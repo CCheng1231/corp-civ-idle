@@ -42,6 +42,7 @@ body {
 button,
 input {
   font: inherit;
+  touch-action: manipulation;
 }
 
 .muted {

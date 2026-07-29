@@ -1526,11 +1526,188 @@
     grid-template-columns: 1fr;
   }
 
-  .layout {
+  .layout:not(.layout-mobile-nav) {
     grid-template-columns: 1fr;
   }
 
   .office-scene {
     grid-template-columns: 1fr;
+  }
+
+  .office-site-staff-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Phone / narrow tablet: bottom nav, scrollable resources, touch targets */
+@media (max-width: 768px) {
+  .app-top-chrome {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .resource-bar {
+    grid-template-columns: 1fr;
+    padding: 0.55rem 0.65rem;
+    gap: 0.45rem;
+  }
+
+  .brand {
+    gap: 0.5rem;
+  }
+
+  .brand-mark {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 0.85rem;
+  }
+
+  .brand strong {
+    font-size: 0.95rem;
+  }
+
+  .resource-grid {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    gap: 0.4rem;
+    margin: 0 -0.15rem;
+    padding: 0 0.15rem 0.2rem;
+  }
+
+  .resource-chip {
+    flex: 0 0 auto;
+    min-width: 5.25rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .net-worth {
+    text-align: left;
+    font-size: 0.8rem;
+  }
+
+  .net-worth strong {
+    font-size: 1rem;
+  }
+
+  .contractors {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
+    min-height: 0;
+  }
+
+  .layout-sidebar-collapsed {
+    grid-template-columns: unset;
+  }
+
+  .main-panel {
+    flex: 1;
+    order: 1;
+    padding: 0.75rem 0.85rem
+      calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .shortcut-sidebar-mobile {
+    order: 2;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 300;
+    flex-direction: row;
+    align-items: stretch;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    background: rgba(23, 30, 39, 0.98);
+    backdrop-filter: blur(12px);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    min-height: auto;
+  }
+
+  .shortcut-sidebar-mobile .shortcut-nav {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.35rem 0.2rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .shortcut-sidebar-mobile .shortcut-link {
+    flex: 1 1 0;
+    min-width: 2.75rem;
+    max-width: 5rem;
+    min-height: 3rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.62rem;
+  }
+
+  .shortcut-sidebar-mobile .shortcut-link-short {
+    width: auto;
+    font-size: 0.68rem;
+  }
+
+  .shortcut-sidebar-mobile .shortcut-link-label {
+    display: block;
+    text-align: center;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .btn,
+  .tab,
+  .shortcut-link,
+  .location-site-select {
+    min-height: 2.75rem;
+  }
+
+  .research-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .location-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .location-queue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contractor-roster-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .office-site-summary-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .main-view-panel {
+    max-width: none;
+  }
+
+  .logbook-sheet-wrap {
+    max-height: min(480px, 50vh);
+  }
+
+  .hex-map svg {
+    max-height: 55vh;
   }
 }

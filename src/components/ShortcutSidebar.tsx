@@ -1,5 +1,25 @@
-import type { Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import type { GameAction, GameState, MainView } from "../game/types";
+
+const MOBILE_NAV_MQ = "(max-width: 768px)";
+
+function useMobileNavLayout(): boolean {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia(MOBILE_NAV_MQ).matches
+      : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_NAV_MQ);
+    const onChange = () => setMobile(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return mobile;
+}
 
 const SHORTCUTS: { view: MainView; label: string; short: string }[] = [
   { view: "operations", label: "Office sites", short: "Sites" },
@@ -24,20 +44,24 @@ export function ShortcutSidebar({
   collapsed,
   onToggleCollapse,
 }: ShortcutSidebarProps) {
+  const mobileNav = useMobileNavLayout();
+
   return (
     <aside
-      className={`shortcut-sidebar${collapsed ? " shortcut-sidebar-collapsed" : ""}`}
+      className={`shortcut-sidebar${collapsed && !mobileNav ? " shortcut-sidebar-collapsed" : ""}${mobileNav ? " shortcut-sidebar-mobile" : ""}`}
       aria-label="Shortcuts"
     >
-      <button
-        type="button"
-        className="shortcut-collapse-btn"
-        onClick={onToggleCollapse}
-        aria-expanded={!collapsed}
-        title={collapsed ? "Expand menu" : "Collapse menu"}
-      >
-        {collapsed ? "»" : "«"}
-      </button>
+      {!mobileNav && (
+        <button
+          type="button"
+          className="shortcut-collapse-btn"
+          onClick={onToggleCollapse}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand menu" : "Collapse menu"}
+        >
+          {collapsed ? "»" : "«"}
+        </button>
+      )}
       <nav className="shortcut-nav">
         {SHORTCUTS.map((item) => (
           <button
@@ -52,7 +76,7 @@ export function ShortcutSidebar({
             onClick={() => dispatch({ type: "SET_VIEW", view: item.view })}
           >
             <span className="shortcut-link-short">{item.short}</span>
-            {!collapsed && (
+            {(!collapsed || mobileNav) && (
               <span className="shortcut-link-label">{item.label}</span>
             )}
           </button>
