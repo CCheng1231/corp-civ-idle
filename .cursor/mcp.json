@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "google-sheets": {
+      "command": "npx",
+      "args": ["-y", "mcp-gsheets@latest"],
+      "envFile": "${workspaceFolder}/.env.local"
+    }
+  }
+}

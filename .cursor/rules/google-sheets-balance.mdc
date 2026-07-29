@@ -1,0 +1,24 @@
+---
+description: Live balance data via Google Sheets MCP (tabs, IDs, sync with engine)
+alwaysApply: true
+---
+
+# Google Sheets balance source
+
+When tuning **corp-civ-idle** structure/economy numbers, prefer reading the live workbook through the **`google-sheets`** MCP server (configured in `.cursor/mcp.json`).
+
+## Workbook
+
+- Spreadsheet ID: use env `CORP_CIV_SPREADSHEET_ID` from `.env.local` (copy from `env.example`).
+- Authoritative design tab: **`Structure Cost and passive rate`** (column C = Excel time format, day fraction).
+- Engine mirror tabs (if present): **`Structure Build Times (engine)`**, **`Phase A Placeholders (engine)`**.
+
+## After sheet changes
+
+1. For game builds, data still flows through `scripts/build-structure-balance.mjs` → `src/game/structureBalanceData.ts` (today: export `.xlsx` or keep xlsx in repo in sync with Google).
+2. Use MCP for **read/query during design**; do not commit service account JSON or `.env.local`.
+
+## MCP usage
+
+- Read **narrow ranges** (e.g. one structure block, columns A–R) to save context.
+- Column C times: real seconds = `C × 86400`; engine `buildTimeHours = C × 24`.
