@@ -22,8 +22,9 @@ function useMobileNavLayout(): boolean {
 }
 
 const SHORTCUTS: { view: MainView; label: string; short: string }[] = [
-  { view: "operations", label: "Office sites", short: "Sites" },
   { view: "world", label: "World map", short: "Map" },
+  { view: "overview", label: "Overview", short: "HQ" },
+  { view: "operations", label: "Office sites", short: "Sites" },
   { view: "research", label: "Research", short: "R&D" },
   { view: "office", label: "Secretary", short: "Sec" },
   { view: "logbook", label: "Logbook", short: "Log" },
@@ -87,6 +88,7 @@ export function ShortcutSidebar({
 }
 
 export const MAIN_VIEW_TITLES: Record<MainView, string> = {
+  overview: "HQ overview",
   world: "World map & open bids",
   operations: "Office sites & upgrades",
   research: "Research",

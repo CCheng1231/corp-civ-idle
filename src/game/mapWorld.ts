@@ -234,6 +234,28 @@ export function ownedOfficeIds(state: GameState): ("hq" | "branch")[] {
   return state.branchEstablished ? ["hq", "branch"] : ["hq"];
 }
 
+/** Offices listed in Overview dropdown (includes locked sites for future expansion). */
+export interface OverviewOfficeOption {
+  id: "hq" | "branch";
+  label: string;
+  available: boolean;
+  hint?: string;
+}
+
+export function overviewOfficeOptions(state: GameState): OverviewOfficeOption[] {
+  return [
+    { id: "hq", label: "HQ", available: true },
+    {
+      id: "branch",
+      label: "Branch Office",
+      available: state.branchEstablished,
+      hint: state.branchEstablished
+        ? undefined
+        : "Unlock Branch Management research, then open a site on the world map",
+    },
+  ];
+}
+
 export function branchManagementResearched(state: GameState): boolean {
   return state.researchLevels.branch_management >= 1;
 }

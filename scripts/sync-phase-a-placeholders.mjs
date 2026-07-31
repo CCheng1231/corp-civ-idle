@@ -10,12 +10,7 @@ import * as XLSXNS from "xlsx";
 const XLSX = XLSXNS.default ?? XLSXNS;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootWorkbook = join(
-  __dirname,
-  "..",
-  "..",
-  "Corp-Civ-Balance-Reference.xlsx",
-);
+const rootWorkbook = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
 const fallbackWorkbook = join(__dirname, "..", "Corp-Civ-Balance-Reference.xlsx");
 const workbookPath = existsSync(rootWorkbook) ? rootWorkbook : fallbackWorkbook;
 

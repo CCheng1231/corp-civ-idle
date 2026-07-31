@@ -13,26 +13,23 @@ import {
   splitResourceCost,
 } from "../game/constants";
 import {
+  structureUpgradePreviewLines,
+} from "../game/structureBalance";
+import {
   structureCost,
   structureDemolishRefund,
 } from "../game/engine";
 import { StructureBuildQueueList } from "./StructureBuildQueueList";
+import { StructureCostLine } from "./StructureCostLine";
+import {
+  formatPreviewDelta,
+} from "./upgradePreviewFormat";
 import type {
   GameAction,
   GameState,
   OfficeLocationId,
   StructureDefinition,
 } from "../game/types";
-
-function formatUpgradeCost(cost: ReturnType<typeof structureCost>): string {
-  return Object.entries(cost)
-    .map(([k, v]) =>
-      k === "electricity"
-        ? `power ${formatNumber(v ?? 0)}`
-        : `${k} ${formatNumber(v ?? 0)}`,
-    )
-    .join(" · ");
-}
 
 export function structureUpgradeBlocker(
   state: GameState,
@@ -93,7 +90,7 @@ export function OfficeStructurePanel({
       {buildQueue.length > 0 && (
         <StructureBuildQueueList state={state} jobs={buildQueue} now={now} />
       )}
-      <ul className="structure-list research-grid">
+      <ul className="structure-list research-grid office-structure-grid">
         {structurePanelStructures().map((structure) => {
           const level = locationStructures[structure.id];
           const projected = projectedStructures[structure.id];
@@ -109,29 +106,62 @@ export function OfficeStructurePanel({
           const canSell = canSellStructureLevel(state, officeId, structure.id);
           const sellRefund = structureDemolishRefund(state, officeId, structure.id);
           const sellBlocked = isStructureQueuedAt(state, officeId, structure.id);
+          const targetLevel = projected + 1;
+          const previewLines = maxed
+            ? []
+            : structureUpgradePreviewLines(structure.id, projected, targetLevel);
 
           return (
-            <li key={structure.id} className="structure-card">
+            <li key={structure.id} className="structure-card structure-card-upgrade">
               <div className="structure-head">
                 <strong>{structure.name}</strong>
                 <span>
-                  Lv {level}/{structure.maxLevel}
+                  {maxed ? (
+                    <>Lv {level}/{structure.maxLevel}</>
+                  ) : (
+                    <>
+                      Lv {projected} → {targetLevel}
+                    </>
+                  )}
                 </span>
               </div>
               {!maxed && (
-                <p className="structure-cost-primary">
-                  {formatUpgradeCost(cost)}
-                </p>
+                <div className="structure-upgrade-preview">
+                  <StructureCostLine
+                    state={state}
+                    officeId={officeId}
+                    cost={cost}
+                    layout="stack"
+                  />
+                  <ul className="structure-upgrade-preview-stats">
+                    {previewLines.map((line) => (
+                      <li key={line.label}>
+                        <span className="structure-upgrade-preview-label">
+                          {line.label}
+                        </span>
+                        <span className="structure-upgrade-preview-value">
+                          {formatPreviewDelta(
+                            line.from,
+                            line.to,
+                            line.unit,
+                            line.label,
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {blocker && !maxed && (
                 <p className="structure-blocker">{blocker}</p>
               )}
               <p className="structure-desc muted">{structure.description}</p>
-              <p className="cost-line muted structure-space-line">
-                {structure.officeSlotsWhenBuilt > 0
-                  ? `Uses ${structure.officeSlotsWhenBuilt} office slot while built (all levels)`
-                  : "Does not consume an office slot"}
-              </p>
+              {structure.officeSlotsWhenBuilt > 0 ? (
+                <p className="structure-space-line compact-stack-line">
+                  <span className="compact-stack-label">slot:</span>{" "}
+                  {structure.officeSlotsWhenBuilt}
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="btn"

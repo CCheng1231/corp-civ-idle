@@ -36,6 +36,7 @@ export type StructureId =
   | "social_media"
   | "office_expansion"
   | "power_panel"
+  | "dept_rnd"
   | "recruitment_desk";
 
 export type StructureLevels = Record<StructureId, number>;
@@ -60,12 +61,15 @@ export interface StructureDefinition {
 }
 
 export type ResearchId =
-  | "efficiency_manuals"
-  | "bid_modeling"
-  | "logistics_planning"
-  | "public_relations"
-  | "government_liaison"
-  | "branch_management";
+  | "eff_manuals_cash"
+  | "eff_manuals_sup"
+  | "eff_manuals_con"
+  | "eff_manuals_mood"
+  | "eff_manuals_rep"
+  | "eff_manuals_grep"
+  | "planning_ahead"
+  | "branch_management"
+  | "bid_modeling";
 
 export type MapRegion = "metropolis" | "suburban" | "rural" | "countryside";
 
@@ -91,6 +95,8 @@ export interface OfficeTowerDefinition {
 
 export interface ProgressionEffects {
   rates?: Partial<ProductionRates>;
+  ratePercentPerLevel?: Partial<Record<ResourceKey, number>>;
+  storagePercentPerLevel?: number;
   bidBonus?: number;
   projectDurationMultPerLevel?: number;
   projectPayoutMultPerLevel?: number;
@@ -98,14 +104,20 @@ export interface ProgressionEffects {
   powerCapacityPerLevel?: number;
 }
 
+export interface ResearchRequirement {
+  id: ResearchId;
+  minLevel: number;
+}
+
 export interface ResearchDefinition {
   id: ResearchId;
   name: string;
   description: string;
   maxLevel: number;
+  rndLevelRequired?: number;
   baseCost: ResourceCost;
   costScale: number;
-  requires?: ResearchId[];
+  requires?: ResearchRequirement[];
   effects: ProgressionEffects;
 }
 
@@ -217,10 +229,16 @@ export interface GameSettings {
   notifications: boolean;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
   ignoreTimers: boolean;
+  /** Office sites: Structure upgrades / Recruitment sections expanded per site. */
+  officeSiteSections: Record<
+    OfficeLocationId,
+    { structuresOpen: boolean; recruitmentOpen: boolean }
+  >;
 }
 
 export type MainView =
   | "world"
+  | "overview"
   | "operations"
   | "research"
   | "office"

@@ -36,6 +36,11 @@ import {
   recomputeProductionRates,
   structureMaxLevel,
 } from "./structureBalance";
+import { RESEARCH_DEFINITIONS } from "./researchData";
+import {
+  RECRUITMENT_TIER1_COST,
+  RECRUITMENT_TIER1_LABEL,
+} from "./recruitmentData";
 
 export const SAVE_KEY = "corp-civ-idle-save-v2";
 export const TICK_MS = 1000;
@@ -46,7 +51,14 @@ export const MAX_STRUCTURE_QUEUE = 2;
 export const STRUCTURE_SELL_MONEY_REFUND_RATE = 0.5;
 export const CONTRACTOR_TRANSFER_SEC_PER_HEX = 30;
 export const RECRUIT_MS_PER_CONTRACTOR = 1000;
-export const MAX_RECRUIT_BATCH = 25;
+export const MAX_RECRUIT_BATCH = 100;
+
+export function defaultOfficeSiteSections(): GameState["settings"]["officeSiteSections"] {
+  return {
+    hq: { structuresOpen: false, recruitmentOpen: false },
+    branch: { structuresOpen: false, recruitmentOpen: false },
+  };
+}
 
 export const OFFICE_IDS: OfficeLocationId[] = ["hq", "branch"];
 
@@ -237,7 +249,11 @@ function structureDescription(structureId: StructureId, name: string): string {
     case "power_capacity_bonus":
       return "Adds site power capacity (bonus total at level).";
     case "none":
-      return "Recruitment infrastructure (costs scale by balance table).";
+      return structureId === "dept_rnd"
+        ? "Unlocks research (R&D level gates research tree)."
+        : structureId === "recruitment_desk"
+          ? "Required infrastructure for contractor recruitment."
+          : "Infrastructure (costs from balance sheet).";
     default:
       return name;
   }
@@ -256,107 +272,44 @@ export const STRUCTURES: StructureDefinition[] = PHASE_A_PLACEHOLDER_ROWS.map(
   }),
 );
 
-export const RESEARCH: ResearchDefinition[] = [
-  {
-    id: "efficiency_manuals",
-    name: "Efficiency Manuals",
-    description: "Standardize workflows to squeeze more cash from the firm.",
-    maxLevel: 5,
-    baseCost: { cash: 100, connection: 3 },
-    costScale: 1.6,
-    effects: { rates: { cash: 15 } },
-  },
-  {
-    id: "logistics_planning",
-    name: "Logistics Planning",
-    description: "Route crews faster between job sites on the hex map.",
-    maxLevel: 4,
-    baseCost: { cash: 90, electricity: 20 },
-    costScale: 1.65,
-    effects: { projectDurationMultPerLevel: 0.05 },
-  },
-  {
-    id: "bid_modeling",
-    name: "Bid Modeling",
-    description: "Forecast rival bids and improve contract margins.",
-    maxLevel: 4,
-    baseCost: { cash: 160, connection: 8 },
-    costScale: 1.75,
-    requires: ["efficiency_manuals"],
-    effects: {
-      rates: { connection: 5 },
-      projectPayoutMultPerLevel: 0.04,
-    },
-  },
-  {
-    id: "public_relations",
-    name: "Public Relations",
-    description: "Stay likable while you outbid everyone else.",
-    maxLevel: 5,
-    baseCost: { cash: 140, reputation: 2 },
-    costScale: 1.7,
-    requires: ["efficiency_manuals"],
-    effects: { rates: { reputation: 2 } },
-  },
-  {
-    id: "government_liaison",
-    name: "Government Liaison",
-    description: "Unlock GREP with the hub at the map center.",
-    maxLevel: 3,
-    baseCost: { cash: 300, connection: 15, reputation: 6 },
-    costScale: 2,
-    requires: ["bid_modeling", "public_relations"],
-    effects: { rates: { govReputation: 1 } },
-  },
-  {
-    id: "branch_management",
-    name: "Branch Management",
-    description:
-      "Train regional managers to lease commercial real estate and open a branch office.",
-    maxLevel: 1,
-    baseCost: { cash: 400, connection: 10, reputation: 5 },
-    costScale: 1,
-    requires: ["efficiency_manuals"],
-    effects: {},
-  },
-];
+export const RESEARCH: ResearchDefinition[] = RESEARCH_DEFINITIONS;
 
 export const CONTRACTOR_TYPES: ContractorTypeDefinition[] = [
   {
     id: "farming",
     role: "Resource Farming",
-    flavorTitle: "Highschool Graduate",
+    flavorTitle: RECRUITMENT_TIER1_LABEL.farming,
     description:
       "Field crews sent on tower contracts. Jobs consume idle farming staff.",
-    baseCost: { cash: 70, reputation: 1 },
-    moneyScalePerUnit: 22,
+    baseCost: RECRUITMENT_TIER1_COST.farming,
+    moneyScalePerUnit: 0,
   },
   {
     id: "defense",
     role: "Protection / Defense",
-    flavorTitle: "Security Guard",
+    flavorTitle: RECRUITMENT_TIER1_LABEL.defense,
     description:
       "Guards HQ and branch offices. Each unit reduces espionage risk in Phase 2.",
-    baseCost: { cash: 95, electricity: 5 },
-    moneyScalePerUnit: 28,
+    baseCost: RECRUITMENT_TIER1_COST.defense,
+    moneyScalePerUnit: 0,
   },
   {
     id: "intel",
     role: "Intel Gathering",
-    flavorTitle: "Highschool Influencer",
+    flavorTitle: RECRUITMENT_TIER1_LABEL.intel,
     description:
       "Scouts new leads. More intel staff unlock additional company projects.",
-    baseCost: { cash: 110, connection: 4 },
-    moneyScalePerUnit: 30,
+    baseCost: RECRUITMENT_TIER1_COST.intel,
+    moneyScalePerUnit: 0,
   },
   {
     id: "support",
     role: "Support Units",
-    flavorTitle: "Janitor / Manager",
+    flavorTitle: RECRUITMENT_TIER1_LABEL.support,
     description:
       "Deploy with farming crews to finish jobs faster and improve payouts.",
-    baseCost: { cash: 60, reputation: 1 },
-    moneyScalePerUnit: 18,
+    baseCost: RECRUITMENT_TIER1_COST.support,
+    moneyScalePerUnit: 0,
   },
 ];
 
@@ -371,14 +324,9 @@ export function createInitialState(now = Date.now()): GameState {
     hq: hqStartStructureLevels(),
     branch: branchStartStructureLevels(),
   };
-  const researchLevels = {
-    efficiency_manuals: 0,
-    bid_modeling: 0,
-    logistics_planning: 0,
-    public_relations: 0,
-    government_liaison: 0,
-    branch_management: 0,
-  };
+  const researchLevels = Object.fromEntries(
+    RESEARCH.map((r) => [r.id, 0]),
+  ) as GameState["researchLevels"];
   const contractorsByLocation: ContractorsByLocation = {
     hq: emptyContractorRoster({ farming: 2 }),
     branch: emptyContractorRoster(),
@@ -422,6 +370,7 @@ export function createInitialState(now = Date.now()): GameState {
       uiScale: 1,
       notifications: true,
       ignoreTimers: false,
+      officeSiteSections: defaultOfficeSiteSections(),
     },
   };
 
@@ -479,14 +428,32 @@ export function recomputeDerivedStats(state: {
 
   for (const def of RESEARCH) {
     const level = state.researchLevels[def.id];
-    if (level <= 0 || !def.effects.rates) continue;
-    for (const [key, delta] of Object.entries(def.effects.rates)) {
-      const k = key as keyof ProductionRates;
-      rates[k] += (delta ?? 0) * level;
+    if (level <= 0) continue;
+
+    if (def.effects.rates) {
+      for (const [key, delta] of Object.entries(def.effects.rates)) {
+        const k = key as keyof ProductionRates;
+        rates[k] += (delta ?? 0) * level;
+      }
+    }
+
+    if (def.effects.ratePercentPerLevel) {
+      for (const [key, pct] of Object.entries(def.effects.ratePercentPerLevel)) {
+        const k = key as keyof ProductionRates;
+        rates[k] *= 1 + (pct ?? 0) * level;
+      }
     }
   }
 
   return { rates };
+}
+
+/** Highest built Department of R&D level across all sites. */
+export function deptRndLevel(state: GameState): number {
+  return Math.max(
+    state.structureLevelsByLocation.hq.dept_rnd,
+    state.structureLevelsByLocation.branch.dept_rnd,
+  );
 }
 
 export function totalStructureLevel(
@@ -668,6 +635,47 @@ export function formatNumber(value: number): string {
   return value.toFixed(value < 10 ? 1 : 0);
 }
 
+export function formatResourceCost(cost: ResourceCost): string {
+  return resourceCostParts(cost)
+    .map((part) => `${part.label} ${formatNumber(part.amount)}`)
+    .join(" · ");
+}
+
+export interface ResourceCostPart {
+  key: string;
+  label: string;
+  amount: number;
+}
+
+export function resourceCostParts(cost: ResourceCost): ResourceCostPart[] {
+  const parts: ResourceCostPart[] = [];
+  for (const [key, val] of Object.entries(cost)) {
+    const amount = val ?? 0;
+    if (amount <= 0) continue;
+    if (key === "electricity") {
+      parts.push({ key, label: "Power", amount });
+      continue;
+    }
+    const label =
+      RESOURCE_LABELS[key as keyof Resources] ??
+      key.charAt(0).toUpperCase() + key.slice(1);
+    parts.push({ key, label, amount });
+  }
+  return parts;
+}
+
+export function canAffordCostPart(
+  state: GameState,
+  officeId: OfficeLocationId,
+  part: ResourceCostPart,
+): boolean {
+  if (part.key === "electricity") {
+    return powerAvailable(state.locationStats[officeId]) >= part.amount;
+  }
+  const k = part.key as keyof Resources;
+  return state.resources[k] >= part.amount;
+}
+
 /** Top resource bar — no K/M shortening; locale grouping for readability. */
 export function formatResourceFull(value: number): string {
   if (!Number.isFinite(value)) return "0";
@@ -739,14 +747,27 @@ export function isResearchUnlocked(
   state: GameState,
   research: ResearchDefinition,
 ): boolean {
+  const rndRequired = research.rndLevelRequired ?? 0;
+  if (rndRequired > 0 && deptRndLevel(state) < rndRequired) {
+    return false;
+  }
   if (!research.requires?.length) return true;
-  return research.requires.every((id) => state.researchLevels[id] >= 1);
+  return research.requires.every(
+    (req) => state.researchLevels[req.id] >= req.minLevel,
+  );
 }
 
 export function researchRequirementLabel(research: ResearchDefinition): string {
-  if (!research.requires?.length) return "";
-  const names = research.requires.map(
-    (id) => RESEARCH.find((r) => r.id === id)?.name ?? id,
-  );
-  return names.join(" + ");
+  const parts: string[] = [];
+  const rndRequired = research.rndLevelRequired ?? 0;
+  if (rndRequired > 0) {
+    parts.push(`Department of R&D Lv ${rndRequired}`);
+  }
+  if (research.requires?.length) {
+    for (const req of research.requires) {
+      const name = RESEARCH.find((r) => r.id === req.id)?.name ?? req.id;
+      parts.push(`${name} Lv ${req.minLevel}`);
+    }
+  }
+  return parts.join(" + ");
 }

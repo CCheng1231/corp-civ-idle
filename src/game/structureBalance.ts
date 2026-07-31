@@ -12,6 +12,7 @@ import {
   STRUCTURE_EFFECT_KIND,
   type StructureLevelBalanceRow,
 } from "./structureBalanceData";
+import { RESEARCH_DEFINITIONS } from "./researchData";
 
 const OFFICE_IDS: OfficeLocationId[] = ["hq", "branch"];
 
@@ -65,6 +66,100 @@ export function effectAtStructureLevel(
 ): number {
   const row = getStructureLevelRow(structureId, level);
   return row?.effect ?? 0;
+}
+
+export interface StructureUpgradePreviewLine {
+  label: string;
+  from: number | null;
+  to: number;
+  unit: string;
+}
+
+function pushPreviewLine(
+  lines: StructureUpgradePreviewLine[],
+  label: string,
+  fromLevel: number,
+  toLevel: number,
+  structureId: StructureId,
+  unit: string,
+  effectAtLevel: (level: number) => number = (lvl) =>
+    effectAtStructureLevel(structureId, lvl),
+) {
+  const from = fromLevel > 0 ? effectAtLevel(fromLevel) : null;
+  const to = effectAtLevel(toLevel);
+  if (from === to && fromLevel > 0) return;
+  lines.push({ label, from, to, unit });
+}
+
+/** Stat lines for upgrading from `currentLevel` to `targetLevel`. */
+export function structureUpgradePreviewLines(
+  structureId: StructureId,
+  currentLevel: number,
+  targetLevel: number,
+): StructureUpgradePreviewLine[] {
+  if (targetLevel <= currentLevel) return [];
+
+  const lines: StructureUpgradePreviewLine[] = [];
+  const buildRow = getStructureLevelRow(structureId, targetLevel);
+  if (buildRow && buildRow.buildTimeHours > 0) {
+    lines.push({
+      label: "Build time",
+      from: null,
+      to: buildRow.buildTimeHours,
+      unit: " hr",
+    });
+  }
+
+  const kind = STRUCTURE_EFFECT_KIND[structureId];
+  switch (kind) {
+    case "cash_per_hour":
+      pushPreviewLine(lines, "Cash/hr", currentLevel, targetLevel, structureId, "/hr");
+      break;
+    case "supply_per_hour":
+      pushPreviewLine(lines, "SUP/hr", currentLevel, targetLevel, structureId, "/hr");
+      break;
+    case "connection_per_hour":
+      pushPreviewLine(lines, "CON/hr", currentLevel, targetLevel, structureId, "/hr");
+      if (structureId === "social_media") {
+        pushPreviewLine(
+          lines,
+          "Mood/hr",
+          currentLevel,
+          targetLevel,
+          structureId,
+          "/hr",
+          (lvl) => (effectAtStructureLevel(structureId, lvl) * 5) / 8,
+        );
+      }
+      break;
+    case "mood_per_hour":
+      pushPreviewLine(lines, "Mood/hr", currentLevel, targetLevel, structureId, "/hr");
+      break;
+    case "cash_holding":
+      pushPreviewLine(lines, "Cash cap", currentLevel, targetLevel, structureId, "");
+      break;
+    case "supply_holding":
+      pushPreviewLine(lines, "SUP cap", currentLevel, targetLevel, structureId, "");
+      break;
+    case "office_space_bonus":
+      pushPreviewLine(lines, "Office space", currentLevel, targetLevel, structureId, "");
+      break;
+    case "power_capacity_bonus":
+      pushPreviewLine(lines, "Power capacity", currentLevel, targetLevel, structureId, "");
+      break;
+    case "none":
+      if (structureId === "dept_rnd") {
+        lines.push({
+          label: "R&D gate level",
+          from: currentLevel > 0 ? currentLevel : null,
+          to: targetLevel,
+          unit: "",
+        });
+      }
+      break;
+  }
+
+  return lines;
 }
 
 export function structureUpgradeCostFromCurrentLevel(
@@ -149,7 +244,10 @@ export function recomputeProductionRates(state: {
   return rates;
 }
 
-export function computeResourceCaps(state: GameState): {
+export function computeResourceCaps(state: {
+  structureLevelsByLocation: GameState["structureLevelsByLocation"];
+  researchLevels?: GameState["researchLevels"];
+}): {
   cashCap: number;
   supplyCap: number;
 } {
@@ -165,6 +263,18 @@ export function computeResourceCaps(state: GameState): {
     const storageLevel = levels.storage_room;
     if (storageLevel > 0) {
       supplyCap += effectAtStructureLevel("storage_room", storageLevel);
+    }
+  }
+
+  if (state.researchLevels) {
+    const planningLevel = state.researchLevels.planning_ahead ?? 0;
+    const storagePct =
+      (RESEARCH_DEFINITIONS.find((r) => r.id === "planning_ahead")?.effects
+        .storagePercentPerLevel ?? 0) * planningLevel;
+    if (storagePct > 0) {
+      const mult = 1 + storagePct;
+      cashCap *= mult;
+      supplyCap *= mult;
     }
   }
 

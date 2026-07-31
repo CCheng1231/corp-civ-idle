@@ -1,6 +1,7 @@
 import {
   SAVE_KEY,
   createInitialState,
+  defaultOfficeSiteSections,
   emptyStructureLevels,
   emptyStructureQueues,
   emptyContractorRoster,
@@ -30,9 +31,11 @@ import type {
   ContractorRoster,
   ContractorsByLocation,
   MainView,
+  ResearchId,
 } from "./types";
 
 const VALID_VIEWS = new Set<MainView>([
+  "overview",
   "world",
   "operations",
   "research",
@@ -75,6 +78,30 @@ function isLegacyStructureSave(parsed: LegacySave): boolean {
     }
   }
   return false;
+}
+
+function migrateResearchLevels(
+  parsed: LegacySave,
+  base: GameState,
+): GameState["researchLevels"] {
+  const levels = { ...base.researchLevels };
+  const old = parsed.researchLevels as Record<string, number> | undefined;
+  if (!old) return levels;
+
+  if (old.efficiency_manuals) {
+    levels.eff_manuals_cash = Math.max(
+      levels.eff_manuals_cash,
+      old.efficiency_manuals,
+    );
+  }
+
+  for (const [key, val] of Object.entries(old)) {
+    if (key in levels && typeof val === "number") {
+      levels[key as ResearchId] = Math.max(levels[key as ResearchId], val);
+    }
+  }
+
+  return levels;
 }
 
 function migrateStructureLevels(parsed: LegacySave): GameState["structureLevelsByLocation"] {
@@ -189,13 +216,7 @@ function migrateBranchFields(
 function normalizeSave(parsed: LegacySave): GameState {
   const base = createInitialState();
   const structureLevelsByLocation = migrateStructureLevels(parsed);
-  const researchLevels = {
-    ...base.researchLevels,
-    ...parsed.researchLevels,
-    branch_management:
-      parsed.researchLevels?.branch_management ??
-      base.researchLevels.branch_management,
-  };
+  const researchLevels = migrateResearchLevels(parsed, base);
   const contractorsByLocation = migrateContractors(parsed);
 
   const merged: GameState = {
@@ -213,7 +234,22 @@ function normalizeSave(parsed: LegacySave): GameState {
       reputation: parsed.resources?.reputation,
       govReputation: parsed.resources?.govReputation,
     }),
-    settings: { ...base.settings, ...parsed.settings },
+    settings: {
+      ...base.settings,
+      ...parsed.settings,
+      officeSiteSections: {
+        ...defaultOfficeSiteSections(),
+        ...parsed.settings?.officeSiteSections,
+        hq: {
+          ...defaultOfficeSiteSections().hq,
+          ...parsed.settings?.officeSiteSections?.hq,
+        },
+        branch: {
+          ...defaultOfficeSiteSections().branch,
+          ...parsed.settings?.officeSiteSections?.branch,
+        },
+      },
+    },
     structureLevelsByLocation,
     structureQueues: {
       ...emptyStructureQueues(),

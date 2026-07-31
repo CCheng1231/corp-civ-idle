@@ -4,14 +4,19 @@ import {
   BASE_OFFICE_SPACE,
   CONTRACTOR_TYPES,
   OFFICE_EXPANSION_STRUCTURE_ID,
-  STRUCTURES,
+  canAffordCostPart,
   formatNumber,
   getStructureDefinition,
   officeSpaceAvailable,
   powerAvailable,
+  projectedStructureLevels,
+  resourceCostParts,
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
+import { structureCost } from "../game/engine";
+import { effectAtStructureLevel } from "../game/structureBalance";
+import { formatCompactCost } from "./CompactStack";
 import { structureUpgradeBlocker } from "./OfficeStructurePanel";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
 
@@ -38,8 +43,28 @@ export function OfficeSiteSummary({
     .length;
 
   const expansionDef = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
+  const projectedExpansion =
+    projectedStructureLevels(state, officeId).office_expansion;
   const expansionLevel = structures.office_expansion;
-  const expansionMaxed = expansionLevel >= expansionDef.maxLevel;
+  const expansionMaxed = projectedExpansion >= expansionDef.maxLevel;
+  const expansionCost = structureCost(
+    state,
+    officeId,
+    OFFICE_EXPANSION_STRUCTURE_ID,
+  );
+  const spaceGain = expansionMaxed
+    ? 0
+    : Math.max(
+        0,
+        effectAtStructureLevel(
+          OFFICE_EXPANSION_STRUCTURE_ID,
+          projectedExpansion + 1,
+        ) -
+          effectAtStructureLevel(
+            OFFICE_EXPANSION_STRUCTURE_ID,
+            projectedExpansion,
+          ),
+      );
   const expansionBlocker = structureUpgradeBlocker(
     state,
     officeId,
@@ -47,6 +72,8 @@ export function OfficeSiteSummary({
     false,
   );
   const canExpand = !expansionMaxed && !expansionBlocker;
+  const freeSpace = officeSpaceAvailable(loc);
+  const expansionCostParts = resourceCostParts(expansionCost);
 
   return (
     <div className="office-site-summary">
@@ -56,7 +83,7 @@ export function OfficeSiteSummary({
           <strong>
             {formatNumber(loc.officeSpaceUsed)} / {formatNumber(loc.officeSpace)}
           </strong>
-          <small>{formatNumber(officeSpaceAvailable(loc))} free</small>
+          <small>{formatNumber(freeSpace)} free</small>
         </div>
         <div className="location-stat">
           <span className="location-stat-label">Power</span>
@@ -74,14 +101,9 @@ export function OfficeSiteSummary({
       <div className="office-site-expand-row">
         <button
           type="button"
-          className="btn btn-compact"
+          className="btn btn-compact office-expand-btn"
           disabled={!canExpand}
-          title={
-            expansionBlocker ??
-            (expansionMaxed
-              ? "Maximum expansion reached"
-              : `Expand office (Lv ${expansionLevel} → ${expansionLevel + 1})`)
-          }
+          title={expansionBlocker ?? undefined}
           onClick={() =>
             dispatch({
               type: "BUY_STRUCTURE",
@@ -90,7 +112,42 @@ export function OfficeSiteSummary({
             })
           }
         >
-          {expansionMaxed ? "Office expansion maxed" : "Expand office space"}
+          <span className="office-expand-btn-title">
+            {expansionMaxed
+              ? "Office expansion maxed"
+              : `Expand office · Lv ${expansionLevel} → ${expansionLevel + 1}`}
+          </span>
+          <span className="office-expand-btn-detail">
+            {!expansionMaxed && expansionCostParts.length > 0 && (
+              <span className="office-expand-btn-cost">
+                {expansionCostParts.map((part, index) => (
+                  <span key={part.key}>
+                    {index > 0 && (
+                      <span className="office-expand-btn-sep"> · </span>
+                    )}
+                    <span className="compact-stack-label">
+                      {part.label.toLowerCase()}:
+                    </span>{" "}
+                    <span
+                      className={
+                        canAffordCostPart(state, officeId, part)
+                          ? "structure-cost-affordable"
+                          : "structure-cost-unaffordable"
+                      }
+                    >
+                      {formatCompactCost(part.amount)}
+                    </span>
+                  </span>
+                ))}
+                {spaceGain > 0 && (
+                  <>
+                    <span className="office-expand-btn-sep"> · </span>
+                    <span className="muted">+{formatCompactCost(spaceGain)} slots</span>
+                  </>
+                )}
+              </span>
+            )}
+          </span>
         </button>
         {expansionBlocker && !expansionMaxed && (
           <span className="muted office-site-expand-blocker">{expansionBlocker}</span>
@@ -103,19 +160,6 @@ export function OfficeSiteSummary({
             <li key={type.id}>
               <span className="office-site-staff-role">{type.role}</span>
               <span className="office-site-staff-count">×{roster[type.id]}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="office-site-summary-structures">
-        <h4>Structure levels</h4>
-        <ul className="office-site-structure-levels">
-          {STRUCTURES.map((def) => (
-            <li key={def.id}>
-              <span>{def.name}</span>
-              <strong>
-                Lv {structures[def.id]}/{def.maxLevel}
-              </strong>
             </li>
           ))}
         </ul>

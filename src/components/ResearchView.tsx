@@ -2,11 +2,16 @@ import { type Dispatch } from "react";
 import {
   RESEARCH,
   canAffordAtOffice,
-  formatNumber,
   isResearchUnlocked,
   researchRequirementLabel,
 } from "../game/constants";
 import { researchCost } from "../game/engine";
+import { researchUpgradePreviewLines } from "../game/researchPreview";
+import {
+  formatPreviewDelta,
+  formatPreviewText,
+} from "./upgradePreviewFormat";
+import { StructureCostLine } from "./StructureCostLine";
 import type { GameAction, GameState } from "../game/types";
 
 interface ResearchViewProps {
@@ -27,7 +32,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           {office.toUpperCase()}).
         </p>
       </header>
-      <ul className="structure-list research-grid">
+      <ul className="structure-list research-grid office-structure-grid">
         {RESEARCH.map((research) => {
           const level = state.researchLevels[research.id];
           const maxed = level >= research.maxLevel;
@@ -35,27 +40,57 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           const cost = researchCost(state, research.id);
           const affordable = canAffordAtOffice(state, office, cost);
           const disabled = !unlocked || maxed || !affordable;
+          const targetLevel = level + 1;
+          const previewLines =
+            maxed || !unlocked
+              ? []
+              : researchUpgradePreviewLines(research, level, targetLevel);
+
           return (
             <li
               key={research.id}
-              className={`structure-card${unlocked ? "" : " progression-locked"}`}
+              className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
             >
               <div className="structure-head">
                 <strong>{research.name}</strong>
                 <span>
-                  Lv {level}/{research.maxLevel}
+                  {maxed ? (
+                    <>Lv {level}/{research.maxLevel}</>
+                  ) : (
+                    <>Lv {level} → {targetLevel}</>
+                  )}
                 </span>
               </div>
               {!maxed && unlocked && (
-                <p className="structure-cost-primary">
-                  {Object.entries(cost)
-                    .map(([k, v]) =>
-                      k === "electricity"
-                        ? `power ${formatNumber(v ?? 0)}`
-                        : `${k} ${formatNumber(v ?? 0)}`,
-                    )
-                    .join(" · ")}
-                </p>
+                <div className="structure-upgrade-preview">
+                  <StructureCostLine
+                    state={state}
+                    officeId={office}
+                    cost={cost}
+                    layout="stack"
+                  />
+                  {previewLines.length > 0 && (
+                    <ul className="structure-upgrade-preview-stats">
+                      {previewLines.map((line) => (
+                        <li key={line.label}>
+                          <span className="structure-upgrade-preview-label">
+                            {line.label}
+                          </span>
+                          <span className="structure-upgrade-preview-value">
+                            {line.text
+                              ? formatPreviewText(line.text)
+                              : formatPreviewDelta(
+                                  line.from,
+                                  line.to,
+                                  line.unit,
+                                  line.label,
+                                )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
               <p className="structure-desc muted">{research.description}</p>
               {!unlocked && (

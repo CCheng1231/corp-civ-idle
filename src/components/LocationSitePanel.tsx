@@ -17,6 +17,25 @@ export function LocationSitePanel({
   officeId,
 }: LocationSitePanelProps) {
   const selected = state.selectedOffice === officeId;
+  const sectionPrefs = state.settings.officeSiteSections[officeId];
+
+  function setSectionOpen(
+    key: "structuresOpen" | "recruitmentOpen",
+    open: boolean,
+  ) {
+    dispatch({
+      type: "UPDATE_SETTINGS",
+      settings: {
+        officeSiteSections: {
+          ...state.settings.officeSiteSections,
+          [officeId]: {
+            ...sectionPrefs,
+            [key]: open,
+          },
+        },
+      },
+    });
+  }
 
   return (
     <article
@@ -38,7 +57,16 @@ export function LocationSitePanel({
         <OfficeSiteSummary state={state} dispatch={dispatch} officeId={officeId} />
       </details>
 
-      <details className="office-site-section">
+      <details
+        className="office-site-section"
+        open={sectionPrefs.structuresOpen}
+        onToggle={(e) =>
+          setSectionOpen(
+            "structuresOpen",
+            (e.currentTarget as HTMLDetailsElement).open,
+          )
+        }
+      >
         <summary>Structure upgrades</summary>
         <OfficeStructurePanel
           state={state}
@@ -47,7 +75,16 @@ export function LocationSitePanel({
         />
       </details>
 
-      <details className="office-site-section">
+      <details
+        className="office-site-section"
+        open={sectionPrefs.recruitmentOpen}
+        onToggle={(e) =>
+          setSectionOpen(
+            "recruitmentOpen",
+            (e.currentTarget as HTMLDetailsElement).open,
+          )
+        }
+      >
         <summary>Recruitment</summary>
         <OfficeRecruitmentPanel
           state={state}

@@ -1,4 +1,5 @@
 import { type Dispatch } from "react";
+import { OverviewView } from "./OverviewView";
 import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
 import { NotesView } from "./NotesView";
@@ -16,6 +17,8 @@ interface MainContentProps {
 
 export function MainContent({ state, dispatch }: MainContentProps) {
   switch (state.view) {
+    case "overview":
+      return <OverviewView state={state} />;
     case "world":
       return (
         <>
