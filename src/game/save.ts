@@ -43,11 +43,11 @@ const VALID_VIEWS = new Set<MainView>([
   "research",
   "office",
   "logbook",
-  "notes",
   "settings",
 ]);
 
 function normalizeView(view: unknown): MainView {
+  if (view === "notes") return "logbook";
   if (typeof view === "string" && VALID_VIEWS.has(view as MainView)) {
     return view as MainView;
   }

@@ -1299,22 +1299,12 @@
 }
 
 .world-view,
-.office-view,
-.notes-view {
+.office-view {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 1rem;
   padding: 1rem;
   margin-bottom: 1rem;
-}
-
-.notes-header h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1.1rem;
-}
-
-.notes-header p {
-  margin: 0 0 0.75rem;
 }
 
 .notes-editor {
@@ -1329,6 +1319,15 @@
   font: inherit;
   line-height: 1.5;
   box-sizing: border-box;
+}
+
+.logbook-notes-section {
+  margin-bottom: 0.85rem;
+}
+
+.logbook-notes-editor {
+  min-height: 120px;
+  max-height: 220px;
 }
 
 .notes-editor:focus {
@@ -1382,7 +1381,7 @@
 
 .logbook-sheet {
   width: 100%;
-  min-width: 720px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
   line-height: 1.35;
@@ -1395,6 +1394,7 @@
 }
 
 .logbook-sheet th {
+  position: relative;
   text-align: left;
   font-weight: 600;
   font-size: 0.72rem;
@@ -1405,12 +1405,72 @@
   border-bottom: 2px solid var(--border);
   background: #1a2332;
   white-space: nowrap;
+  overflow: hidden;
+}
+
+.logbook-col-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.35rem;
+}
+
+.logbook-col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.logbook-col-resize:hover,
+body.logbook-col-resizing .logbook-col-resize {
+  background: rgba(110, 231, 183, 0.35);
+}
+
+body.logbook-col-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .logbook-sheet td {
   padding: 0.45rem 0.65rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logbook-sheet .col-time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.logbook-sheet .col-category {
+  white-space: nowrap;
+}
+
+.logbook-sheet .col-site {
+  white-space: nowrap;
+}
+
+.logbook-sheet .col-spent,
+.logbook-sheet .col-gained {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.logbook-sheet .col-event {
+  word-break: break-word;
+}
+
+.logbook-sheet .col-effects {
+  color: var(--muted);
+  font-size: 0.78rem;
+  word-break: break-word;
 }
 
 .logbook-sheet tbody tr:nth-child(even) td {
@@ -1419,41 +1479,6 @@
 
 .logbook-sheet tbody tr:hover td {
   background: rgba(110, 231, 183, 0.06);
-}
-
-.logbook-sheet .col-time {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  width: 1%;
-}
-
-.logbook-sheet .col-category {
-  white-space: nowrap;
-  width: 1%;
-}
-
-.logbook-sheet .col-site {
-  white-space: nowrap;
-  width: 1%;
-}
-
-.logbook-sheet .col-spent,
-.logbook-sheet .col-gained {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  min-width: 7rem;
-}
-
-.logbook-sheet .col-event {
-  min-width: 10rem;
-  max-width: 16rem;
-}
-
-.logbook-sheet .col-effects {
-  min-width: 12rem;
-  color: var(--muted);
-  font-size: 0.78rem;
 }
 
 .logbook-event-title {

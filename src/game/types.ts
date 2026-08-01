@@ -362,7 +362,6 @@ export type MainView =
   | "research"
   | "office"
   | "logbook"
-  | "notes"
   | "settings";
 
 export type LogCategory =

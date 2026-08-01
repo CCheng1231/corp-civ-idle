@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch } from "react";
 import {
   LOG_CATEGORY_LABELS,
   LOG_FILTER_GROUPS,
@@ -7,14 +8,65 @@ import {
   formatLogTimeCell,
   officeLabel,
 } from "../game/logbook";
-import type { GameState, LogCategory } from "../game/types";
+import type { GameAction, GameState, LogCategory } from "../game/types";
+
+const LOGBOOK_COL_STORAGE_KEY = "corp-civ-idle-logbook-col-widths";
+
+const LOGBOOK_COLUMNS = [
+  { id: "time", label: "Time" },
+  { id: "category", label: "Category" },
+  { id: "event", label: "Event" },
+  { id: "site", label: "Site" },
+  { id: "spent", label: "Spent" },
+  { id: "gained", label: "Gained" },
+  { id: "effects", label: "Effects" },
+] as const;
+
+type LogbookColumnId = (typeof LOGBOOK_COLUMNS)[number]["id"];
+
+const DEFAULT_COL_WIDTHS: Record<LogbookColumnId, number> = {
+  time: 118,
+  category: 108,
+  event: 240,
+  site: 72,
+  spent: 112,
+  gained: 112,
+  effects: 220,
+};
+
+const MIN_COL_WIDTH = 56;
+
+function loadColumnWidths(): Record<LogbookColumnId, number> {
+  try {
+    const raw = localStorage.getItem(LOGBOOK_COL_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_COL_WIDTHS };
+    const parsed = JSON.parse(raw) as Partial<Record<LogbookColumnId, number>>;
+    const next = { ...DEFAULT_COL_WIDTHS };
+    for (const col of LOGBOOK_COLUMNS) {
+      const val = parsed[col.id];
+      if (typeof val === "number" && val >= MIN_COL_WIDTH) {
+        next[col.id] = val;
+      }
+    }
+    return next;
+  } catch {
+    return { ...DEFAULT_COL_WIDTHS };
+  }
+}
 
 interface LogbookViewProps {
   state: GameState;
+  dispatch: Dispatch<GameAction>;
 }
 
-export function LogbookView({ state }: LogbookViewProps) {
+export function LogbookView({ state, dispatch }: LogbookViewProps) {
   const [filterId, setFilterId] = useState("all");
+  const [colWidths, setColWidths] = useState(loadColumnWidths);
+  const resizeRef = useRef<{
+    columnId: LogbookColumnId;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   const filtered = useMemo(() => {
     const group = LOG_FILTER_GROUPS.find((g) => g.id === filterId);
@@ -25,15 +77,75 @@ export function LogbookView({ state }: LogbookViewProps) {
     return state.activityLog.filter((entry) => allowed.has(entry.category));
   }, [state.activityLog, filterId]);
 
+  const persistWidths = useCallback((widths: Record<LogbookColumnId, number>) => {
+    localStorage.setItem(LOGBOOK_COL_STORAGE_KEY, JSON.stringify(widths));
+  }, []);
+
+  const startResize = useCallback(
+    (columnId: LogbookColumnId, clientX: number) => {
+      resizeRef.current = {
+        columnId,
+        startX: clientX,
+        startWidth: colWidths[columnId],
+      };
+      document.body.classList.add("logbook-col-resizing");
+    },
+    [colWidths],
+  );
+
+  useEffect(() => {
+    function onMouseMove(event: MouseEvent) {
+      const active = resizeRef.current;
+      if (!active) return;
+      const delta = event.clientX - active.startX;
+      const nextWidth = Math.max(MIN_COL_WIDTH, active.startWidth + delta);
+      setColWidths((prev) => ({ ...prev, [active.columnId]: nextWidth }));
+    }
+
+    function onMouseUp() {
+      if (!resizeRef.current) return;
+      resizeRef.current = null;
+      document.body.classList.remove("logbook-col-resizing");
+      setColWidths((prev) => {
+        persistWidths(prev);
+        return prev;
+      });
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      document.body.classList.remove("logbook-col-resizing");
+    };
+  }, [persistWidths]);
+
   return (
     <div className="logbook-view">
       <header className="logbook-header">
-        <h2>Logbook</h2>
+        <h2>Notes &amp; logbook</h2>
         <p className="muted">
-          Activity sheet — newest rows first. {state.activityLog.length} entries
-          stored.
+          Personal notes save with your game. Activity sheet below — newest rows
+          first ({state.activityLog.length} entries). Drag column edges to resize.
         </p>
       </header>
+
+      <section className="logbook-notes-section" aria-label="Player notes">
+        <textarea
+          className="notes-editor logbook-notes-editor"
+          value={state.playerNotes}
+          onChange={(event) =>
+            dispatch({
+              type: "UPDATE_PLAYER_NOTES",
+              notes: event.target.value,
+            })
+          }
+          placeholder="Bids, research plans, rival gossip…"
+          spellCheck
+          aria-label="Player notes"
+        />
+      </section>
 
       <div className="logbook-filters" role="tablist" aria-label="Log categories">
         {LOG_FILTER_GROUPS.map((group) => (
@@ -55,29 +167,36 @@ export function LogbookView({ state }: LogbookViewProps) {
       ) : (
         <div className="logbook-sheet-wrap">
           <table className="logbook-sheet">
+            <colgroup>
+              {LOGBOOK_COLUMNS.map((col) => (
+                <col
+                  key={col.id}
+                  style={{ width: `${colWidths[col.id]}px` }}
+                />
+              ))}
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col" className="col-time">
-                  Time
-                </th>
-                <th scope="col" className="col-category">
-                  Category
-                </th>
-                <th scope="col" className="col-event">
-                  Event
-                </th>
-                <th scope="col" className="col-site">
-                  Site
-                </th>
-                <th scope="col" className="col-spent">
-                  Spent
-                </th>
-                <th scope="col" className="col-gained">
-                  Gained
-                </th>
-                <th scope="col" className="col-effects">
-                  Effects
-                </th>
+                {LOGBOOK_COLUMNS.map((col) => (
+                  <th
+                    key={col.id}
+                    scope="col"
+                    className={`col-${col.id}`}
+                    style={{ width: `${colWidths[col.id]}px` }}
+                  >
+                    <span className="logbook-col-label">{col.label}</span>
+                    <span
+                      className="logbook-col-resize"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Resize ${col.label} column`}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        startResize(col.id, event.clientX);
+                      }}
+                    />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>

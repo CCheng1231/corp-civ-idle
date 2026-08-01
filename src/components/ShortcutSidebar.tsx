@@ -27,8 +27,7 @@ const SHORTCUTS: { view: MainView; label: string; short: string }[] = [
   { view: "operations", label: "Office sites", short: "Sites" },
   { view: "research", label: "Research", short: "R&D" },
   { view: "office", label: "Secretary", short: "Sec" },
-  { view: "logbook", label: "Logbook", short: "Log" },
-  { view: "notes", label: "Notes", short: "Note" },
+  { view: "logbook", label: "Notes & logbook", short: "Log" },
   { view: "settings", label: "Settings", short: "Set" },
 ];
 
@@ -93,7 +92,6 @@ export const MAIN_VIEW_TITLES: Record<MainView, string> = {
   operations: "Office sites & upgrades",
   research: "Research",
   office: "Office / Secretary",
-  logbook: "Logbook",
-  notes: "Notes",
+  logbook: "Notes & logbook",
   settings: "Settings",
 };

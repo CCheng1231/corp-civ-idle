@@ -2,7 +2,6 @@ import { type Dispatch } from "react";
 import { OverviewView } from "./OverviewView";
 import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
-import { NotesView } from "./NotesView";
 import { LogbookView } from "./LogbookView";
 import { OperationsView } from "./OperationsView";
 import { ResearchView } from "./ResearchView";
@@ -33,9 +32,7 @@ export function MainContent({ state, dispatch }: MainContentProps) {
     case "office":
       return <OfficeView state={state} dispatch={dispatch} />;
     case "logbook":
-      return <LogbookView state={state} />;
-    case "notes":
-      return <NotesView state={state} dispatch={dispatch} />;
+      return <LogbookView state={state} dispatch={dispatch} />;
     case "settings":
       return <SettingsView state={state} dispatch={dispatch} />;
     default:
