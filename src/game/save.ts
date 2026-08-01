@@ -16,12 +16,8 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
+import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
-import {
-  optimalCrewForProject,
-  projectById,
-  towerById,
-} from "./mapWorld";
 import {
   migrateLegacyResources,
   hqStartStructureLevels,
@@ -37,9 +33,7 @@ import type {
   ResearchId,
   UnitId,
   UnitRoster,
-  UnitAssignment,
   ContractorCategoryId,
-  ActiveProject,
 } from "./types";
 
 const VALID_VIEWS = new Set<MainView>([
@@ -195,56 +189,36 @@ function migrateUnitId(
   return DEFAULT_TIER1_UNIT[fallbackCategory ?? "farming"];
 }
 
-function migrateActiveProject(activeProject: ActiveProject | (ActiveProject & {
-  farmingAssigned?: number;
-  supportAssigned?: number;
-}) | null): ActiveProject | null {
-  if (!activeProject) return null;
-  if (activeProject.crewAssigned) {
-    try {
-      const project = projectById(activeProject.projectId);
-      const tower = towerById(project.towerId);
-      return {
-        ...activeProject,
-        towerId: project.towerId,
-        optimalCrew:
-          activeProject.optimalCrew ??
-          optimalCrewForProject(tower, project),
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  const legacy = activeProject as ActiveProject & {
-    farmingAssigned?: number;
-    supportAssigned?: number;
-  };
-  const crewAssigned: UnitAssignment = {};
-  if (legacy.farmingAssigned && legacy.farmingAssigned > 0) {
-    crewAssigned[DEFAULT_TIER1_UNIT.farming] = legacy.farmingAssigned;
-  }
-  if (legacy.supportAssigned && legacy.supportAssigned > 0) {
-    crewAssigned[DEFAULT_TIER1_UNIT.support] = legacy.supportAssigned;
-  }
-
-  try {
-    const project = projectById(activeProject.projectId);
-    const tower = towerById(project.towerId);
+function migrateJobFields(
+  parsed: LegacySave,
+  now: number,
+): Pick<GameState, "jobPostings" | "jobEngagements"> {
+  if (parsed.jobPostings?.length && parsed.jobEngagements) {
     return {
-      projectId: activeProject.projectId,
-      towerId: project.towerId,
-      bid: activeProject.bid,
-      endsAt: activeProject.endsAt,
-      officeId: activeProject.officeId,
-      crewAssigned,
-      optimalCrew:
-        activeProject.optimalCrew ??
-        optimalCrewForProject(tower, project),
+      jobPostings: parsed.jobPostings,
+      jobEngagements: parsed.jobEngagements.map((engagement) => {
+        if (engagement.endsAt) return engagement;
+        try {
+          const def = jobDefinitionById(engagement.definitionId);
+          return {
+            ...engagement,
+            endsAt: engagement.startedAt + def.durationSec * 1000,
+          };
+        } catch {
+          return {
+            ...engagement,
+            endsAt: engagement.startedAt + 3600 * 1000,
+          };
+        }
+      }),
     };
-  } catch {
-    return null;
   }
+
+  const jobPostings = initializeJobPostings(now);
+  return {
+    jobPostings,
+    jobEngagements: [],
+  };
 }
 
 function migrateBranchFields(
@@ -256,7 +230,6 @@ function migrateBranchFields(
   | "branchCoord"
   | "selectedTowerId"
   | "selectedCommercialHex"
-  | "activeProject"
 > {
   let branchEstablished = parsed.branchEstablished;
   if (branchEstablished === undefined) {
@@ -273,22 +246,17 @@ function migrateBranchFields(
     parsed.branchCoord ??
     (branchEstablished ? { ...MAP_BRANCH } : null);
 
-  let activeProject = migrateActiveProject(parsed.activeProject ?? null);
-  if (activeProject === null && parsed.activeProject) {
-    activeProject = null;
-  }
-
   return {
     branchEstablished,
     branchCoord,
     selectedTowerId: parsed.selectedTowerId ?? "metro_central",
     selectedCommercialHex: parsed.selectedCommercialHex ?? null,
-    activeProject,
   };
 }
 
 function normalizeSave(parsed: LegacySave): GameState {
   const base = createInitialState();
+  const now = Date.now();
   const structureLevelsByLocation = migrateStructureLevels(parsed);
   const researchLevels = migrateResearchLevels(parsed, base);
   const contractorsByLocation = migrateContractors(parsed);
@@ -355,6 +323,7 @@ function normalizeSave(parsed: LegacySave): GameState {
   };
 
   Object.assign(merged, migrateBranchFields(parsed, merged));
+  Object.assign(merged, migrateJobFields(parsed, now));
 
   merged.locationStats = computeLocationStats({
     structureLevelsByLocation: merged.structureLevelsByLocation,

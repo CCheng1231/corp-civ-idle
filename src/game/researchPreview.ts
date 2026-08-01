@@ -68,5 +68,18 @@ export function researchUpgradePreviewLines(
     });
   }
 
+  if (
+    lines.length === 0 &&
+    research.id === "portfolio_management" &&
+    currentLevel < research.maxLevel
+  ) {
+    lines.push({
+      label: "Engagement cap",
+      from: 3 + currentLevel,
+      to: 3 + targetLevel,
+      unit: " jobs",
+    });
+  }
+
   return lines;
 }

@@ -38,6 +38,7 @@ import {
   recomputeProductionRates,
   structureMaxLevel,
 } from "./structureBalance";
+import { initializeJobPostings } from "./jobs";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import {
   DEFAULT_TIER1_UNIT,
@@ -443,7 +444,8 @@ export function createInitialState(now = Date.now()): GameState {
     selectedTowerId: "metro_central",
     selectedCommercialHex: null,
     won: false,
-    activeProject: null,
+    jobPostings: initializeJobPostings(now),
+    jobEngagements: [],
     completedProjects: 0,
     phase: 1,
     view: "operations",

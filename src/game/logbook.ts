@@ -19,6 +19,9 @@ export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
   transfer_arrival: "Staff relocation",
   bid_start: "Bids",
   bid_complete: "Bids",
+  job_engage: "Jobs",
+  job_cancel: "Jobs",
+  job_complete: "Jobs",
   phase: "Milestones",
 };
 
@@ -38,6 +41,11 @@ export const LOG_FILTER_GROUPS: { id: string; label: string; categories: LogCate
     categories: ["transfer", "transfer_arrival"],
   },
   { id: "bids", label: "Bids", categories: ["bid_start", "bid_complete"] },
+  {
+    id: "jobs",
+    label: "Jobs",
+    categories: ["job_engage", "job_cancel", "job_complete"],
+  },
   { id: "milestones", label: "Milestones", categories: ["phase"] },
 ];
 

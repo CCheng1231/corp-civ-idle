@@ -199,5 +199,30 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "effects": {
       "projectPayoutMultPerLevel": 0.04
     }
+  },
+  {
+    "id": "portfolio_management",
+    "name": "Portfolio Management",
+    "description": "+1 concurrent job engagement per level (base cap 3)",
+    "maxLevel": 2,
+    "rndLevelRequired": 2,
+    "baseCost": {
+      "cash": 100,
+      "supply": 50,
+      "connection": 10,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "requires": [
+      {
+        "id": "planning_ahead",
+        "minLevel": 1
+      }
+    ],
+    "effects": {
+      "engagementCapPerLevel": 1
+    }
   }
 ];

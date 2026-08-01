@@ -19,7 +19,7 @@ if (!existsSync(workbookPath)) {
 const outTs = join(__dirname, "..", "src", "game", "researchData.ts");
 
 /** v1 scope — Option-type and Discover unlocks deferred. */
-const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14]);
+const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 20]);
 
 const ID_BY_NUMBER = {
   1: "eff_manuals_cash",
@@ -36,6 +36,7 @@ const ID_BY_NUMBER = {
   12: "five_sticky_fingers",
   13: "ethic_training",
   14: "bid_modeling",
+  20: "portfolio_management",
   15: "discover_video_studio",
   16: "discover_press_room",
   17: "discover_company_statue",
@@ -90,6 +91,12 @@ function effectFromRow(type, effectText, name) {
   }
   if (type === "Unlock" && /Branch/i.test(name)) {
     return {};
+  }
+  if (/Portfolio Management|concurrent job engagement/i.test(name + effectText)) {
+    return { engagementCapPerLevel: 1 };
+  }
+  if (/Portfolio Management|concurrent job engagement/i.test(effectText)) {
+    return { engagementCapPerLevel: 1 };
   }
   return {};
 }

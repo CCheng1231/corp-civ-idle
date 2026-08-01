@@ -69,7 +69,8 @@ export type ResearchId =
   | "eff_manuals_grep"
   | "planning_ahead"
   | "branch_management"
-  | "bid_modeling";
+  | "bid_modeling"
+  | "portfolio_management";
 
 export type MapRegion = "metropolis" | "suburban" | "rural" | "countryside";
 
@@ -100,6 +101,7 @@ export interface ProgressionEffects {
   bidBonus?: number;
   projectDurationMultPerLevel?: number;
   projectPayoutMultPerLevel?: number;
+  engagementCapPerLevel?: number;
   officeSpacePerLevel?: number;
   powerCapacityPerLevel?: number;
 }
@@ -209,6 +211,88 @@ export interface ActiveProject {
   optimalCrew: number;
 }
 
+/** @deprecated Legacy tower contracts — migrated to job engagements. */
+export type { ActiveProject as LegacyActiveProject };
+
+export type BusinessType =
+  | "theme_park"
+  | "hospital"
+  | "science_lab"
+  | "restaurant"
+  | "retail_shop"
+  | "research_lab"
+  | "big_corp"
+  | "start_up"
+  | "gov"
+  | "family_business"
+  | "mall_management";
+
+export type JobTier = 1 | 2;
+export type JobSize = "small" | "mid" | "huge";
+export type JobPostingStatus = "open" | "completed" | "expired";
+export type CompletionBand =
+  | "none"
+  | "minimal"
+  | "in_progress"
+  | "midway"
+  | "almost"
+  | "finishing";
+
+export interface JobDefinition {
+  id: string;
+  towerId: TowerId;
+  businessType: BusinessType;
+  tier: JobTier;
+  size: JobSize;
+  title: string;
+  description: string;
+  /** Units on site for this many seconds per engagement, then return to office. */
+  durationSec: number;
+  expirationSec: number;
+  /** Visible on T1 — cash earned per unit-hour of effective work. */
+  cashPerUnitHour: number;
+  /** Hidden total work capacity (unit-hours). */
+  unitHoursTotal: number;
+  bonusPercent: number;
+  requiredCategory: ContractorCategoryId;
+  minUnitTier: number;
+  optionalIntelBoost: boolean;
+  completionPayout: Partial<Resources>;
+}
+
+/** Shared tower posting — multiplayer-ready contributor ledger. */
+export interface JobContributor {
+  playerId: string;
+  unitHours: number;
+}
+
+export interface JobPosting {
+  id: string;
+  definitionId: string;
+  towerId: TowerId;
+  spawnedAt: number;
+  expiresAt: number;
+  unitHoursCompleted: number;
+  status: JobPostingStatus;
+  contributors: JobContributor[];
+}
+
+export interface JobEngagement {
+  id: string;
+  postingId: string;
+  definitionId: string;
+  towerId: TowerId;
+  officeId: OfficeLocationId;
+  crewAssigned: UnitAssignment;
+  startedAt: number;
+  /** When assigned units return to the office (shift ends). */
+  endsAt: number;
+  lastAccruedAt: number;
+  /** Unpaid effective earnings for this engagement (paid when shift ends or on cancel). */
+  earnedSoFar: number;
+  unitHoursApplied: number;
+}
+
 export interface StructureBuildJob {
   structureId: StructureId;
   /** Level after this job finishes (used for sheet build time). */
@@ -241,7 +325,10 @@ export interface GameState {
   selectedTowerId: TowerId | null;
   selectedCommercialHex: AxialCoord | null;
   won: boolean;
-  activeProject: ActiveProject | null;
+  /** @deprecated Migrated to jobEngagements on load. */
+  activeProject?: ActiveProject | null;
+  jobPostings: JobPosting[];
+  jobEngagements: JobEngagement[];
   completedProjects: number;
   phase: 1 | 2 | 3;
   view: MainView;
@@ -288,6 +375,9 @@ export type LogCategory =
   | "transfer_arrival"
   | "bid_start"
   | "bid_complete"
+  | "job_engage"
+  | "job_cancel"
+  | "job_complete"
   | "phase";
 
 export interface LogEntry {
@@ -325,6 +415,12 @@ export type GameAction =
       unitId: UnitId;
       count?: number;
     }
+  | {
+      type: "ENGAGE_JOB";
+      postingId: string;
+      crewAssigned: UnitAssignment;
+    }
+  | { type: "CANCEL_JOB_ENGAGEMENT"; engagementId: string }
   | {
       type: "START_PROJECT";
       projectId: ProjectId;

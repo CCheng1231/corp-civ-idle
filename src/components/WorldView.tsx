@@ -1,4 +1,5 @@
 import { type Dispatch } from "react";
+import { jobDefinitionById } from "../game/jobs";
 import {
   BRANCH_OPENING_COST,
   REGION_LABELS,
@@ -7,7 +8,6 @@ import {
   canEstablishBranch,
   commercialSiteAt,
   isAvailableCommercialLot,
-  projectById,
   towerAtCoord,
   towerById,
   regionAtCoord,
@@ -15,7 +15,6 @@ import {
 import {
   formatNumber,
 } from "../game/constants";
-import { formatTimerRemaining } from "../game/timers";
 import {
   MAP_GOV,
   axialEquals,
@@ -46,13 +45,16 @@ function hexVariant(
   if (officeId === "branch") return "branch";
   if (towerAtCoord(coord)) return "tower";
   if (isAvailableCommercialLot(coord, state)) return "commercial";
-  if (state.activeProject) {
-    try {
-      const project = projectById(state.activeProject.projectId);
-      const tower = towerById(project.towerId);
-      if (axialEquals(coord, tower.coord)) return "active";
-    } catch {
-      /* ignore */
+  if (state.jobEngagements.length > 0) {
+    const activeTowerId =
+      state.selectedTowerId ?? state.jobEngagements[0]?.towerId;
+    if (activeTowerId) {
+      try {
+        const tower = towerById(activeTowerId);
+        if (axialEquals(coord, tower.coord)) return "active";
+      } catch {
+        /* ignore */
+      }
     }
   }
   return "default";
@@ -78,14 +80,11 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
   const cells = generateHexagonMap();
   const bounds = hexBounds(cells);
 
-  let activeName: string | null = null;
-  if (state.activeProject) {
-    try {
-      activeName = projectById(state.activeProject.projectId).name;
-    } catch {
-      activeName = null;
-    }
-  }
+  const engagementCount = state.jobEngagements.length;
+  const engagementSummary =
+    engagementCount > 0
+      ? `${engagementCount} active job engagement${engagementCount === 1 ? "" : "s"}`
+      : null;
 
   const selectedCommercial = state.selectedCommercialHex
     ? commercialSiteAt(state.selectedCommercialHex)
@@ -253,14 +252,22 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
         </div>
       )}
 
-      {activeName && state.activeProject && (
+      {engagementSummary && (
         <div className="travel-banner">
-          Crew on contract: <strong>{activeName}</strong> —{" "}
-          {formatTimerRemaining(
-            state,
-            state.activeProject.endsAt,
-            Date.now(),
-          ).replace("Finishing…", "Completing…")}
+          Crew on jobs: <strong>{engagementSummary}</strong>
+          {state.jobEngagements.slice(0, 2).map((e) => {
+            try {
+              const def = jobDefinitionById(e.definitionId);
+              return (
+                <span key={e.id}>
+                  {" "}
+                  · {def.title} (~${formatNumber(e.earnedSoFar)} accrued)
+                </span>
+              );
+            } catch {
+              return null;
+            }
+          })}
         </div>
       )}
     </div>

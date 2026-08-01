@@ -11,7 +11,6 @@ import {
   totalStructureLevel,
   WIN_NET_WORTH,
   recruitBatchCost,
-  isProjectUnlocked,
   canAffordAtOffice,
   applyOfficeCost,
   canBuildStructure,
@@ -21,7 +20,6 @@ import {
   MAX_STRUCTURE_QUEUE,
   unitAvailableAt,
   contractorTransferDurationMs,
-  rosterAt,
   OFFICE_LABELS,
   RECRUIT_MS_PER_CONTRACTOR,
   MAX_RECRUIT_BATCH,
@@ -29,19 +27,18 @@ import {
   OFFICE_EXPANSION_STRUCTURE_ID,
 } from "./constants";
 import {
-  projectById,
-  towerById,
-  optimalCrewForProject,
+  cancelJobEngagement,
+  engageJobPosting,
+  jobDefinitionById,
+  processJobEngagements,
+} from "./jobs";
+import {
   BRANCH_OPENING_COST,
   branchManagementResearched,
   commercialSiteAt,
 } from "./mapWorld";
 import {
-  addAssignmentToRoster,
-  canAssignFromRoster,
-  computeMissionModifiers,
   formatAssignmentSummary,
-  subtractAssignmentFromRoster,
   unitDefinition,
 } from "./unitEffects";
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
@@ -169,14 +166,6 @@ export function computeProjectBonuses(state: GameState) {
   }
 
   return { durationMult, payoutMult };
-}
-
-function scalePayout(payout: ResourceCost, mult: number): ResourceCost {
-  const scaled: ResourceCost = {};
-  for (const [key, value] of Object.entries(payout)) {
-    scaled[key as keyof ResourceCost] = (value ?? 0) * mult;
-  }
-  return scaled;
 }
 
 function withDerivedStats(state: GameState): GameState {
@@ -354,8 +343,11 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
     now,
   );
   return withDerivedStats(
-    processRecruitmentJobs(
-      processContractorTransfers(processStructureQueues(normalized, now), now),
+    runJobSimulation(
+      processRecruitmentJobs(
+        processContractorTransfers(processStructureQueues(normalized, now), now),
+        now,
+      ),
       now,
     ),
   );
@@ -373,87 +365,25 @@ function tickProduction(state: GameState, deltaSec: number): GameState {
   return applyVictoryCheck(next);
 }
 
-function mergeCosts(a: ResourceCost, b: ResourceCost): ResourceCost {
-  const merged: ResourceCost = { ...a };
-  for (const [key, val] of Object.entries(b)) {
-    const k = key as keyof ResourceCost;
-    merged[k] = (merged[k] ?? 0) + (val ?? 0);
+function applyJobPhaseMilestone(state: GameState): GameState {
+  if (state.completedProjects >= 3 && state.phase === 1) {
+    return appendActivityLogs(
+      { ...state, phase: 2 },
+      [
+        {
+          category: "phase",
+          summary: "Entered Phase 2 — Rival bids & espionage",
+          impacts: ["Unlocked with 3 completed jobs"],
+        },
+      ],
+    );
   }
-  return merged;
+  return state;
 }
 
-function resolveActiveProjectIfDue(state: GameState, now: number): GameState {
-  if (
-    !state.activeProject ||
-    timerHasNotElapsed(now, state.activeProject.endsAt, state)
-  ) {
-    return state;
-  }
-
-  let project;
-  try {
-    project = projectById(state.activeProject!.projectId);
-  } catch {
-    return { ...state, activeProject: null };
-  }
-
-  let next = structuredClone(state);
-  const optimal = next.activeProject!.optimalCrew;
-  const crewAssigned = next.activeProject!.crewAssigned;
-  const { payoutMult: basePayMult, durationMult: _ignoredDuration } =
-    computeProjectBonuses(next);
-  const mission = computeMissionModifiers(crewAssigned, project, optimal);
-  const payoutMult = basePayMult * mission.payoutMult;
-  next.resources = addResources(
-    next.resources,
-    scalePayout(project.totalPayout, payoutMult),
-  );
-  next.resources.reputation += project.reputationGain * payoutMult;
-
-  const officeId = next.activeProject!.officeId;
-  next.contractorsByLocation[officeId] = addAssignmentToRoster(
-    next.contractorsByLocation[officeId],
-    crewAssigned,
-  );
-
-  next.completedProjects += 1;
-  next.activeProject = null;
-  next.netWorth = computeNetWorth(next.resources, next.locationStats);
-  next = applyVictoryCheck(next);
-
-  if (next.completedProjects >= 3 && next.phase === 1) {
-    next.phase = 2;
-    next = appendActivityLogs(next, [
-      {
-        category: "phase",
-        summary: "Entered Phase 2 — Rival bids & espionage",
-        impacts: ["Unlocked with 3 completed jobs"],
-      },
-    ]);
-  }
-
-  const gained: ResourceCost = scalePayout(project.totalPayout, payoutMult);
-  gained.reputation =
-    (gained.reputation ?? 0) + project.reputationGain * payoutMult;
-
-  const crewNote =
-    mission.payoutMult >= 0.999
-      ? "Full contract value"
-      : `${Math.round(mission.payoutMult * 100)}% payout after crew modifiers`;
-
-  return appendActivityLogs(next, [
-    {
-      category: "bid_complete",
-      summary: `Completed ${project.name}`,
-      officeId,
-      gained,
-      impacts: [
-        `Crew returned to ${OFFICE_LABELS[officeId]}`,
-        crewNote,
-        `${next.completedProjects} jobs completed firm-wide`,
-      ],
-    },
-  ]);
+function runJobSimulation(state: GameState, now: number): GameState {
+  const processed = processJobEngagements(state, now);
+  return applyVictoryCheck(applyJobPhaseMilestone(withDerivedStats(processed)));
 }
 
 function advanceSimulatedTime(
@@ -470,7 +400,7 @@ function advanceSimulatedTime(
   next = processStructureQueues(next, input.eventNow);
   next = processContractorTransfers(next, input.eventNow);
   next = processRecruitmentJobs(next, input.eventNow);
-  next = resolveActiveProjectIfDue(next, input.eventNow);
+  next = runJobSimulation(next, input.eventNow);
   next.lastTickAt = input.lastTickAt;
   return next;
 }
@@ -814,61 +744,39 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       ]);
     }
 
-    case "START_PROJECT": {
-      if (state.activeProject) return state;
-      let project;
-      try {
-        project = projectById(action.projectId);
-      } catch {
-        return state;
-      }
-      if (state.selectedTowerId !== project.towerId) return state;
-      const officeId = state.selectedOffice;
-      const officeRoster = rosterAt(state, officeId);
-      if (!isProjectUnlocked(state, project)) return state;
-
-      const crewAssigned = action.crewAssigned;
-      if (!canAssignFromRoster(officeRoster, crewAssigned)) return state;
-
-      const mergedBid = mergeCosts(project.minBid, action.bid);
-      if (!canAffordAtOffice(state, officeId, mergedBid)) return state;
-
-      const tower = towerById(project.towerId);
-      const optimalCrew = optimalCrewForProject(tower, project);
-      const { durationMult: baseDurationMult } = computeProjectBonuses(state);
-      const mission = computeMissionModifiers(crewAssigned, project, optimalCrew);
-      const durationMs =
-        project.durationSec * 1000 * baseDurationMult * mission.durationMult;
-
-      const next = applyOfficeCost(state, officeId, mergedBid);
-      next.contractorsByLocation[officeId] = subtractAssignmentFromRoster(
-        officeRoster,
-        crewAssigned,
+    case "ENGAGE_JOB": {
+      const now = Date.now();
+      const before = state.jobEngagements.length;
+      let next = engageJobPosting(
+        state,
+        action.postingId,
+        action.crewAssigned,
+        now,
       );
-      next.activeProject = {
-        projectId: project.id,
-        towerId: project.towerId,
-        bid: mergedBid,
-        crewAssigned,
-        officeId,
-        optimalCrew,
-        endsAt: scheduleTimerAt(state, Date.now(), durationMs),
-      };
+      if (next.jobEngagements.length <= before) return state;
+      const engagement = next.jobEngagements[next.jobEngagements.length - 1];
+      const def = jobDefinitionById(engagement.definitionId);
       return appendActivityLogs(next, [
         {
-          category: "bid_start",
-          summary: `Accepted contract: ${project.name} (${tower.name})`,
-          officeId,
-          spent: mergedBid,
+          category: "job_engage",
+          summary: `Engaged: ${def.title}`,
+          officeId: engagement.officeId,
           impacts: [
-            formatAssignmentSummary(crewAssigned),
-            `Job duration ~${Math.round(durationMs / 1000)}s`,
-            `Expected payout ~${Math.round(mission.payoutMult * 100)}% before research/structure bonuses`,
+            formatAssignmentSummary(engagement.crewAssigned),
+            `Shift length ~${Math.round(
+              jobDefinitionById(engagement.definitionId).durationSec / 3600,
+            )} hr — units return when shift ends`,
           ],
         },
       ]);
     }
 
+    case "CANCEL_JOB_ENGAGEMENT": {
+      const now = Date.now();
+      return cancelJobEngagement(state, action.engagementId, now);
+    }
+
+    case "START_PROJECT":
     case "COMPLETE_PROJECT":
       return state;
 
