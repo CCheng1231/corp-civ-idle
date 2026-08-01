@@ -1,5 +1,6 @@
 import type { Dispatch } from "react";
 import type { GameAction, GameState } from "../game/types";
+import secretaryPortrait from "../assets/secretary.jpg";
 import { LocationStructureQueues } from "./LocationStructureQueues";
 import { ContractorOfficeRoster } from "./ContractorOfficeRoster";
 
@@ -21,10 +22,12 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
     <div className="office-view">
       <div className="office-scene">
         <div className="secretary-desk">
-          <div className="secretary-portrait" aria-hidden>
-            <span>Secretary</span>
-            <small>Anime office companion — art placeholder</small>
-          </div>
+          <img
+            src={secretaryPortrait}
+            alt=""
+            className="secretary-portrait"
+            aria-hidden
+          />
           <div className="dialogue-box">
             <p>{line}</p>
             <p className="muted">

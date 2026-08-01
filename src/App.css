@@ -15,10 +15,10 @@
 
 .resource-bar {
   display: grid;
-  grid-template-columns: 220px 1fr auto;
-  gap: 1rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
   align-items: center;
-  padding: 0.85rem 1.25rem;
+  padding: 0.45rem 5.25rem 0.45rem 0.85rem;
   border-bottom: 1px solid var(--border);
   background: rgba(15, 20, 25, 0.97);
   backdrop-filter: blur(10px);
@@ -26,66 +26,105 @@
 
 .brand {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .brand-mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.75rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.5rem;
   display: grid;
   place-items: center;
   font-weight: 700;
+  font-size: 0.72rem;
   background: linear-gradient(135deg, var(--accent-2), #4f46e5);
 }
 
+.brand strong {
+  font-size: 0.92rem;
+}
+
 .phase-tag {
-  display: block;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .resource-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .resource-chip {
+  flex: 0 0 7rem;
+  width: 7rem;
+  height: 2.95rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  padding: 0.35rem 0.65rem;
-  min-width: 6.5rem;
+  border-radius: 0.5rem;
+  padding: 0.24rem 0.4rem;
+}
+
+.resource-chip-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+  min-height: 0;
+  flex: 1;
 }
 
 .resource-label {
-  display: block;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .resource-value {
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .resource-rate {
-  display: block;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: var(--accent);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .resource-cap-bar {
-  margin: 0.25rem 0 0.15rem;
-  height: 0.3rem;
+  flex-shrink: 0;
+  height: 0.14rem;
+  margin-top: 0.1rem;
   border-radius: 999px;
   background: var(--panel-2);
-  border: 1px solid var(--border);
   overflow: hidden;
+}
+
+.resource-cap-bar--empty {
+  visibility: hidden;
 }
 
 .resource-cap-fill {
@@ -107,29 +146,87 @@
 }
 
 .net-worth {
+  flex-shrink: 0;
+  min-width: 9.5rem;
   text-align: right;
-  font-size: 0.85rem;
+}
+
+.net-worth-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.net-worth-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.net-worth-goal {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.audio-controls {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.45rem;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.28rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: rgba(15, 20, 25, 0.92);
+}
+
+.audio-volume-slider {
+  width: 3.5rem;
+  height: 0.2rem;
+  accent-color: var(--accent-2);
+  cursor: pointer;
+}
+
+.audio-mute-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.audio-mute-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.audio-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  display: block;
 }
 
 .net-worth strong {
-  display: block;
   font-family: "JetBrains Mono", monospace;
-  font-size: 1.15rem;
+  font-size: 0.88rem;
   color: var(--warn);
 }
 
-.contractors {
-  display: block;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
 .goal-bar {
-  margin: 0.35rem 0;
-  height: 0.35rem;
+  margin-top: 0.2rem;
+  height: 0.18rem;
   border-radius: 999px;
   background: var(--panel-2);
-  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -1720,21 +1817,14 @@
 }
 
 .secretary-portrait {
+  width: 100%;
   min-height: 220px;
+  max-height: 420px;
   border-radius: 1rem;
-  border: 1px dashed var(--border);
-  background:
-    linear-gradient(160deg, rgba(124, 156, 255, 0.25), rgba(236, 72, 153, 0.18)),
-    var(--panel-2);
-  display: grid;
-  place-content: center;
-  text-align: center;
-  gap: 0.35rem;
-}
-
-.secretary-portrait span {
-  font-size: 1.25rem;
-  font-weight: 700;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 
 .dialogue-box {
@@ -1821,22 +1911,27 @@
 
   .resource-bar {
     grid-template-columns: 1fr;
-    padding: 0.55rem 0.65rem;
-    gap: 0.45rem;
+    padding: 2.15rem 0.55rem 0.45rem;
+    gap: 0.35rem;
   }
 
   .brand {
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .brand-mark {
-    width: 2.1rem;
-    height: 2.1rem;
-    font-size: 0.85rem;
+    width: 1.65rem;
+    height: 1.65rem;
+    font-size: 0.65rem;
   }
 
   .brand strong {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
+  }
+
+  .audio-controls {
+    top: calc(0.35rem + env(safe-area-inset-top, 0px));
+    right: 0.4rem;
   }
 
   .resource-grid {
@@ -1850,23 +1945,23 @@
   }
 
   .resource-chip {
-    flex: 0 0 auto;
-    min-width: 5.25rem;
-    padding: 0.3rem 0.5rem;
+    flex: 0 0 7rem;
+    width: 7rem;
+    height: 2.95rem;
+    padding: 0.22rem 0.38rem;
   }
 
   .net-worth {
     text-align: left;
-    font-size: 0.8rem;
+    min-width: 0;
+  }
+
+  .net-worth-row {
+    justify-content: flex-start;
   }
 
   .net-worth strong {
-    font-size: 1rem;
-  }
-
-  .contractors {
-    font-size: 0.72rem;
-    line-height: 1.35;
+    font-size: 0.82rem;
   }
 
   .layout {

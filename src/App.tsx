@@ -1,10 +1,12 @@
 import { useEffect, useReducer, useState } from "react";
+import { AudioControls } from "./components/AudioControls";
 import { ResourceBar } from "./components/ResourceBar";
 import { ShortcutSidebar } from "./components/ShortcutSidebar";
 import { MainContent } from "./components/MainContent";
 import { gameReducer } from "./game/engine";
 import { loadGameState, saveGameState } from "./game/save";
 import { WIN_NET_WORTH, formatNumber } from "./game/constants";
+import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
 import "./App.css";
 
@@ -13,6 +15,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useGameLoop(dispatch);
+  useBgm(state.settings.masterVolume, state.settings.musicMuted);
 
   useEffect(() => {
     saveGameState(state);
@@ -25,6 +28,7 @@ function App() {
   return (
     <div className="app-shell">
       <div className="app-top-chrome">
+        <AudioControls settings={state.settings} dispatch={dispatch} />
         <ResourceBar state={state} />
         {state.won && (
           <div className="victory-banner" role="status">

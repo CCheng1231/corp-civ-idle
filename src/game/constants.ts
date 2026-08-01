@@ -367,6 +367,7 @@ export function createInitialState(now = Date.now()): GameState {
     lastTickAt: now,
     settings: {
       masterVolume: 0.6,
+      musicMuted: false,
       uiScale: 1,
       notifications: true,
       ignoreTimers: false,

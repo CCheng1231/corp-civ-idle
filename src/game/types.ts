@@ -225,6 +225,7 @@ export interface GameState {
 
 export interface GameSettings {
   masterVolume: number;
+  musicMuted: boolean;
   uiScale: number;
   notifications: boolean;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
