@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  CONTRACTOR_TYPES,
   OFFICE_LABELS,
   RESEARCH,
   STRUCTURES,
@@ -9,6 +8,8 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
+import { unitDefinition } from "../game/unitEffects";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import { overviewOfficeOptions } from "../game/mapWorld";
 import { formatTimerRemaining } from "../game/timers";
 import type { GameState, OfficeLocationId } from "../game/types";
@@ -138,15 +139,11 @@ export function OverviewView({ state }: OverviewViewProps) {
         ) : (
           <ul className="build-queue">
             {hireQueue.map((job) => {
-              const typeDef = CONTRACTOR_TYPES.find(
-                (t) => t.id === job.contractorType,
-              );
+              const unit = unitDefinition(job.unitId);
               return (
                 <li key={job.id}>
                   <span className="queue-role">Hiring</span>
-                  <span className="queue-name">
-                    {typeDef?.flavorTitle ?? typeDef?.role ?? job.contractorType}
-                  </span>
+                  <span className="queue-name">{unit.name}</span>
                   <span className="queue-status">
                     {formatTimerRemaining(state, job.completesAt, now)}
                   </span>
@@ -164,16 +161,21 @@ export function OverviewView({ state }: OverviewViewProps) {
           {hireQueue.length > 0 && ` · ${hireQueue.length} arriving`}
         </p>
         <ul className="office-site-staff-list">
-          {CONTRACTOR_TYPES.map((type) => (
-            <li key={type.id}>
-              <span className="office-site-staff-role">{type.flavorTitle}</span>
-              <span className="office-site-staff-count muted">
-                {type.role}
-              </span>
-              <strong>×{roster[type.id]}</strong>
-            </li>
-          ))}
+          {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
+            (unit) => (
+              <li key={unit.id}>
+                <span className="office-site-staff-role">{unit.name}</span>
+                <span className="office-site-staff-count muted">
+                  T{unit.tier} · {unit.category}
+                </span>
+                <strong>×{roster[unit.id] ?? 0}</strong>
+              </li>
+            ),
+          )}
         </ul>
+        {RECRUITMENT_UNITS.every((unit) => (roster[unit.id] ?? 0) <= 0) && (
+          <p className="muted">No units stationed at this site.</p>
+        )}
       </section>
     </div>
   );

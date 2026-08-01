@@ -1,21 +1,22 @@
 import { type Dispatch } from "react";
 import {
-  CONTRACTOR_TYPES,
   CONTRACTOR_TRANSFER_SEC_PER_HEX,
   OFFICE_LABELS,
   contractorTransferDurationMs,
   contractorTransferHexDistance,
-  contractorsAvailableAt,
   otherOffice,
   totalWorkforce,
+  unitAvailableAt,
 } from "../game/constants";
-import { formatTimerRemaining } from "../game/timers";
 import { ownedOfficeIds } from "../game/mapWorld";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
+import { unitDefinition } from "../game/unitEffects";
+import { formatTimerRemaining } from "../game/timers";
 import type {
-  ContractorTypeId,
   GameAction,
   GameState,
   OfficeLocationId,
+  UnitId,
 } from "../game/types";
 
 interface ContractorOfficeRosterProps {
@@ -23,9 +24,14 @@ interface ContractorOfficeRosterProps {
   dispatch: Dispatch<GameAction>;
 }
 
-function transferLabelSec(state: GameState, from: OfficeLocationId, to: OfficeLocationId): string {
+function transferLabelSec(
+  state: GameState,
+  from: OfficeLocationId,
+  to: OfficeLocationId,
+  unitId: UnitId,
+): string {
   const hexes = contractorTransferHexDistance(state, from, to);
-  const sec = contractorTransferDurationMs(state, from, to) / 1000;
+  const sec = contractorTransferDurationMs(state, from, to, unitId, 1) / 1000;
   return `${hexes} hex · ${sec}s (${CONTRACTOR_TRANSFER_SEC_PER_HEX}s/hex)`;
 }
 
@@ -42,13 +48,13 @@ export function ContractorOfficeRoster({
   function sendOne(
     from: OfficeLocationId,
     to: OfficeLocationId,
-    contractorType: ContractorTypeId,
+    unitId: UnitId,
   ) {
     dispatch({
       type: "START_CONTRACTOR_TRANSFER",
       from,
       to,
-      contractorType,
+      unitId,
       count: 1,
     });
   }
@@ -60,14 +66,13 @@ export function ContractorOfficeRoster({
         {state.branchEstablished ? (
           <>
             HQ and Branch are {hqBranchHexes} hexes apart on the map.
-            Relocating staff takes {CONTRACTOR_TRANSFER_SEC_PER_HEX}s per hex (
-            {contractorTransferDurationMs(state, "hq", "branch") / 1000}s
-            between sites).
+            Relocating staff takes {CONTRACTOR_TRANSFER_SEC_PER_HEX}s per hex.
+            Bike Couriers shorten travel by 1 hex each.
           </>
         ) : (
           <>Open a branch on the regional map to relocate staff between sites.</>
         )}{" "}
-        Crew in transit are unavailable until they arrive.
+        Crew in transit or on contracts are unavailable until they return.
       </p>
 
       <div className="contractor-roster-grid">
@@ -75,49 +80,58 @@ export function ContractorOfficeRoster({
           const roster = state.contractorsByLocation[officeId];
           const destination =
             offices.length > 1 ? otherOffice(officeId) : null;
+          const visibleUnits = RECRUITMENT_UNITS.filter(
+            (unit) => (roster[unit.id] ?? 0) > 0,
+          );
+
           return (
             <div key={officeId} className="contractor-roster-card">
               <div className="contractor-roster-head">
                 <strong>{OFFICE_LABELS[officeId]}</strong>
                 <span className="muted">{totalWorkforce(roster)} on site</span>
               </div>
-              <ul className="contractor-roster-list">
-                {CONTRACTOR_TYPES.map((type) => {
-                  const count = roster[type.id];
-                  const canSend = contractorsAvailableAt(
-                    state,
-                    officeId,
-                    type.id,
-                  );
-                  return (
-                    <li key={type.id} className="contractor-roster-row">
-                      <div className="contractor-roster-info">
-                        <span className="contractor-role">{type.role}</span>
-                        <span className="contractor-count">×{count}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-small"
-                        disabled={canSend < 1 || !destination}
-                        title={
-                          destination
-                            ? transferLabelSec(state, officeId, destination)
-                            : "Open a branch to transfer staff"
-                        }
-                        onClick={() => {
-                          if (destination) {
-                            sendOne(officeId, destination, type.id);
+              {visibleUnits.length === 0 ? (
+                <p className="muted">No units stationed here.</p>
+              ) : (
+                <ul className="contractor-roster-list">
+                  {visibleUnits.map((unit) => {
+                    const count = roster[unit.id] ?? 0;
+                    const canSend = unitAvailableAt(state, officeId, unit.id);
+                    return (
+                      <li key={unit.id} className="contractor-roster-row">
+                        <div className="contractor-roster-info">
+                          <span className="contractor-role">{unit.name}</span>
+                          <span className="contractor-count">×{count}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-small"
+                          disabled={canSend < 1 || !destination}
+                          title={
+                            destination
+                              ? transferLabelSec(
+                                  state,
+                                  officeId,
+                                  destination,
+                                  unit.id,
+                                )
+                              : "Open a branch to transfer staff"
                           }
-                        }}
-                      >
-                        {destination
-                          ? `Send 1 → ${OFFICE_LABELS[destination]}`
-                          : "No branch yet"}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                          onClick={() => {
+                            if (destination) {
+                              sendOne(officeId, destination, unit.id);
+                            }
+                          }}
+                        >
+                          {destination
+                            ? `Send 1 → ${OFFICE_LABELS[destination]}`
+                            : "No branch yet"}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           );
         })}
@@ -128,9 +142,7 @@ export function ContractorOfficeRoster({
           <h4>In transit</h4>
           <ul className="build-queue">
             {state.contractorTransfers.map((transfer) => {
-              const typeDef = CONTRACTOR_TYPES.find(
-                (t) => t.id === transfer.contractorType,
-              );
+              const unit = unitDefinition(transfer.unitId);
               const remaining = formatTimerRemaining(
                 state,
                 transfer.arrivesAt,
@@ -140,8 +152,7 @@ export function ContractorOfficeRoster({
                 <li key={transfer.id}>
                   <span className="queue-role">{transfer.count}×</span>
                   <span className="queue-name">
-                    {typeDef?.role ?? transfer.contractorType}:{" "}
-                    {OFFICE_LABELS[transfer.from]} →{" "}
+                    {unit.name}: {OFFICE_LABELS[transfer.from]} →{" "}
                     {OFFICE_LABELS[transfer.to]}
                   </span>
                   <span className="queue-status">{remaining}</span>

@@ -7,7 +7,6 @@ import {
   powerAvailable,
   rosterAt,
   splitResourceCost,
-  supportStaffForMission,
 } from "../game/constants";
 import {
   OFFICE_TOWERS,
@@ -15,7 +14,12 @@ import {
   projectsForTower,
   towerById,
 } from "../game/mapWorld";
-import type { GameAction, GameState, ProjectDefinition } from "../game/types";
+import { canAssignFromRoster } from "../game/unitEffects";
+import {
+  MissionCrewPicker,
+  emptyAssignmentForProject,
+} from "./MissionCrewPicker";
+import type { GameAction, GameState, ProjectDefinition, UnitAssignment } from "../game/types";
 
 function mergedProjectBid(project: ProjectDefinition) {
   return {
@@ -34,7 +38,7 @@ function submitContractLabel(
   state: GameState,
   officeId: GameState["selectedOffice"],
   project: ProjectDefinition,
-  farmingAssigned: number,
+  assignment: UnitAssignment,
   busy: boolean,
 ): string {
   if (busy) return "Crew busy (job in progress)";
@@ -43,10 +47,11 @@ function submitContractLabel(
   }
 
   const roster = rosterAt(state, officeId);
-  if (farmingAssigned < 1) return "Assign at least 1 farming crew";
-  if (roster.farming < farmingAssigned) {
-    return `Need ${farmingAssigned} farming at ${OFFICE_LABELS[officeId]} (${roster.farming} here)`;
+  if (!canAssignFromRoster(roster, assignment)) {
+    return "Assign at least 1 farming unit";
   }
+
+  if (state.settings.ignoreCosts) return "Take contract";
 
   const merged = mergedProjectBid(project);
   const { global, power } = splitResourceCost(merged);
@@ -78,21 +83,20 @@ export function ProjectPanel({ state, dispatch }: ProjectPanelProps) {
   const officeRoster = rosterAt(state, officeId);
   const towerId = state.selectedTowerId ?? "metro_central";
   const tower = towerById(towerId);
-  const [crewByProject, setCrewByProject] = useState<Record<string, number>>(
-    {},
-  );
+  const [crewByProject, setCrewByProject] = useState<
+    Record<string, UnitAssignment>
+  >({});
 
-  function crewFor(projectId: string): number {
-    return crewByProject[projectId] ?? 1;
+  function assignmentFor(projectId: string): UnitAssignment {
+    return emptyAssignmentForProject(projectId, officeRoster, crewByProject);
   }
 
   function startProject(project: ProjectDefinition) {
-    const farmingAssigned = crewFor(project.id);
     dispatch({
       type: "START_PROJECT",
       projectId: project.id,
       bid: { connection: 2 },
-      farmingAssigned,
+      crewAssigned: assignmentFor(project.id),
     });
   }
 
@@ -104,11 +108,10 @@ export function ProjectPanel({ state, dispatch }: ProjectPanelProps) {
       <h2>Company projects — {tower.name}</h2>
       <p className="muted">
         Each office tower hosts companies offering contracts. Select a{" "}
-        <strong>tower on the map</strong> to see its project board. Jobs use
-        farming staff and power from the <strong>selected office</strong> (HQ
-        until you open a branch). Listed payout is the full contract value —
-        crew sizing affects what you actually earn. Each contract also spends{" "}
-        <strong>+2 Connection</strong> on top of the min bid.
+        <strong>tower on the map</strong>, then manually assign units for each
+        job. Power and resources come from the <strong>selected office</strong>.
+        Each contract also spends <strong>+2 Connection</strong> on top of the
+        min bid.
       </p>
       <p className="cost-line">
         Region: <strong>{REGION_LABELS[tower.region]}</strong> · Host companies
@@ -126,29 +129,25 @@ export function ProjectPanel({ state, dispatch }: ProjectPanelProps) {
         {towerProjects
           .filter((project) => isProjectUnlocked(state, project))
           .map((project) => {
-            const farmingAssigned = crewFor(project.id);
+            const assignment = assignmentFor(project.id);
             const mergedPreview = mergedProjectBid(project);
             const affordable = canAffordAtOffice(
               state,
               officeId,
               mergedPreview,
             );
-            const hasCrew = officeRoster.farming >= farmingAssigned;
+            const hasValidCrew = canAssignFromRoster(officeRoster, assignment);
             const towerSelected = state.selectedTowerId === project.towerId;
             const disabled =
-              busy || !affordable || !hasCrew || !towerSelected;
+              busy || !affordable || !hasValidCrew || !towerSelected;
             const bidLabel = submitContractLabel(
               state,
               officeId,
               project,
-              farmingAssigned,
+              assignment,
               busy,
             );
-            const support = supportStaffForMission(
-              state,
-              officeId,
-              farmingAssigned,
-            );
+
             return (
               <article key={project.id} className="project-card">
                 <header>
@@ -156,36 +155,25 @@ export function ProjectPanel({ state, dispatch }: ProjectPanelProps) {
                   <span>{project.client}</span>
                 </header>
                 <ul>
-                  <li>Duration: {project.durationSec}s</li>
+                  <li>Duration: {project.durationSec}s base</li>
                   <li>Total payout: {formatCost(project.totalPayout)}</li>
-                  <li>
-                    Field crew:{" "}
-                    <input
-                      type="number"
-                      min={1}
-                      max={Math.max(1, officeRoster.farming)}
-                      value={farmingAssigned}
-                      disabled={busy}
-                      onChange={(e) => {
-                        const n = Math.max(
-                          1,
-                          Math.min(
-                            officeRoster.farming || 1,
-                            Number(e.target.value) || 1,
-                          ),
-                        );
-                        setCrewByProject((prev) => ({
-                          ...prev,
-                          [project.id]: n,
-                        }));
-                      }}
-                    />{" "}
-                    at {OFFICE_LABELS[officeId]}
-                    {support > 0
-                      ? ` · ${support} support (faster / bonus pay)`
-                      : ""}
-                  </li>
+                  {project.tags && project.tags.length > 0 && (
+                    <li>Tags: {project.tags.join(", ")}</li>
+                  )}
                 </ul>
+                <MissionCrewPicker
+                  officeId={officeId}
+                  project={project}
+                  roster={officeRoster}
+                  assignment={assignment}
+                  disabled={busy}
+                  onChange={(next) =>
+                    setCrewByProject((prev) => ({
+                      ...prev,
+                      [project.id]: next,
+                    }))
+                  }
+                />
                 <p className="cost-line">
                   Min bid:{" "}
                   {Object.entries(project.minBid)
@@ -210,12 +198,14 @@ export function ProjectPanel({ state, dispatch }: ProjectPanelProps) {
           })}
       </div>
       <p className="muted project-tower-picker">
-        Other towers:{" "}
-        {OFFICE_TOWERS.filter((t) => t.id !== towerId).map((t) => (
+        All towers:{" "}
+        {OFFICE_TOWERS.map((t) => (
           <button
             key={t.id}
             type="button"
             className="btn linkish"
+            disabled={t.id === towerId}
+            aria-current={t.id === towerId ? "true" : undefined}
             onClick={() =>
               dispatch({ type: "SELECT_TOWER", towerId: t.id })
             }

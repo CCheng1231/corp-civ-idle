@@ -46,6 +46,8 @@ export function structureUpgradeBlocker(
     return "Not enough office space at this site";
   }
 
+  if (state.settings.ignoreCosts) return null;
+
   const cost = structureCost(state, officeId, structure.id);
   const { global, power } = splitResourceCost(cost);
   for (const [key, amount] of Object.entries(global)) {

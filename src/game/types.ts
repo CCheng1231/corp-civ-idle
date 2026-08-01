@@ -123,17 +123,43 @@ export interface ResearchDefinition {
 
 export type ProjectId = string;
 
-export type ContractorTypeId = "farming" | "defense" | "intel" | "support";
+export type ProjectTag = "service" | "official" | "highRisk";
 
-export type ContractorRoster = Record<ContractorTypeId, number>;
+export type ContractorCategoryId = "farming" | "defense" | "intel" | "support";
 
-export type ContractorsByLocation = Record<OfficeLocationId, ContractorRoster>;
+/** @deprecated Use ContractorCategoryId — kept for migration labels. */
+export type ContractorTypeId = ContractorCategoryId;
+
+export type UnitId =
+  | "fresh_graduate"
+  | "part_timer"
+  | "office_clerk"
+  | "call_center_veteran"
+  | "mall_cop"
+  | "night_watchman"
+  | "ex_bouncer"
+  | "corporate_security"
+  | "internet_surfer"
+  | "office_gossip"
+  | "linkedin_stalker"
+  | "data_entry_snoop"
+  | "janitor"
+  | "bike_courier"
+  | "junior_team_lead"
+  | "office_mom_dad";
+
+export type UnitRoster = Record<UnitId, number>;
+
+/** Units assigned to an active tower contract. */
+export type UnitAssignment = Partial<Record<UnitId, number>>;
+
+export type ContractorsByLocation = Record<OfficeLocationId, UnitRoster>;
 
 export interface ContractorTransfer {
   id: string;
   from: OfficeLocationId;
   to: OfficeLocationId;
-  contractorType: ContractorTypeId;
+  unitId: UnitId;
   count: number;
   arrivesAt: number;
 }
@@ -141,12 +167,15 @@ export interface ContractorTransfer {
 export interface RecruitmentJob {
   id: string;
   officeId: OfficeLocationId;
-  contractorType: ContractorTypeId;
+  unitId: UnitId;
   completesAt: number;
 }
 
+/** @deprecated Aggregate category roster — use UnitRoster. */
+export type ContractorRoster = Record<ContractorCategoryId, number>;
+
 export interface ContractorTypeDefinition {
-  id: ContractorTypeId;
+  id: ContractorCategoryId;
   role: string;
   flavorTitle: string;
   description: string;
@@ -166,6 +195,7 @@ export interface ProjectDefinition {
   /** Fraction of tower company capacity for full payout (hidden from player). */
   crewDemand: number;
   intelRequired: number;
+  tags?: ProjectTag[];
 }
 
 export interface ActiveProject {
@@ -173,8 +203,7 @@ export interface ActiveProject {
   towerId: TowerId;
   bid: ResourceCost;
   endsAt: number;
-  farmingAssigned: number;
-  supportAssigned: number;
+  crewAssigned: UnitAssignment;
   officeId: OfficeLocationId;
   /** Stored at job start for payout scaling (not shown in UI). */
   optimalCrew: number;
@@ -230,6 +259,8 @@ export interface GameSettings {
   notifications: boolean;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
   ignoreTimers: boolean;
+  /** Dev: allow purchases and bids without spending resources or power. */
+  ignoreCosts: boolean;
   /** Office sites: Structure upgrades / Recruitment sections expanded per site. */
   officeSiteSections: Record<
     OfficeLocationId,
@@ -280,25 +311,25 @@ export type GameAction =
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
   | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null }
-  | { type: "RECRUIT_CONTRACTOR"; contractorType: ContractorTypeId }
+  | { type: "RECRUIT_CONTRACTOR"; unitId: UnitId }
   | {
       type: "START_RECRUITMENT";
       officeId: OfficeLocationId;
-      contractorType: ContractorTypeId;
+      unitId: UnitId;
       count: number;
     }
   | {
       type: "START_CONTRACTOR_TRANSFER";
       from: OfficeLocationId;
       to: OfficeLocationId;
-      contractorType: ContractorTypeId;
+      unitId: UnitId;
       count?: number;
     }
   | {
       type: "START_PROJECT";
       projectId: ProjectId;
       bid: ResourceCost;
-      farmingAssigned: number;
+      crewAssigned: UnitAssignment;
     }
   | { type: "COMPLETE_PROJECT" }
   | { type: "SET_VIEW"; view: MainView }

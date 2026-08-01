@@ -6,6 +6,7 @@ import {
   branchEstablishBlockers,
   canEstablishBranch,
   commercialSiteAt,
+  isAvailableCommercialLot,
   projectById,
   towerAtCoord,
   towerById,
@@ -44,7 +45,7 @@ function hexVariant(
   if (officeId === "hq") return "hq";
   if (officeId === "branch") return "branch";
   if (towerAtCoord(coord)) return "tower";
-  if (commercialSiteAt(coord) && !state.branchEstablished) return "commercial";
+  if (isAvailableCommercialLot(coord, state)) return "commercial";
   if (state.activeProject) {
     try {
       const project = projectById(state.activeProject.projectId);
@@ -101,9 +102,9 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
         <h2>Regional map</h2>
         <p>
           New firms start at <strong>HQ</strong> only. Research{" "}
-          <strong>Branch Management</strong>, lease a{" "}
-          <strong>commercial lot</strong> (yellow hex) to lease it — when
-          requirements are met, clicking the lot opens the branch. Costs are paid
+          <strong>Branch Management</strong>, select a{" "}
+          <strong>commercial lot</strong> (yellow hex), then establish the branch
+          below. Unused lots stay on the map for future expansion. Costs are paid
           from <strong>HQ</strong> (including {BRANCH_OPENING_COST.electricity}{" "}
           power at HQ).
         </p>
@@ -139,7 +140,6 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
             const variant = hexVariant(coord, state);
             const isDefault = variant === "default";
             const towerId = towerAtCoord(coord);
-            const commercial = commercialSiteAt(coord);
             const officeId = officeAtCoord(coord, {
               established: state.branchEstablished,
               coord: state.branchCoord,
@@ -150,10 +150,12 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
               state.selectedCommercialHex &&
               axialEquals(coord, state.selectedCommercialHex);
 
+            const availableCommercial = isAvailableCommercialLot(coord, state);
+
             const clickable =
               officeId !== null ||
               towerId !== null ||
-              (commercial !== undefined && !state.branchEstablished);
+              availableCommercial;
 
             const mapLabel = hexOfficeLabel(officeId, towerId);
 
@@ -178,15 +180,11 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                     } else if (towerId) {
                       dispatch({ type: "SELECT_TOWER", towerId });
                       dispatch({ type: "SET_VIEW", view: "world" });
-                    } else if (commercial && !state.branchEstablished) {
-                      if (canEstablishBranch(state, coord)) {
-                        dispatch({ type: "ESTABLISH_BRANCH", coord: { ...coord } });
-                      } else {
-                        dispatch({
-                          type: "SELECT_COMMERCIAL_HEX",
-                          coord: { ...coord },
-                        });
-                      }
+                    } else if (availableCommercial) {
+                      dispatch({
+                        type: "SELECT_COMMERCIAL_HEX",
+                        coord: { ...coord },
+                      });
                     }
                   }}
                   style={{ cursor: clickable ? "pointer" : "default" }}
@@ -213,8 +211,8 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
         <div className="branch-setup-panel">
           <h3>Open a branch</h3>
           <p className="muted">
-            1) Research Branch Management · 2) Click a yellow commercial lot ·
-            3) Pay opening costs at HQ (cash, connection, REP, and power)
+            1) Research Branch Management · 2) Select a yellow commercial lot ·
+            3) Establish branch and pay opening costs at HQ
           </p>
           <p className="cost-line">
             Opening cost:{" "}

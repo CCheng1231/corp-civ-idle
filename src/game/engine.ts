@@ -12,8 +12,6 @@ import {
   WIN_NET_WORTH,
   recruitBatchCost,
   isProjectUnlocked,
-  supportStaffForMission,
-  supportMissionBonuses,
   canAffordAtOffice,
   applyOfficeCost,
   canBuildStructure,
@@ -21,11 +19,10 @@ import {
   canSellStructureLevel,
   projectedStructureLevels,
   MAX_STRUCTURE_QUEUE,
-  contractorsAvailableAt,
+  unitAvailableAt,
   contractorTransferDurationMs,
   rosterAt,
   OFFICE_LABELS,
-  CONTRACTOR_TYPES,
   RECRUIT_MS_PER_CONTRACTOR,
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
@@ -35,11 +32,18 @@ import {
   projectById,
   towerById,
   optimalCrewForProject,
-  crewPayoutMultiplier,
   BRANCH_OPENING_COST,
   branchManagementResearched,
   commercialSiteAt,
 } from "./mapWorld";
+import {
+  addAssignmentToRoster,
+  canAssignFromRoster,
+  computeMissionModifiers,
+  formatAssignmentSummary,
+  subtractAssignmentFromRoster,
+  unitDefinition,
+} from "./unitEffects";
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
 import { normalizeResourceCost } from "./phaseA";
 import {
@@ -281,23 +285,22 @@ function processContractorTransfers(state: GameState, now: number): GameState {
   const next = structuredClone(state);
   next.contractorTransfers = pending;
   for (const transfer of arrived) {
-    next.contractorsByLocation[transfer.to][transfer.contractorType] +=
+    next.contractorsByLocation[transfer.to][transfer.unitId] =
+      (next.contractorsByLocation[transfer.to][transfer.unitId] ?? 0) +
       transfer.count;
   }
   if (arrived.length > 0) {
     return appendActivityLogs(
       next,
       arrived.map((transfer) => {
-        const typeDef = CONTRACTOR_TYPES.find(
-          (t) => t.id === transfer.contractorType,
-        );
+        const unit = unitDefinition(transfer.unitId);
         return {
           category: "transfer_arrival" as const,
-          summary: `${transfer.count}× ${typeDef?.role ?? transfer.contractorType} arrived at ${OFFICE_LABELS[transfer.to]}`,
+          summary: `${transfer.count}× ${unit.name} arrived at ${OFFICE_LABELS[transfer.to]}`,
           officeId: transfer.to,
           impacts: [
             `From ${OFFICE_LABELS[transfer.from]}`,
-            `${next.contractorsByLocation[transfer.to][transfer.contractorType]} ${transfer.contractorType} now at site`,
+            `${next.contractorsByLocation[transfer.to][transfer.unitId]} ${unit.name} now at site`,
           ],
         };
       }),
@@ -321,19 +324,20 @@ function processRecruitmentJobs(state: GameState, now: number): GameState {
   const next = structuredClone(state);
   next.recruitmentJobs = pending;
   for (const job of completed) {
-    next.contractorsByLocation[job.officeId][job.contractorType] += 1;
+    next.contractorsByLocation[job.officeId][job.unitId] =
+      (next.contractorsByLocation[job.officeId][job.unitId] ?? 0) + 1;
   }
 
   return appendActivityLogs(
     next,
     completed.map((job) => {
-      const typeDef = CONTRACTOR_TYPES.find((t) => t.id === job.contractorType);
+      const unit = unitDefinition(job.unitId);
       return {
         category: "recruit" as const,
-        summary: `${typeDef?.role ?? job.contractorType} joined ${OFFICE_LABELS[job.officeId]}`,
+        summary: `${unit.name} joined ${OFFICE_LABELS[job.officeId]}`,
         officeId: job.officeId,
         impacts: [
-          `${next.contractorsByLocation[job.officeId][job.contractorType]} ${job.contractorType} at site`,
+          `${next.contractorsByLocation[job.officeId][job.unitId]} ${unit.name} at site`,
         ],
       };
     }),
@@ -395,15 +399,11 @@ function resolveActiveProjectIfDue(state: GameState, now: number): GameState {
 
   let next = structuredClone(state);
   const optimal = next.activeProject!.optimalCrew;
-  const crewMult = crewPayoutMultiplier(
-    next.activeProject!.farmingAssigned,
-    optimal,
-  );
-  const { payoutMult: basePayMult } = computeProjectBonuses(next);
-  const { payoutMult: supportPayMult } = supportMissionBonuses(
-    next.activeProject!.supportAssigned,
-  );
-  const payoutMult = basePayMult * supportPayMult * crewMult;
+  const crewAssigned = next.activeProject!.crewAssigned;
+  const { payoutMult: basePayMult, durationMult: _ignoredDuration } =
+    computeProjectBonuses(next);
+  const mission = computeMissionModifiers(crewAssigned, project, optimal);
+  const payoutMult = basePayMult * mission.payoutMult;
   next.resources = addResources(
     next.resources,
     scalePayout(project.totalPayout, payoutMult),
@@ -411,10 +411,10 @@ function resolveActiveProjectIfDue(state: GameState, now: number): GameState {
   next.resources.reputation += project.reputationGain * payoutMult;
 
   const officeId = next.activeProject!.officeId;
-  next.contractorsByLocation[officeId].farming +=
-    next.activeProject!.farmingAssigned;
-  next.contractorsByLocation[officeId].support +=
-    next.activeProject!.supportAssigned;
+  next.contractorsByLocation[officeId] = addAssignmentToRoster(
+    next.contractorsByLocation[officeId],
+    crewAssigned,
+  );
 
   next.completedProjects += 1;
   next.activeProject = null;
@@ -437,9 +437,9 @@ function resolveActiveProjectIfDue(state: GameState, now: number): GameState {
     (gained.reputation ?? 0) + project.reputationGain * payoutMult;
 
   const crewNote =
-    crewMult >= 0.999
+    mission.payoutMult >= 0.999
       ? "Full contract value"
-      : `${Math.round(crewMult * 100)}% of listed payout (crew sizing)`;
+      : `${Math.round(mission.payoutMult * 100)}% payout after crew modifiers`;
 
   return appendActivityLogs(next, [
     {
@@ -520,7 +520,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const next = applyOfficeCost(state, "hq", BRANCH_OPENING_COST);
       next.branchEstablished = true;
       next.branchCoord = { ...site.coord };
-      next.selectedCommercialHex = { ...site.coord };
+      next.selectedCommercialHex = null;
       next.selectedOffice = "branch";
       return appendActivityLogs(next, [
         {
@@ -718,7 +718,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const inner = gameReducer(state, {
         type: "START_RECRUITMENT",
         officeId: state.selectedOffice,
-        contractorType: action.contractorType,
+        unitId: action.unitId,
         count: 1,
       });
       return inner;
@@ -727,8 +727,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "START_RECRUITMENT": {
       const count = Math.floor(action.count);
       if (count < 1 || count > MAX_RECRUIT_BATCH) return state;
-      const { officeId, contractorType } = action;
-      const cost = recruitBatchCost(state, contractorType, count);
+      const { officeId, unitId } = action;
+      const cost = recruitBatchCost(unitId, count);
       if (!canAffordAtOffice(state, officeId, cost)) return state;
 
       const now = Date.now();
@@ -745,20 +745,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       for (let i = 0; i < count; i += 1) {
         cursor = scheduleTimerAt(state, cursor, RECRUIT_MS_PER_CONTRACTOR);
         newJobs.push({
-          id: `${cursor}-${officeId}-${contractorType}-${Math.random().toString(36).slice(2, 9)}`,
+          id: `${cursor}-${officeId}-${unitId}-${Math.random().toString(36).slice(2, 9)}`,
           officeId,
-          contractorType,
+          unitId,
           completesAt: cursor,
         });
       }
       next.recruitmentJobs = [...next.recruitmentJobs, ...newJobs];
 
-      const typeDef = CONTRACTOR_TYPES.find((t) => t.id === contractorType);
+      const unit = unitDefinition(unitId);
       const totalSec = (count * RECRUIT_MS_PER_CONTRACTOR) / 1000;
       return appendActivityLogs(next, [
         {
           category: "recruit",
-          summary: `Queued ${count}× ${typeDef?.role ?? contractorType} at ${OFFICE_LABELS[officeId]}`,
+          summary: `Queued ${count}× ${unit.name} at ${OFFICE_LABELS[officeId]}`,
           officeId,
           spent: cost,
           impacts: [
@@ -770,7 +770,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "START_CONTRACTOR_TRANSFER": {
-      const { from, to, contractorType } = action;
+      const { from, to, unitId } = action;
       const count = action.count ?? 1;
       if (from === to || count < 1) return state;
       if (
@@ -779,32 +779,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       ) {
         return state;
       }
-      if (contractorsAvailableAt(state, from, contractorType) < count) {
+      if (unitAvailableAt(state, from, unitId) < count) {
         return state;
       }
 
       const now = Date.now();
       const next = structuredClone(state);
-      next.contractorsByLocation[from][contractorType] -= count;
+      next.contractorsByLocation[from][unitId] -= count;
       next.contractorTransfers.push({
-        id: `${now}-${from}-${to}-${contractorType}-${Math.random().toString(36).slice(2, 9)}`,
+        id: `${now}-${from}-${to}-${unitId}-${Math.random().toString(36).slice(2, 9)}`,
         from,
         to,
-        contractorType,
+        unitId,
         count,
         arrivesAt: scheduleTimerAt(
           state,
           now,
-          contractorTransferDurationMs(state, from, to),
+          contractorTransferDurationMs(state, from, to, unitId, count),
         ),
       });
-      const typeDef = CONTRACTOR_TYPES.find((t) => t.id === contractorType);
+      const unit = unitDefinition(unitId);
       const travelSec =
-        contractorTransferDurationMs(state, from, to) / 1000;
+        contractorTransferDurationMs(state, from, to, unitId, count) / 1000;
       return appendActivityLogs(next, [
         {
           category: "transfer",
-          summary: `Relocated ${count}× ${typeDef?.role ?? contractorType} toward ${OFFICE_LABELS[to]}`,
+          summary: `Relocated ${count}× ${unit.name} toward ${OFFICE_LABELS[to]}`,
           officeId: from,
           impacts: [
             `Left ${OFFICE_LABELS[from]}`,
@@ -827,38 +827,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const officeRoster = rosterAt(state, officeId);
       if (!isProjectUnlocked(state, project)) return state;
 
-      const farmingAssigned = Math.floor(action.farmingAssigned);
-      if (farmingAssigned < 1) return state;
-      if (officeRoster.farming < farmingAssigned) return state;
+      const crewAssigned = action.crewAssigned;
+      if (!canAssignFromRoster(officeRoster, crewAssigned)) return state;
 
       const mergedBid = mergeCosts(project.minBid, action.bid);
       if (!canAffordAtOffice(state, officeId, mergedBid)) return state;
 
       const tower = towerById(project.towerId);
       const optimalCrew = optimalCrewForProject(tower, project);
-      const supportAssigned = supportStaffForMission(
-        state,
-        officeId,
-        farmingAssigned,
-      );
       const { durationMult: baseDurationMult } = computeProjectBonuses(state);
-      const { durationMult: supportDurationMult } =
-        supportMissionBonuses(supportAssigned);
+      const mission = computeMissionModifiers(crewAssigned, project, optimalCrew);
       const durationMs =
-        project.durationSec *
-        1000 *
-        baseDurationMult *
-        supportDurationMult;
+        project.durationSec * 1000 * baseDurationMult * mission.durationMult;
 
       const next = applyOfficeCost(state, officeId, mergedBid);
-      next.contractorsByLocation[officeId].farming -= farmingAssigned;
-      next.contractorsByLocation[officeId].support -= supportAssigned;
+      next.contractorsByLocation[officeId] = subtractAssignmentFromRoster(
+        officeRoster,
+        crewAssigned,
+      );
       next.activeProject = {
         projectId: project.id,
         towerId: project.towerId,
         bid: mergedBid,
-        farmingAssigned,
-        supportAssigned,
+        crewAssigned,
         officeId,
         optimalCrew,
         endsAt: scheduleTimerAt(state, Date.now(), durationMs),
@@ -870,11 +861,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           officeId,
           spent: mergedBid,
           impacts: [
-            `${farmingAssigned} farming deployed from ${OFFICE_LABELS[officeId]}`,
-            ...(supportAssigned > 0
-              ? [`${supportAssigned} support attached`]
-              : []),
+            formatAssignmentSummary(crewAssigned),
             `Job duration ~${Math.round(durationMs / 1000)}s`,
+            `Expected payout ~${Math.round(mission.payoutMult * 100)}% before research/structure bonuses`,
           ],
         },
       ]);

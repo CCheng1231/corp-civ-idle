@@ -1,5 +1,11 @@
 import type { AxialCoord } from "./hexLayout";
-import { axialDistance, axialEquals, MAP_GOV, MAP_HQ } from "./hexLayout";
+import {
+  axialDistance,
+  axialEquals,
+  MAP_GOV,
+  MAP_HQ,
+  officeAtCoord,
+} from "./hexLayout";
 import type {
   GameState,
   MapRegion,
@@ -92,6 +98,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 5,
     intelRequired: 0,
     crewDemand: 0.75,
+    tags: ["service"],
   },
   {
     id: "metro_datacenter",
@@ -104,6 +111,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 8,
     intelRequired: 2,
     crewDemand: 1,
+    tags: ["highRisk"],
   },
   {
     id: "suburban_retail",
@@ -116,6 +124,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 4,
     intelRequired: 0,
     crewDemand: 0.6,
+    tags: ["service"],
   },
   {
     id: "suburban_office",
@@ -128,6 +137,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 6,
     intelRequired: 1,
     crewDemand: 0.85,
+    tags: ["official"],
   },
   {
     id: "rural_warehouse",
@@ -140,6 +150,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 3,
     intelRequired: 0,
     crewDemand: 0.5,
+    tags: ["highRisk"],
   },
   {
     id: "rural_clinic",
@@ -152,6 +163,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 4,
     intelRequired: 1,
     crewDemand: 0.7,
+    tags: ["service", "official"],
   },
   {
     id: "country_inn",
@@ -164,6 +176,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 5,
     intelRequired: 0,
     crewDemand: 0.55,
+    tags: ["service"],
   },
   {
     id: "country_solar",
@@ -176,6 +189,7 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
     reputationGain: 7,
     intelRequired: 1,
     crewDemand: 0.9,
+    tags: ["official", "highRisk"],
   },
 ];
 
@@ -205,6 +219,20 @@ export function towerAtCoord(coord: AxialCoord): TowerId | null {
 export function commercialSiteAt(coord: AxialCoord) {
   return COMMERCIAL_REAL_ESTATE.find(
     (s) => s.coord.q === coord.q && s.coord.r === coord.r,
+  );
+}
+
+/** Commercial lot not yet leased as an office site. */
+export function isAvailableCommercialLot(
+  coord: AxialCoord,
+  state: GameState,
+): boolean {
+  if (!commercialSiteAt(coord)) return false;
+  return (
+    officeAtCoord(coord, {
+      established: state.branchEstablished,
+      coord: state.branchCoord,
+    }) === null
   );
 }
 

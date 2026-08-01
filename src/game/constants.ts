@@ -7,7 +7,7 @@ import type {
   StructureId,
   StructureLevels,
   OfficeLocationId,
-  ContractorTypeId,
+  ContractorCategoryId,
   ContractorRoster,
   ContractorTypeDefinition,
   LocationSnapshot,
@@ -16,6 +16,8 @@ import type {
   StructureQueuesByLocation,
   ProjectDefinition,
   RecruitmentJob,
+  UnitId,
+  UnitRoster,
 } from "./types";
 import {
   officeSeparationHexes,
@@ -38,9 +40,19 @@ import {
 } from "./structureBalance";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import {
+  DEFAULT_TIER1_UNIT,
   RECRUITMENT_TIER1_COST,
   RECRUITMENT_TIER1_LABEL,
+  UNIT_IDS,
 } from "./recruitmentData";
+import {
+  firmEspionageDefensePoints,
+  firmIntelPoints,
+  officePassiveRatesForLocation,
+  transferHexBonus,
+  unitDefinition,
+  unitsInCategory,
+} from "./unitEffects";
 
 export const SAVE_KEY = "corp-civ-idle-save-v2";
 export const TICK_MS = 1000;
@@ -141,8 +153,11 @@ export function contractorTransferDurationMs(
   state: GameState,
   from: OfficeLocationId,
   to: OfficeLocationId,
+  unitId?: UnitId,
+  count = 1,
 ): number {
-  const hexes = contractorTransferHexDistance(state, from, to);
+  let hexes = contractorTransferHexDistance(state, from, to);
+  hexes = Math.max(1, hexes - transferHexBonus(unitId ?? "janitor", count));
   return hexes * CONTRACTOR_TRANSFER_SEC_PER_HEX * 1000;
 }
 
@@ -150,12 +165,80 @@ export function otherOffice(officeId: OfficeLocationId): OfficeLocationId {
   return officeId === "hq" ? "branch" : "hq";
 }
 
+export function emptyUnitRoster(
+  overrides: Partial<UnitRoster> = {},
+): UnitRoster {
+  const roster = Object.fromEntries(
+    UNIT_IDS.map((id) => [id, 0]),
+  ) as UnitRoster;
+  return { ...roster, ...overrides };
+}
+
+export function isLegacyCategoryRoster(value: unknown): value is ContractorRoster {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "farming" in value &&
+    !("fresh_graduate" in value)
+  );
+}
+
+export function migrateLegacyCategoryRoster(
+  legacy: ContractorRoster,
+): UnitRoster {
+  const roster = emptyUnitRoster();
+  for (const category of [
+    "farming",
+    "defense",
+    "intel",
+    "support",
+  ] as ContractorCategoryId[]) {
+    const count = legacy[category] ?? 0;
+    if (count > 0) {
+      roster[DEFAULT_TIER1_UNIT[category]] += count;
+    }
+  }
+  return roster;
+}
+
+/** @deprecated Use emptyUnitRoster */
+export function emptyContractorRoster(
+  overrides: Partial<ContractorRoster> = {},
+): UnitRoster {
+  return migrateLegacyCategoryRoster({
+    farming: 0,
+    defense: 0,
+    intel: 0,
+    support: 0,
+    ...overrides,
+  });
+}
+
+export function unitAvailableAt(
+  state: GameState,
+  officeId: OfficeLocationId,
+  unitId: UnitId,
+): number {
+  return state.contractorsByLocation[officeId][unitId] ?? 0;
+}
+
+/** @deprecated Use unitAvailableAt */
 export function contractorsAvailableAt(
   state: GameState,
   officeId: OfficeLocationId,
-  contractorType: ContractorTypeId,
+  category: ContractorCategoryId,
 ): number {
-  return state.contractorsByLocation[officeId][contractorType];
+  return countInCategory(state.contractorsByLocation[officeId], category);
+}
+
+export function countInCategory(
+  roster: UnitRoster,
+  category: ContractorCategoryId,
+): number {
+  return unitsInCategory(category).reduce(
+    (sum, def) => sum + (roster[def.id] ?? 0),
+    0,
+  );
 }
 
 export function isStructureQueuedAt(
@@ -273,6 +356,7 @@ export const STRUCTURES: StructureDefinition[] = PHASE_A_PLACEHOLDER_ROWS.map(
 );
 
 export const RESEARCH: ResearchDefinition[] = RESEARCH_DEFINITIONS;
+export { RECRUITMENT_UNITS } from "./recruitmentData";
 
 export const CONTRACTOR_TYPES: ContractorTypeDefinition[] = [
   {
@@ -328,8 +412,8 @@ export function createInitialState(now = Date.now()): GameState {
     RESEARCH.map((r) => [r.id, 0]),
   ) as GameState["researchLevels"];
   const contractorsByLocation: ContractorsByLocation = {
-    hq: emptyContractorRoster({ farming: 2 }),
-    branch: emptyContractorRoster(),
+    hq: emptyUnitRoster({ fresh_graduate: 2 }),
+    branch: emptyUnitRoster(),
   };
   const locationStats = computeLocationStats({
     structureLevelsByLocation,
@@ -338,6 +422,7 @@ export function createInitialState(now = Date.now()): GameState {
   });
   const derived = recomputeDerivedStats({
     structureLevelsByLocation,
+    contractorsByLocation,
     researchLevels,
   });
 
@@ -371,6 +456,7 @@ export function createInitialState(now = Date.now()): GameState {
       uiScale: 1,
       notifications: true,
       ignoreTimers: false,
+      ignoreCosts: false,
       officeSiteSections: defaultOfficeSiteSections(),
     },
   };
@@ -383,8 +469,8 @@ export function emptyContractorsByLocation(
   overrides: Partial<ContractorsByLocation> = {},
 ): ContractorsByLocation {
   return {
-    hq: emptyContractorRoster(),
-    branch: emptyContractorRoster(),
+    hq: emptyUnitRoster(),
+    branch: emptyUnitRoster(),
     ...overrides,
   };
 }
@@ -423,6 +509,7 @@ export function computeLocationStats(input: {
 
 export function recomputeDerivedStats(state: {
   structureLevelsByLocation: GameState["structureLevelsByLocation"];
+  contractorsByLocation: ContractorsByLocation;
   researchLevels: GameState["researchLevels"];
 }): { rates: ProductionRates } {
   const rates = recomputeProductionRates(state);
@@ -443,6 +530,16 @@ export function recomputeDerivedStats(state: {
         const k = key as keyof ProductionRates;
         rates[k] *= 1 + (pct ?? 0) * level;
       }
+    }
+  }
+
+  for (const officeId of OFFICE_IDS) {
+    const passive = officePassiveRatesForLocation(
+      state.contractorsByLocation[officeId],
+    );
+    for (const [key, delta] of Object.entries(passive)) {
+      const k = key as keyof ProductionRates;
+      rates[k] += delta ?? 0;
     }
   }
 
@@ -468,38 +565,38 @@ export function totalStructureLevel(
   );
 }
 
-export function emptyContractorRoster(
-  overrides: Partial<ContractorRoster> = {},
+export function totalWorkforce(roster: UnitRoster): number {
+  return UNIT_IDS.reduce((sum, id) => sum + (roster[id] ?? 0), 0);
+}
+
+export function aggregateCategoryRoster(
+  byLocation: ContractorsByLocation,
 ): ContractorRoster {
-  return {
+  const total: ContractorRoster = {
     farming: 0,
     defense: 0,
     intel: 0,
     support: 0,
-    ...overrides,
   };
-}
-
-export function totalWorkforce(roster: ContractorRoster): number {
-  return roster.farming + roster.defense + roster.intel + roster.support;
-}
-
-export function aggregateRoster(
-  byLocation: ContractorsByLocation,
-): ContractorRoster {
-  const total = emptyContractorRoster();
   for (const officeId of OFFICE_IDS) {
-    for (const type of Object.keys(total) as (keyof ContractorRoster)[]) {
-      total[type] += byLocation[officeId][type];
+    for (const category of Object.keys(total) as ContractorCategoryId[]) {
+      total[category] += countInCategory(byLocation[officeId], category);
     }
   }
   return total;
 }
 
+/** @deprecated Use aggregateCategoryRoster */
+export function aggregateRoster(
+  byLocation: ContractorsByLocation,
+): ContractorRoster {
+  return aggregateCategoryRoster(byLocation);
+}
+
 export function rosterAt(
   state: GameState,
   officeId: OfficeLocationId,
-): ContractorRoster {
+): UnitRoster {
   return state.contractorsByLocation[officeId];
 }
 
@@ -538,11 +635,16 @@ export function splitResourceCost(cost: ResourceCost): {
   return { global, power: electricity ?? 0 };
 }
 
+export function ignoreCosts(state: GameState): boolean {
+  return state.settings.ignoreCosts === true;
+}
+
 export function canAffordAtOffice(
   state: GameState,
   officeId: OfficeLocationId,
   cost: ResourceCost,
 ): boolean {
+  if (ignoreCosts(state)) return true;
   const { global, power } = splitResourceCost(cost);
   if (!canAfford(state.resources, global)) return false;
   if (power > powerAvailable(state.locationStats[officeId])) return false;
@@ -554,6 +656,7 @@ export function applyOfficeCost(
   officeId: OfficeLocationId,
   cost: ResourceCost,
 ): GameState {
+  if (ignoreCosts(state)) return structuredClone(state);
   const { global, power } = splitResourceCost(cost);
   const next = structuredClone(state);
   next.resources = subtractCost(next.resources, global);
@@ -563,23 +666,40 @@ export function applyOfficeCost(
   return next;
 }
 
-export function recruitCost(
-  _state: GameState,
-  contractorType: ContractorTypeId,
-): ResourceCost {
-  const def = CONTRACTOR_TYPES.find((c) => c.id === contractorType);
-  if (!def) throw new Error(`Unknown contractor type ${contractorType}`);
-  return { ...def.baseCost };
+export function recruitUnitCost(unitId: UnitId): ResourceCost {
+  return { ...unitDefinition(unitId).cost };
 }
 
-/** Total cost to hire `count` units at the flat per-unit rate. */
+/** @deprecated Use recruitUnitCost */
+export function recruitCost(
+  _state: GameState,
+  category: ContractorCategoryId,
+): ResourceCost {
+  return { ...RECRUITMENT_TIER1_COST[category] };
+}
+
 export function recruitBatchCost(
-  state: GameState,
-  contractorType: ContractorTypeId,
+  unitId: UnitId,
   count: number,
 ): ResourceCost {
   if (count < 1) return {};
-  const unit = recruitCost(state, contractorType);
+  const unit = recruitUnitCost(unitId);
+  const total: ResourceCost = {};
+  for (const [key, val] of Object.entries(unit)) {
+    const k = key as keyof ResourceCost;
+    total[k] = (val ?? 0) * count;
+  }
+  return total;
+}
+
+/** @deprecated */
+export function recruitBatchCostLegacy(
+  _state: GameState,
+  category: ContractorCategoryId,
+  count: number,
+): ResourceCost {
+  if (count < 1) return {};
+  const unit = RECRUITMENT_TIER1_COST[category];
   const total: ResourceCost = {};
   for (const [key, val] of Object.entries(unit)) {
     const k = key as keyof ResourceCost;
@@ -599,34 +719,11 @@ export function isProjectUnlocked(
   state: GameState,
   project: ProjectDefinition,
 ): boolean {
-  return aggregateRoster(state.contractorsByLocation).intel >=
-    project.intelRequired;
+  return firmIntelPoints(state.contractorsByLocation) >= project.intelRequired;
 }
 
-export function supportStaffForMission(
-  state: GameState,
-  officeId: OfficeLocationId,
-  farmingRequired: number,
-): number {
-  return Math.min(
-    state.contractorsByLocation[officeId].support,
-    farmingRequired,
-  );
-}
-
-export function supportMissionBonuses(supportCount: number): {
-  durationMult: number;
-  payoutMult: number;
-} {
-  if (supportCount <= 0) return { durationMult: 1, payoutMult: 1 };
-  return {
-    durationMult: Math.max(0.65, 1 - 0.05 * supportCount),
-    payoutMult: 1 + 0.07 * supportCount,
-  };
-}
-
-export function espionageDefensePercent(defenseCount: number): number {
-  return Math.min(75, defenseCount * 8);
+export function espionageDefensePercent(state: GameState): number {
+  return firmEspionageDefensePoints(state.contractorsByLocation);
 }
 
 export function formatNumber(value: number): string {
@@ -670,6 +767,7 @@ export function canAffordCostPart(
   officeId: OfficeLocationId,
   part: ResourceCostPart,
 ): boolean {
+  if (ignoreCosts(state)) return true;
   if (part.key === "electricity") {
     return powerAvailable(state.locationStats[officeId]) >= part.amount;
   }
@@ -748,6 +846,7 @@ export function isResearchUnlocked(
   state: GameState,
   research: ResearchDefinition,
 ): boolean {
+  if (ignoreCosts(state)) return true;
   const rndRequired = research.rndLevelRequired ?? 0;
   if (rndRequired > 0 && deptRndLevel(state) < rndRequired) {
     return false;

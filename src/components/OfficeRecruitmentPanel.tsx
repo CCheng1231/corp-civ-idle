@@ -1,6 +1,5 @@
 import { useState, type Dispatch } from "react";
 import {
-  CONTRACTOR_TYPES,
   MAX_RECRUIT_BATCH,
   RECRUIT_MS_PER_CONTRACTOR,
   canAffordAtOffice,
@@ -9,20 +8,25 @@ import {
   recruitBatchCost,
   recruitmentJobsAtOffice,
   splitResourceCost,
+  unitAvailableAt,
 } from "../game/constants";
 import { formatTimerRemaining } from "../game/timers";
-import type {
-  ContractorTypeId,
-  GameAction,
-  GameState,
-  OfficeLocationId,
-} from "../game/types";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
+import { unitDefinition } from "../game/unitEffects";
+import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
 
 interface OfficeRecruitmentPanelProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  farming: "Resource Farming",
+  defense: "Protection / Defense",
+  intel: "Intel / Scouting",
+  support: "Support Units",
+};
 
 function formatCost(cost: ReturnType<typeof recruitBatchCost>) {
   return Object.entries(cost)
@@ -41,23 +45,21 @@ export function OfficeRecruitmentPanel({
 }: OfficeRecruitmentPanelProps) {
   const now = Date.now();
   const loc = state.locationStats[officeId];
-  const [counts, setCounts] = useState<Record<ContractorTypeId, number>>({
-    farming: 1,
-    defense: 1,
-    intel: 1,
-    support: 1,
-  });
+  const [counts, setCounts] = useState<Partial<Record<UnitId, number>>>({});
 
   const queue = recruitmentJobsAtOffice(state, officeId).sort(
     (a, b) => a.completesAt - b.completesAt,
   );
 
-  function hire(type: ContractorTypeId) {
-    const count = Math.max(1, Math.min(MAX_RECRUIT_BATCH, counts[type] ?? 1));
+  function hire(unitId: UnitId) {
+    const count = Math.max(
+      1,
+      Math.min(MAX_RECRUIT_BATCH, counts[unitId] ?? 1),
+    );
     dispatch({
       type: "START_RECRUITMENT",
       officeId,
-      contractorType: type,
+      unitId,
       count,
     });
   }
@@ -65,18 +67,16 @@ export function OfficeRecruitmentPanel({
   return (
     <div className="office-recruitment-panel">
       <p className="muted office-recruitment-intro">
-        Pay upfront, then one contractor arrives every{" "}
-        {RECRUIT_MS_PER_CONTRACTOR / 1000}s (queued per site). Power free{" "}
-        {formatNumber(powerAvailable(loc))}/{formatNumber(loc.power)}.
+        All tier 1 and tier 2 units are available. Pay upfront, then one unit
+        arrives every {RECRUIT_MS_PER_CONTRACTOR / 1000}s (queued per site).
+        Power free {formatNumber(powerAvailable(loc))}/{formatNumber(loc.power)}.
       </p>
       {queue.length > 0 && (
         <div className="office-recruitment-queue">
           <h4>Hiring queue</h4>
           <ul className="build-queue">
             {queue.map((job) => {
-              const typeDef = CONTRACTOR_TYPES.find(
-                (t) => t.id === job.contractorType,
-              );
+              const unit = unitDefinition(job.unitId);
               const remaining = formatTimerRemaining(
                 state,
                 job.completesAt,
@@ -84,9 +84,7 @@ export function OfficeRecruitmentPanel({
               );
               return (
                 <li key={job.id}>
-                  <span className="queue-name">
-                    {typeDef?.role ?? job.contractorType}
-                  </span>
+                  <span className="queue-name">{unit.name}</span>
                   <span className="queue-status">{remaining}</span>
                 </li>
               );
@@ -95,11 +93,11 @@ export function OfficeRecruitmentPanel({
         </div>
       )}
       <ul className="structure-list research-grid">
-        {CONTRACTOR_TYPES.map((type) => {
-          const count = counts[type.id] ?? 1;
-          const cost = recruitBatchCost(state, type.id, count);
+        {RECRUITMENT_UNITS.map((unit) => {
+          const count = counts[unit.id] ?? 1;
+          const cost = recruitBatchCost(unit.id, count);
           const affordable = canAffordAtOffice(state, officeId, cost);
-          const owned = state.contractorsByLocation[officeId][type.id];
+          const owned = unitAvailableAt(state, officeId, unit.id);
           const { power } = splitResourceCost(cost);
           const blocked =
             power > powerAvailable(loc)
@@ -107,13 +105,15 @@ export function OfficeRecruitmentPanel({
               : null;
 
           return (
-            <li key={type.id} className="structure-card">
+            <li key={unit.id} className="structure-card">
               <div className="structure-head">
-                <strong>{type.role}</strong>
-                <span>×{owned} here</span>
+                <strong>{unit.name}</strong>
+                <span>
+                  T{unit.tier} · ×{owned} here
+                </span>
               </div>
-              <p className="recruitment-flavor">{type.flavorTitle}</p>
-              <p className="structure-desc muted">{type.description}</p>
+              <p className="recruitment-flavor">{CATEGORY_LABELS[unit.category]}</p>
+              <p className="structure-desc muted">{unit.proposedRole}</p>
               <label className="recruit-count-field">
                 Hire count
                 <input
@@ -129,7 +129,7 @@ export function OfficeRecruitmentPanel({
                         Number(e.target.value) || 1,
                       ),
                     );
-                    setCounts((prev) => ({ ...prev, [type.id]: n }));
+                    setCounts((prev) => ({ ...prev, [unit.id]: n }));
                   }}
                 />
               </label>
@@ -141,7 +141,7 @@ export function OfficeRecruitmentPanel({
                 type="button"
                 className="btn primary"
                 disabled={!affordable}
-                onClick={() => hire(type.id)}
+                onClick={() => hire(unit.id)}
               >
                 Start hiring ({count})
               </button>

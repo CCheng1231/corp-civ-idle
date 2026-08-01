@@ -4,14 +4,17 @@ import {
   defaultOfficeSiteSections,
   emptyStructureLevels,
   emptyStructureQueues,
-  emptyContractorRoster,
+  emptyUnitRoster,
   emptyContractorsByLocation,
+  migrateLegacyCategoryRoster,
+  isLegacyCategoryRoster,
   recomputeDerivedStats,
   computeNetWorth,
   computeLocationStats,
   WIN_NET_WORTH,
   staffAtLocation,
 } from "./constants";
+import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
 import { MAP_BRANCH } from "./hexLayout";
 import {
@@ -32,6 +35,11 @@ import type {
   ContractorsByLocation,
   MainView,
   ResearchId,
+  UnitId,
+  UnitRoster,
+  UnitAssignment,
+  ContractorCategoryId,
+  ActiveProject,
 } from "./types";
 
 const VALID_VIEWS = new Set<MainView>([
@@ -131,17 +139,21 @@ function migrateStructureLevels(parsed: LegacySave): GameState["structureLevelsB
   return base;
 }
 
+function normalizeUnitRoster(raw: unknown): UnitRoster {
+  if (isLegacyCategoryRoster(raw)) {
+    return migrateLegacyCategoryRoster(raw);
+  }
+  return {
+    ...emptyUnitRoster(),
+    ...(raw as Partial<UnitRoster>),
+  };
+}
+
 function migrateContractors(parsed: LegacySave): ContractorsByLocation {
   if (parsed.contractorsByLocation) {
     return {
-      hq: {
-        ...emptyContractorRoster(),
-        ...parsed.contractorsByLocation.hq,
-      },
-      branch: {
-        ...emptyContractorRoster(),
-        ...parsed.contractorsByLocation.branch,
-      },
+      hq: normalizeUnitRoster(parsed.contractorsByLocation.hq),
+      branch: normalizeUnitRoster(parsed.contractorsByLocation.branch),
     };
   }
   if (
@@ -149,16 +161,90 @@ function migrateContractors(parsed: LegacySave): ContractorsByLocation {
     typeof parsed.contractors === "object" &&
     "farming" in parsed.contractors
   ) {
-    return emptyContractorsByLocation({ hq: parsed.contractors });
+    return emptyContractorsByLocation({
+      hq: migrateLegacyCategoryRoster(parsed.contractors),
+    });
   }
   if (typeof parsed.contractors === "number") {
     return emptyContractorsByLocation({
-      hq: emptyContractorRoster({ farming: parsed.contractors }),
+      hq: emptyUnitRoster({
+        [DEFAULT_TIER1_UNIT.farming]: parsed.contractors,
+      }),
     });
   }
   return emptyContractorsByLocation({
-    hq: emptyContractorRoster({ farming: 2 }),
+    hq: emptyUnitRoster({ fresh_graduate: 2 }),
   });
+}
+
+function migrateUnitId(
+  raw: unknown,
+  fallbackCategory?: ContractorCategoryId,
+): UnitId {
+  if (typeof raw === "string") {
+    if (UNIT_IDS.includes(raw as UnitId)) return raw as UnitId;
+    if (
+      raw === "farming" ||
+      raw === "defense" ||
+      raw === "intel" ||
+      raw === "support"
+    ) {
+      return DEFAULT_TIER1_UNIT[raw];
+    }
+  }
+  return DEFAULT_TIER1_UNIT[fallbackCategory ?? "farming"];
+}
+
+function migrateActiveProject(activeProject: ActiveProject | (ActiveProject & {
+  farmingAssigned?: number;
+  supportAssigned?: number;
+}) | null): ActiveProject | null {
+  if (!activeProject) return null;
+  if (activeProject.crewAssigned) {
+    try {
+      const project = projectById(activeProject.projectId);
+      const tower = towerById(project.towerId);
+      return {
+        ...activeProject,
+        towerId: project.towerId,
+        optimalCrew:
+          activeProject.optimalCrew ??
+          optimalCrewForProject(tower, project),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const legacy = activeProject as ActiveProject & {
+    farmingAssigned?: number;
+    supportAssigned?: number;
+  };
+  const crewAssigned: UnitAssignment = {};
+  if (legacy.farmingAssigned && legacy.farmingAssigned > 0) {
+    crewAssigned[DEFAULT_TIER1_UNIT.farming] = legacy.farmingAssigned;
+  }
+  if (legacy.supportAssigned && legacy.supportAssigned > 0) {
+    crewAssigned[DEFAULT_TIER1_UNIT.support] = legacy.supportAssigned;
+  }
+
+  try {
+    const project = projectById(activeProject.projectId);
+    const tower = towerById(project.towerId);
+    return {
+      projectId: activeProject.projectId,
+      towerId: project.towerId,
+      bid: activeProject.bid,
+      endsAt: activeProject.endsAt,
+      officeId: activeProject.officeId,
+      crewAssigned,
+      optimalCrew:
+        activeProject.optimalCrew ??
+        optimalCrewForProject(tower, project),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function migrateBranchFields(
@@ -187,21 +273,9 @@ function migrateBranchFields(
     parsed.branchCoord ??
     (branchEstablished ? { ...MAP_BRANCH } : null);
 
-  let activeProject = parsed.activeProject ?? null;
-  if (activeProject) {
-    try {
-      const project = projectById(activeProject.projectId);
-      const tower = towerById(project.towerId);
-      activeProject = {
-        ...activeProject,
-        towerId: project.towerId,
-        optimalCrew:
-          activeProject.optimalCrew ??
-          optimalCrewForProject(tower, project),
-      };
-    } catch {
-      activeProject = null;
-    }
+  let activeProject = migrateActiveProject(parsed.activeProject ?? null);
+  if (activeProject === null && parsed.activeProject) {
+    activeProject = null;
   }
 
   return {
@@ -257,8 +331,21 @@ function normalizeSave(parsed: LegacySave): GameState {
     },
     researchLevels,
     contractorsByLocation,
-    contractorTransfers: parsed.contractorTransfers ?? [],
-    recruitmentJobs: parsed.recruitmentJobs ?? [],
+    contractorTransfers: (parsed.contractorTransfers ?? []).map((transfer) => {
+      const unitId = migrateUnitId(
+        (transfer as { unitId?: UnitId; contractorType?: ContractorCategoryId })
+          .unitId ??
+          (transfer as { contractorType?: ContractorCategoryId }).contractorType,
+      );
+      return { ...transfer, unitId };
+    }),
+    recruitmentJobs: (parsed.recruitmentJobs ?? []).map((job) => {
+      const unitId = migrateUnitId(
+        (job as { unitId?: UnitId; contractorType?: ContractorCategoryId }).unitId ??
+          (job as { contractorType?: ContractorCategoryId }).contractorType,
+      );
+      return { ...job, unitId };
+    }),
     selectedOffice: parsed.selectedOffice ?? "hq",
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
@@ -275,7 +362,11 @@ function normalizeSave(parsed: LegacySave): GameState {
     previous: parsed.locationStats,
   });
 
-  const derived = recomputeDerivedStats(merged);
+  const derived = recomputeDerivedStats({
+    structureLevelsByLocation: merged.structureLevelsByLocation,
+    contractorsByLocation: merged.contractorsByLocation,
+    researchLevels: merged.researchLevels,
+  });
   merged.rates = derived.rates;
   merged.netWorth = computeNetWorth(merged.resources, merged.locationStats);
   if (merged.netWorth >= WIN_NET_WORTH) {

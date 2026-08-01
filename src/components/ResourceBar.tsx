@@ -1,4 +1,5 @@
 import {
+  aggregateCategoryRoster,
   RESOURCE_LABELS,
   RESOURCE_BAR_KEYS,
   normalizeResourceWallet,
@@ -6,7 +7,6 @@ import {
   formatResourceFull,
   PHASE_LABELS,
   WIN_NET_WORTH,
-  aggregateRoster,
   totalWorkforce,
 } from "../game/constants";
 import { RATE_UNIT_LABEL } from "../game/phaseA";
@@ -23,10 +23,13 @@ interface ResourceBarProps {
 
 export function ResourceBar({ state }: ResourceBarProps) {
   const goalProgress = Math.min(100, (state.netWorth / WIN_NET_WORTH) * 100);
-  const roster = aggregateRoster(state.contractorsByLocation);
+  const categoryRoster = aggregateCategoryRoster(state.contractorsByLocation);
   const resources = normalizeResourceWallet(state.resources);
   const caps = computeResourceCaps(state);
-  const staffSummary = `Staff ${totalWorkforce(roster)} · Farm ${roster.farming} · Def ${roster.defense} · Intel ${roster.intel} · Sup ${roster.support}`;
+  const staffTotal =
+    totalWorkforce(state.contractorsByLocation.hq) +
+    totalWorkforce(state.contractorsByLocation.branch);
+  const staffSummary = `Staff ${staffTotal} · Farm ${categoryRoster.farming} · Def ${categoryRoster.defense} · Intel ${categoryRoster.intel} · Sup ${categoryRoster.support}`;
 
   return (
     <header className="resource-bar">

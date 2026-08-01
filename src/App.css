@@ -230,6 +230,61 @@
   overflow: hidden;
 }
 
+.mission-crew-picker {
+  margin: 0.65rem 0;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.mission-crew-group + .mission-crew-group {
+  margin-top: 0.75rem;
+}
+
+.mission-crew-group h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+}
+
+.mission-crew-unit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mission-crew-unit-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.45rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mission-crew-unit-meta {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.mission-crew-unit-meta strong {
+  font-size: 0.88rem;
+}
+
+.mission-crew-unit-input {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: end;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.mission-crew-unit-input input {
+  width: 4rem;
+}
+
 .goal-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--warn), var(--accent));
@@ -1456,7 +1511,7 @@
 }
 
 .hex-region-rural.hex-tile-default {
-  fill: #997700;
+  fill: #1f5230;
 }
 
 .hex-region-countryside.hex-tile-default {
@@ -1538,7 +1593,7 @@
 }
 
 .region-legend-rural::before {
-  background: #997700;
+  background: #1f5230;
   border: 1px solid #0a0e12;
 }
 

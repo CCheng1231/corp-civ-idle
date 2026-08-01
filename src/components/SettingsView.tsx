@@ -52,6 +52,24 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
       <section className="dev-menu settings-block">
         <h3>Developer</h3>
         <label className="setting-row">
+          Ignore all costs
+          <input
+            type="checkbox"
+            checked={state.settings.ignoreCosts}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                settings: { ignoreCosts: e.target.checked },
+              })
+            }
+          />
+        </label>
+        <p className="muted setting-hint">
+          When on, structures, research, recruitment, branch opening, and tower
+          bids do not spend resources or office power. All research nodes are
+          unlocked regardless of prerequisites.
+        </p>
+        <label className="setting-row">
           Ignore all timers
           <input
             type="checkbox"

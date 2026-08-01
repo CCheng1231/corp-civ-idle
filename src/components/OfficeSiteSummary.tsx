@@ -2,7 +2,6 @@ import { type Dispatch } from "react";
 import {
   BASE_LOCATION_POWER,
   BASE_OFFICE_SPACE,
-  CONTRACTOR_TYPES,
   OFFICE_EXPANSION_STRUCTURE_ID,
   canAffordCostPart,
   formatNumber,
@@ -14,6 +13,7 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import { structureCost } from "../game/engine";
 import { effectAtStructureLevel } from "../game/structureBalance";
 import { formatCompactCost } from "./CompactStack";
@@ -156,13 +156,20 @@ export function OfficeSiteSummary({
       <div className="office-site-summary-units">
         <h4>Units</h4>
         <ul className="office-site-staff-list">
-          {CONTRACTOR_TYPES.map((type) => (
-            <li key={type.id}>
-              <span className="office-site-staff-role">{type.role}</span>
-              <span className="office-site-staff-count">×{roster[type.id]}</span>
-            </li>
-          ))}
+          {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
+            (unit) => (
+              <li key={unit.id}>
+                <span className="office-site-staff-role">{unit.name}</span>
+                <span className="office-site-staff-count">
+                  ×{roster[unit.id] ?? 0}
+                </span>
+              </li>
+            ),
+          )}
         </ul>
+        {RECRUITMENT_UNITS.every((unit) => (roster[unit.id] ?? 0) <= 0) && (
+          <p className="muted">No units at this site.</p>
+        )}
       </div>
     </div>
   );
