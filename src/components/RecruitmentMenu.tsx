@@ -4,6 +4,7 @@ import {
   canAffordAtOffice,
   espionageDefensePercent,
   formatNumber,
+  formatResourceCost,
   powerAvailable,
   recruitBatchCost,
 } from "../game/constants";
@@ -73,15 +74,7 @@ export function RecruitmentMenu({
                 >
                   Hire
                 </button>
-                <small className="cost-line">
-                  {Object.entries(cost)
-                    .map(([k, v]) =>
-                      k === "electricity"
-                        ? `power ${formatNumber(v ?? 0)}`
-                        : `${k} ${formatNumber(v ?? 0)}`,
-                    )
-                    .join(" · ")}
-                </small>
+                <small className="cost-line">{formatResourceCost(cost)}</small>
               </article>
             );
           })}

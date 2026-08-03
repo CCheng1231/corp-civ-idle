@@ -9,7 +9,9 @@ import * as XLSXNS from "xlsx";
 
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const workbookPath = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
+import { resolveWorkbookPath } from "./workbook-path.mjs";
+
+const workbookPath = resolveWorkbookPath();
 const outTs = join(__dirname, "..", "src", "game", "jobHubData.ts");
 
 const TOWER_BY_LABEL = {

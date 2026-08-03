@@ -12,18 +12,9 @@ import * as XLSXNS from "xlsx";
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const WORKBOOK_CANDIDATES = [
-  join(__dirname, "..", "20260731 Corp Idle Working.xlsx"),
-  join(__dirname, "..", "..", "Corp-Civ-Balance-Reference-working.xlsx"),
-  join(__dirname, "..", "..", "Corp-Civ-Balance-Reference.xlsx"),
-  join(__dirname, "..", "Corp-Civ-Balance-Reference.xlsx"),
-];
+import { resolveWorkbookPath, WORKBOOK_CANDIDATES } from "./workbook-path.mjs";
 
-const workbookPath = WORKBOOK_CANDIDATES.find((p) => existsSync(p));
-if (!workbookPath) {
-  console.error("No balance workbook found. Expected one of:", WORKBOOK_CANDIDATES);
-  process.exit(1);
-}
+const workbookPath = resolveWorkbookPath();
 
 const outTs = join(__dirname, "..", "src", "game", "structureBalanceData.ts");
 const COST_SHEET_CANDIDATES = [

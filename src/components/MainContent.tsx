@@ -4,11 +4,10 @@ import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
 import { LogbookView } from "./LogbookView";
 import { OperationsView } from "./OperationsView";
+import { RecruitmentView } from "./RecruitmentView";
 import { ResearchView } from "./ResearchView";
 import { SettingsView } from "./SettingsView";
-import { ProjectPanel } from "./ProjectPanel";
 import type { GameAction, GameState } from "../game/types";
-
 interface MainContentProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -17,16 +16,12 @@ interface MainContentProps {
 export function MainContent({ state, dispatch }: MainContentProps) {
   switch (state.view) {
     case "overview":
-      return <OverviewView state={state} />;
+      return <OverviewView state={state} dispatch={dispatch} />;
     case "world":
-      return (
-        <>
-          <WorldView state={state} dispatch={dispatch} />
-          <ProjectPanel state={state} dispatch={dispatch} />
-        </>
-      );
-    case "operations":
+      return <WorldView state={state} dispatch={dispatch} />;    case "operations":
       return <OperationsView state={state} dispatch={dispatch} />;
+    case "recruitment":
+      return <RecruitmentView state={state} dispatch={dispatch} />;
     case "research":
       return <ResearchView state={state} dispatch={dispatch} />;
     case "office":

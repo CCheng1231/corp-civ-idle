@@ -13,19 +13,29 @@ import {
   recruitBatchCost,
   canAffordAtOffice,
   applyOfficeCost,
+  applyOfficeRefund,
   canBuildStructure,
   isStructureQueueFull,
+  isResearchQueueFull,
+  isRecruitmentQueueFull,
   canSellStructureLevel,
   projectedStructureLevels,
+  projectedResearchLevels,
   MAX_STRUCTURE_QUEUE,
+  MAX_RESEARCH_QUEUE,
+  MAX_RECRUIT_QUEUE,
   unitAvailableAt,
   contractorTransferDurationMs,
   OFFICE_LABELS,
-  RECRUIT_MS_PER_CONTRACTOR,
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
   OFFICE_EXPANSION_STRUCTURE_ID,
+  recruitmentOrderDurationMs,
+  recruitmentOrderBuildTimeHours,
 } from "./constants";
+import { cancelRefundFromSpent } from "./refunds";
+import { researchBuildTimeMs } from "./researchBalance";
+import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
   engageJobPosting,
@@ -41,7 +51,7 @@ import {
   formatAssignmentSummary,
   unitDefinition,
 } from "./unitEffects";
-import { appendActivityLogs, cloneResourceCost } from "./logbook";
+import { appendActivityLogs, cloneResourceCost, queueCancelLogFields } from "./logbook";
 import { normalizeResourceCost } from "./phaseA";
 import {
   buildTimeMsForQueueJob,
@@ -101,6 +111,10 @@ function getResearchDef(id: ResearchId) {
   return def;
 }
 
+function newQueueJobId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export function structureCost(
   state: GameState,
   locationId: OfficeLocationId,
@@ -130,7 +144,8 @@ export function structureDemolishRefund(
 
 export function researchCost(state: GameState, researchId: ResearchId) {
   const def = getResearchDef(researchId);
-  return progressionCost(state.researchLevels[researchId], def);
+  const level = projectedResearchLevels(state)[researchId];
+  return progressionCost(level, def);
 }
 
 export function computeProjectBonuses(state: GameState) {
@@ -299,31 +314,128 @@ function processContractorTransfers(state: GameState, now: number): GameState {
   return next;
 }
 
-function processRecruitmentJobs(state: GameState, now: number): GameState {
-  if (state.recruitmentJobs.length === 0) return state;
+function processResearchQueues(state: GameState, now: number): GameState {
+  let next = state;
 
-  const pending = state.recruitmentJobs.filter((j) =>
-    timerHasNotElapsed(now, j.completesAt, state),
-  );
-  const completed = state.recruitmentJobs.filter(
-    (j) => !timerHasNotElapsed(now, j.completesAt, state),
-  );
-  if (completed.length === 0) return state;
+  for (const officeId of OFFICE_IDS) {
+    let queue = [...(next.researchQueues[officeId] ?? [])];
 
-  const next = structuredClone(state);
-  next.recruitmentJobs = pending;
-  for (const job of completed) {
-    next.contractorsByLocation[job.officeId][job.unitId] =
-      (next.contractorsByLocation[job.officeId][job.unitId] ?? 0) + 1;
+    while (queue.length > 0) {
+      if (queue[0].completesAt === null) {
+        const buildMs = researchBuildTimeMs(
+          queue[0].researchId,
+          queue[0].targetLevel,
+        );
+        const startedAt = now;
+        const completesAt = scheduleTimerAt(next, now, buildMs);
+        queue[0] = { ...queue[0], startedAt, completesAt };
+        if (timerHasNotElapsed(now, completesAt, next)) break;
+      }
+      const dueAt = queue[0].completesAt;
+      if (dueAt === null || timerHasNotElapsed(now, dueAt, next)) break;
+
+      const job = queue.shift()!;
+      next = applyResearchEffects(next, job.researchId);
+      next.researchQueues = { ...next.researchQueues, [officeId]: queue };
+      const def = getResearchDef(job.researchId);
+      const newLevel = next.researchLevels[job.researchId];
+      next = appendActivityLogs(next, [
+        {
+          category: "research_complete",
+          summary: `${def.name} completed`,
+          officeId,
+          impacts: [
+            `Research level ${newLevel}/${def.maxLevel}`,
+            "Firm production rates updated",
+          ],
+        },
+      ]);
+    }
+
+    next = {
+      ...next,
+      researchQueues: { ...next.researchQueues, [officeId]: queue },
+    };
   }
+
+  return next;
+}
+
+function startRecruitmentJobTimer(
+  state: GameState,
+  job: import("./types").RecruitmentJob,
+  now: number,
+): import("./types").RecruitmentJob {
+  const startedAt = now;
+  const completesAt = scheduleTimerAt(
+    state,
+    now,
+    recruitmentOrderDurationMs(job.count ?? 1),
+  );
+  return { ...job, startedAt, completesAt };
+}
+
+function recruitmentJobsForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+) {
+  return state.recruitmentJobs.filter((j) => j.officeId === officeId);
+}
+
+function setRecruitmentJobsForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+  jobs: import("./types").RecruitmentJob[],
+): GameState {
+  return {
+    ...state,
+    recruitmentJobs: [
+      ...state.recruitmentJobs.filter((j) => j.officeId !== officeId),
+      ...jobs,
+    ],
+  };
+}
+
+function processRecruitmentJobs(state: GameState, now: number): GameState {
+  let next = structuredClone(state);
+  const completed: import("./types").RecruitmentJob[] = [];
+
+  for (const officeId of OFFICE_IDS) {
+    let jobs = recruitmentJobsForOffice(next, officeId);
+    if (jobs.length === 0) continue;
+
+    if (jobs[0].completesAt === null) {
+      jobs[0] = startRecruitmentJobTimer(next, jobs[0], now);
+      next = setRecruitmentJobsForOffice(next, officeId, jobs);
+    }
+
+    while (
+      jobs.length > 0 &&
+      jobs[0].completesAt !== null &&
+      !timerHasNotElapsed(now, jobs[0].completesAt!, next)
+    ) {
+      const job = jobs.shift()!;
+      completed.push(job);
+      const hireCount = job.count ?? 1;
+      next.contractorsByLocation[job.officeId][job.unitId] =
+        (next.contractorsByLocation[job.officeId][job.unitId] ?? 0) + hireCount;
+      if (jobs.length > 0 && jobs[0].completesAt === null) {
+        jobs[0] = startRecruitmentJobTimer(next, jobs[0], now);
+      }
+      next = setRecruitmentJobsForOffice(next, officeId, jobs);
+    }
+  }
+
+  if (completed.length === 0) return next;
 
   return appendActivityLogs(
     next,
     completed.map((job) => {
       const unit = unitDefinition(job.unitId);
+      const hireCount = job.count ?? 1;
       return {
         category: "recruit" as const,
-        summary: `${unit.name} joined ${OFFICE_LABELS[job.officeId]}`,
+        summary: `${hireCount}× ${unit.name} joined ${OFFICE_LABELS[job.officeId]}`,
         officeId: job.officeId,
         impacts: [
           `${next.contractorsByLocation[job.officeId][job.unitId]} ${unit.name} at site`,
@@ -339,13 +451,18 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
     {
       ...state,
       resources: normalizeResourceWallet(state.resources),
+      dismissedJobReportIds: state.dismissedJobReportIds ?? [],
+      logbookFilterId: state.logbookFilterId ?? "all",
     },
     now,
   );
   return withDerivedStats(
     runJobSimulation(
       processRecruitmentJobs(
-        processContractorTransfers(processStructureQueues(normalized, now), now),
+        processContractorTransfers(
+          processResearchQueues(processStructureQueues(normalized, now), now),
+          now,
+        ),
         now,
       ),
       now,
@@ -398,6 +515,7 @@ function advanceSimulatedTime(
 
   let next = tickProduction(state, input.productionDeltaSec);
   next = processStructureQueues(next, input.eventNow);
+  next = processResearchQueues(next, input.eventNow);
   next = processContractorTransfers(next, input.eventNow);
   next = processRecruitmentJobs(next, input.eventNow);
   next = runJobSimulation(next, input.eventNow);
@@ -424,7 +542,27 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return finalizeLoadedState(action.state, Date.now());
 
     case "SET_VIEW":
-      return { ...state, view: action.view };
+      return {
+        ...state,
+        view: action.view,
+        ...(action.logbookFilter !== undefined
+          ? { logbookFilterId: action.logbookFilter }
+          : {}),
+      };
+
+    case "SET_LOGBOOK_FILTER":
+      return { ...state, logbookFilterId: action.filterId };
+
+    case "DISMISS_JOB_REPORT": {
+      const dismissed = state.dismissedJobReportIds ?? [];
+      if (dismissed.includes(action.logEntryId)) {
+        return state;
+      }
+      return {
+        ...state,
+        dismissedJobReportIds: [...dismissed, action.logEntryId],
+      };
+    }
 
     case "SELECT_OFFICE": {
       if (action.officeId === "branch" && !state.branchEstablished) {
@@ -497,17 +635,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "BUY_STRUCTURE": {
       const def = getStructureDef(action.structureId);
-      const isOfficeExpansion =
-        action.structureId === OFFICE_EXPANSION_STRUCTURE_ID;
       const projected = projectedStructureLevels(
         state,
         action.locationId,
       )[action.structureId];
       if (projected >= def.maxLevel) return state;
-      if (
-        !isOfficeExpansion &&
-        isStructureQueueFull(state, action.locationId)
-      ) {
+      if (isStructureQueueFull(state, action.locationId)) {
         return state;
       }
       if (!canBuildStructure(state, action.locationId, action.structureId)) {
@@ -518,35 +651,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const spentSnapshot = cloneResourceCost(cost) ?? cost;
       let next = applyOfficeCost(state, action.locationId, cost);
 
-      if (isOfficeExpansion) {
-        const levelBefore =
-          next.structureLevelsByLocation[action.locationId][action.structureId];
-        return appendActivityLogs(
-          withDerivedStats(
-            applyStructurePurchase(next, action.locationId, action.structureId),
-          ),
-          [
-          {
-            category: "structure_complete",
-            summary: `${def.name} upgraded at ${OFFICE_LABELS[action.locationId]}`,
-            officeId: action.locationId,
-            spent: spentSnapshot,
-            impacts: [
-              `Level ${levelBefore} → ${levelBefore + 1}`,
-              `Office space capacity updated`,
-            ],
-          },
-        ],
-        );
-      }
-
       const targetLevel = projected + 1;
       const buildMs = structureBuildTimeMs(action.structureId, targetLevel);
       const queue = [...next.structureQueues[action.locationId]];
       const now = Date.now();
       queue.push({
+        id: newQueueJobId(),
         structureId: action.structureId,
         targetLevel,
+        spentCost: spentSnapshot,
         startedAt: queue.length === 0 ? now : null,
         completesAt:
           queue.length === 0
@@ -557,10 +670,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const buildHours =
         getStructureLevelRow(action.structureId, targetLevel)?.buildTimeHours ??
         0;
+      const isExpansion =
+        action.structureId === OFFICE_EXPANSION_STRUCTURE_ID;
       return appendActivityLogs(next, [
         {
           category: "structure_upgrade",
-          summary: `Queued ${def.name} at ${OFFICE_LABELS[action.locationId]}`,
+          summary: isExpansion
+            ? `Queued ${def.name} at ${OFFICE_LABELS[action.locationId]}`
+            : `Queued ${def.name} at ${OFFICE_LABELS[action.locationId]}`,
           officeId: action.locationId,
           spent: spentSnapshot,
           impacts: [
@@ -569,6 +686,37 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
               ? `Build time ${buildHours} game hr (real-time)`
               : "Waiting behind earlier queued builds",
           ],
+        },
+      ]);
+    }
+
+    case "CANCEL_STRUCTURE_JOB": {
+      const queue = state.structureQueues[action.locationId];
+      const index = queue.findIndex((j) => j.id === action.jobId);
+      if (index < 0) return state;
+      const job = queue[index];
+      const spent =
+        job.spentCost ??
+        structureUpgradeCostForTargetLevel(
+          job.structureId,
+          job.targetLevel ??
+            projectedStructureLevels(state, action.locationId)[
+              job.structureId
+            ] + 1,
+        );
+      const refund = cancelRefundFromSpent(spent);
+      const def = getStructureDef(job.structureId);
+      let next = applyOfficeRefund(state, action.locationId, refund);
+      next = structuredClone(next);
+      next.structureQueues[action.locationId] = queue.filter(
+        (j) => j.id !== action.jobId,
+      );
+      return appendActivityLogs(withDerivedStats(next), [
+        {
+          category: "structure_cancel",
+          summary: `Cancelled ${def.name} at ${OFFICE_LABELS[action.locationId]}`,
+          officeId: action.locationId,
+          ...queueCancelLogFields(spent, refund),
         },
       ]);
     }
@@ -613,7 +761,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           impacts: [
             `Now level ${newLevel}`,
             powerRefund > 0
-              ? `${powerRefund} power returned to site pool`
+              ? `${powerRefund} Power returned to site pool`
               : "Office space freed at site",
           ],
         },
@@ -621,25 +769,67 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "BUY_RESEARCH": {
+      const officeId = action.officeId ?? state.selectedOffice;
       const def = getResearchDef(action.researchId);
       if (!isResearchUnlocked(state, def)) return state;
-      const level = state.researchLevels[action.researchId];
-      if (level >= def.maxLevel) return state;
+      const projected = projectedResearchLevels(state)[action.researchId];
+      if (projected >= def.maxLevel) return state;
+      if (isResearchQueueFull(state, officeId)) return state;
       const cost = researchCost(state, action.researchId);
-      if (!canAffordAtOffice(state, state.selectedOffice, cost)) return state;
-      const paid = applyOfficeCost(state, state.selectedOffice, cost);
-      const applied = applyResearchEffects(paid, action.researchId);
-      const newLevel = applied.researchLevels[action.researchId];
-      return appendActivityLogs(applied, [
+      if (!canAffordAtOffice(state, officeId, cost)) return state;
+      const spentSnapshot = cloneResourceCost(cost) ?? cost;
+      let next = applyOfficeCost(state, officeId, cost);
+      const targetLevel = projected + 1;
+      const buildMs = researchBuildTimeMs(action.researchId, targetLevel);
+      const queue = [...(next.researchQueues[officeId] ?? [])];
+      const now = Date.now();
+      queue.push({
+        id: newQueueJobId(),
+        researchId: action.researchId,
+        officeId,
+        targetLevel,
+        spentCost: spentSnapshot,
+        startedAt: queue.length === 0 ? now : null,
+        completesAt:
+          queue.length === 0 ? scheduleTimerAt(next, now, buildMs) : null,
+      });
+      next.researchQueues = { ...next.researchQueues, [officeId]: queue };
+      const buildHours = buildMs / (3600 * 1000);
+      return appendActivityLogs(next, [
         {
           category: "research",
-          summary: `${def.name} upgraded`,
-          officeId: state.selectedOffice,
-          spent: cost,
+          summary: `Queued ${def.name} at ${OFFICE_LABELS[officeId]}`,
+          officeId,
+          spent: spentSnapshot,
           impacts: [
-            `Research level ${newLevel}/${def.maxLevel}`,
-            "Firm production rates updated",
+            `Queue ${queue.length}/${MAX_RESEARCH_QUEUE}`,
+            queue.length === 1
+              ? `Research time ${buildHours.toFixed(2)} game hr (real-time)`
+              : "Waiting behind earlier queued research",
           ],
+        },
+      ]);
+    }
+
+    case "CANCEL_RESEARCH_JOB": {
+      const queue = state.researchQueues[action.officeId] ?? [];
+      const job = queue.find((j) => j.id === action.jobId);
+      if (!job) return state;
+      const spent = job.spentCost ?? {};
+      const refund = cancelRefundFromSpent(spent);
+      const def = getResearchDef(job.researchId);
+      let next = applyOfficeRefund(state, action.officeId, refund);
+      next = structuredClone(next);
+      next.researchQueues = {
+        ...next.researchQueues,
+        [action.officeId]: queue.filter((j) => j.id !== action.jobId),
+      };
+      return appendActivityLogs(next, [
+        {
+          category: "research_cancel",
+          summary: `Cancelled ${def.name} at ${OFFICE_LABELS[action.officeId]}`,
+          officeId: action.officeId,
+          ...queueCancelLogFields(spent, refund),
         },
       ]);
     }
@@ -658,43 +848,67 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const count = Math.floor(action.count);
       if (count < 1 || count > MAX_RECRUIT_BATCH) return state;
       const { officeId, unitId } = action;
+      if (isRecruitmentQueueFull(state, officeId)) return state;
       const cost = recruitBatchCost(unitId, count);
       if (!canAffordAtOffice(state, officeId, cost)) return state;
 
       const now = Date.now();
-      const officeJobs = state.recruitmentJobs.filter(
-        (j) => j.officeId === officeId,
+      const officeJobs = recruitmentJobsForOffice(state, officeId);
+      const active = officeJobs.length === 0;
+      const spentSnapshot = cloneResourceCost(cost) ?? cost;
+      const job = {
+        id: newQueueJobId(),
+        officeId,
+        unitId,
+        count,
+        spentCost: spentSnapshot,
+        startedAt: active ? now : null,
+        completesAt: active
+          ? scheduleTimerAt(state, now, recruitmentOrderDurationMs(count))
+          : null,
+      };
+      const merged = setRecruitmentJobsForOffice(
+        applyOfficeCost(state, officeId, cost),
+        officeId,
+        [...officeJobs, job],
       );
-      let cursor = now;
-      if (officeJobs.length > 0 && !state.settings.ignoreTimers) {
-        cursor = Math.max(...officeJobs.map((j) => j.completesAt));
-      }
-
-      const next = applyOfficeCost(state, officeId, cost);
-      const newJobs = [];
-      for (let i = 0; i < count; i += 1) {
-        cursor = scheduleTimerAt(state, cursor, RECRUIT_MS_PER_CONTRACTOR);
-        newJobs.push({
-          id: `${cursor}-${officeId}-${unitId}-${Math.random().toString(36).slice(2, 9)}`,
-          officeId,
-          unitId,
-          completesAt: cursor,
-        });
-      }
-      next.recruitmentJobs = [...next.recruitmentJobs, ...newJobs];
 
       const unit = unitDefinition(unitId);
-      const totalSec = (count * RECRUIT_MS_PER_CONTRACTOR) / 1000;
-      return appendActivityLogs(next, [
+      const orderHours = recruitmentOrderBuildTimeHours(count);
+      return appendActivityLogs(merged, [
         {
           category: "recruit",
-          summary: `Queued ${count}× ${unit.name} at ${OFFICE_LABELS[officeId]}`,
+          summary: `Queued order: ${count}× ${unit.name} at ${OFFICE_LABELS[officeId]}`,
           officeId,
-          spent: cost,
+          spent: spentSnapshot,
           impacts: [
-            `${RECRUIT_MS_PER_CONTRACTOR / 1000}s per hire`,
-            `Last arrives in ~${Math.ceil(totalSec)}s`,
+            `Queue ${officeJobs.length + 1}/${MAX_RECRUIT_QUEUE} orders`,
+            active
+              ? `Arrives in ${formatQueueTimeHours(orderHours)}`
+              : "Waiting behind earlier orders",
           ],
+        },
+      ]);
+    }
+
+    case "CANCEL_RECRUITMENT_JOB": {
+      const job = state.recruitmentJobs.find((j) => j.id === action.jobId);
+      if (!job) return state;
+      const spent = job.spentCost ?? {};
+      const refund = cancelRefundFromSpent(spent);
+      const unit = unitDefinition(job.unitId);
+      let next = applyOfficeRefund(state, job.officeId, refund);
+      next = structuredClone(next);
+      const officeJobs = recruitmentJobsForOffice(next, job.officeId).filter(
+        (j) => j.id !== action.jobId,
+      );
+      next = setRecruitmentJobsForOffice(next, job.officeId, officeJobs);
+      return appendActivityLogs(next, [
+        {
+          category: "recruit_cancel",
+          summary: `Cancelled hire: ${job.count ?? 1}× ${unit.name} at ${OFFICE_LABELS[job.officeId]}`,
+          officeId: job.officeId,
+          ...queueCancelLogFields(spent, refund),
         },
       ]);
     }

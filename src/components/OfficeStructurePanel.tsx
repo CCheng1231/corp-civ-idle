@@ -10,16 +10,19 @@ import {
   isStructureQueuedAt,
   projectedStructureLevels,
   powerAvailable,
+  RESOURCE_LABELS,
   splitResourceCost,
 } from "../game/constants";
 import {
   structureUpgradePreviewLines,
+  structureBuildTimeMs,
 } from "../game/structureBalance";
 import {
   structureCost,
   structureDemolishRefund,
 } from "../game/engine";
-import { StructureBuildQueueList } from "./StructureBuildQueueList";
+import { formatQueueTimeHours } from "../game/timers";
+import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import {
   formatPreviewDelta,
@@ -53,14 +56,15 @@ export function structureUpgradeBlocker(
   for (const [key, amount] of Object.entries(global)) {
     const k = key as keyof GameState["resources"];
     const need = amount ?? 0;
+    const label = RESOURCE_LABELS[k] ?? key;
     if (state.resources[k] < need) {
-      return `Need ${formatNumber(need)} ${k} (have ${formatNumber(state.resources[k])})`;
+      return `Need ${formatNumber(need)} ${label} (have ${formatNumber(state.resources[k])})`;
     }
   }
 
   const freePower = powerAvailable(state.locationStats[officeId]);
   if (power > freePower) {
-    return `Need ${power} power at this site (${formatNumber(freePower)} free)`;
+    return `Need ${power} Power at this site (${formatNumber(freePower)} free)`;
   }
 
   return null;
@@ -89,9 +93,19 @@ export function OfficeStructurePanel({
         Upgrades queue at this site (build time in game hours = real time, max{" "}
         {MAX_STRUCTURE_QUEUE}). Sell refunds 50% of that level's upgrade cost.
       </p>
-      {buildQueue.length > 0 && (
-        <StructureBuildQueueList state={state} jobs={buildQueue} now={now} />
-      )}
+      <QueueSection
+        label="Build queue"
+        count={buildQueue.length}
+        max={MAX_STRUCTURE_QUEUE}
+      >
+        <StructureBuildQueueList
+          state={state}
+          jobs={buildQueue}
+          locationId={officeId}
+          dispatch={dispatch}
+          now={now}
+        />
+      </QueueSection>
       <ul className="structure-list research-grid office-structure-grid">
         {structurePanelStructures().map((structure) => {
           const level = locationStructures[structure.id];
@@ -109,9 +123,15 @@ export function OfficeStructurePanel({
           const sellRefund = structureDemolishRefund(state, officeId, structure.id);
           const sellBlocked = isStructureQueuedAt(state, officeId, structure.id);
           const targetLevel = projected + 1;
+          const buildHours =
+            structureBuildTimeMs(structure.id, targetLevel) / (3600 * 1000);
           const previewLines = maxed
             ? []
-            : structureUpgradePreviewLines(structure.id, projected, targetLevel);
+            : structureUpgradePreviewLines(
+                structure.id,
+                projected,
+                targetLevel,
+              ).filter((line) => line.label !== "Build time");
 
           return (
             <li key={structure.id} className="structure-card structure-card-upgrade">
@@ -129,29 +149,44 @@ export function OfficeStructurePanel({
               </div>
               {!maxed && (
                 <div className="structure-upgrade-preview">
-                  <StructureCostLine
-                    state={state}
-                    officeId={officeId}
-                    cost={cost}
-                    layout="stack"
-                  />
-                  <ul className="structure-upgrade-preview-stats">
-                    {previewLines.map((line) => (
-                      <li key={line.label}>
+                  {previewLines.length > 0 ? (
+                    <ul className="structure-upgrade-preview-effects">
+                      {previewLines.map((line) => (
+                        <li key={line.label}>
+                          <span className="structure-upgrade-preview-label">
+                            {line.label}
+                          </span>
+                          <span className="structure-upgrade-preview-value">
+                            {formatPreviewDelta(
+                              line.from,
+                              line.to,
+                              line.unit,
+                              line.label,
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <div className="structure-upgrade-preview-foot">
+                    <StructureCostLine
+                      state={state}
+                      officeId={officeId}
+                      cost={cost}
+                      layout="stack"
+                      heading="Cost"
+                    />
+                    {buildHours > 0 ? (
+                      <div className="structure-upgrade-time">
                         <span className="structure-upgrade-preview-label">
-                          {line.label}
+                          Time
                         </span>
                         <span className="structure-upgrade-preview-value">
-                          {formatPreviewDelta(
-                            line.from,
-                            line.to,
-                            line.unit,
-                            line.label,
-                          )}
+                          {formatQueueTimeHours(buildHours)}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               )}
               {blocker && !maxed && (

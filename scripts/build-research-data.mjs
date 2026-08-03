@@ -2,19 +2,16 @@
  * Reads Research + Research Cost tabs → src/game/researchData.ts
  * Run: node scripts/build-research-data.mjs
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as XLSXNS from "xlsx";
+import { resolveWorkbookPath } from "./workbook-path.mjs";
 
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const workbookPath = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
-if (!existsSync(workbookPath)) {
-  console.error("Workbook not found:", workbookPath);
-  process.exit(1);
-}
+const workbookPath = resolveWorkbookPath();
 
 const outTs = join(__dirname, "..", "src", "game", "researchData.ts");
 
@@ -171,6 +168,10 @@ for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
       govReputation: cost.govReputation,
     },
     costScale: cost.costScale,
+    buildTimeHoursPerLevel: Array.from(
+      { length: meta.maxLevel },
+      () => cost.timeHours,
+    ),
     requires: requires.length ? requires : undefined,
     effects: effectFromRow(meta.type, meta.effectText, meta.name),
   });

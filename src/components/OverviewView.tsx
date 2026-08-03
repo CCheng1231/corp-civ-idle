@@ -1,151 +1,76 @@
-import { useEffect, useState } from "react";
+import { type Dispatch } from "react";
 import {
+  MAX_RESEARCH_QUEUE,
+  MAX_RECRUIT_QUEUE,
+  MAX_STRUCTURE_QUEUE,
   OFFICE_LABELS,
   RESEARCH,
   STRUCTURES,
   formatNumber,
+  projectedResearchLevels,
   recruitmentJobsAtOffice,
+  researchJobsAtOffice,
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
-import { unitDefinition } from "../game/unitEffects";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
-import { overviewOfficeOptions } from "../game/mapWorld";
-import { formatTimerRemaining } from "../game/timers";
-import type { GameState, OfficeLocationId } from "../game/types";
-import { StructureBuildQueueList } from "./StructureBuildQueueList";
+import type { GameAction, GameState } from "../game/types";
+import { LocationViewHeader } from "./LocationViewHeader";
+import {
+  RecruitmentQueueList,
+  ResearchQueueList,
+  StructureBuildQueueList,
+  QueueSection,
+} from "./StructureBuildQueueList";
 
 interface OverviewViewProps {
   state: GameState;
+  dispatch: Dispatch<GameAction>;
 }
 
-export function OverviewView({ state }: OverviewViewProps) {
-  const officeOptions = overviewOfficeOptions(state);
-  const [officeId, setOfficeId] = useState<OfficeLocationId>("hq");
-
-  useEffect(() => {
-    if (officeId === "branch" && !state.branchEstablished) {
-      setOfficeId("hq");
-    }
-  }, [officeId, state.branchEstablished]);
-
+export function OverviewView({ state, dispatch }: OverviewViewProps) {
+  const officeId = state.selectedOffice;
   const officeLabel = OFFICE_LABELS[officeId];
   const now = Date.now();
   const structures = state.structureLevelsByLocation[officeId];
   const buildQueue = state.structureQueues[officeId];
-  const hireQueue = recruitmentJobsAtOffice(state, officeId).sort(
-    (a, b) => a.completesAt - b.completesAt,
-  );
+  const researchQueue = researchJobsAtOffice(state, officeId);
+  const hireQueue = recruitmentJobsAtOffice(state, officeId);
   const roster = rosterAt(state, officeId);
+  const projectedResearch = projectedResearchLevels(state);
   const researchActive = RESEARCH.filter(
-    (def) => state.researchLevels[def.id] > 0,
+    (def) => projectedResearch[def.id] > 0,
   );
-  const selectedOption = officeOptions.find((o) => o.id === officeId);
 
   return (
-    <div className="main-view-panel overview-view">
-      <header className="main-view-header overview-header">
-        <div className="overview-header-row">
-          <div>
-            <h2>Overview</h2>
-            <p className="muted">
-              Per-site snapshot — structures, builds, hiring, and staff.
-              Research is firm-wide.
-            </p>
-          </div>
-          <label className="overview-office-picker">
-            <span className="overview-office-picker-label">Office</span>
-            <select
-              className="overview-office-select"
-              value={officeId}
-              onChange={(e) =>
-                setOfficeId(e.target.value as OfficeLocationId)
-              }
-            >
-              {officeOptions.map((option) => (
-                <option
-                  key={option.id}
-                  value={option.id}
-                  disabled={!option.available}
-                >
-                  {option.label}
-                  {!option.available ? " (not open)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {selectedOption?.hint && (
-          <p className="muted overview-office-hint">{selectedOption.hint}</p>
-        )}
-      </header>
+    <div className="main-view-panel location-view-panel overview-view">
+      <LocationViewHeader
+        title="Overview"
+        description="Per-site snapshot — structures, builds, hiring, and staff. Research levels are firm-wide; queues are per office."
+        state={state}
+        dispatch={dispatch}
+      />
 
-      <section className="overview-section">
+      <div className="location-view-body">
+      <section className="overview-section location-view-section">
         <h3>Structure levels — {officeLabel}</h3>
-        <ul className="office-site-structure-levels overview-structure-levels">
-          {STRUCTURES.map((def) => {
-            const level = structures[def.id];
-            if (level <= 0) return null;
-            return (
-              <li key={def.id}>
-                <span>{def.name}</span>
-                <strong>
-                  Lv {level}/{def.maxLevel}
-                </strong>
-              </li>
-            );
-          })}
-        </ul>
-        {STRUCTURES.every((def) => structures[def.id] <= 0) && (
-          <p className="muted">No structures built at this site yet.</p>
-        )}
-      </section>
-
-      <section className="overview-section">
-        <h3>Building in progress</h3>
-        <StructureBuildQueueList
-          state={state}
-          jobs={buildQueue}
-          now={now}
-          emptyLabel={`No structure upgrades queued at ${officeLabel}.`}
-        />
-      </section>
-
-      <section className="overview-section">
-        <h3>Research</h3>
-        {researchActive.length === 0 ? (
-          <p className="muted">No research purchased yet.</p>
+        {STRUCTURES.every((def) => structures[def.id] <= 0) ? (
+          <p className="muted overview-empty-note">
+            No structures built at this site yet.
+          </p>
         ) : (
-          <ul className="overview-research-list">
-            {researchActive.map((def) => (
-              <li key={def.id}>
-                <span>{def.name}</span>
-                <strong>
-                  Lv {state.researchLevels[def.id]}/{def.maxLevel}
-                </strong>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="muted overview-research-note">
-          Research completes instantly when purchased from the Research tab.
-        </p>
-      </section>
-
-      <section className="overview-section">
-        <h3>Hiring in progress</h3>
-        {hireQueue.length === 0 ? (
-          <p className="muted">No contractors arriving at {officeLabel}.</p>
-        ) : (
-          <ul className="build-queue">
-            {hireQueue.map((job) => {
-              const unit = unitDefinition(job.unitId);
+          <ul className="overview-structure-levels">
+            {STRUCTURES.map((def) => {
+              const level = structures[def.id];
+              if (level <= 0) return null;
               return (
-                <li key={job.id}>
-                  <span className="queue-role">Hiring</span>
-                  <span className="queue-name">{unit.name}</span>
-                  <span className="queue-status">
-                    {formatTimerRemaining(state, job.completesAt, now)}
+                <li key={def.id} className="overview-structure-tile">
+                  <span className="overview-structure-name">{def.name}</span>
+                  <span className="overview-structure-level">
+                    Lv {level}
+                    <span className="overview-structure-level-max">
+                      / {def.maxLevel}
+                    </span>
                   </span>
                 </li>
               );
@@ -154,29 +79,103 @@ export function OverviewView({ state }: OverviewViewProps) {
         )}
       </section>
 
-      <section className="overview-section">
-        <h3>Units at {officeLabel}</h3>
-        <p className="muted overview-units-total">
-          {formatNumber(totalWorkforce(roster))} on site
-          {hireQueue.length > 0 && ` · ${hireQueue.length} arriving`}
-        </p>
+      <section className="overview-section location-view-section">
+        <h3>Building in progress</h3>
+        <QueueSection
+          label="Build queue"
+          count={buildQueue.length}
+          max={MAX_STRUCTURE_QUEUE}
+        >
+          <StructureBuildQueueList
+            state={state}
+            jobs={buildQueue}
+            locationId={officeId}
+            dispatch={dispatch}
+            now={now}
+            emptyLabel={`No structure upgrades queued at ${officeLabel}.`}
+          />
+        </QueueSection>
+      </section>
+
+      <section className="overview-section location-view-section">
+        <h3>Research — {officeLabel}</h3>
+        <QueueSection
+          label="Research queue"
+          count={researchQueue.length}
+          max={MAX_RESEARCH_QUEUE}
+        >
+          <ResearchQueueList
+            state={state}
+            jobs={researchQueue}
+            officeId={officeId}
+            dispatch={dispatch}
+            now={now}
+            emptyLabel={`No research queued at ${officeLabel}.`}
+          />
+        </QueueSection>
+        {researchActive.length > 0 && (
+          <>
+            <h4 className="overview-subheading">Firm-wide levels</h4>
+            <ul className="overview-research-list">
+              {researchActive.map((def) => (
+                <li key={def.id}>
+                  <span>{def.name}</span>
+                  <strong>
+                    Lv {state.researchLevels[def.id]}/{def.maxLevel}
+                    {projectedResearch[def.id] > state.researchLevels[def.id] && (
+                      <span className="muted">
+                        {" "}
+                        (+{projectedResearch[def.id] - state.researchLevels[def.id]} queued)
+                      </span>
+                    )}
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section className="overview-section location-view-section">
+        <h3>Hiring in progress</h3>
+        <QueueSection
+          label="Hiring queue"
+          count={hireQueue.length}
+          max={MAX_RECRUIT_QUEUE}
+        >
+          <RecruitmentQueueList
+            state={state}
+            jobs={hireQueue}
+            officeId={officeId}
+            dispatch={dispatch}
+            now={now}
+            emptyLabel={`No contractors arriving at ${officeLabel}.`}
+          />
+        </QueueSection>
+      </section>
+
+      <section className="overview-section location-view-section">
+        <h3>Staff — {officeLabel}</h3>
         <ul className="office-site-staff-list">
           {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
             (unit) => (
               <li key={unit.id}>
                 <span className="office-site-staff-role">{unit.name}</span>
-                <span className="office-site-staff-count muted">
-                  T{unit.tier} · {unit.category}
+                <span className="office-site-staff-count">
+                  ×{roster[unit.id] ?? 0}
                 </span>
-                <strong>×{roster[unit.id] ?? 0}</strong>
               </li>
             ),
           )}
         </ul>
         {RECRUITMENT_UNITS.every((unit) => (roster[unit.id] ?? 0) <= 0) && (
-          <p className="muted">No units stationed at this site.</p>
+          <p className="muted">No units at this site.</p>
         )}
+        <p className="muted overview-staff-total">
+          Total on site: {formatNumber(totalWorkforce(roster))}
+        </p>
       </section>
+      </div>
     </div>
   );
 }

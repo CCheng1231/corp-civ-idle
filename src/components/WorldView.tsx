@@ -1,20 +1,11 @@
-import { type Dispatch } from "react";
-import { jobDefinitionById } from "../game/jobs";
+import { useState, type Dispatch } from "react";
 import {
-  BRANCH_OPENING_COST,
   REGION_LABELS,
   TOWER_HEX_LABELS,
-  branchEstablishBlockers,
-  canEstablishBranch,
-  commercialSiteAt,
   isAvailableCommercialLot,
-  towerAtCoord,
-  towerById,
   regionAtCoord,
+  towerAtCoord,
 } from "../game/mapWorld";
-import {
-  formatNumber,
-} from "../game/constants";
 import {
   MAP_GOV,
   axialEquals,
@@ -26,6 +17,7 @@ import {
   officeAtCoord,
 } from "../game/hexLayout";
 import type { AxialCoord, GameAction, GameState } from "../game/types";
+import { MapHexDrawer } from "./MapHexDrawer";
 
 interface WorldViewProps {
   state: GameState;
@@ -48,13 +40,8 @@ function hexVariant(
   if (state.jobEngagements.length > 0) {
     const activeTowerId =
       state.selectedTowerId ?? state.jobEngagements[0]?.towerId;
-    if (activeTowerId) {
-      try {
-        const tower = towerById(activeTowerId);
-        if (axialEquals(coord, tower.coord)) return "active";
-      } catch {
-        /* ignore */
-      }
+    if (activeTowerId && towerAtCoord(coord) === activeTowerId) {
+      return "active";
     }
   }
   return "default";
@@ -79,33 +66,51 @@ function hexOfficeLabel(
 export function WorldView({ state, dispatch }: WorldViewProps) {
   const cells = generateHexagonMap();
   const bounds = hexBounds(cells);
+  const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(null);
+  const [drawerSide, setDrawerSide] = useState<"left" | "right">("right");
+  const mapCenterX = bounds.minX + bounds.width / 2;
 
-  const engagementCount = state.jobEngagements.length;
-  const engagementSummary =
-    engagementCount > 0
-      ? `${engagementCount} active job engagement${engagementCount === 1 ? "" : "s"}`
-      : null;
+  function closeDrawer() {
+    setInspectedCoord(null);
+    dispatch({ type: "SELECT_TOWER", towerId: null });
+    dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: null });
+  }
 
-  const selectedCommercial = state.selectedCommercialHex
-    ? commercialSiteAt(state.selectedCommercialHex)
-    : undefined;
-  const canOpenBranch = canEstablishBranch(state, state.selectedCommercialHex);
-  const branchBlockers = branchEstablishBlockers(
-    state,
-    state.selectedCommercialHex,
-  );
+  function inspectHex(coord: AxialCoord) {
+    const { x } = axialToPixel(coord.q, coord.r);
+    setDrawerSide(x > mapCenterX ? "left" : "right");
+    setInspectedCoord({ ...coord });
+
+    const officeId = officeAtCoord(coord, {
+      established: state.branchEstablished,
+      coord: state.branchCoord,
+    });
+    const towerId = towerAtCoord(coord);
+
+    if (officeId) {
+      dispatch({ type: "SELECT_OFFICE", officeId });
+      dispatch({ type: "SELECT_TOWER", towerId: null });
+      dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: null });
+    } else if (towerId) {
+      dispatch({ type: "SELECT_TOWER", towerId });
+      dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: null });
+    } else if (isAvailableCommercialLot(coord, state)) {
+      dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: { ...coord } });
+      dispatch({ type: "SELECT_TOWER", towerId: null });
+    } else {
+      dispatch({ type: "SELECT_TOWER", towerId: null });
+      dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: null });
+    }
+  }
 
   return (
     <div className="world-view">
       <div className="world-header">
         <h2>Regional map</h2>
         <p>
-          New firms start at <strong>HQ</strong> only. Research{" "}
-          <strong>Branch Management</strong>, select a{" "}
-          <strong>commercial lot</strong> (yellow hex), then establish the branch
-          below. Unused lots stay on the map for future expansion. Costs are paid
-          from <strong>HQ</strong> (including {BRANCH_OPENING_COST.electricity}{" "}
-          power at HQ).
+          Click any hex to inspect it — office towers, commercial lots, your
+          sites, or open terrain. Towers list nearby contract postings; use{" "}
+          <strong>Open job board</strong> when you are ready to bid.
         </p>
         <ul className="region-legend" aria-label="Map regions">
           {(
@@ -128,148 +133,72 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
           <li className="landmark-legend-job">Active job</li>
         </ul>
       </div>
-      <div className="hex-map">
-        <svg
-          viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
-          role="img"
-          aria-label="Regional hex map"
-        >
-          {cells.map((coord) => {
-            const { x, y } = axialToPixel(coord.q, coord.r);
-            const variant = hexVariant(coord, state);
-            const isDefault = variant === "default";
-            const towerId = towerAtCoord(coord);
-            const officeId = officeAtCoord(coord, {
-              established: state.branchEstablished,
-              coord: state.branchCoord,
-            });
-            const isSelectedOffice = officeId === state.selectedOffice;
-            const isSelectedTower = towerId === state.selectedTowerId;
-            const isSelectedCommercial =
-              state.selectedCommercialHex &&
-              axialEquals(coord, state.selectedCommercialHex);
 
-            const availableCommercial = isAvailableCommercialLot(coord, state);
-
-            const clickable =
-              officeId !== null ||
-              towerId !== null ||
-              availableCommercial;
-
-            const mapLabel = hexOfficeLabel(officeId, towerId);
-
-            return (
-              <g key={axialKey(coord)} className="hex-cell">
-                <polygon
-                  points={hexPolygonPoints(x, y)}
-                  className={[
-                    "hex-tile",
-                    isDefault ? regionClass(coord) : "",
-                    `hex-tile-${variant}`,
-                    officeId ? "hex-tile-office" : "",
-                    isSelectedOffice ? "hex-tile-selected" : "",
-                    isSelectedTower ? "hex-tile-tower-selected" : "",
-                    isSelectedCommercial ? "hex-tile-commercial-selected" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => {
-                    if (officeId) {
-                      dispatch({ type: "SELECT_OFFICE", officeId });
-                    } else if (towerId) {
-                      dispatch({ type: "SELECT_TOWER", towerId });
-                      dispatch({ type: "SET_VIEW", view: "world" });
-                    } else if (availableCommercial) {
-                      dispatch({
-                        type: "SELECT_COMMERCIAL_HEX",
-                        coord: { ...coord },
-                      });
-                    }
-                  }}
-                  style={{ cursor: clickable ? "pointer" : "default" }}
-                />
-                {mapLabel && (
-                  <text
-                    x={x}
-                    y={y}
-                    className={`hex-label hex-label-${mapLabel.kind}`}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    pointerEvents="none"
-                  >
-                    {mapLabel.text}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {!state.branchEstablished && (
-        <div className="branch-setup-panel">
-          <h3>Open a branch</h3>
-          <p className="muted">
-            1) Research Branch Management · 2) Select a yellow commercial lot ·
-            3) Establish branch and pay opening costs at HQ
-          </p>
-          <p className="cost-line">
-            Opening cost:{" "}
-            {Object.entries(BRANCH_OPENING_COST)
-              .map(([k, v]) =>
-                k === "electricity"
-                  ? `power ${formatNumber(v ?? 0)}`
-                  : `${k} ${formatNumber(v ?? 0)}`,
-              )
-              .join(" · ")}
-          </p>
-          {selectedCommercial && (
-            <p>
-              Selected site: <strong>{selectedCommercial.label}</strong> (
-              {REGION_LABELS[selectedCommercial.region]})
-            </p>
-          )}
-          {branchBlockers.length > 0 && (
-            <ul className="branch-blockers">
-              {branchBlockers.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!canOpenBranch}
-            onClick={() =>
-              dispatch({
-                type: "ESTABLISH_BRANCH",
-                coord: state.selectedCommercialHex,
-              })
-            }
+      <div className="world-map-stage">
+        <div className="hex-map">
+          <svg
+            viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+            role="img"
+            aria-label="Regional hex map"
           >
-            Establish branch at selected lot
-          </button>
-        </div>
-      )}
+            {cells.map((coord) => {
+              const { x, y } = axialToPixel(coord.q, coord.r);
+              const variant = hexVariant(coord, state);
+              const isDefault = variant === "default";
+              const towerId = towerAtCoord(coord);
+              const officeId = officeAtCoord(coord, {
+                established: state.branchEstablished,
+                coord: state.branchCoord,
+              });
+              const isInspected =
+                inspectedCoord !== null && axialEquals(coord, inspectedCoord);
 
-      {engagementSummary && (
-        <div className="travel-banner">
-          Crew on jobs: <strong>{engagementSummary}</strong>
-          {state.jobEngagements.slice(0, 2).map((e) => {
-            try {
-              const def = jobDefinitionById(e.definitionId);
+              const mapLabel = hexOfficeLabel(officeId, towerId);
+
               return (
-                <span key={e.id}>
-                  {" "}
-                  · {def.title} (~${formatNumber(e.earnedSoFar)} accrued)
-                </span>
+                <g key={axialKey(coord)} className="hex-cell">
+                  <polygon
+                    points={hexPolygonPoints(x, y)}
+                    className={[
+                      "hex-tile",
+                      isDefault ? regionClass(coord) : "",
+                      `hex-tile-${variant}`,
+                      officeId ? "hex-tile-office" : "",
+                      isInspected ? "hex-tile-inspected" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => inspectHex(coord)}
+                    style={{ cursor: "pointer" }}
+                  />
+                  {mapLabel && (
+                    <text
+                      x={x}
+                      y={y}
+                      className={`hex-label hex-label-${mapLabel.kind}`}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      pointerEvents="none"
+                    >
+                      {mapLabel.text}
+                    </text>
+                  )}
+                </g>
               );
-            } catch {
-              return null;
-            }
-          })}
+            })}
+          </svg>
         </div>
-      )}
+
+        {inspectedCoord && (
+          <MapHexDrawer
+            state={state}
+            dispatch={dispatch}
+            coord={inspectedCoord}
+            side={drawerSide}
+            onClose={closeDrawer}
+          />
+        )}
+      </div>
     </div>
   );
 }

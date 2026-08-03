@@ -1,9 +1,11 @@
 import {
   SAVE_KEY,
   createInitialState,
-  defaultOfficeSiteSections,
   emptyStructureLevels,
   emptyStructureQueues,
+  emptyResearchQueues,
+  OFFICE_IDS,
+  recruitBatchCost,
   emptyUnitRoster,
   emptyContractorsByLocation,
   migrateLegacyCategoryRoster,
@@ -16,6 +18,7 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
+import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
 import {
@@ -40,6 +43,7 @@ const VALID_VIEWS = new Set<MainView>([
   "overview",
   "world",
   "operations",
+  "recruitment",
   "research",
   "office",
   "logbook",
@@ -52,6 +56,62 @@ function normalizeView(view: unknown): MainView {
     return view as MainView;
   }
   return "operations";
+}
+
+function migrateStructureQueues(
+  parsed: LegacySave,
+  structureLevelsByLocation: GameState["structureLevelsByLocation"],
+): GameState["structureQueues"] {
+  const queues = {
+    ...emptyStructureQueues(),
+    ...parsed.structureQueues,
+  };
+  for (const officeId of OFFICE_IDS) {
+    const built = { ...structureLevelsByLocation[officeId] };
+    queues[officeId] = (queues[officeId] ?? []).map((job, index) => {
+      let targetLevel = job.targetLevel;
+      if (targetLevel == null) {
+        targetLevel = built[job.structureId] + 1;
+      }
+      built[job.structureId] = Math.max(built[job.structureId], targetLevel);
+      return {
+        ...job,
+        id: job.id ?? `${officeId}-${job.structureId}-${index}`,
+        targetLevel,
+        spentCost:
+          job.spentCost ??
+          structureUpgradeCostForTargetLevel(job.structureId, targetLevel),
+        completesAt: job.completesAt ?? null,
+      };
+    });
+  }
+  return queues;
+}
+
+function migrateResearchQueues(parsed: LegacySave): GameState["researchQueues"] {
+  return {
+    ...emptyResearchQueues(),
+    ...(parsed.researchQueues ?? {}),
+  };
+}
+
+function migrateRecruitmentJobs(parsed: LegacySave): GameState["recruitmentJobs"] {
+  return (parsed.recruitmentJobs ?? []).map((job, index) => {
+    const unitId = migrateUnitId(
+      (job as { unitId?: UnitId; contractorType?: ContractorCategoryId }).unitId ??
+        (job as { contractorType?: ContractorCategoryId }).contractorType,
+    );
+    const count = Math.max(1, (job as { count?: number }).count ?? 1);
+    return {
+      ...job,
+      id: job.id ?? `recruit-${index}-${job.officeId}`,
+      unitId,
+      count,
+      spentCost: job.spentCost ?? recruitBatchCost(unitId, count),
+      completesAt: job.completesAt ?? null,
+      startedAt: job.startedAt ?? null,
+    };
+  });
 }
 
 type LegacySave = Partial<GameState> & {
@@ -279,24 +339,27 @@ function normalizeSave(parsed: LegacySave): GameState {
     settings: {
       ...base.settings,
       ...parsed.settings,
+      viewportPreview:
+        parsed.settings?.viewportPreview === "mobile" ||
+        parsed.settings?.viewportPreview === "desktop" ||
+        parsed.settings?.viewportPreview === "auto"
+          ? parsed.settings.viewportPreview
+          : "auto",
       officeSiteSections: {
-        ...defaultOfficeSiteSections(),
-        ...parsed.settings?.officeSiteSections,
         hq: {
-          ...defaultOfficeSiteSections().hq,
-          ...parsed.settings?.officeSiteSections?.hq,
+          structuresOpen:
+            parsed.settings?.officeSiteSections?.hq?.structuresOpen ?? false,
         },
         branch: {
-          ...defaultOfficeSiteSections().branch,
-          ...parsed.settings?.officeSiteSections?.branch,
+          structuresOpen:
+            parsed.settings?.officeSiteSections?.branch?.structuresOpen ??
+            false,
         },
       },
     },
     structureLevelsByLocation,
-    structureQueues: {
-      ...emptyStructureQueues(),
-      ...parsed.structureQueues,
-    },
+    structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),
+    researchQueues: migrateResearchQueues(parsed),
     researchLevels,
     contractorsByLocation,
     contractorTransfers: (parsed.contractorTransfers ?? []).map((transfer) => {
@@ -307,16 +370,13 @@ function normalizeSave(parsed: LegacySave): GameState {
       );
       return { ...transfer, unitId };
     }),
-    recruitmentJobs: (parsed.recruitmentJobs ?? []).map((job) => {
-      const unitId = migrateUnitId(
-        (job as { unitId?: UnitId; contractorType?: ContractorCategoryId }).unitId ??
-          (job as { contractorType?: ContractorCategoryId }).contractorType,
-      );
-      return { ...job, unitId };
-    }),
+    recruitmentJobs: migrateRecruitmentJobs(parsed),
     selectedOffice: parsed.selectedOffice ?? "hq",
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
+    dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
+    logbookFilterId:
+      typeof parsed.logbookFilterId === "string" ? parsed.logbookFilterId : "all",
     view: normalizeView(parsed.view),
     won: parsed.won ?? false,
     lastTickAt: Date.now(),
@@ -324,6 +384,10 @@ function normalizeSave(parsed: LegacySave): GameState {
 
   Object.assign(merged, migrateBranchFields(parsed, merged));
   Object.assign(merged, migrateJobFields(parsed, now));
+
+  if (merged.selectedOffice === "branch" && !merged.branchEstablished) {
+    merged.selectedOffice = "hq";
+  }
 
   merged.locationStats = computeLocationStats({
     structureLevelsByLocation: merged.structureLevelsByLocation,
@@ -360,7 +424,26 @@ export function saveGameState(state: GameState): void {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
 }
 
-export function resetGameState(): GameState {
+export function resetGameState(preserveSettings?: GameState["settings"]): GameState {
   localStorage.removeItem(SAVE_KEY);
-  return createInitialState();
+  const fresh = createInitialState();
+  if (preserveSettings) {
+    fresh.settings = {
+      ...fresh.settings,
+      ...preserveSettings,
+      officeSiteSections: {
+        ...fresh.settings.officeSiteSections,
+        ...preserveSettings.officeSiteSections,
+        hq: {
+          ...fresh.settings.officeSiteSections.hq,
+          ...preserveSettings.officeSiteSections?.hq,
+        },
+        branch: {
+          ...fresh.settings.officeSiteSections.branch,
+          ...preserveSettings.officeSiteSections?.branch,
+        },
+      },
+    };
+  }
+  return fresh;
 }

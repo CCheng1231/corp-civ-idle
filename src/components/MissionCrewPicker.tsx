@@ -2,6 +2,7 @@ import {
   CONTRACTOR_TYPES,
   countInCategory,
   formatNumber,
+  formatResourceCost,
   rosterAt,
 } from "../game/constants";
 import {
@@ -161,13 +162,7 @@ export function formatUnitName(unitId: UnitId): string {
 }
 
 export function formatUnitCost(cost: ReturnType<typeof unitDefinition>["cost"]) {
-  return Object.entries(cost)
-    .map(([k, v]) =>
-      k === "electricity"
-        ? `power ${formatNumber(v ?? 0)}`
-        : `${k} ${formatNumber(v ?? 0)}`,
-    )
-    .join(" · ");
+  return formatResourceCost(cost);
 }
 
 export { RECRUITMENT_UNITS };

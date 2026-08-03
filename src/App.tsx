@@ -8,11 +8,16 @@ import { loadGameState, saveGameState } from "./game/save";
 import { WIN_NET_WORTH, formatNumber } from "./game/constants";
 import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
+import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
 import "./App.css";
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, loadGameState);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const viewportPreview = state.settings.viewportPreview ?? "auto";
+  const mobileNav = useMobileNavLayout(viewportPreview);
+  const viewportClass =
+    viewportPreview === "auto" ? "" : ` viewport-preview-${viewportPreview}`;
 
   useGameLoop(dispatch);
   useBgm(state.settings.masterVolume, state.settings.musicMuted);
@@ -26,7 +31,7 @@ function App() {
   }, [state.settings.uiScale]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${viewportClass}`}>
       <div className="app-top-chrome">
         <AudioControls settings={state.settings} dispatch={dispatch} />
         <ResourceBar state={state} />
@@ -38,13 +43,14 @@ function App() {
         )}
       </div>
       <div
-        className={`layout${sidebarCollapsed ? " layout-sidebar-collapsed" : ""}`}
+        className={`layout${sidebarCollapsed && !mobileNav ? " layout-sidebar-collapsed" : ""}${mobileNav ? " layout-mobile-nav" : ""}`}
       >
         <ShortcutSidebar
           state={state}
           dispatch={dispatch}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+          mobileNav={mobileNav}
         />
         <main className="main-panel">
           <MainContent state={state} dispatch={dispatch} />

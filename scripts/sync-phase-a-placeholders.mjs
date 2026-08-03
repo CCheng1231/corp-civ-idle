@@ -10,9 +10,9 @@ import * as XLSXNS from "xlsx";
 const XLSX = XLSXNS.default ?? XLSXNS;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootWorkbook = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
-const fallbackWorkbook = join(__dirname, "..", "Corp-Civ-Balance-Reference.xlsx");
-const workbookPath = existsSync(rootWorkbook) ? rootWorkbook : fallbackWorkbook;
+import { resolveWorkbookPath } from "./workbook-path.mjs";
+
+const workbookPath = resolveWorkbookPath();
 
 const SHEET_NAME = "Phase A Placeholders (engine)";
 

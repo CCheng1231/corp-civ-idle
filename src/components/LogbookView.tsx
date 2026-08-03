@@ -60,7 +60,7 @@ interface LogbookViewProps {
 }
 
 export function LogbookView({ state, dispatch }: LogbookViewProps) {
-  const [filterId, setFilterId] = useState("all");
+  const filterId = state.logbookFilterId;
   const [colWidths, setColWidths] = useState(loadColumnWidths);
   const resizeRef = useRef<{
     columnId: LogbookColumnId;
@@ -155,7 +155,9 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
             role="tab"
             aria-selected={filterId === group.id}
             className={filterId === group.id ? "tab active" : "tab"}
-            onClick={() => setFilterId(group.id)}
+            onClick={() =>
+              dispatch({ type: "SET_LOGBOOK_FILTER", filterId: group.id })
+            }
           >
             {group.label}
           </button>

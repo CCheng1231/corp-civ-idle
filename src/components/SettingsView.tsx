@@ -47,6 +47,38 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
             }
           />
         </label>
+        <div className="setting-row setting-row-stack">
+          <span>Layout preview</span>
+          <div className="viewport-preview-toggle" role="group" aria-label="Layout preview">
+            {(["auto", "desktop", "mobile"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={
+                  (state.settings.viewportPreview ?? "auto") === mode
+                    ? "tab active"
+                    : "tab"
+                }
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_SETTINGS",
+                    settings: { viewportPreview: mode },
+                  })
+                }
+              >
+                {mode === "auto"
+                  ? "Auto"
+                  : mode === "desktop"
+                    ? "Desktop"
+                    : "Mobile"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="muted setting-hint">
+          Override responsive layout for UI testing. Mobile forces bottom nav and
+          phone-style breakpoints on any window size.
+        </p>
       </section>
 
       <section className="dev-menu settings-block">
@@ -94,7 +126,9 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
         <button
           type="button"
           className="btn danger-btn"
-          onClick={() => dispatch({ type: "LOAD", state: resetGameState() })}
+          onClick={() =>
+            dispatch({ type: "LOAD", state: resetGameState(state.settings) })
+          }
         >
           Reset save
         </button>

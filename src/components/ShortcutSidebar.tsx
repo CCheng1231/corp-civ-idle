@@ -1,30 +1,10 @@
-import { useEffect, useState, type Dispatch } from "react";
+import { type Dispatch } from "react";
 import type { GameAction, GameState, MainView } from "../game/types";
-
-const MOBILE_NAV_MQ = "(max-width: 768px)";
-
-function useMobileNavLayout(): boolean {
-  const [mobile, setMobile] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia(MOBILE_NAV_MQ).matches
-      : false,
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_NAV_MQ);
-    const onChange = () => setMobile(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  return mobile;
-}
-
 const SHORTCUTS: { view: MainView; label: string; short: string }[] = [
-  { view: "world", label: "World map", short: "Map" },
-  { view: "overview", label: "Overview", short: "HQ" },
-  { view: "operations", label: "Office sites", short: "Sites" },
+  { view: "world", label: "World map", short: "World" },
+  { view: "overview", label: "Overview", short: "Home" },
+  { view: "operations", label: "Office sites", short: "Office" },
+  { view: "recruitment", label: "Recruitment", short: "Hire" },
   { view: "research", label: "Research", short: "R&D" },
   { view: "office", label: "Secretary", short: "Sec" },
   { view: "logbook", label: "Notes & logbook", short: "Log" },
@@ -36,6 +16,7 @@ interface ShortcutSidebarProps {
   dispatch: Dispatch<GameAction>;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileNav: boolean;
 }
 
 export function ShortcutSidebar({
@@ -43,8 +24,8 @@ export function ShortcutSidebar({
   dispatch,
   collapsed,
   onToggleCollapse,
+  mobileNav,
 }: ShortcutSidebarProps) {
-  const mobileNav = useMobileNavLayout();
 
   return (
     <aside
@@ -76,9 +57,9 @@ export function ShortcutSidebar({
             onClick={() => dispatch({ type: "SET_VIEW", view: item.view })}
           >
             <span className="shortcut-link-short">{item.short}</span>
-            {(!collapsed || mobileNav) && (
+            {!mobileNav && !collapsed ? (
               <span className="shortcut-link-label">{item.label}</span>
-            )}
+            ) : null}
           </button>
         ))}
       </nav>
@@ -88,8 +69,9 @@ export function ShortcutSidebar({
 
 export const MAIN_VIEW_TITLES: Record<MainView, string> = {
   overview: "HQ overview",
-  world: "World map & open bids",
+  world: "World map",
   operations: "Office sites & upgrades",
+  recruitment: "Recruitment",
   research: "Research",
   office: "Office / Secretary",
   logbook: "Notes & logbook",

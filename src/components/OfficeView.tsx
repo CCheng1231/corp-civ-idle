@@ -1,58 +1,35 @@
 import type { Dispatch } from "react";
+import { maxJobEngagements } from "../game/jobs";
 import type { GameAction, GameState } from "../game/types";
-import secretaryPortrait from "../assets/secretary.jpg";
-import { LocationStructureQueues } from "./LocationStructureQueues";
-import { ContractorOfficeRoster } from "./ContractorOfficeRoster";
+import { JobBoard } from "./JobBoard";
+import { LocationViewHeader } from "./LocationViewHeader";
+import { SecretaryBriefing } from "./SecretaryBriefing";
 
 interface OfficeViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
 }
 
-const LINES = [
-  "Welcome back, boss. Another day, another bid war you pretend not to enjoy.",
-  "Debt clock is ticking — but at least the coffee machine runs on passive income.",
-  "Phase 2 unlocks when rivals start sniffing your Mango contracts.",
-];
-
 export function OfficeView({ state, dispatch }: OfficeViewProps) {
-  const line = LINES[state.completedProjects % LINES.length];
+  const jobCap = maxJobEngagements(state);
 
   return (
-    <div className="office-view">
-      <div className="office-scene">
-        <div className="secretary-desk">
-          <img
-            src={secretaryPortrait}
-            alt=""
-            className="secretary-portrait"
-            aria-hidden
-          />
-          <div className="dialogue-box">
-            <p>{line}</p>
-            <p className="muted">
-              Completed jobs: {state.completedProjects}. Net worth rank coming
-              with multiplayer leaderboard.
-            </p>
-          </div>
-        </div>
-        <div className="office-stats">
-          <div>
-            <span>Cash runway</span>
-            <strong>{Math.floor(state.resources.cash)}</strong>
-          </div>
-          <div>
-            <span>Connection</span>
-            <strong>{state.resources.connection.toFixed(1)}</strong>
-          </div>
-          <div>
-            <span>Reputation</span>
-            <strong>{state.resources.reputation.toFixed(1)}</strong>
-          </div>
-        </div>
+    <div className="main-view-panel location-view-panel office-view">
+      <LocationViewHeader
+        title="Secretary"
+        description={
+          <>
+            Daily briefing and regional job board. Crews deploy from the
+            selected office, max {jobCap} engagements at once.
+          </>
+        }
+        state={state}
+        dispatch={dispatch}
+      />
+      <div className="location-view-body">
+        <SecretaryBriefing state={state} dispatch={dispatch} />
+        <JobBoard state={state} dispatch={dispatch} />
       </div>
-      <ContractorOfficeRoster state={state} dispatch={dispatch} />
-      <LocationStructureQueues state={state} />
     </div>
   );
 }

@@ -18,6 +18,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024,
+      0.024,
+      0.024,
+      0.024,
+      0.024
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "cash": 0.05
@@ -39,6 +46,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024,
+      0.024,
+      0.024,
+      0.024,
+      0.024
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "supply": 0.05
@@ -60,6 +74,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "connection": 0.05
@@ -81,6 +102,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004,
+      0.036000000000000004
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "mood": 0.05
@@ -102,6 +130,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 10
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.12,
+      0.12,
+      0.12,
+      0.12,
+      0.12
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "reputation": 0.05
@@ -123,6 +158,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 10
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.12,
+      0.12,
+      0.12,
+      0.12,
+      0.12
+    ],
     "effects": {
       "ratePercentPerLevel": {
         "govReputation": 0.05
@@ -144,6 +186,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.24,
+      0.24,
+      0.24,
+      0.24,
+      0.24
+    ],
     "requires": [
       {
         "id": "eff_manuals_cash",
@@ -173,6 +222,9 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.24
+    ],
     "effects": {}
   },
   {
@@ -190,6 +242,13 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.8400000000000001,
+      0.8400000000000001,
+      0.8400000000000001,
+      0.8400000000000001,
+      0.8400000000000001
+    ],
     "requires": [
       {
         "id": "eff_manuals_con",
@@ -215,6 +274,10 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
       "govReputation": 0
     },
     "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024,
+      0.024
+    ],
     "requires": [
       {
         "id": "planning_ahead",

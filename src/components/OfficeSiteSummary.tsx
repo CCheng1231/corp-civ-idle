@@ -8,6 +8,7 @@ import {
   getStructureDefinition,
   officeSpaceAvailable,
   powerAvailable,
+  isStructureQueueFull,
   projectedStructureLevels,
   resourceCostParts,
   rosterAt,
@@ -39,8 +40,9 @@ export function OfficeSiteSummary({
   };
   const roster = rosterAt(state, officeId);
   const structures = state.structureLevelsByLocation[officeId];
-  const pendingHires = state.recruitmentJobs.filter((j) => j.officeId === officeId)
-    .length;
+  const pendingHires = state.recruitmentJobs
+    .filter((j) => j.officeId === officeId)
+    .reduce((sum, j) => sum + (j.count ?? 1), 0);
 
   const expansionDef = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
   const projectedExpansion =
@@ -69,7 +71,7 @@ export function OfficeSiteSummary({
     state,
     officeId,
     expansionDef,
-    false,
+    isStructureQueueFull(state, officeId),
   );
   const canExpand = !expansionMaxed && !expansionBlocker;
   const freeSpace = officeSpaceAvailable(loc);
@@ -126,7 +128,7 @@ export function OfficeSiteSummary({
                       <span className="office-expand-btn-sep"> · </span>
                     )}
                     <span className="compact-stack-label">
-                      {part.label.toLowerCase()}:
+                      {part.label}:
                     </span>{" "}
                     <span
                       className={

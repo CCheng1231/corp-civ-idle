@@ -2,16 +2,16 @@
  * Reads Recruitment tab → src/game/recruitmentData.ts
  * Run: node scripts/build-recruitment-data.mjs
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as XLSXNS from "xlsx";
+import { resolveWorkbookPath } from "./workbook-path.mjs";
 
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const workbookPath = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
-const outTs = join(__dirname, "..", "src", "game", "recruitmentData.ts");
+const workbookPath = resolveWorkbookPath();
 
 const TYPE_TO_ID = {
   "Resource Farming": "farming",
@@ -45,10 +45,7 @@ function parseFlatCost(text) {
   return cost;
 }
 
-if (!existsSync(workbookPath)) {
-  console.error("Workbook not found:", workbookPath);
-  process.exit(1);
-}
+const outTs = join(__dirname, "..", "src", "game", "recruitmentData.ts");
 
 const wb = XLSX.read(readFileSync(workbookPath), { type: "buffer" });
 const rows = XLSX.utils.sheet_to_json(wb.Sheets.Recruitment, {

@@ -1,16 +1,21 @@
+import { type Dispatch } from "react";
 import {
   MAX_STRUCTURE_QUEUE,
   OFFICE_IDS,
   OFFICE_LABELS,
 } from "../game/constants";
-import type { GameState } from "../game/types";
-import { StructureBuildQueueList } from "./StructureBuildQueueList";
+import type { GameAction, GameState } from "../game/types";
+import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 
 interface LocationStructureQueuesProps {
   state: GameState;
+  dispatch: Dispatch<GameAction>;
 }
 
-export function LocationStructureQueues({ state }: LocationStructureQueuesProps) {
+export function LocationStructureQueues({
+  state,
+  dispatch,
+}: LocationStructureQueuesProps) {
   const now = Date.now();
 
   return (
@@ -31,7 +36,19 @@ export function LocationStructureQueues({ state }: LocationStructureQueuesProps)
                   {jobs.length}/{MAX_STRUCTURE_QUEUE}
                 </span>
               </div>
-              <StructureBuildQueueList state={state} jobs={jobs} now={now} />
+              <QueueSection
+                label="Queue"
+                count={jobs.length}
+                max={MAX_STRUCTURE_QUEUE}
+              >
+                <StructureBuildQueueList
+                  state={state}
+                  jobs={jobs}
+                  locationId={officeId}
+                  dispatch={dispatch}
+                  now={now}
+                />
+              </QueueSection>
             </div>
           );
         })}

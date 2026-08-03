@@ -1,4 +1,4 @@
-import { formatNumber, OFFICE_LABELS } from "./constants";
+import { formatNumber, OFFICE_LABELS, resourceCostParts } from "./constants";
 import type {
   GameState,
   LogCategory,
@@ -13,8 +13,12 @@ export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
   structure_upgrade: "Structure upgrades",
   structure_complete: "Structure upgrades",
   structure_sell: "Structure sells",
+  structure_cancel: "Structure cancels",
   research: "Research",
+  research_complete: "Research",
+  research_cancel: "Research cancels",
   recruit: "Recruitment",
+  recruit_cancel: "Recruitment cancels",
   transfer: "Staff relocation",
   transfer_arrival: "Staff relocation",
   bid_start: "Bids",
@@ -30,11 +34,11 @@ export const LOG_FILTER_GROUPS: { id: string; label: string; categories: LogCate
   {
     id: "upgrades",
     label: "Upgrades",
-    categories: ["structure_upgrade", "structure_complete"],
+    categories: ["structure_upgrade", "structure_complete", "structure_cancel"],
   },
   { id: "sells", label: "Sells", categories: ["structure_sell"] },
-  { id: "research", label: "Research", categories: ["research"] },
-  { id: "recruit", label: "Recruitment", categories: ["recruit"] },
+  { id: "research", label: "Research", categories: ["research", "research_complete", "research_cancel"] },
+  { id: "recruit", label: "Recruitment", categories: ["recruit", "recruit_cancel"] },
   {
     id: "staff",
     label: "Staff travel",
@@ -47,6 +51,11 @@ export const LOG_FILTER_GROUPS: { id: string; label: string; categories: LogCate
     categories: ["job_engage", "job_cancel", "job_complete"],
   },
   { id: "milestones", label: "Milestones", categories: ["phase"] },
+  {
+    id: "cancels",
+    label: "Cancels",
+    categories: ["structure_cancel", "research_cancel", "recruit_cancel", "job_cancel"],
+  },
 ];
 
 export function cloneResourceCost(cost: ResourceCost | undefined): ResourceCost | undefined {
@@ -105,34 +114,36 @@ export function formatLogResourceCost(
   prefix: "spent" | "gained",
 ): string | null {
   if (!cost) return null;
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(cost)) {
-    if (!value || value <= 0) continue;
-    if (key === "electricity") {
-      parts.push(`power ${formatNumber(value)}`);
-    } else {
-      parts.push(`${key} ${formatNumber(value)}`);
-    }
-  }
-  if (parts.length === 0) return null;
-  return prefix === "spent"
-    ? `Spent: ${parts.join(" · ")}`
-    : `Gained: ${parts.join(" · ")}`;
+  const text = formatLogCostCell(cost);
+  if (text === "—") return null;
+  return prefix === "spent" ? `Spent: ${text}` : `Gained: ${text}`;
 }
 
 /** Plain cell text for spreadsheet columns (no "Spent:" prefix). */
 export function formatLogCostCell(cost: ResourceCost | undefined): string {
   if (!cost) return "—";
-  const parts: string[] = [];
-  for (const [key, value] of Object.entries(cost)) {
-    if (!value || value <= 0) continue;
-    if (key === "electricity") {
-      parts.push(`power ${formatNumber(value)}`);
-    } else {
-      parts.push(`${key} ${formatNumber(value)}`);
-    }
-  }
-  return parts.length > 0 ? parts.join(", ") : "—";
+  const parts = resourceCostParts(cost);
+  if (parts.length === 0) return "—";
+  return parts.map((part) => `${part.label} ${formatNumber(part.amount)}`).join(", ");
+}
+
+/** Log fields for queue cancel — mirrors upgrade rows (spent + gained columns). */
+export function queueCancelLogFields(
+  spent: ResourceCost,
+  refund: ResourceCost,
+): Pick<LogEntry, "spent" | "gained" | "impacts"> {
+  const gainedText = formatLogCostCell(refund);
+  return {
+    spent: cloneResourceCost(spent),
+    gained: cloneResourceCost(refund),
+    impacts: [
+      "Removed from queue",
+      gainedText !== "—"
+        ? `Refunded ${gainedText}`
+        : "No resources refunded",
+      "Power 100%; other resources 95% (rounded down)",
+    ],
+  };
 }
 
 export function formatLogImpactsCell(impacts: string[] | undefined): string {

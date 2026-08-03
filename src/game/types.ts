@@ -119,9 +119,23 @@ export interface ResearchDefinition {
   rndLevelRequired?: number;
   baseCost: ResourceCost;
   costScale: number;
+  /** Per-level build time in game hours (Research Cost tab, column E). */
+  buildTimeHoursPerLevel?: number[];
   requires?: ResearchRequirement[];
   effects: ProgressionEffects;
 }
+
+export interface ResearchJob {
+  id: string;
+  researchId: ResearchId;
+  officeId: OfficeLocationId;
+  targetLevel: number;
+  startedAt?: number | null;
+  completesAt: number | null;
+  spentCost: ResourceCost;
+}
+
+export type ResearchQueuesByLocation = Record<OfficeLocationId, ResearchJob[]>;
 
 export type ProjectId = string;
 
@@ -170,7 +184,11 @@ export interface RecruitmentJob {
   id: string;
   officeId: OfficeLocationId;
   unitId: UnitId;
-  completesAt: number;
+  /** Units in this hire order (one queue slot). */
+  count: number;
+  startedAt?: number | null;
+  completesAt: number | null;
+  spentCost: ResourceCost;
 }
 
 /** @deprecated Aggregate category roster — use UnitRoster. */
@@ -294,6 +312,7 @@ export interface JobEngagement {
 }
 
 export interface StructureBuildJob {
+  id: string;
   structureId: StructureId;
   /** Level after this job finishes (used for sheet build time). */
   targetLevel?: number;
@@ -301,6 +320,7 @@ export interface StructureBuildJob {
   startedAt?: number | null;
   /** null while waiting behind another job in the queue */
   completesAt: number | null;
+  spentCost: ResourceCost;
 }
 
 export type StructureQueuesByLocation = Record<
@@ -318,6 +338,7 @@ export interface GameState {
   recruitmentJobs: RecruitmentJob[];
   structureLevelsByLocation: StructureLevelsByLocation;
   structureQueues: StructureQueuesByLocation;
+  researchQueues: ResearchQueuesByLocation;
   researchLevels: Record<ResearchId, number>;
   selectedOffice: OfficeLocationId;
   branchEstablished: boolean;
@@ -335,15 +356,23 @@ export interface GameState {
   /** Free-form notes saved with the game. */
   playerNotes: string;
   activityLog: LogEntry[];
+  /** Log entry ids the player dismissed from the Secretary job report box. */
+  dismissedJobReportIds: string[];
+  /** Active filter on Notes & logbook (LOG_FILTER_GROUPS id). */
+  logbookFilterId: string;
   lastTickAt: number;
   settings: GameSettings;
 }
+
+export type ViewportPreview = "auto" | "desktop" | "mobile";
 
 export interface GameSettings {
   masterVolume: number;
   musicMuted: boolean;
   uiScale: number;
   notifications: boolean;
+  /** Force desktop or mobile layout for UI testing (auto = match window width). */
+  viewportPreview: ViewportPreview;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
   ignoreTimers: boolean;
   /** Dev: allow purchases and bids without spending resources or power. */
@@ -351,7 +380,7 @@ export interface GameSettings {
   /** Office sites: Structure upgrades / Recruitment sections expanded per site. */
   officeSiteSections: Record<
     OfficeLocationId,
-    { structuresOpen: boolean; recruitmentOpen: boolean }
+    { structuresOpen: boolean }
   >;
 }
 
@@ -359,6 +388,7 @@ export type MainView =
   | "world"
   | "overview"
   | "operations"
+  | "recruitment"
   | "research"
   | "office"
   | "logbook"
@@ -368,8 +398,12 @@ export type LogCategory =
   | "structure_upgrade"
   | "structure_complete"
   | "structure_sell"
+  | "structure_cancel"
   | "research"
+  | "research_complete"
+  | "research_cancel"
   | "recruit"
+  | "recruit_cancel"
   | "transfer"
   | "transfer_arrival"
   | "bid_start"
@@ -395,7 +429,10 @@ export type GameAction =
   | { type: "TICK"; now: number }
   | { type: "BUY_STRUCTURE"; structureId: StructureId; locationId: OfficeLocationId }
   | { type: "DOWNGRADE_STRUCTURE"; structureId: StructureId; locationId: OfficeLocationId }
-  | { type: "BUY_RESEARCH"; researchId: ResearchId }
+  | { type: "BUY_RESEARCH"; researchId: ResearchId; officeId?: OfficeLocationId }
+  | { type: "CANCEL_STRUCTURE_JOB"; locationId: OfficeLocationId; jobId: string }
+  | { type: "CANCEL_RESEARCH_JOB"; officeId: OfficeLocationId; jobId: string }
+  | { type: "CANCEL_RECRUITMENT_JOB"; jobId: string }
   | { type: "SELECT_OFFICE"; officeId: OfficeLocationId }
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
@@ -427,7 +464,9 @@ export type GameAction =
       crewAssigned: UnitAssignment;
     }
   | { type: "COMPLETE_PROJECT" }
-  | { type: "SET_VIEW"; view: MainView }
+  | { type: "SET_VIEW"; view: MainView; logbookFilter?: string }
+  | { type: "SET_LOGBOOK_FILTER"; filterId: string }
+  | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }
   | { type: "UPDATE_SETTINGS"; settings: Partial<GameSettings> }
   | { type: "DEV_SKIP_TIME"; minutes: number }

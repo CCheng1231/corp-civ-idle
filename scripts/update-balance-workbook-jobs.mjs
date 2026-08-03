@@ -9,8 +9,9 @@ import * as XLSXNS from "xlsx";
 
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const workbookPath = join(__dirname, "..", "20260731 Corp Idle Working.xlsx");
+import { resolveWorkbookPath } from "./workbook-path.mjs";
 
+const workbookPath = resolveWorkbookPath();
 if (!existsSync(workbookPath)) {
   console.error("Workbook not found:", workbookPath);
   process.exit(1);

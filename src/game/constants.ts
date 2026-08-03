@@ -14,6 +14,8 @@ import type {
   ResourceCost,
   ContractorsByLocation,
   StructureQueuesByLocation,
+  ResearchQueuesByLocation,
+  ResearchJob,
   ProjectDefinition,
   RecruitmentJob,
   UnitId,
@@ -61,15 +63,30 @@ export const WIN_NET_WORTH = 100_000_000;
 export const BASE_LOCATION_POWER = HQ_BASE_POWER;
 export const BASE_OFFICE_SPACE = HQ_BASE_OFFICE_SPACE;
 export const MAX_STRUCTURE_QUEUE = 2;
+export const MAX_RESEARCH_QUEUE = 2;
+export const MAX_RECRUIT_QUEUE = 2;
 export const STRUCTURE_SELL_MONEY_REFUND_RATE = 0.5;
 export const CONTRACTOR_TRANSFER_SEC_PER_HEX = 30;
 export const RECRUIT_MS_PER_CONTRACTOR = 1000;
+
+/** Game hours per unit (1 sec per hire from balance sheet = 1/3600 hr; game hr = real hr). */
+export const RECRUIT_HOURS_PER_UNIT = RECRUIT_MS_PER_CONTRACTOR / (3600 * 1000);
+
+/** Total game hours for a hire order. */
+export function recruitmentOrderBuildTimeHours(count: number): number {
+  return Math.max(1, count) * RECRUIT_HOURS_PER_UNIT;
+}
+
+/** Real-time ms for a hire order of `count` units. */
+export function recruitmentOrderDurationMs(count: number): number {
+  return recruitmentOrderBuildTimeHours(count) * 3600 * 1000;
+}
 export const MAX_RECRUIT_BATCH = 100;
 
 export function defaultOfficeSiteSections(): GameState["settings"]["officeSiteSections"] {
   return {
-    hq: { structuresOpen: false, recruitmentOpen: false },
-    branch: { structuresOpen: false, recruitmentOpen: false },
+    hq: { structuresOpen: false },
+    branch: { structuresOpen: false },
   };
 }
 
@@ -82,6 +99,43 @@ export const OFFICE_LABELS: Record<OfficeLocationId, string> = {
 
 export function emptyStructureQueues(): StructureQueuesByLocation {
   return { hq: [], branch: [] };
+}
+
+export function emptyResearchQueues(): ResearchQueuesByLocation {
+  return { hq: [], branch: [] };
+}
+
+export function projectedResearchLevels(
+  state: GameState,
+): GameState["researchLevels"] {
+  const levels = { ...state.researchLevels };
+  for (const officeId of OFFICE_IDS) {
+    for (const job of state.researchQueues[officeId] ?? []) {
+      levels[job.researchId] += 1;
+    }
+  }
+  return levels;
+}
+
+export function researchJobsAtOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): ResearchJob[] {
+  return state.researchQueues[officeId] ?? [];
+}
+
+export function isResearchQueueFull(
+  state: GameState,
+  officeId: OfficeLocationId,
+): boolean {
+  return (state.researchQueues[officeId] ?? []).length >= MAX_RESEARCH_QUEUE;
+}
+
+export function isRecruitmentQueueFull(
+  state: GameState,
+  officeId: OfficeLocationId,
+): boolean {
+  return recruitmentJobsAtOffice(state, officeId).length >= MAX_RECRUIT_QUEUE;
 }
 
 export function projectedStructureLevels(
@@ -437,6 +491,7 @@ export function createInitialState(now = Date.now()): GameState {
     recruitmentJobs: [],
     structureLevelsByLocation,
     structureQueues: emptyStructureQueues(),
+    researchQueues: emptyResearchQueues(),
     researchLevels,
     selectedOffice: "hq",
     branchEstablished: false,
@@ -451,12 +506,15 @@ export function createInitialState(now = Date.now()): GameState {
     view: "operations",
     playerNotes: "",
     activityLog: [],
+    dismissedJobReportIds: [],
+    logbookFilterId: "all",
     lastTickAt: now,
     settings: {
-      masterVolume: 0.6,
+      masterVolume: 0.1,
       musicMuted: false,
       uiScale: 1,
       notifications: true,
+      viewportPreview: "auto",
       ignoreTimers: false,
       ignoreCosts: false,
       officeSiteSections: defaultOfficeSiteSections(),
@@ -664,6 +722,23 @@ export function applyOfficeCost(
   next.resources = subtractCost(next.resources, global);
   if (power > 0) {
     next.locationStats[officeId].powerUsed += power;
+  }
+  return next;
+}
+
+export function applyOfficeRefund(
+  state: GameState,
+  officeId: OfficeLocationId,
+  refund: ResourceCost,
+): GameState {
+  const { global, power } = splitResourceCost(refund);
+  const next = structuredClone(state);
+  next.resources = addResources(next.resources, global);
+  if (power > 0) {
+    next.locationStats[officeId].powerUsed = Math.max(
+      0,
+      next.locationStats[officeId].powerUsed - power,
+    );
   }
   return next;
 }

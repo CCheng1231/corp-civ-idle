@@ -39,7 +39,7 @@ export function StructureCostLine({
         className={className}
         note={note}
         lines={parts.map((part) => ({
-          label: part.label.toLowerCase(),
+          label: part.label,
           value: formatCompactCost(part.amount),
           valueClassName: canAffordCostPart(state, officeId, part)
             ? "structure-cost-affordable"

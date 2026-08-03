@@ -18,6 +18,7 @@ import {
   canAffordAtOffice,
   formatNumber,
   powerAvailable,
+  RESOURCE_LABELS,
   splitResourceCost,
 } from "./constants";
 
@@ -319,13 +320,15 @@ export function branchEstablishBlockers(
     const k = key as keyof GameState["resources"];
     const need = amount ?? 0;
     if (state.resources[k] < need) {
-      blockers.push(`Need ${formatNumber(need)} ${k} (have ${formatNumber(state.resources[k])})`);
+      blockers.push(
+        `Need ${formatNumber(need)} ${RESOURCE_LABELS[k]} (have ${formatNumber(state.resources[k])})`,
+      );
     }
   }
   const freePower = powerAvailable(state.locationStats.hq);
   if (power > freePower) {
     blockers.push(
-      `Need ${power} power at HQ (${formatNumber(freePower)} free — build Power Grid or sell bids' power use)`,
+      `Need ${power} Power at HQ (${formatNumber(freePower)} free — build Power Grid or sell bids' power use)`,
     );
   }
   if (blockers.length === 0) {
