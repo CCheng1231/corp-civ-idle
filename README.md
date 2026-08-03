@@ -20,6 +20,7 @@ npm run dev
 - Hex world map placeholder with government center + HQ
 - Office / secretary view placeholder
 - Auto-save to `localStorage`
+- Changed repo to public
 
 ## Next steps (from GDD)
 
