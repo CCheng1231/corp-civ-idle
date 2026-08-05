@@ -4,6 +4,7 @@ import {
   axialEquals,
   MAP_GOV,
   MAP_HQ,
+  MAP_RADIUS,
   officeAtCoord,
 } from "./hexLayout";
 import type {
@@ -17,9 +18,11 @@ import type {
 import {
   canAffordAtOffice,
   formatNumber,
+  OFFICE_LABELS,
   powerAvailable,
   RESOURCE_LABELS,
   splitResourceCost,
+  unitAvailableAt,
 } from "./constants";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
@@ -29,34 +32,77 @@ export const REGION_LABELS: Record<MapRegion, string> = {
   countryside: "Countryside",
 };
 
+/**
+ * Temporary regional site bonus on structure passive rates at that office.
+ * Rank (worst→best): countryside → rural → suburban → metropolis.
+ * HQ starts countryside at 0% so branches inland are worth opening.
+ */
+export const REGION_SITE_RATE_BONUS: Record<MapRegion, number> = {
+  countryside: 0,
+  rural: 0.07,
+  suburban: 0.1,
+  metropolis: 0.12,
+};
+
+/** HQ / future company-start region (pinned; not jittered off countryside). */
+export const HQ_REGION: MapRegion = "countryside";
+
+/**
+ * Fixed world seed for region jitter (testing baseline).
+ * Multiplayer world setup will supply a shared seed later so all clients match.
+ */
+export const MAP_REGION_SEED = 104729;
+
 export const MAP_HQ_COORD = MAP_HQ;
+
+/** Stable 0–1 hash for axial coords + seed. */
+function regionHash01(q: number, r: number, seed: number): number {
+  const x = Math.sin(q * 127.1 + r * 311.7 + seed * 0.013) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Deterministic ±1 wobble near band edges so regions are not perfect rings.
+ * Interior tiles keep base distance; ~edge tiles may shift by -1 / 0 / +1.
+ */
+function regionDistanceJitter(coord: AxialCoord, distance: number): number {
+  const nearEdge =
+    Math.abs(distance - 2) <= 1 ||
+    Math.abs(distance - 4) <= 1 ||
+    Math.abs(distance - 6) <= 1;
+  if (!nearEdge) return 0;
+  const bucket = Math.floor(regionHash01(coord.q, coord.r, MAP_REGION_SEED) * 3);
+  if (bucket === 0) return -1;
+  if (bucket === 2) return 1;
+  return 0;
+}
 
 export const OFFICE_TOWERS: OfficeTowerDefinition[] = [
   {
     id: "metro_central",
     name: "Central Exchange Tower",
-    coord: { q: 1, r: -1 },
+    coord: { q: -1, r: 1 },
     region: "metropolis",
     companyCrewCapacity: 8,
   },
   {
     id: "suburban_park",
     name: "Parkview Office Tower",
-    coord: { q: 4, r: -3 },
+    coord: { q: 4, r: -5 },
     region: "suburban",
     companyCrewCapacity: 5,
   },
   {
     id: "rural_crossing",
     name: "Crossroads Business Tower",
-    coord: { q: -4, r: 1 },
+    coord: { q: -6, r: 2 },
     region: "rural",
     companyCrewCapacity: 3,
   },
   {
     id: "country_estate",
     name: "Hillside Corporate Tower",
-    coord: { q: 2, r: 4 },
+    coord: { q: 3, r: 4 },
     region: "countryside",
     companyCrewCapacity: 4,
   },
@@ -75,9 +121,9 @@ export const COMMERCIAL_REAL_ESTATE: {
   region: MapRegion;
   label: string;
 }[] = [
-  { coord: { q: 3, r: -2 }, region: "suburban", label: "Suburban strip parcel" },
-  { coord: { q: -3, r: 3 }, region: "rural", label: "Rural highway frontage" },
-  { coord: { q: 0, r: 4 }, region: "countryside", label: "Countryside lot" },
+  { coord: { q: 6, r: -3 }, region: "suburban", label: "Suburban strip parcel" },
+  { coord: { q: -5, r: 4 }, region: "rural", label: "Rural highway frontage" },
+  { coord: { q: -2, r: 6 }, region: "countryside", label: "Countryside lot" },
 ];
 
 export const BRANCH_OPENING_COST: ResourceCost = {
@@ -238,11 +284,44 @@ export function isAvailableCommercialLot(
 }
 
 export function regionAtCoord(coord: AxialCoord): MapRegion {
+  // Company HQ is authored as countryside for starts / future creation.
+  if (axialEquals(coord, MAP_HQ)) return HQ_REGION;
+
   const d = axialDistance(coord, MAP_GOV);
-  if (d <= 2) return "metropolis";
-  if (d <= 4) return "suburban";
-  if (d <= 5) return "rural";
+  const effective = Math.max(
+    0,
+    Math.min(MAP_RADIUS, d + regionDistanceJitter(coord, d)),
+  );
+  if (effective <= 2) return "metropolis";
+  if (effective <= 4) return "suburban";
+  if (effective <= 6) return "rural";
   return "countryside";
+}
+
+export function siteRateBonusForRegion(region: MapRegion): number {
+  return REGION_SITE_RATE_BONUS[region];
+}
+
+export function siteRateBonusForCoord(coord: AxialCoord): number {
+  const region = commercialSiteAt(coord)?.region ?? regionAtCoord(coord);
+  return siteRateBonusForRegion(region);
+}
+
+export function siteRateBonusesForState(state: {
+  branchEstablished: boolean;
+  branchCoord: AxialCoord | null;
+}): Record<"hq" | "branch", number> {
+  return {
+    hq: siteRateBonusForRegion(HQ_REGION),
+    branch:
+      state.branchEstablished && state.branchCoord
+        ? siteRateBonusForCoord(state.branchCoord)
+        : 0,
+  };
+}
+
+export function formatSiteRateBonusPercent(bonus: number): string {
+  return `${Math.round(bonus * 100)}%`;
 }
 
 export function optimalCrewForProject(
@@ -276,17 +355,43 @@ export function overviewOfficeOptions(state: GameState): OverviewOfficeOption[] 
     { id: "hq", label: "HQ", available: true },
     {
       id: "branch",
-      label: "Branch Office",
+      label: officeDisplayName(state, "branch"),
       available: state.branchEstablished,
       hint: state.branchEstablished
         ? undefined
-        : "Unlock Branch Management research, then open a site on the world map",
+        : "Research Branch Management, hire a Branch Manager, then establish on the map",
     },
   ];
 }
 
+export function officeDisplayName(
+  state: GameState,
+  officeId: "hq" | "branch",
+): string {
+  if (officeId === "branch" && state.branchEstablished && state.branchName) {
+    return state.branchName;
+  }
+  return OFFICE_LABELS[officeId];
+}
+
+export function defaultBranchName(coord: AxialCoord, branchIndex = 1): string {
+  const region = commercialSiteAt(coord)?.region ?? regionAtCoord(coord);
+  return `Branch ${branchIndex} @ ${REGION_LABELS[region]}`;
+}
+
 export function branchManagementResearched(state: GameState): boolean {
   return state.researchLevels.branch_management >= 1;
+}
+
+/** First branch from Branch Management; further slots from Massive Expansion. */
+export function maxBranchSlots(state: GameState): number {
+  if (!branchManagementResearched(state)) return 0;
+  const extra = state.researchLevels.massive_expansion ?? 0;
+  return 1 + extra;
+}
+
+export function branchManagerAvailable(state: GameState): number {
+  return unitAvailableAt(state, "hq", "branch_manager");
 }
 
 export function canEstablishBranch(
@@ -295,6 +400,7 @@ export function canEstablishBranch(
 ): boolean {
   if (state.branchEstablished) return false;
   if (!branchManagementResearched(state)) return false;
+  if (branchManagerAvailable(state) < 1) return false;
   if (!coord || !commercialSiteAt(coord)) return false;
   return canAffordAtOffice(state, "hq", BRANCH_OPENING_COST);
 }
@@ -307,13 +413,24 @@ export function branchEstablishBlockers(
   if (state.branchEstablished) return [];
   const blockers: string[] = [];
   if (!branchManagementResearched(state)) {
-    blockers.push("Research Branch Management (Research tab, requires Efficiency Manuals)");
+    blockers.push(
+      "Research Branch Management (Research tab)",
+    );
+  }
+  if (branchManagerAvailable(state) < 1) {
+    blockers.push("Hire a Branch Manager at HQ (consumed on establish)");
   }
   if (!coord || !commercialSiteAt(coord)) {
     blockers.push("Select a yellow commercial lot on the map");
     return blockers;
   }
-  if (canAffordAtOffice(state, "hq", BRANCH_OPENING_COST)) return blockers;
+  if (
+    canAffordAtOffice(state, "hq", BRANCH_OPENING_COST) &&
+    branchManagerAvailable(state) >= 1 &&
+    branchManagementResearched(state)
+  ) {
+    return blockers;
+  }
 
   const { global, power } = splitResourceCost(BRANCH_OPENING_COST);
   for (const [key, amount] of Object.entries(global)) {

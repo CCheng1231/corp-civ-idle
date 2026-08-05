@@ -64,7 +64,20 @@ export function researchUpgradePreviewLines(
       from: null,
       to: 0,
       unit: "",
-      text: "Branch manager unit",
+      text: "Branch Manager recruitment + first branch slot",
+    });
+  }
+
+  if (
+    research.id === "massive_expansion" &&
+    currentLevel < research.maxLevel
+  ) {
+    const per = research.effects.branchSlotPerLevel ?? 1;
+    lines.push({
+      label: "Branch slots",
+      from: 1 + currentLevel * per,
+      to: 1 + targetLevel * per,
+      unit: "",
     });
   }
 

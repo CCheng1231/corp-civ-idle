@@ -54,7 +54,11 @@ export function RecruitmentMenu({
         <div className="recruitment-grid">
           {RECRUITMENT_UNITS.map((unit) => {
             const cost = recruitBatchCost(unit.id, 1);
-            const affordable = canAffordAtOffice(state, officeId, cost);
+            const researchLocked =
+              unit.id === "branch_manager" &&
+              (state.researchLevels.branch_management ?? 0) < 1;
+            const affordable =
+              !researchLocked && canAffordAtOffice(state, officeId, cost);
             const owned = state.contractorsByLocation[officeId][unit.id] ?? 0;
             return (
               <article key={unit.id} className="structure-card recruitment-card">
@@ -66,13 +70,18 @@ export function RecruitmentMenu({
                 </div>
                 <p className="recruitment-flavor">{unit.category}</p>
                 <p>{unit.proposedRole}</p>
+                {researchLocked && (
+                  <p className="structure-blocker">
+                    Requires Branch Management research
+                  </p>
+                )}
                 <button
                   type="button"
                   className="btn primary"
-                  disabled={!affordable}
+                  disabled={!affordable || researchLocked}
                   onClick={() => hire(unit.id)}
                 >
-                  Hire
+                  {researchLocked ? "Locked" : "Hire"}
                 </button>
                 <small className="cost-line">{formatResourceCost(cost)}</small>
               </article>

@@ -70,7 +70,8 @@ export type ResearchId =
   | "planning_ahead"
   | "branch_management"
   | "bid_modeling"
-  | "portfolio_management";
+  | "portfolio_management"
+  | "massive_expansion";
 
 export type MapRegion = "metropolis" | "suburban" | "rural" | "countryside";
 
@@ -102,6 +103,8 @@ export interface ProgressionEffects {
   projectDurationMultPerLevel?: number;
   projectPayoutMultPerLevel?: number;
   engagementCapPerLevel?: number;
+  /** Extra branch office slots beyond the first (Massive Expansion). */
+  branchSlotPerLevel?: number;
   officeSpacePerLevel?: number;
   powerCapacityPerLevel?: number;
 }
@@ -141,7 +144,12 @@ export type ProjectId = string;
 
 export type ProjectTag = "service" | "official" | "highRisk";
 
-export type ContractorCategoryId = "farming" | "defense" | "intel" | "support";
+export type ContractorCategoryId =
+  | "farming"
+  | "defense"
+  | "intel"
+  | "support"
+  | "special";
 
 /** @deprecated Use ContractorCategoryId — kept for migration labels. */
 export type ContractorTypeId = ContractorCategoryId;
@@ -162,7 +170,8 @@ export type UnitId =
   | "janitor"
   | "bike_courier"
   | "junior_team_lead"
-  | "office_mom_dad";
+  | "office_mom_dad"
+  | "branch_manager";
 
 export type UnitRoster = Record<UnitId, number>;
 
@@ -295,6 +304,8 @@ export interface JobPosting {
   contributors: JobContributor[];
 }
 
+export type JobEngagementPhase = "outbound" | "working" | "returning";
+
 export interface JobEngagement {
   id: string;
   postingId: string;
@@ -302,13 +313,20 @@ export interface JobEngagement {
   towerId: TowerId;
   officeId: OfficeLocationId;
   crewAssigned: UnitAssignment;
+  phase: JobEngagementPhase;
+  /** Current travel leg (outbound / returning); null while working. */
+  travelStartedAt: number | null;
+  travelArrivesAt: number | null;
+  /** Work window — set when outbound arrives. */
   startedAt: number;
-  /** When assigned units return to the office (shift ends). */
+  /** Work shift end — set when outbound arrives. */
   endsAt: number;
   lastAccruedAt: number;
   /** Unpaid effective earnings for this engagement (paid when shift ends or on cancel). */
   earnedSoFar: number;
   unitHoursApplied: number;
+  /** True after shift pay is banked and crew is walking home. */
+  shiftPaid?: boolean;
 }
 
 export interface StructureBuildJob {
@@ -328,6 +346,16 @@ export type StructureQueuesByLocation = Record<
   StructureBuildJob[]
 >;
 
+/** One-shot UI payload after offline catch-up (not persisted). */
+export interface OfflineWelcomeSummary {
+  awaySec: number;
+  gained: ResourceCost;
+  structures: string[];
+  research: string[];
+  hires: string[];
+  jobsFinished: number;
+}
+
 export interface GameState {
   resources: Resources;
   rates: ProductionRates;
@@ -343,6 +371,8 @@ export interface GameState {
   selectedOffice: OfficeLocationId;
   branchEstablished: boolean;
   branchCoord: AxialCoord | null;
+  /** Player-renameable; default e.g. "Branch 1 @ Suburban". */
+  branchName: string | null;
   selectedTowerId: TowerId | null;
   selectedCommercialHex: AxialCoord | null;
   won: boolean;
@@ -362,15 +392,39 @@ export interface GameState {
   logbookFilterId: string;
   lastTickAt: number;
   settings: GameSettings;
+  /** Shown once after load catch-up; stripped from saves. */
+  pendingOfflineSummary?: OfflineWelcomeSummary | null;
+  /** Live completion toasts; stripped from saves. */
+  pendingCompletionAlerts?: CompletionAlert[];
+  /** Scroll/highlight target on Recruitment; stripped from saves. */
+  recruitFocusUnitId?: UnitId | null;
+}
+
+export type CompletionAlertKind = "structure" | "research" | "recruitment";
+
+export interface CompletionAlert {
+  id: string;
+  kind: CompletionAlertKind;
+  title: string;
+  /** e.g. what the queue started next, or that the queue is empty */
+  detail?: string;
 }
 
 export type ViewportPreview = "auto" | "desktop" | "mobile";
+export type MapPresentation = "dev" | "player";
+/** Player map ground look (Google Maps–like variants in game palette). */
+export type MapPlayerGround = "streets" | "terrain" | "hybrid";
 
 export interface GameSettings {
   masterVolume: number;
   musicMuted: boolean;
   uiScale: number;
+  /** Show completion toasts for structure / research / recruitment. */
   notifications: boolean;
+  /** Auto-hide completion toasts after a delay. */
+  alertAutoDismiss: boolean;
+  /** Seconds before auto-dismiss (used when alertAutoDismiss is on). */
+  alertAutoDismissSec: number;
   /** Force desktop or mobile layout for UI testing (auto = match window width). */
   viewportPreview: ViewportPreview;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
@@ -382,6 +436,10 @@ export interface GameSettings {
     OfficeLocationId,
     { structuresOpen: boolean }
   >;
+  /** World map: hex developer view vs player soft-region presentation. */
+  mapPresentation: MapPresentation;
+  /** Player-only map ground style for A/B comparison. */
+  mapPlayerGround: MapPlayerGround;
 }
 
 export type MainView =
@@ -437,6 +495,7 @@ export type GameAction =
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
   | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null }
+  | { type: "RENAME_BRANCH"; name: string }
   | { type: "RECRUIT_CONTRACTOR"; unitId: UnitId }
   | {
       type: "START_RECRUITMENT";
@@ -464,9 +523,16 @@ export type GameAction =
       crewAssigned: UnitAssignment;
     }
   | { type: "COMPLETE_PROJECT" }
-  | { type: "SET_VIEW"; view: MainView; logbookFilter?: string }
+  | {
+      type: "SET_VIEW";
+      view: MainView;
+      logbookFilter?: string;
+      recruitFocusUnitId?: UnitId | null;
+    }
   | { type: "SET_LOGBOOK_FILTER"; filterId: string }
   | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
+  | { type: "DISMISS_OFFLINE_SUMMARY" }
+  | { type: "DISMISS_COMPLETION_ALERT"; alertId: string }
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }
   | { type: "UPDATE_SETTINGS"; settings: Partial<GameSettings> }
   | { type: "DEV_SKIP_TIME"; minutes: number }

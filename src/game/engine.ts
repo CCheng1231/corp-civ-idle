@@ -30,9 +30,11 @@ import {
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
   OFFICE_EXPANSION_STRUCTURE_ID,
+  OFFLINE_CATCHUP_CAP_SEC,
   recruitmentOrderDurationMs,
   recruitmentOrderBuildTimeHours,
 } from "./constants";
+import { buildOfflineWelcomeSummary } from "./offlineWelcome";
 import { cancelRefundFromSpent } from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
 import { formatQueueTimeHours } from "./timers";
@@ -45,7 +47,10 @@ import {
 import {
   BRANCH_OPENING_COST,
   branchManagementResearched,
+  branchManagerAvailable,
   commercialSiteAt,
+  defaultBranchName,
+  siteRateBonusesForState,
 } from "./mapWorld";
 import {
   formatAssignmentSummary,
@@ -68,6 +73,7 @@ import {
   timerHasNotElapsed,
 } from "./timers";
 import type {
+  CompletionAlert,
   GameAction,
   GameState,
   ProgressionEffects,
@@ -76,6 +82,24 @@ import type {
   StructureId,
   OfficeLocationId,
 } from "./types";
+
+const MAX_PENDING_COMPLETION_ALERTS = 8;
+
+function pushCompletionAlert(
+  state: GameState,
+  alert: Omit<CompletionAlert, "id">,
+  notify: boolean,
+): GameState {
+  if (!notify || !state.settings.notifications) return state;
+  const entry: CompletionAlert = {
+    ...alert,
+    id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  };
+  const pending = [...(state.pendingCompletionAlerts ?? []), entry].slice(
+    -MAX_PENDING_COMPLETION_ALERTS,
+  );
+  return { ...state, pendingCompletionAlerts: pending };
+}
 
 type LeveledDef = {
   maxLevel: number;
@@ -184,7 +208,10 @@ export function computeProjectBonuses(state: GameState) {
 }
 
 function withDerivedStats(state: GameState): GameState {
-  const derived = recomputeDerivedStats(state);
+  const derived = recomputeDerivedStats({
+    ...state,
+    siteRateBonusByOffice: siteRateBonusesForState(state),
+  });
   const locationStats = computeLocationStats({
     structureLevelsByLocation: state.structureLevelsByLocation,
     contractorsByLocation: state.contractorsByLocation,
@@ -225,7 +252,11 @@ function applyResearchEffects(
   return withDerivedStats(next);
 }
 
-function processStructureQueues(state: GameState, now: number): GameState {
+function processStructureQueues(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
   let next = state;
 
   for (const officeId of OFFICE_IDS) {
@@ -252,18 +283,43 @@ function processStructureQueues(state: GameState, now: number): GameState {
         job.structureId,
         newLevel,
       );
-      next = appendActivityLogs(next, [
+      next = appendActivityLogs(
+        next,
+        [
+          {
+            category: "structure_complete",
+            summary: `${def.name} built at ${OFFICE_LABELS[officeId]}`,
+            officeId,
+            spent: buildSpent,
+            impacts: [
+              `Level ${newLevel} at ${OFFICE_LABELS[officeId]}`,
+              `Rates and site stats updated`,
+            ],
+          },
+        ],
+        now,
+      );
+
+      let detail: string;
+      if (queue.length > 0) {
+        const upcoming = queue[0];
+        const upcomingDef = getStructureDef(upcoming.structureId);
+        const target =
+          upcoming.targetLevel ??
+          next.structureLevelsByLocation[officeId][upcoming.structureId] + 1;
+        detail = `Now building: ${upcomingDef.name} → Lv ${target}`;
+      } else {
+        detail = `Build queue empty at ${OFFICE_LABELS[officeId]}`;
+      }
+      next = pushCompletionAlert(
+        next,
         {
-          category: "structure_complete",
-          summary: `${def.name} built at ${OFFICE_LABELS[officeId]}`,
-          officeId,
-          spent: buildSpent,
-          impacts: [
-            `Level ${newLevel} at ${OFFICE_LABELS[officeId]}`,
-            `Rates and site stats updated`,
-          ],
+          kind: "structure",
+          title: `${def.name} complete (Lv ${newLevel}) · ${OFFICE_LABELS[officeId]}`,
+          detail,
         },
-      ]);
+        notify,
+      );
     }
 
     next = {
@@ -314,7 +370,11 @@ function processContractorTransfers(state: GameState, now: number): GameState {
   return next;
 }
 
-function processResearchQueues(state: GameState, now: number): GameState {
+function processResearchQueues(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
   let next = state;
 
   for (const officeId of OFFICE_IDS) {
@@ -339,17 +399,39 @@ function processResearchQueues(state: GameState, now: number): GameState {
       next.researchQueues = { ...next.researchQueues, [officeId]: queue };
       const def = getResearchDef(job.researchId);
       const newLevel = next.researchLevels[job.researchId];
-      next = appendActivityLogs(next, [
+      next = appendActivityLogs(
+        next,
+        [
+          {
+            category: "research_complete",
+            summary: `${def.name} completed`,
+            officeId,
+            impacts: [
+              `Research level ${newLevel}/${def.maxLevel}`,
+              "Firm production rates updated",
+            ],
+          },
+        ],
+        now,
+      );
+
+      let detail: string;
+      if (queue.length > 0) {
+        const upcoming = queue[0];
+        const upcomingDef = getResearchDef(upcoming.researchId);
+        detail = `Now researching: ${upcomingDef.name} → Lv ${upcoming.targetLevel}`;
+      } else {
+        detail = `Research queue empty at ${OFFICE_LABELS[officeId]}`;
+      }
+      next = pushCompletionAlert(
+        next,
         {
-          category: "research_complete",
-          summary: `${def.name} completed`,
-          officeId,
-          impacts: [
-            `Research level ${newLevel}/${def.maxLevel}`,
-            "Firm production rates updated",
-          ],
+          kind: "research",
+          title: `${def.name} complete (Lv ${newLevel})`,
+          detail,
         },
-      ]);
+        notify,
+      );
     }
 
     next = {
@@ -396,7 +478,11 @@ function setRecruitmentJobsForOffice(
   };
 }
 
-function processRecruitmentJobs(state: GameState, now: number): GameState {
+function processRecruitmentJobs(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
   let next = structuredClone(state);
   const completed: import("./types").RecruitmentJob[] = [];
 
@@ -423,6 +509,26 @@ function processRecruitmentJobs(state: GameState, now: number): GameState {
         jobs[0] = startRecruitmentJobTimer(next, jobs[0], now);
       }
       next = setRecruitmentJobsForOffice(next, officeId, jobs);
+
+      const unit = unitDefinition(job.unitId);
+      let detail: string;
+      if (jobs.length > 0) {
+        const upcoming = jobs[0];
+        const upcomingUnit = unitDefinition(upcoming.unitId);
+        const upcomingCount = upcoming.count ?? 1;
+        detail = `Now hiring: ${upcomingCount}× ${upcomingUnit.name}`;
+      } else {
+        detail = `Hiring queue empty at ${OFFICE_LABELS[officeId]}`;
+      }
+      next = pushCompletionAlert(
+        next,
+        {
+          kind: "recruitment",
+          title: `${hireCount}× ${unit.name} arrived · ${OFFICE_LABELS[officeId]}`,
+          detail,
+        },
+        notify,
+      );
     }
   }
 
@@ -447,27 +553,54 @@ function processRecruitmentJobs(state: GameState, now: number): GameState {
 }
 
 export function finalizeLoadedState(state: GameState, now: number): GameState {
+  const previousTickAt = state.lastTickAt;
+  const beforeCatchUp = state;
   const normalized = reconcileStructureBuildTimers(
     {
       ...state,
       resources: normalizeResourceWallet(state.resources),
       dismissedJobReportIds: state.dismissedJobReportIds ?? [],
       logbookFilterId: state.logbookFilterId ?? "all",
+      pendingOfflineSummary: null,
+      pendingCompletionAlerts: [],
+      recruitFocusUnitId: null,
     },
     now,
   );
-  return withDerivedStats(
+  // Resolve wall-clock queues/jobs first, then apply offline production at
+  // post-completion rates (slightly generous if an upgrade finished while away).
+  // Silent notify: offline welcome dialog already summarizes completions.
+  const afterQueues = withDerivedStats(
     runJobSimulation(
       processRecruitmentJobs(
         processContractorTransfers(
-          processResearchQueues(processStructureQueues(normalized, now), now),
+          processResearchQueues(
+            processStructureQueues(normalized, now, false),
+            now,
+            false,
+          ),
           now,
         ),
         now,
+        false,
       ),
       now,
     ),
   );
+  const awaySec = Math.max(0, (now - previousTickAt) / 1000);
+  const productionDeltaSec = Math.min(OFFLINE_CATCHUP_CAP_SEC, awaySec);
+  let next =
+    productionDeltaSec > 0
+      ? tickProduction(afterQueues, productionDeltaSec)
+      : afterQueues;
+  next.lastTickAt = now;
+  next.pendingOfflineSummary = buildOfflineWelcomeSummary(
+    beforeCatchUp,
+    afterQueues,
+    next,
+    awaySec,
+  );
+  return next;
 }
 
 function tickProduction(state: GameState, deltaSec: number): GameState {
@@ -514,25 +647,97 @@ function advanceSimulatedTime(
   if (input.productionDeltaSec <= 0) return state;
 
   let next = tickProduction(state, input.productionDeltaSec);
-  next = processStructureQueues(next, input.eventNow);
-  next = processResearchQueues(next, input.eventNow);
+  next = processStructureQueues(next, input.eventNow, true);
+  next = processResearchQueues(next, input.eventNow, true);
   next = processContractorTransfers(next, input.eventNow);
-  next = processRecruitmentJobs(next, input.eventNow);
+  next = processRecruitmentJobs(next, input.eventNow, true);
   next = runJobSimulation(next, input.eventNow);
   next.lastTickAt = input.lastTickAt;
   return next;
 }
 
+/**
+ * Pull every absolute wall-clock mark earlier by `shiftMs` so a later catch-up
+ * at real `Date.now()` treats the skipped duration as already elapsed.
+ * Covers queues, travel, job shifts/postings, and log timestamps.
+ */
+function shiftSimulatedClock(state: GameState, shiftMs: number): GameState {
+  if (shiftMs <= 0) return state;
+  const next = structuredClone(state);
+
+  const shift = (at: number): number => at - shiftMs;
+  const shiftNullable = (at: number | null | undefined): number | null => {
+    if (at == null) return null;
+    return at - shiftMs;
+  };
+
+  for (const officeId of OFFICE_IDS) {
+    next.structureQueues[officeId] = next.structureQueues[officeId].map(
+      (job) => ({
+        ...job,
+        startedAt: shiftNullable(job.startedAt),
+        completesAt: shiftNullable(job.completesAt),
+      }),
+    );
+    next.researchQueues[officeId] = (next.researchQueues[officeId] ?? []).map(
+      (job) => ({
+        ...job,
+        startedAt: shiftNullable(job.startedAt),
+        completesAt: shiftNullable(job.completesAt),
+      }),
+    );
+  }
+
+  next.recruitmentJobs = next.recruitmentJobs.map((job) => ({
+    ...job,
+    startedAt: shiftNullable(job.startedAt),
+    completesAt: shiftNullable(job.completesAt),
+  }));
+
+  next.contractorTransfers = next.contractorTransfers.map((transfer) => ({
+    ...transfer,
+    arrivesAt: shift(transfer.arrivesAt),
+  }));
+
+  next.jobEngagements = next.jobEngagements.map((engagement) => ({
+    ...engagement,
+    startedAt: shift(engagement.startedAt),
+    endsAt: shift(engagement.endsAt),
+    lastAccruedAt: shift(engagement.lastAccruedAt),
+    travelStartedAt: shiftNullable(engagement.travelStartedAt),
+    travelArrivesAt: shiftNullable(engagement.travelArrivesAt),
+  }));
+
+  next.jobPostings = next.jobPostings.map((posting) => ({
+    ...posting,
+    spawnedAt: shift(posting.spawnedAt),
+    expiresAt: shift(posting.expiresAt),
+  }));
+
+  next.activityLog = next.activityLog.map((entry) => ({
+    ...entry,
+    at: shift(entry.at),
+  }));
+
+  next.lastTickAt = shift(next.lastTickAt);
+  return next;
+}
+
+/**
+ * Dev time skip: shift all deadlines/accrual marks back, then run the normal
+ * simulation catch-up at the real wall clock. New timers started during the
+ * catch-up are scheduled from wall time (no post-skip rebase needed).
+ */
 export function devSkipTime(state: GameState, minutes: number): GameState {
   if (!Number.isFinite(minutes) || minutes <= 0) return state;
   const capped = Math.min(minutes, 60 * 24 * 7);
   const deltaSec = capped * 60;
-  const wall = Date.now();
-  const eventNow = wall + deltaSec * 1000;
-  return advanceSimulatedTime(state, {
+  const now = Date.now();
+  const shifted = shiftSimulatedClock(state, deltaSec * 1000);
+  return advanceSimulatedTime(shifted, {
     productionDeltaSec: deltaSec,
-    eventNow,
-    lastTickAt: wall,
+    eventNow: now,
+    lastTickAt: now,
   });
 }
 
@@ -548,6 +753,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
+        recruitFocusUnitId:
+          action.view === "recruitment"
+            ? (action.recruitFocusUnitId ?? null)
+            : null,
       };
 
     case "SET_LOGBOOK_FILTER":
@@ -561,6 +770,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         dismissedJobReportIds: [...dismissed, action.logEntryId],
+      };
+    }
+
+    case "DISMISS_OFFLINE_SUMMARY":
+      if (!state.pendingOfflineSummary) return state;
+      return { ...state, pendingOfflineSummary: null };
+
+    case "DISMISS_COMPLETION_ALERT": {
+      const pending = state.pendingCompletionAlerts ?? [];
+      if (!pending.some((alert) => alert.id === action.alertId)) {
+        return state;
+      }
+      return {
+        ...state,
+        pendingCompletionAlerts: pending.filter(
+          (alert) => alert.id !== action.alertId,
+        ),
       };
     }
 
@@ -580,28 +806,48 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "ESTABLISH_BRANCH": {
       if (state.branchEstablished) return state;
       if (!branchManagementResearched(state)) return state;
+      if (branchManagerAvailable(state) < 1) return state;
       const pick = action.coord ?? state.selectedCommercialHex;
       const site = pick ? commercialSiteAt(pick) : undefined;
       if (!site) return state;
       if (!canAffordAtOffice(state, "hq", BRANCH_OPENING_COST)) return state;
 
       const next = applyOfficeCost(state, "hq", BRANCH_OPENING_COST);
+      next.contractorsByLocation = {
+        ...next.contractorsByLocation,
+        hq: {
+          ...next.contractorsByLocation.hq,
+          branch_manager: Math.max(
+            0,
+            (next.contractorsByLocation.hq.branch_manager ?? 0) - 1,
+          ),
+        },
+      };
       next.branchEstablished = true;
       next.branchCoord = { ...site.coord };
+      next.branchName = defaultBranchName(site.coord, 1);
       next.selectedCommercialHex = null;
       next.selectedOffice = "branch";
       return appendActivityLogs(next, [
         {
           category: "research",
-          summary: `Opened branch at ${site.label}`,
+          summary: `Opened ${next.branchName} at ${site.label}`,
           officeId: "branch",
           spent: BRANCH_OPENING_COST,
           impacts: [
+            "Consumed 1 Branch Manager",
             "Branch office now on the regional map",
             "Manage structures and staff at the new site",
           ],
         },
       ]);
+    }
+
+    case "RENAME_BRANCH": {
+      if (!state.branchEstablished) return state;
+      const name = action.name.trim().slice(0, 48);
+      if (!name) return state;
+      return { ...state, branchName: name };
     }
 
     case "UPDATE_SETTINGS": {
@@ -620,7 +866,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "TICK": {
       const now = action.now;
-      const deltaSec = Math.min(30, (now - state.lastTickAt) / 1000);
+      const deltaSec = Math.min(
+        OFFLINE_CATCHUP_CAP_SEC,
+        (now - state.lastTickAt) / 1000,
+      );
       if (deltaSec <= 0) return state;
 
       return advanceSimulatedTime(state, {
@@ -848,6 +1097,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const count = Math.floor(action.count);
       if (count < 1 || count > MAX_RECRUIT_BATCH) return state;
       const { officeId, unitId } = action;
+      if (unitId === "branch_manager" && !branchManagementResearched(state)) {
+        return state;
+      }
       if (isRecruitmentQueueFull(state, officeId)) return state;
       const cost = recruitBatchCost(unitId, count);
       if (!canAffordAtOffice(state, officeId, cost)) return state;
@@ -977,9 +1229,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           officeId: engagement.officeId,
           impacts: [
             formatAssignmentSummary(engagement.crewAssigned),
-            `Shift length ~${Math.round(
-              jobDefinitionById(engagement.definitionId).durationSec / 3600,
-            )} hr — units return when shift ends`,
+            "Crew en route — work starts on arrival",
+            `Shift ~${Math.round(def.durationSec / 3600)} hr once on site`,
           ],
         },
       ]);

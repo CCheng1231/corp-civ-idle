@@ -21,6 +21,7 @@ import { finalizeLoadedState } from "./engine";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
+import { defaultBranchName, siteRateBonusesForState } from "./mapWorld";
 import {
   migrateLegacyResources,
   hqStartStructureLevels,
@@ -38,6 +39,19 @@ import type {
   UnitRoster,
   ContractorCategoryId,
 } from "./types";
+
+export const ALERT_AUTO_DISMISS_SEC_MIN = 2;
+export const ALERT_AUTO_DISMISS_SEC_MAX = 30;
+export const ALERT_AUTO_DISMISS_SEC_DEFAULT = 7;
+
+export function clampAlertAutoDismissSec(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return ALERT_AUTO_DISMISS_SEC_DEFAULT;
+  return Math.min(
+    ALERT_AUTO_DISMISS_SEC_MAX,
+    Math.max(ALERT_AUTO_DISMISS_SEC_MIN, Math.round(n)),
+  );
+}
 
 const VALID_VIEWS = new Set<MainView>([
   "overview",
@@ -257,19 +271,24 @@ function migrateJobFields(
     return {
       jobPostings: parsed.jobPostings,
       jobEngagements: parsed.jobEngagements.map((engagement) => {
-        if (engagement.endsAt) return engagement;
-        try {
-          const def = jobDefinitionById(engagement.definitionId);
-          return {
-            ...engagement,
-            endsAt: engagement.startedAt + def.durationSec * 1000,
-          };
-        } catch {
-          return {
-            ...engagement,
-            endsAt: engagement.startedAt + 3600 * 1000,
-          };
+        let endsAt = engagement.endsAt;
+        if (!endsAt) {
+          try {
+            const def = jobDefinitionById(engagement.definitionId);
+            endsAt = engagement.startedAt + def.durationSec * 1000;
+          } catch {
+            endsAt = engagement.startedAt + 3600 * 1000;
+          }
         }
+        const phase = engagement.phase ?? "working";
+        return {
+          ...engagement,
+          endsAt,
+          phase,
+          travelStartedAt: engagement.travelStartedAt ?? null,
+          travelArrivesAt: engagement.travelArrivesAt ?? null,
+          shiftPaid: engagement.shiftPaid ?? false,
+        };
       }),
     };
   }
@@ -288,6 +307,7 @@ function migrateBranchFields(
   GameState,
   | "branchEstablished"
   | "branchCoord"
+  | "branchName"
   | "selectedTowerId"
   | "selectedCommercialHex"
 > {
@@ -306,10 +326,20 @@ function migrateBranchFields(
     parsed.branchCoord ??
     (branchEstablished ? { ...MAP_BRANCH } : null);
 
+  let branchName =
+    typeof parsed.branchName === "string" && parsed.branchName.trim()
+      ? parsed.branchName.trim().slice(0, 48)
+      : null;
+  if (branchEstablished && !branchName && branchCoord) {
+    branchName = defaultBranchName(branchCoord, 1);
+  }
+
   return {
     branchEstablished,
     branchCoord,
-    selectedTowerId: parsed.selectedTowerId ?? "metro_central",
+    branchName: branchEstablished ? branchName : null,
+    // Map/job-board tower focus is session UI — don't restore a stale filter.
+    selectedTowerId: null,
     selectedCommercialHex: parsed.selectedCommercialHex ?? null,
   };
 }
@@ -339,6 +369,11 @@ function normalizeSave(parsed: LegacySave): GameState {
     settings: {
       ...base.settings,
       ...parsed.settings,
+      notifications: parsed.settings?.notifications ?? true,
+      alertAutoDismiss: parsed.settings?.alertAutoDismiss ?? true,
+      alertAutoDismissSec: clampAlertAutoDismissSec(
+        parsed.settings?.alertAutoDismissSec,
+      ),
       viewportPreview:
         parsed.settings?.viewportPreview === "mobile" ||
         parsed.settings?.viewportPreview === "desktop" ||
@@ -356,6 +391,17 @@ function normalizeSave(parsed: LegacySave): GameState {
             false,
         },
       },
+      mapPresentation:
+        parsed.settings?.mapPresentation === "player" ||
+        parsed.settings?.mapPresentation === "dev"
+          ? parsed.settings.mapPresentation
+          : "dev",
+      mapPlayerGround:
+        parsed.settings?.mapPlayerGround === "streets" ||
+        parsed.settings?.mapPlayerGround === "terrain" ||
+        parsed.settings?.mapPlayerGround === "hybrid"
+          ? parsed.settings.mapPlayerGround
+          : "hybrid",
     },
     structureLevelsByLocation,
     structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),
@@ -379,7 +425,11 @@ function normalizeSave(parsed: LegacySave): GameState {
       typeof parsed.logbookFilterId === "string" ? parsed.logbookFilterId : "all",
     view: normalizeView(parsed.view),
     won: parsed.won ?? false,
-    lastTickAt: Date.now(),
+    // Keep wall-clock last tick so reopen can catch up offline production.
+    lastTickAt:
+      typeof parsed.lastTickAt === "number" && Number.isFinite(parsed.lastTickAt)
+        ? parsed.lastTickAt
+        : now,
   };
 
   Object.assign(merged, migrateBranchFields(parsed, merged));
@@ -399,6 +449,7 @@ function normalizeSave(parsed: LegacySave): GameState {
     structureLevelsByLocation: merged.structureLevelsByLocation,
     contractorsByLocation: merged.contractorsByLocation,
     researchLevels: merged.researchLevels,
+    siteRateBonusByOffice: siteRateBonusesForState(merged),
   });
   merged.rates = derived.rates;
   merged.netWorth = computeNetWorth(merged.resources, merged.locationStats);
@@ -421,7 +472,13 @@ export function loadGameState(): GameState {
 }
 
 export function saveGameState(state: GameState): void {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  const {
+    pendingOfflineSummary: _welcome,
+    pendingCompletionAlerts: _alerts,
+    recruitFocusUnitId: _recruitFocus,
+    ...persistable
+  } = state;
+  localStorage.setItem(SAVE_KEY, JSON.stringify(persistable));
 }
 
 export function resetGameState(preserveSettings?: GameState["settings"]): GameState {

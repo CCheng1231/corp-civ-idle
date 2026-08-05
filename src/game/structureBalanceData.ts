@@ -502,7 +502,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 2,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.024,
       "cash": 55,
       "supply": 60,
       "connection": 0,
@@ -513,7 +513,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 3,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.0264,
       "cash": 60.5,
       "supply": 72,
       "connection": 0,
@@ -524,7 +524,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 4,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.029039999999999996,
       "cash": 66.55,
       "supply": 86.4,
       "connection": 0,
@@ -535,7 +535,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 5,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.1452,
       "cash": 73.205,
       "supply": 103.68,
       "connection": 0,
@@ -546,7 +546,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 6,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.17424,
       "cash": 80.5255,
       "supply": 124.416,
       "connection": 0,
@@ -557,7 +557,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 7,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.209088,
       "cash": 88.57805,
       "supply": 149.2992,
       "connection": 0,
@@ -568,7 +568,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 8,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.2509056,
       "cash": 97.435855,
       "supply": 179.15904,
       "connection": 0,
@@ -579,7 +579,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 9,
-      "buildTimeHours": 0,
+      "buildTimeHours": 0.30108672000000003,
       "cash": 107.1794405,
       "supply": 214.990848,
       "connection": 0,
@@ -590,7 +590,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 10,
-      "buildTimeHours": 0,
+      "buildTimeHours": 1.2043468800000001,
       "cash": 117.8973846,
       "supply": 257.9890176,
       "connection": 0,
@@ -601,7 +601,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 11,
-      "buildTimeHours": 0,
+      "buildTimeHours": 1.445216256,
       "cash": 129.687123,
       "supply": 309.5868211,
       "connection": 0,
@@ -612,7 +612,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 12,
-      "buildTimeHours": 0,
+      "buildTimeHours": 1.7342595072,
       "cash": 142.6558353,
       "supply": 371.5041853,
       "connection": 0,
@@ -623,7 +623,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 13,
-      "buildTimeHours": 0,
+      "buildTimeHours": 2.08111140864,
       "cash": 156.9214188,
       "supply": 445.8050224,
       "connection": 0,
@@ -634,7 +634,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 14,
-      "buildTimeHours": 0,
+      "buildTimeHours": 2.4973336896,
       "cash": 172.6135607,
       "supply": 534.9660269,
       "connection": 0,
@@ -645,7 +645,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 15,
-      "buildTimeHours": 0,
+      "buildTimeHours": 6.2433342264,
       "cash": 189.8749168,
       "supply": 641.9592323,
       "connection": 0,
@@ -656,7 +656,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 16,
-      "buildTimeHours": 0,
+      "buildTimeHours": 7.492001071200001,
       "cash": 208.8624085,
       "supply": 770.3510787,
       "connection": 0,
@@ -667,7 +667,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 17,
-      "buildTimeHours": 0,
+      "buildTimeHours": 8.9904012864,
       "cash": 229.7486493,
       "supply": 924.4212945,
       "connection": 0,
@@ -678,7 +678,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 18,
-      "buildTimeHours": 0,
+      "buildTimeHours": 10.7884815432,
       "cash": 252.7235142,
       "supply": 1109.305553,
       "connection": 0,
@@ -689,7 +689,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 19,
-      "buildTimeHours": 0,
+      "buildTimeHours": 12.946177850399998,
       "cash": 277.9958657,
       "supply": 1331.166664,
       "connection": 0,
@@ -700,7 +700,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
     },
     {
       "level": 20,
-      "buildTimeHours": 0,
+      "buildTimeHours": 25.892355695999996,
       "cash": 305.7954522,
       "supply": 1597.399997,
       "connection": 0,

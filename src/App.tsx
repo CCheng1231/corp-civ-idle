@@ -1,5 +1,7 @@
 import { useEffect, useReducer, useState } from "react";
 import { AudioControls } from "./components/AudioControls";
+import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
+import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
 import { ShortcutSidebar } from "./components/ShortcutSidebar";
 import { MainContent } from "./components/MainContent";
@@ -32,6 +34,17 @@ function App() {
 
   return (
     <div className={`app-shell${viewportClass}`}>
+      {state.pendingOfflineSummary ? (
+        <OfflineWelcomeDialog
+          summary={state.pendingOfflineSummary}
+          dispatch={dispatch}
+        />
+      ) : null}
+      <CompletionAlertToasts
+        alerts={state.pendingCompletionAlerts}
+        settings={state.settings}
+        dispatch={dispatch}
+      />
       <div className="app-top-chrome">
         <AudioControls settings={state.settings} dispatch={dispatch} />
         <ResourceBar state={state} />

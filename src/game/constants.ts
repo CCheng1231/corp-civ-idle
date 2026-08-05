@@ -24,6 +24,7 @@ import type {
 import {
   officeSeparationHexes,
 } from "./hexLayout";
+import { travelDurationMs } from "./mapTravel";
 import {
   HQ_BASE_OFFICE_SPACE,
   HQ_BASE_POWER,
@@ -59,6 +60,8 @@ import {
 
 export const SAVE_KEY = "corp-civ-idle-save-v2";
 export const TICK_MS = 1000;
+/** Max real-time seconds of passive production applied after being away. */
+export const OFFLINE_CATCHUP_CAP_SEC = 24 * 60 * 60;
 export const WIN_NET_WORTH = 100_000_000;
 export const BASE_LOCATION_POWER = HQ_BASE_POWER;
 export const BASE_OFFICE_SPACE = HQ_BASE_OFFICE_SPACE;
@@ -66,7 +69,8 @@ export const MAX_STRUCTURE_QUEUE = 2;
 export const MAX_RESEARCH_QUEUE = 2;
 export const MAX_RECRUIT_QUEUE = 2;
 export const STRUCTURE_SELL_MONEY_REFUND_RATE = 0.5;
-export const CONTRACTOR_TRANSFER_SEC_PER_HEX = 30;
+/** @deprecated Use TRAVEL_SEC_PER_HEX from mapTravel — same value. */
+export { TRAVEL_SEC_PER_HEX as CONTRACTOR_TRANSFER_SEC_PER_HEX } from "./mapTravel";
 export const RECRUIT_MS_PER_CONTRACTOR = 1000;
 
 /** Game hours per unit (1 sec per hire from balance sheet = 1/3600 hr; game hr = real hr). */
@@ -213,7 +217,7 @@ export function contractorTransferDurationMs(
 ): number {
   let hexes = contractorTransferHexDistance(state, from, to);
   hexes = Math.max(1, hexes - transferHexBonus(unitId ?? "janitor", count));
-  return hexes * CONTRACTOR_TRANSFER_SEC_PER_HEX * 1000;
+  return travelDurationMs(hexes);
 }
 
 export function otherOffice(officeId: OfficeLocationId): OfficeLocationId {
@@ -247,6 +251,7 @@ export function migrateLegacyCategoryRoster(
     "defense",
     "intel",
     "support",
+    "special",
   ] as ContractorCategoryId[]) {
     const count = legacy[category] ?? 0;
     if (count > 0) {
@@ -265,6 +270,7 @@ export function emptyContractorRoster(
     defense: 0,
     intel: 0,
     support: 0,
+    special: 0,
     ...overrides,
   });
 }
@@ -496,7 +502,8 @@ export function createInitialState(now = Date.now()): GameState {
     selectedOffice: "hq",
     branchEstablished: false,
     branchCoord: null,
-    selectedTowerId: "metro_central",
+    branchName: null,
+    selectedTowerId: null,
     selectedCommercialHex: null,
     won: false,
     jobPostings: initializeJobPostings(now),
@@ -509,15 +516,22 @@ export function createInitialState(now = Date.now()): GameState {
     dismissedJobReportIds: [],
     logbookFilterId: "all",
     lastTickAt: now,
+    pendingOfflineSummary: null,
+    pendingCompletionAlerts: [],
+    recruitFocusUnitId: null,
     settings: {
       masterVolume: 0.1,
       musicMuted: false,
       uiScale: 1,
       notifications: true,
+      alertAutoDismiss: true,
+      alertAutoDismissSec: 7,
       viewportPreview: "auto",
       ignoreTimers: false,
       ignoreCosts: false,
       officeSiteSections: defaultOfficeSiteSections(),
+      mapPresentation: "dev",
+      mapPlayerGround: "hybrid",
     },
   };
 
@@ -571,8 +585,16 @@ export function recomputeDerivedStats(state: {
   structureLevelsByLocation: GameState["structureLevelsByLocation"];
   contractorsByLocation: ContractorsByLocation;
   researchLevels: GameState["researchLevels"];
+  /** Region site bonus on structure passives; defaults to countryside HQ (0%). */
+  siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): { rates: ProductionRates } {
-  const rates = recomputeProductionRates(state);
+  const rates = recomputeProductionRates({
+    ...state,
+    siteRateBonusByOffice: state.siteRateBonusByOffice ?? {
+      hq: 0,
+      branch: 0,
+    },
+  });
 
   for (const def of RESEARCH) {
     const level = state.researchLevels[def.id];
@@ -637,6 +659,7 @@ export function aggregateCategoryRoster(
     defense: 0,
     intel: 0,
     support: 0,
+    special: 0,
   };
   for (const officeId of OFFICE_IDS) {
     for (const category of Object.keys(total) as ContractorCategoryId[]) {

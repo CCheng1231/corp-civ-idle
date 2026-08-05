@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import {
   MAX_RECRUIT_BATCH,
   MAX_RECRUIT_QUEUE,
@@ -31,6 +31,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   defense: "Protection / Defense",
   intel: "Intel / Scouting",
   support: "Support Units",
+  special: "Special",
 };
 
 const RECRUITMENT_TIERS = [
@@ -45,6 +46,23 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const queue = recruitmentJobsAtOffice(state, officeId);
   const queueFull = isRecruitmentQueueFull(state, officeId);
   const roster = rosterAt(state, officeId);
+  const focusUnitId = state.recruitFocusUnitId ?? null;
+
+  useEffect(() => {
+    if (!focusUnitId) return;
+    const el = document.getElementById(`recruit-unit-${focusUnitId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const clearId = window.setTimeout(() => {
+      dispatch({
+        type: "SET_VIEW",
+        view: "recruitment",
+        recruitFocusUnitId: null,
+      });
+    }, 2500);
+    return () => window.clearTimeout(clearId);
+  }, [focusUnitId, dispatch]);
 
   function hire(unitId: UnitId) {
     const count = Math.max(
@@ -62,17 +80,30 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   function renderUnitCard(unit: RecruitmentUnitDefinition) {
     const count = counts[unit.id] ?? 1;
     const cost = recruitBatchCost(unit.id, count);
-    const affordable = canAffordAtOffice(state, officeId, cost);
+    const researchLocked =
+      unit.id === "branch_manager" &&
+      (state.researchLevels.branch_management ?? 0) < 1;
+    const affordable =
+      !researchLocked && canAffordAtOffice(state, officeId, cost);
     const { power } = splitResourceCost(cost);
     const orderHours = recruitmentOrderBuildTimeHours(count);
-    const blocked = queueFull
-      ? "Hiring queue full (2 orders) at this site"
-      : power > powerAvailable(loc)
-        ? `Need ${power} Power (${formatNumber(powerAvailable(loc))} free)`
-        : null;
+    const blocked = researchLocked
+      ? "Requires Branch Management research"
+      : queueFull
+        ? "Hiring queue full (2 orders) at this site"
+        : power > powerAvailable(loc)
+          ? `Need ${power} Power (${formatNumber(powerAvailable(loc))} free)`
+          : null;
 
+    const focused = focusUnitId === unit.id;
     return (
-      <li key={unit.id} className="structure-card structure-card-upgrade">
+      <li
+        key={unit.id}
+        id={`recruit-unit-${unit.id}`}
+        className={`structure-card structure-card-upgrade${
+          focused ? " recruit-unit-focused" : ""
+        }`}
+      >
         <div className="structure-head">
           <strong>{unit.name}</strong>
         </div>
@@ -104,7 +135,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             min={1}
             max={MAX_RECRUIT_BATCH}
             value={count}
-            disabled={queueFull}
+            disabled={queueFull || researchLocked}
             onChange={(e) => {
               const n = Math.max(
                 1,
@@ -118,10 +149,14 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         <button
           type="button"
           className="btn primary"
-          disabled={!affordable || queueFull}
+          disabled={!affordable || queueFull || researchLocked}
           onClick={() => hire(unit.id)}
         >
-          {queueFull ? "Queue full" : `Queue order (${count})`}
+          {researchLocked
+            ? "Locked"
+            : queueFull
+              ? "Queue full"
+              : `Queue order (${count})`}
         </button>
       </li>
     );

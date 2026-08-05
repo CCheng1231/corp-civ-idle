@@ -1,5 +1,10 @@
 import { type Dispatch } from "react";
-import { resetGameState } from "../game/save";
+import {
+  ALERT_AUTO_DISMISS_SEC_MAX,
+  ALERT_AUTO_DISMISS_SEC_MIN,
+  clampAlertAutoDismissSec,
+  resetGameState,
+} from "../game/save";
 import { DevTimeSkip } from "./DevTimeSkip";
 import type { GameAction, GameState } from "../game/types";
 
@@ -35,7 +40,7 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
           />
         </label>
         <label className="setting-row">
-          Notifications
+          Completion alerts
           <input
             type="checkbox"
             checked={state.settings.notifications}
@@ -47,6 +52,60 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
             }
           />
         </label>
+        <p className="muted setting-hint">
+          Pop up when a structure, research project, or hire order finishes, and
+          note what that queue starts next (if anything).
+        </p>
+        <label className="setting-row">
+          Auto-dismiss alerts
+          <input
+            type="checkbox"
+            checked={state.settings.alertAutoDismiss !== false}
+            disabled={!state.settings.notifications}
+            onChange={(e) =>
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                settings: { alertAutoDismiss: e.target.checked },
+              })
+            }
+          />
+        </label>
+        <label className="setting-row">
+          Alert fade timer
+          <span className="setting-row-inline">
+            <input
+              type="range"
+              min={ALERT_AUTO_DISMISS_SEC_MIN}
+              max={ALERT_AUTO_DISMISS_SEC_MAX}
+              step={1}
+              value={clampAlertAutoDismissSec(
+                state.settings.alertAutoDismissSec,
+              )}
+              disabled={
+                !state.settings.notifications ||
+                state.settings.alertAutoDismiss === false
+              }
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: {
+                    alertAutoDismissSec: clampAlertAutoDismissSec(
+                      Number(e.target.value),
+                    ),
+                  },
+                })
+              }
+            />
+            <span className="setting-value">
+              {clampAlertAutoDismissSec(state.settings.alertAutoDismissSec)}s
+            </span>
+          </span>
+        </label>
+        <p className="muted setting-hint">
+          When auto-dismiss is on, alerts fade out after this many seconds
+          ({ALERT_AUTO_DISMISS_SEC_MIN}–{ALERT_AUTO_DISMISS_SEC_MAX}). Turn it
+          off to keep alerts until you close them.
+        </p>
         <div className="setting-row setting-row-stack">
           <span>Layout preview</span>
           <div className="viewport-preview-toggle" role="group" aria-label="Layout preview">
@@ -115,8 +174,9 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
           />
         </label>
         <p className="muted setting-hint">
-          When on, structure builds (table hours), recruitment, staff travel, and
-          tower contracts finish immediately. Passive income still runs normally.
+          When on, structure builds, research, recruitment, staff travel, and
+          job engagement shifts finish immediately. Passive income still runs
+          normally.
         </p>
         <DevTimeSkip dispatch={dispatch} />
       </section>

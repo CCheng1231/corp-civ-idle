@@ -211,6 +211,20 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     },
     "detail": "Strong fatigue recovery bonus, morale boost",
     "proposedRole": "Office or mission: +0.03 mood/hr at site. On mission, -5% duration via morale support."
+  },
+  {
+    "id": "branch_manager",
+    "name": "Branch Manager",
+    "category": "special",
+    "tier": 1,
+    "cost": {
+      "cash": 800,
+      "supply": 200,
+      "reputation": 10,
+      "connection": 8
+    },
+    "detail": "Site-founding specialist. Cannot be assigned to contracts. One unit is consumed to open a branch.",
+    "proposedRole": "Establish-only unit: required and consumed when founding a branch. No job or office passive effects. Further branches need Massive Expansion research + another Branch Manager each."
   }
 ];
 
@@ -220,7 +234,8 @@ export const DEFAULT_TIER1_UNIT: Record<ContractorCategoryId, UnitId> = {
   "farming": "fresh_graduate",
   "defense": "mall_cop",
   "intel": "internet_surfer",
-  "support": "janitor"
+  "support": "janitor",
+  "special": "branch_manager"
 };
 
 /** Tier-1 hire cost per category (legacy helper). */
@@ -241,6 +256,12 @@ export const RECRUITMENT_TIER1_COST: Record<ContractorCategoryId, ResourceCost> 
   "support": {
     "cash": 150,
     "supply": 100
+  },
+  "special": {
+    "cash": 800,
+    "supply": 200,
+    "reputation": 10,
+    "connection": 8
   }
 };
 
@@ -248,5 +269,6 @@ export const RECRUITMENT_TIER1_LABEL: Record<ContractorCategoryId, string> = {
   "farming": "Fresh Graduate",
   "defense": "Mall Cop",
   "intel": "Internet surfer",
-  "support": "Janitor"
+  "support": "Janitor",
+  "special": "Branch Manager"
 };

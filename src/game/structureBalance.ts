@@ -225,7 +225,9 @@ export function applyRatesForStructureLevels(
 
 export function recomputeProductionRates(state: {
   structureLevelsByLocation: GameState["structureLevelsByLocation"];
-  researchLevels: GameState["researchLevels"];
+  researchLevels?: GameState["researchLevels"];
+  /** Per-site multiplier on structure passives (region site bonus). */
+  siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): ProductionRates {
   const rates: ProductionRates = {
     cash: 0,
@@ -236,10 +238,22 @@ export function recomputeProductionRates(state: {
     govReputation: 0,
   };
   for (const officeId of OFFICE_IDS) {
+    const siteRates: ProductionRates = {
+      cash: 0,
+      supply: 0,
+      connection: 0,
+      mood: 0,
+      reputation: 0,
+      govReputation: 0,
+    };
     applyRatesForStructureLevels(
       state.structureLevelsByLocation[officeId],
-      rates,
+      siteRates,
     );
+    const mult = 1 + (state.siteRateBonusByOffice?.[officeId] ?? 0);
+    for (const key of Object.keys(rates) as (keyof ProductionRates)[]) {
+      rates[key] += siteRates[key] * mult;
+    }
   }
   return rates;
 }

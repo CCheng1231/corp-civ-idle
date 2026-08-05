@@ -1,10 +1,10 @@
 import { MAP_GOV, axialEquals, officeAtCoord } from "../game/hexLayout";
-import { OFFICE_LABELS } from "../game/constants";
 import {
   REGION_LABELS,
   commercialSiteAt,
   hexDistanceFromHq,
   isAvailableCommercialLot,
+  officeDisplayName,
   regionAtCoord,
   towerAtCoord,
   towerById,
@@ -67,11 +67,16 @@ export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
   return { kind: "terrain", coord, region };
 }
 
-export function mapHexTitle(info: MapHexInfo): string {  switch (info.kind) {
+export function mapHexTitle(info: MapHexInfo, state?: GameState): string {
+  switch (info.kind) {
     case "gov":
       return "Regional government seat";
     case "office":
-      return OFFICE_LABELS[info.officeId];
+      return state
+        ? officeDisplayName(state, info.officeId)
+        : info.officeId === "hq"
+          ? "HQ"
+          : "Branch Office";
     case "tower":
       return towerById(info.towerId).name;
     case "commercial":

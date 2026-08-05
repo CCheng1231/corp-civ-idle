@@ -3,19 +3,22 @@
 import type { OfficeLocationId } from "./types";
 import type { AxialCoord } from "./types";
 
-/** Hex circumradius in px — 50% larger than original 26. */
-export const HEX_RADIUS = 39;
+/** Hex circumradius in px — roomier than the original 26 for player city map. */
+export const HEX_RADIUS = 42;
 
-/** Axial hexagon patch radius (includes tiles up to 5 steps from center). */
-export const MAP_RADIUS = 6;
+/** Axial hexagon patch radius (map extent from Gov). */
+export const MAP_RADIUS = 7;
 
 export type { AxialCoord } from "./types";
 
 export const MAP_GOV: AxialCoord = { q: 0, r: 0 };
-/** Five hex steps from Gov along the same axis. */
-export const MAP_HQ: AxialCoord = { q: 0, r: -5 };
-/** On the Gov → HQ line, between the two. */
-export const MAP_BRANCH: AxialCoord = { q: 0, r: -3 };
+/**
+ * Starting HQ in the countryside rim (future company starts land here too).
+ * Slightly off-axis so the map spine isn't a straight column.
+ */
+export const MAP_HQ: AxialCoord = { q: 2, r: -7 };
+/** Legacy fallback branch tile (live branches use branchCoord). */
+export const MAP_BRANCH: AxialCoord = { q: -1, r: -3 };
 
 export function axialKey({ q, r }: AxialCoord): string {
   return `${q},${r}`;

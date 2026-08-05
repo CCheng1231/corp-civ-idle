@@ -1,23 +1,13 @@
+import { type Dispatch } from "react";
+import { formatResourceCost, rosterAt } from "../game/constants";
+import { jobDefinitionById } from "../game/jobs";
 import {
-  CONTRACTOR_TYPES,
-  countInCategory,
-  formatNumber,
-  formatResourceCost,
-  rosterAt,
-} from "../game/constants";
-import {
-  assignmentMeetsJobRequirements,
-  jobDefinitionById,
-  returnPerHour,
-} from "../game/jobs";
-import { RECRUITMENT_UNITS } from "../game/recruitmentData";
-import {
-  canAssignFromRoster,
-  totalAssigned,
-  unitDefinition,
-  unitsInCategory,
-} from "../game/unitEffects";
+  DEFAULT_TIER1_UNIT,
+  RECRUITMENT_UNITS,
+} from "../game/recruitmentData";
+import { unitDefinition, unitsInCategory } from "../game/unitEffects";
 import type {
+  GameAction,
   JobDefinition,
   OfficeLocationId,
   UnitAssignment,
@@ -30,26 +20,25 @@ interface MissionCrewPickerProps {
   roster: ReturnType<typeof rosterAt>;
   assignment: UnitAssignment;
   disabled?: boolean;
+  dispatch: Dispatch<GameAction>;
   onChange: (next: UnitAssignment) => void;
 }
 
 export function MissionCrewPicker({
-  officeId,
+  officeId: _officeId,
   job,
   roster,
   assignment,
   disabled,
+  dispatch,
   onChange,
 }: MissionCrewPickerProps) {
-  const valid =
-    canAssignFromRoster(roster, assignment) &&
-    assignmentMeetsJobRequirements(assignment, job);
-  const units = unitsInCategory(job.requiredCategory).filter(
-    (unit) => unit.tier >= job.minUnitTier,
-  );
-  const typeDef = CONTRACTOR_TYPES.find((t) => t.id === job.requiredCategory);
-  const assigned = totalAssigned(assignment);
-  const availableInCategory = countInCategory(roster, job.requiredCategory);
+  const tier1Job = job.tier === 1;
+  const units = tier1Job
+    ? [unitDefinition(DEFAULT_TIER1_UNIT[job.requiredCategory])]
+    : unitsInCategory(job.requiredCategory).filter(
+        (unit) => unit.tier >= job.minUnitTier,
+      );
 
   function setUnitCount(unitId: UnitId, raw: number) {
     const max = roster[unitId] ?? 0;
@@ -63,67 +52,52 @@ export function MissionCrewPicker({
     onChange(next);
   }
 
+  function openRecruitment(unitId: UnitId) {
+    dispatch({
+      type: "SET_VIEW",
+      view: "recruitment",
+      recruitFocusUnitId: unitId,
+    });
+  }
+
   return (
     <div className="mission-crew-picker">
-      <p className="cost-line">
-        Assign {job.requiredCategory} units (tier {job.minUnitTier}+) from{" "}
-        {officeId.toUpperCase()}. Total job value is hidden — size band is a
-        hint only.
-      </p>
-      <div className="mission-crew-group">
-        <h4>
-          {typeDef?.role ?? job.requiredCategory}{" "}
-          <span className="muted">
-            ({assigned} assigned · {availableInCategory} available)
-          </span>
-        </h4>
-        <ul className="mission-crew-unit-list">
-          {units.map((unit) => {
-            const available = roster[unit.id] ?? 0;
-            if (available <= 0) return null;
-            const value = assignment[unit.id] ?? 0;
-            return (
-              <li key={unit.id} className="mission-crew-unit-row">
-                <div className="mission-crew-unit-meta">
-                  <strong>{unit.name}</strong>
-                  <span className="muted">T{unit.tier}</span>
-                  <small className="cost-line">{unit.proposedRole}</small>
-                </div>
-                <label className="mission-crew-unit-input">
-                  Assign
-                  <input
-                    type="number"
-                    min={0}
-                    max={available}
-                    value={value}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      setUnitCount(unit.id, Number(e.target.value))
-                    }
-                  />
-                  <span className="muted">/ {available}</span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-      <p className="cost-line">
-        Crew: {assigned} units · Preview ~$
-        {formatNumber(returnPerHour(job, assigned))}/hr
-        {!valid && assigned > 0 && (
-          <>
-            {" "}
-            · <span className="structure-blocker">Invalid unit mix</span>
-          </>
-        )}
-        {assigned <= 0 && (
-          <>
-            {" "}
-            · <span className="structure-blocker">Assign at least 1 unit</span>
-          </>
-        )}
-      </p>
+      <ul className="mission-crew-unit-list">
+        {units.map((unit) => {
+          const available = roster[unit.id] ?? 0;
+          const value = assignment[unit.id] ?? 0;
+          return (
+            <li
+              key={unit.id}
+              className={`mission-crew-unit-row${
+                available <= 0 ? " is-empty" : ""
+              }`}
+            >
+              <button
+                type="button"
+                className="btn linkish mission-crew-unit-link"
+                onClick={() => openRecruitment(unit.id)}
+              >
+                {unit.name}
+              </button>
+              <label className="mission-crew-unit-input">
+                <input
+                  type="number"
+                  min={0}
+                  max={available}
+                  value={value}
+                  disabled={disabled || available <= 0}
+                  aria-label={`Assign ${unit.name}`}
+                  onChange={(e) =>
+                    setUnitCount(unit.id, Number(e.target.value))
+                  }
+                />
+                <span className="muted">/ {available}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -139,7 +113,12 @@ export function emptyAssignmentForJob(
   try {
     job = jobDefinitionById(definitionId);
   } catch {
-    job = { requiredCategory: "farming", minUnitTier: 1 } as JobDefinition;
+    job = { requiredCategory: "farming", minUnitTier: 1, tier: 1 } as JobDefinition;
+  }
+  if (job.tier === 1) {
+    const unitId = DEFAULT_TIER1_UNIT[job.requiredCategory];
+    if ((roster[unitId] ?? 0) > 0) return { [unitId]: 1 };
+    return {};
   }
   const eligible = unitsInCategory(job.requiredCategory).filter(
     (def) => def.tier >= job.minUnitTier && (roster[def.id] ?? 0) > 0,

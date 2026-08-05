@@ -16,7 +16,7 @@ const workbookPath = resolveWorkbookPath();
 const outTs = join(__dirname, "..", "src", "game", "researchData.ts");
 
 /** v1 scope — Option-type and Discover unlocks deferred. */
-const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 20]);
+const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 20, 21]);
 
 const ID_BY_NUMBER = {
   1: "eff_manuals_cash",
@@ -34,6 +34,7 @@ const ID_BY_NUMBER = {
   13: "ethic_training",
   14: "bid_modeling",
   20: "portfolio_management",
+  21: "massive_expansion",
   15: "discover_video_studio",
   16: "discover_press_room",
   17: "discover_company_statue",
@@ -85,6 +86,9 @@ function effectFromRow(type, effectText, name) {
   }
   if (type === "Mult" && /payout/i.test(effectText)) {
     return { projectPayoutMultPerLevel: pct || 0.04 };
+  }
+  if (type === "Unlock" && /Massive Expansion/i.test(name)) {
+    return { branchSlotPerLevel: 1 };
   }
   if (type === "Unlock" && /Branch/i.test(name)) {
     return {};

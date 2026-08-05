@@ -123,7 +123,9 @@ export function canAssignFromRoster(
     if (count <= 0) continue;
     if ((roster[unitId] ?? 0) < count) return false;
   }
-  return farmingAssigned(assignment) >= 1;
+  // Jobs validate category/tier separately; here we only need a non-empty
+  // assignment that the roster can cover (support/intel/etc. are valid alone).
+  return totalAssigned(assignment) >= 1;
 }
 
 const INTEL_WEIGHT: Partial<Record<UnitId, number>> = {

@@ -3,7 +3,6 @@ import {
   MAX_RESEARCH_QUEUE,
   MAX_RECRUIT_QUEUE,
   MAX_STRUCTURE_QUEUE,
-  OFFICE_LABELS,
   RESEARCH,
   STRUCTURES,
   formatNumber,
@@ -13,6 +12,7 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
+import { officeDisplayName } from "../game/mapWorld";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { GameAction, GameState } from "../game/types";
 import { LocationViewHeader } from "./LocationViewHeader";
@@ -30,7 +30,7 @@ interface OverviewViewProps {
 
 export function OverviewView({ state, dispatch }: OverviewViewProps) {
   const officeId = state.selectedOffice;
-  const officeLabel = OFFICE_LABELS[officeId];
+  const officeLabel = officeDisplayName(state, officeId);
   const now = Date.now();
   const structures = state.structureLevelsByLocation[officeId];
   const buildQueue = state.structureQueues[officeId];

@@ -210,7 +210,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "branch_management",
     "name": "Branch Management",
-    "description": "Unlock construction of unit: Branch manager",
+    "description": "Unlock Branch Manager recruitment. Establish a branch by consuming 1 Branch Manager at a commercial lot (pay opening cost at HQ).",
     "maxLevel": 1,
     "rndLevelRequired": 6,
     "baseCost": {
@@ -286,6 +286,37 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     ],
     "effects": {
       "engagementCapPerLevel": 1
+    }
+  },
+  {
+    "id": "massive_expansion",
+    "name": "Massive Expansion",
+    "description": "+1 additional branch office slot per level (beyond the first). Each new branch still consumes 1 Branch Manager. Max 5 branches with level 4.",
+    "maxLevel": 4,
+    "rndLevelRequired": 8,
+    "baseCost": {
+      "cash": 1200,
+      "supply": 800,
+      "connection": 200,
+      "mood": 0,
+      "reputation": 20,
+      "govReputation": 10
+    },
+    "costScale": 1.15,
+    "buildTimeHoursPerLevel": [
+      0.48,
+      0.48,
+      0.48,
+      0.48
+    ],
+    "requires": [
+      {
+        "id": "branch_management",
+        "minLevel": 1
+      }
+    ],
+    "effects": {
+      "branchSlotPerLevel": 1
     }
   }
 ];

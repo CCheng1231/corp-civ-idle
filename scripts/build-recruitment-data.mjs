@@ -18,6 +18,7 @@ const TYPE_TO_ID = {
   "Protection / Defense": "defense",
   "Intel / Scouting": "intel",
   "Support Units": "support",
+  Special: "special",
 };
 
 function slugify(name) {
@@ -103,6 +104,7 @@ export const DEFAULT_TIER1_UNIT: Record<ContractorCategoryId, UnitId> = ${JSON.s
     defense: tier1ByCategory.defense?.id ?? "mall_cop",
     intel: tier1ByCategory.intel?.id ?? "internet_surfer",
     support: tier1ByCategory.support?.id ?? "janitor",
+    special: tier1ByCategory.special?.id ?? "branch_manager",
   },
   null,
   2,
@@ -115,6 +117,12 @@ export const RECRUITMENT_TIER1_COST: Record<ContractorCategoryId, ResourceCost> 
     defense: tier1ByCategory.defense?.cost ?? { cash: 95, supply: 30 },
     intel: tier1ByCategory.intel?.cost ?? { cash: 110, supply: 100, connection: 4 },
     support: tier1ByCategory.support?.cost ?? { cash: 150, supply: 100 },
+    special: tier1ByCategory.special?.cost ?? {
+      cash: 800,
+      supply: 200,
+      reputation: 10,
+      connection: 8,
+    },
   },
   null,
   2,
@@ -126,6 +134,7 @@ export const RECRUITMENT_TIER1_LABEL: Record<ContractorCategoryId, string> = ${J
     defense: tier1ByCategory.defense?.name ?? "Mall Cop",
     intel: tier1ByCategory.intel?.name ?? "Internet surfer",
     support: tier1ByCategory.support?.name ?? "Janitor",
+    special: tier1ByCategory.special?.name ?? "Branch Manager",
   },
   null,
   2,

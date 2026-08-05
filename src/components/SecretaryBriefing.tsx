@@ -1,6 +1,9 @@
 import { useEffect, useState, type Dispatch } from "react";
 import { formatNumber } from "../game/constants";
-import { jobDefinitionById } from "../game/jobs";
+import {
+  engagementStatusLabel,
+  jobDefinitionById,
+} from "../game/jobs";
 import {
   jobReportBrief,
   jobReportHeadline,
@@ -9,7 +12,6 @@ import {
   secretaryTips,
   secretaryJobSummary,
 } from "../game/secretaryBriefing";
-import { formatTimerRemaining } from "../game/timers";
 import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
 import secretaryPortrait from "../assets/secretary.jpg";
@@ -120,9 +122,11 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
                           <strong>{def.title}</strong>
                           <span className="muted">
                             {" "}
-                            · {totalAssigned(engagement.crewAssigned)} units · ~$
-                            {formatNumber(engagement.earnedSoFar)} · returns{" "}
-                            {formatTimerRemaining(state, engagement.endsAt, now)}
+                            · {totalAssigned(engagement.crewAssigned)} units
+                            {engagement.phase === "working"
+                              ? ` · $${formatNumber(engagement.earnedSoFar)}`
+                              : ""}{" "}
+                            · {engagementStatusLabel(state, engagement, now)}
                           </span>
                         </div>
                         <button

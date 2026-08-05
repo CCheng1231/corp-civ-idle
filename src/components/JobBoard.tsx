@@ -24,14 +24,28 @@ import type { GameAction, GameState } from "../game/types";
 import { JobPostingCard } from "./JobPostingCard";
 import { emptyAssignmentForJob } from "./MissionCrewPicker";
 
-interface JobBoardProps {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-}
+const JOB_BOARD_DRAWER_SIZE_KEY = "corp-civ-idle-job-board-drawer-size";
+
+type JobBoardDrawerSize = "compact" | "large";
 
 function initialFiltersExpanded(): boolean {
   if (typeof window === "undefined") return true;
   return window.matchMedia("(min-width: 961px)").matches;
+}
+
+function initialDrawerSize(): JobBoardDrawerSize {
+  try {
+    const stored = localStorage.getItem(JOB_BOARD_DRAWER_SIZE_KEY);
+    if (stored === "compact" || stored === "large") return stored;
+  } catch {
+    /* ignore */
+  }
+  return "compact";
+}
+
+interface JobBoardProps {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
 }
 
 export function JobBoard({ state, dispatch }: JobBoardProps) {
@@ -42,9 +56,19 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
   const [sort, setSort] = useState<JobBoardSort>("expires_soon");
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(initialFiltersExpanded);
+  const [drawerSize, setDrawerSize] = useState<JobBoardDrawerSize>(initialDrawerSize);
+  const drawerLarge = drawerSize === "large";
   const [crewByPosting, setCrewByPosting] = useState<
     Record<string, ReturnType<typeof emptyAssignmentForJob>>
   >({});
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(JOB_BOARD_DRAWER_SIZE_KEY, drawerSize);
+    } catch {
+      /* ignore */
+    }
+  }, [drawerSize]);
 
   const options = jobBoardFilterOptions();
   const allOpen = useMemo(() => openJobPostings(state), [state.jobPostings]);
@@ -90,6 +114,15 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
           next.towerId = "all";
         }
       }
+      if (key === "towerId") {
+        const towerValue = value as JobBoardFilters["towerId"];
+        dispatch({
+          type: "SELECT_TOWER",
+          towerId: towerValue === "all" ? null : towerValue,
+        });
+      } else if (key === "region" && next.towerId === "all") {
+        dispatch({ type: "SELECT_TOWER", towerId: null });
+      }
       if (
         selectedPostingId &&
         !filterAndSortJobPostings(allOpen, next, sort, now).some(
@@ -106,6 +139,7 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
     setFilters(DEFAULT_JOB_BOARD_FILTERS);
     setSort("expires_soon");
     setSelectedPostingId(null);
+    dispatch({ type: "SELECT_TOWER", towerId: null });
   }
 
   function assignmentFor(postingId: string, definitionId: string) {
@@ -375,7 +409,11 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
               map.
             </p>
           ) : (
-            <div className="job-board-list-stage">
+            <div
+              className={`job-board-list-stage${
+                selectedPosting && drawerLarge ? " is-drawer-large" : ""
+              }`}
+            >
               <div className="job-board-list-wrap">
                 <table className="job-board-list">
                   <thead>
@@ -457,10 +495,24 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
 
               {selectedPosting ? (
                 <aside
-                  className="job-board-detail-drawer is-open"
+                  className={`job-board-detail-drawer is-open${
+                    drawerLarge ? " is-large" : ""
+                  }`}
                   aria-label="Posting details"
                 >
                   <div className="job-board-detail-drawer-head">
+                    <button
+                      type="button"
+                      className="tab job-board-detail-resize"
+                      aria-pressed={drawerLarge}
+                      onClick={() =>
+                        setDrawerSize((size) =>
+                          size === "large" ? "compact" : "large",
+                        )
+                      }
+                    >
+                      {drawerLarge ? "Smaller" : "Larger"}
+                    </button>
                     <button
                       type="button"
                       className="job-board-detail-close"
