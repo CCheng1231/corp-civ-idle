@@ -15,8 +15,8 @@ const workbookPath = resolveWorkbookPath();
 
 const outTs = join(__dirname, "..", "src", "game", "researchData.ts");
 
-/** v1 scope — Option-type and Discover unlocks deferred. */
-const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 20, 21]);
+/** v1 scope — Option-type unlocks deferred; Discover (#15–19) included. */
+const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21]);
 
 const ID_BY_NUMBER = {
   1: "eff_manuals_cash",
@@ -42,6 +42,15 @@ const ID_BY_NUMBER = {
   19: "discover_mit_room",
 };
 
+/** Research tab # → structure unlocked (Discover nodes). */
+const DISCOVER_UNLOCK_STRUCTURE = {
+  15: "video_production_studio",
+  16: "press_room",
+  17: "company_statue",
+  18: "electricity_generator",
+  19: "mit_room",
+};
+
 function num(v) {
   const n = typeof v === "number" ? v : parseFloat(String(v).replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
@@ -63,9 +72,13 @@ function parsePreReq(text) {
   return reqs;
 }
 
-function effectFromRow(type, effectText, name) {
+function effectFromRow(type, effectText, name, sheetNumber) {
   const pctMatch = effectText.match(/(\d+)%/);
   const pct = pctMatch ? Number(pctMatch[1]) / 100 : 0;
+
+  if (type === "Unlock" && DISCOVER_UNLOCK_STRUCTURE[sheetNumber]) {
+    return { unlocksStructure: DISCOVER_UNLOCK_STRUCTURE[sheetNumber] };
+  }
 
   if (type === "Resources") {
     if (/Manuals for \$|for \$/.test(name)) {
@@ -148,6 +161,77 @@ function excelTimeToHours(v) {
   return v * 24;
 }
 
+/** Player-facing section in the Research tab (Discover split out from Unlock). */
+function researchCategory(sheetNumber, sheetType) {
+  if (DISCOVER_UNLOCK_STRUCTURE[sheetNumber]) return "discover";
+  const t = String(sheetType).trim();
+  if (t === "Resources") return "resources";
+  if (t === "Mult") return "mult";
+  if (t === "Unlock") return "unlock";
+  return "unlock";
+}
+
+/** Immersive card copy — workbook effect text stays internal to the sheet. */
+function playerDescription(id, name, maxLevel, effects) {
+  const pct5Max = maxLevel * 5;
+  const pct3Max = maxLevel * 3;
+  const pct4Max = maxLevel * 4;
+
+  const byId = {
+    eff_manuals_cash:
+      "Company-wide SOPs for cash handling — +5% Cash/hr from structures per level.",
+    eff_manuals_sup:
+      "Tighten supply closets and reorder rules — +5% SUP/hr from structures per level.",
+    eff_manuals_con:
+      "Networking playbooks for client outreach — +5% Connection/hr from structures per level.",
+    eff_manuals_mood:
+      "Morale guides for break-room culture — +5% Mood/hr from structures per level.",
+    eff_manuals_rep:
+      "PR templates and stakeholder maps — +5% REP/hr from structures per level.",
+    eff_manuals_grep:
+      "Government liaison procedures — +5% GREP/hr from structures per level.",
+    planning_ahead:
+      "Forecast storage needs before the next shipment — +3% Cash and SUP caps per level.",
+    branch_management:
+      "Train branch leads and open your first remote office from a commercial lot.",
+    bid_modeling:
+      "Spreadsheet models for tower bids — +4% cash payout on projects per level.",
+    portfolio_management:
+      "Run more jobs at once — +1 concurrent job engagement per level (base cap 3).",
+    massive_expansion:
+      "Scale the branch network — +1 branch office slot per level beyond your first.",
+  };
+
+  if (byId[id]) {
+    if (id.startsWith("eff_manuals_") && maxLevel > 1) {
+      return `${byId[id]} Max +${pct5Max}%.`;
+    }
+    if (id === "planning_ahead" && maxLevel > 1) {
+      return `${byId[id]} Max +${pct3Max}%.`;
+    }
+    if (id === "bid_modeling" && maxLevel > 1) {
+      return `${byId[id]} Max +${pct4Max}%.`;
+    }
+    return byId[id];
+  }
+
+  if (effects.unlocksStructure) {
+    const structureNames = {
+      video_production_studio: "video studio",
+      press_room: "press room",
+      company_statue: "company statue",
+      electricity_generator: "an electricity generator",
+      mit_room: "management training room",
+    };
+    const short =
+      structureNames[effects.unlocksStructure] ??
+      name.replace(/^Discover:\s*/i, "").toLowerCase();
+    return `Scout a site plan for a ${short} — adds the build to your Office tab.`;
+  }
+
+  return name;
+}
+
 const nodes = [];
 for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
   const meta = metaByNum[n];
@@ -157,10 +241,12 @@ for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
     continue;
   }
   const requires = parsePreReq(meta.preReqText);
+  const effects = effectFromRow(meta.type, meta.effectText, meta.name, n);
   nodes.push({
     id: meta.id,
     name: meta.name,
-    description: meta.effectText || meta.type,
+    description: playerDescription(meta.id, meta.name, meta.maxLevel, effects),
+    category: researchCategory(n, meta.type),
     maxLevel: meta.maxLevel,
     rndLevelRequired: meta.rndLevelRequired,
     baseCost: {
@@ -177,7 +263,7 @@ for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
       () => cost.timeHours,
     ),
     requires: requires.length ? requires : undefined,
-    effects: effectFromRow(meta.type, meta.effectText, meta.name),
+    effects,
   });
 }
 

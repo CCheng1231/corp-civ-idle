@@ -34,10 +34,15 @@ export type StructureId =
   | "dept_b2b"
   | "break_room"
   | "social_media"
+  | "video_production_studio"
+  | "press_room"
+  | "company_statue"
   | "office_expansion"
   | "power_panel"
+  | "electricity_generator"
   | "dept_rnd"
-  | "recruitment_desk";
+  | "recruitment_desk"
+  | "mit_room";
 
 export type StructureLevels = Record<StructureId, number>;
 export type StructureLevelsByLocation = Record<
@@ -45,10 +50,18 @@ export type StructureLevelsByLocation = Record<
   StructureLevels
 >;
 
+export type StructureCategory =
+  | "essentials"
+  | "departments"
+  | "infrastructure"
+  | "staffing";
+
 export interface StructureDefinition {
   id: StructureId;
   name: string;
   description: string;
+  /** Office tab section — grouped by role, not research gate. */
+  category: StructureCategory;
   maxLevel: number;
   baseCost: ResourceCost;
   costScale: number;
@@ -70,6 +83,11 @@ export type ResearchId =
   | "planning_ahead"
   | "branch_management"
   | "bid_modeling"
+  | "discover_video_studio"
+  | "discover_press_room"
+  | "discover_company_statue"
+  | "discover_electricity_generator"
+  | "discover_mit_room"
   | "portfolio_management"
   | "massive_expansion";
 
@@ -105,6 +123,8 @@ export interface ProgressionEffects {
   engagementCapPerLevel?: number;
   /** Extra branch office slots beyond the first (Massive Expansion). */
   branchSlotPerLevel?: number;
+  /** Discover research — structure buildable after first level of this node. */
+  unlocksStructure?: StructureId;
   officeSpacePerLevel?: number;
   powerCapacityPerLevel?: number;
 }
@@ -114,10 +134,14 @@ export interface ResearchRequirement {
   minLevel: number;
 }
 
+/** Workbook Research tab type — Discover unlocks use category `discover`. */
+export type ResearchCategory = "resources" | "mult" | "discover" | "unlock";
+
 export interface ResearchDefinition {
   id: ResearchId;
   name: string;
   description: string;
+  category: ResearchCategory;
   maxLevel: number;
   rndLevelRequired?: number;
   baseCost: ResourceCost;
@@ -440,6 +464,8 @@ export interface GameSettings {
   mapPresentation: MapPresentation;
   /** Player-only map ground style for A/B comparison. */
   mapPlayerGround: MapPlayerGround;
+  /** Player map: show soft closed outlines around each region band. */
+  mapRegionOutlines: boolean;
 }
 
 export type MainView =
@@ -531,6 +557,7 @@ export type GameAction =
     }
   | { type: "SET_LOGBOOK_FILTER"; filterId: string }
   | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
+  | { type: "CLEAR_ALL_JOB_REPORTS" }
   | { type: "DISMISS_OFFLINE_SUMMARY" }
   | { type: "DISMISS_COMPLETION_ALERT"; alertId: string }
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }

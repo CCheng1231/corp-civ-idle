@@ -39,6 +39,7 @@ interface QueueSectionProps {
   max: number;
   children: ReactNode;
   className?: string;
+  headerExtra?: ReactNode;
 }
 
 /** Fixed-height queue area — always rendered so upgrades do not shift layout. */
@@ -48,12 +49,16 @@ export function QueueSection({
   max,
   children,
   className,
+  headerExtra,
 }: QueueSectionProps) {
   return (
     <section className={`queue-section${className ? ` ${className}` : ""}`}>
-      <p className="queue-section-label muted">
-        {label} {count}/{max}
-      </p>
+      <div className="queue-section-head">
+        <p className="queue-section-label muted">
+          {label} {count}/{max}
+        </p>
+        {headerExtra}
+      </div>
       {children}
     </section>
   );

@@ -402,6 +402,7 @@ function normalizeSave(parsed: LegacySave): GameState {
         parsed.settings?.mapPlayerGround === "hybrid"
           ? parsed.settings.mapPlayerGround
           : "hybrid",
+      mapRegionOutlines: parsed.settings?.mapRegionOutlines ?? true,
     },
     structureLevelsByLocation,
     structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),

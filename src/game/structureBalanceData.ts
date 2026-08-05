@@ -8,8 +8,11 @@ export type StructureEffectKind =
   | "supply_per_hour"
   | "connection_per_hour"
   | "mood_per_hour"
+  | "reputation_per_hour"
+  | "gov_reputation_per_hour"
   | "cash_holding"
   | "supply_holding"
+  | "reputation_and_gov_holding"
   | "office_space_bonus"
   | "power_capacity_bonus"
   | "none";
@@ -34,10 +37,15 @@ export const STRUCTURE_EFFECT_KIND: Record<StructureId, StructureEffectKind> = {
   "dept_b2b": "connection_per_hour",
   "break_room": "mood_per_hour",
   "social_media": "connection_per_hour",
+  "video_production_studio": "reputation_per_hour",
+  "press_room": "gov_reputation_per_hour",
+  "company_statue": "reputation_and_gov_holding",
   "office_expansion": "office_space_bonus",
   "power_panel": "power_capacity_bonus",
+  "electricity_generator": "power_capacity_bonus",
   "dept_rnd": "none",
-  "recruitment_desk": "none"
+  "recruitment_desk": "none",
+  "mit_room": "none"
 };
 
 export const STRUCTURE_BALANCE_TABLES: Record<
@@ -1598,6 +1606,672 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "effect": 555.1115
     }
   ],
+  "video_production_studio": [
+    {
+      "level": 1,
+      "buildTimeHours": 0.001,
+      "cash": 200,
+      "supply": 150,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 5
+    },
+    {
+      "level": 2,
+      "buildTimeHours": 0.0011,
+      "cash": 230,
+      "supply": 173,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 6.25
+    },
+    {
+      "level": 3,
+      "buildTimeHours": 0.0012,
+      "cash": 264,
+      "supply": 198,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 7.81
+    },
+    {
+      "level": 4,
+      "buildTimeHours": 0.0013000000000000002,
+      "cash": 304,
+      "supply": 228,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 9.77
+    },
+    {
+      "level": 5,
+      "buildTimeHours": 0.0014,
+      "cash": 350,
+      "supply": 262,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 12.21
+    },
+    {
+      "level": 6,
+      "buildTimeHours": 0.0015,
+      "cash": 402,
+      "supply": 302,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 15.26
+    },
+    {
+      "level": 7,
+      "buildTimeHours": 0.0016,
+      "cash": 463,
+      "supply": 347,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 19.07
+    },
+    {
+      "level": 8,
+      "buildTimeHours": 0.0017000000000000001,
+      "cash": 532,
+      "supply": 399,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 23.84
+    },
+    {
+      "level": 9,
+      "buildTimeHours": 0.0018000000000000002,
+      "cash": 612,
+      "supply": 459,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 29.8
+    },
+    {
+      "level": 10,
+      "buildTimeHours": 0.0019,
+      "cash": 704,
+      "supply": 528,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 37.25
+    },
+    {
+      "level": 11,
+      "buildTimeHours": 0.002,
+      "cash": 809,
+      "supply": 607,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 46.57
+    },
+    {
+      "level": 12,
+      "buildTimeHours": 0.0021000000000000003,
+      "cash": 930,
+      "supply": 698,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 58.21
+    },
+    {
+      "level": 13,
+      "buildTimeHours": 0.0022,
+      "cash": 1070,
+      "supply": 803,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 72.76
+    },
+    {
+      "level": 14,
+      "buildTimeHours": 0.0023,
+      "cash": 1231,
+      "supply": 923,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 90.95
+    },
+    {
+      "level": 15,
+      "buildTimeHours": 0.0024000000000000002,
+      "cash": 1415,
+      "supply": 1061,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 113.69
+    },
+    {
+      "level": 16,
+      "buildTimeHours": 0.0025,
+      "cash": 1627,
+      "supply": 1221,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 142.11
+    },
+    {
+      "level": 17,
+      "buildTimeHours": 0.0026000000000000003,
+      "cash": 1872,
+      "supply": 1404,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 177.64
+    },
+    {
+      "level": 18,
+      "buildTimeHours": 0.0027,
+      "cash": 2152,
+      "supply": 1614,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 222.04
+    },
+    {
+      "level": 19,
+      "buildTimeHours": 0.0028,
+      "cash": 2475,
+      "supply": 1856,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 277.56
+    },
+    {
+      "level": 20,
+      "buildTimeHours": 0.0029000000000000002,
+      "cash": 2846,
+      "supply": 2135,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 346.94
+    }
+  ],
+  "press_room": [
+    {
+      "level": 1,
+      "buildTimeHours": 0.001,
+      "cash": 220,
+      "supply": 160,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 5
+    },
+    {
+      "level": 2,
+      "buildTimeHours": 0.0011,
+      "cash": 253,
+      "supply": 184,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 6.25
+    },
+    {
+      "level": 3,
+      "buildTimeHours": 0.0012,
+      "cash": 291,
+      "supply": 212,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 7.81
+    },
+    {
+      "level": 4,
+      "buildTimeHours": 0.0013000000000000002,
+      "cash": 335,
+      "supply": 243,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 9.77
+    },
+    {
+      "level": 5,
+      "buildTimeHours": 0.0014,
+      "cash": 385,
+      "supply": 280,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 12.21
+    },
+    {
+      "level": 6,
+      "buildTimeHours": 0.0015,
+      "cash": 442,
+      "supply": 322,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 15.26
+    },
+    {
+      "level": 7,
+      "buildTimeHours": 0.0016,
+      "cash": 509,
+      "supply": 370,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 19.07
+    },
+    {
+      "level": 8,
+      "buildTimeHours": 0.0017000000000000001,
+      "cash": 585,
+      "supply": 426,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 23.84
+    },
+    {
+      "level": 9,
+      "buildTimeHours": 0.0018000000000000002,
+      "cash": 673,
+      "supply": 489,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 29.8
+    },
+    {
+      "level": 10,
+      "buildTimeHours": 0.0019,
+      "cash": 774,
+      "supply": 563,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 37.25
+    },
+    {
+      "level": 11,
+      "buildTimeHours": 0.002,
+      "cash": 890,
+      "supply": 647,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 46.57
+    },
+    {
+      "level": 12,
+      "buildTimeHours": 0.0021000000000000003,
+      "cash": 1024,
+      "supply": 744,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 58.21
+    },
+    {
+      "level": 13,
+      "buildTimeHours": 0.0022,
+      "cash": 1177,
+      "supply": 856,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 72.76
+    },
+    {
+      "level": 14,
+      "buildTimeHours": 0.0023,
+      "cash": 1354,
+      "supply": 984,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 90.95
+    },
+    {
+      "level": 15,
+      "buildTimeHours": 0.0024000000000000002,
+      "cash": 1557,
+      "supply": 1132,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 113.69
+    },
+    {
+      "level": 16,
+      "buildTimeHours": 0.0025,
+      "cash": 1790,
+      "supply": 1302,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 142.11
+    },
+    {
+      "level": 17,
+      "buildTimeHours": 0.0026000000000000003,
+      "cash": 2059,
+      "supply": 1497,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 177.64
+    },
+    {
+      "level": 18,
+      "buildTimeHours": 0.0027,
+      "cash": 2367,
+      "supply": 1722,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 222.04
+    },
+    {
+      "level": 19,
+      "buildTimeHours": 0.0028,
+      "cash": 2723,
+      "supply": 1980,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 277.56
+    },
+    {
+      "level": 20,
+      "buildTimeHours": 0.0029000000000000002,
+      "cash": 3131,
+      "supply": 2277,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 346.94
+    }
+  ],
+  "company_statue": [
+    {
+      "level": 1,
+      "buildTimeHours": 0.001,
+      "cash": 250,
+      "supply": 180,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 50
+    },
+    {
+      "level": 2,
+      "buildTimeHours": 0.0011,
+      "cash": 288,
+      "supply": 207,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 60
+    },
+    {
+      "level": 3,
+      "buildTimeHours": 0.0012,
+      "cash": 331,
+      "supply": 238,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 72
+    },
+    {
+      "level": 4,
+      "buildTimeHours": 0.0013000000000000002,
+      "cash": 380,
+      "supply": 274,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 86.4
+    },
+    {
+      "level": 5,
+      "buildTimeHours": 0.0014,
+      "cash": 437,
+      "supply": 315,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 103.68
+    },
+    {
+      "level": 6,
+      "buildTimeHours": 0.0015,
+      "cash": 503,
+      "supply": 362,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 124.42
+    },
+    {
+      "level": 7,
+      "buildTimeHours": 0.0016,
+      "cash": 578,
+      "supply": 416,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 149.3
+    },
+    {
+      "level": 8,
+      "buildTimeHours": 0.0017000000000000001,
+      "cash": 665,
+      "supply": 479,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 179.16
+    },
+    {
+      "level": 9,
+      "buildTimeHours": 0.0018000000000000002,
+      "cash": 765,
+      "supply": 551,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 214.99
+    },
+    {
+      "level": 10,
+      "buildTimeHours": 0.0019,
+      "cash": 879,
+      "supply": 633,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 257.99
+    },
+    {
+      "level": 11,
+      "buildTimeHours": 0.002,
+      "cash": 1011,
+      "supply": 728,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 309.59
+    },
+    {
+      "level": 12,
+      "buildTimeHours": 0.0021000000000000003,
+      "cash": 1163,
+      "supply": 837,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 371.5
+    },
+    {
+      "level": 13,
+      "buildTimeHours": 0.0022,
+      "cash": 1338,
+      "supply": 963,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 445.81
+    },
+    {
+      "level": 14,
+      "buildTimeHours": 0.0023,
+      "cash": 1538,
+      "supply": 1108,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 534.97
+    },
+    {
+      "level": 15,
+      "buildTimeHours": 0.0024000000000000002,
+      "cash": 1769,
+      "supply": 1274,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 641.96
+    },
+    {
+      "level": 16,
+      "buildTimeHours": 0.0025,
+      "cash": 2034,
+      "supply": 1465,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 770.35
+    },
+    {
+      "level": 17,
+      "buildTimeHours": 0.0026000000000000003,
+      "cash": 2339,
+      "supply": 1684,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 924.42
+    },
+    {
+      "level": 18,
+      "buildTimeHours": 0.0027,
+      "cash": 2690,
+      "supply": 1937,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 1109.31
+    },
+    {
+      "level": 19,
+      "buildTimeHours": 0.0028,
+      "cash": 3094,
+      "supply": 2228,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 1331.17
+    },
+    {
+      "level": 20,
+      "buildTimeHours": 0.0029000000000000002,
+      "cash": 3558,
+      "supply": 2562,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 5,
+      "effect": 1597.4
+    }
+  ],
   "office_expansion": [
     {
       "level": 1,
@@ -2042,6 +2716,228 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "effect": 997.8855261
     }
   ],
+  "electricity_generator": [
+    {
+      "level": 1,
+      "buildTimeHours": 0.001,
+      "cash": 180,
+      "supply": 120,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 10
+    },
+    {
+      "level": 2,
+      "buildTimeHours": 0.0011,
+      "cash": 216,
+      "supply": 144,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 11.5
+    },
+    {
+      "level": 3,
+      "buildTimeHours": 0.0012,
+      "cash": 259,
+      "supply": 173,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 13.22
+    },
+    {
+      "level": 4,
+      "buildTimeHours": 0.0013000000000000002,
+      "cash": 311,
+      "supply": 207,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 15.21
+    },
+    {
+      "level": 5,
+      "buildTimeHours": 0.0014,
+      "cash": 373,
+      "supply": 249,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 17.49
+    },
+    {
+      "level": 6,
+      "buildTimeHours": 0.0015,
+      "cash": 448,
+      "supply": 299,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 20.11
+    },
+    {
+      "level": 7,
+      "buildTimeHours": 0.0016,
+      "cash": 537,
+      "supply": 358,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 23.13
+    },
+    {
+      "level": 8,
+      "buildTimeHours": 0.0017000000000000001,
+      "cash": 645,
+      "supply": 430,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 26.6
+    },
+    {
+      "level": 9,
+      "buildTimeHours": 0.0018000000000000002,
+      "cash": 774,
+      "supply": 516,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 30.59
+    },
+    {
+      "level": 10,
+      "buildTimeHours": 0.0019,
+      "cash": 929,
+      "supply": 619,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 35.18
+    },
+    {
+      "level": 11,
+      "buildTimeHours": 0.002,
+      "cash": 1115,
+      "supply": 743,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 40.46
+    },
+    {
+      "level": 12,
+      "buildTimeHours": 0.0021000000000000003,
+      "cash": 1337,
+      "supply": 892,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 46.52
+    },
+    {
+      "level": 13,
+      "buildTimeHours": 0.0022,
+      "cash": 1605,
+      "supply": 1070,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 53.5
+    },
+    {
+      "level": 14,
+      "buildTimeHours": 0.0023,
+      "cash": 1926,
+      "supply": 1284,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 61.53
+    },
+    {
+      "level": 15,
+      "buildTimeHours": 0.0024000000000000002,
+      "cash": 2311,
+      "supply": 1541,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 70.76
+    },
+    {
+      "level": 16,
+      "buildTimeHours": 0.0025,
+      "cash": 2773,
+      "supply": 1849,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 81.37
+    },
+    {
+      "level": 17,
+      "buildTimeHours": 0.0026000000000000003,
+      "cash": 3328,
+      "supply": 2219,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 93.58
+    },
+    {
+      "level": 18,
+      "buildTimeHours": 0.0027,
+      "cash": 3993,
+      "supply": 2662,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 107.61
+    },
+    {
+      "level": 19,
+      "buildTimeHours": 0.0028,
+      "cash": 4792,
+      "supply": 3195,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 123.75
+    },
+    {
+      "level": 20,
+      "buildTimeHours": 0.0029000000000000002,
+      "cash": 5751,
+      "supply": 3834,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 0,
+      "effect": 142.32
+    }
+  ],
   "dept_rnd": [
     {
       "level": 1,
@@ -2263,6 +3159,118 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "reputation": 0,
       "govReputation": 0,
       "electricity": 75,
+      "effect": 0
+    }
+  ],
+  "mit_room": [
+    {
+      "level": 1,
+      "buildTimeHours": 0.002,
+      "cash": 300,
+      "supply": 200,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 2,
+      "buildTimeHours": 0.0022,
+      "cash": 345,
+      "supply": 230,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 3,
+      "buildTimeHours": 0.0024,
+      "cash": 397,
+      "supply": 264,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 4,
+      "buildTimeHours": 0.0026000000000000003,
+      "cash": 456,
+      "supply": 304,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 5,
+      "buildTimeHours": 0.0028,
+      "cash": 525,
+      "supply": 350,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 6,
+      "buildTimeHours": 0.003,
+      "cash": 603,
+      "supply": 402,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 7,
+      "buildTimeHours": 0.0032,
+      "cash": 694,
+      "supply": 463,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 8,
+      "buildTimeHours": 0.0034000000000000002,
+      "cash": 798,
+      "supply": 532,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 9,
+      "buildTimeHours": 0.0036000000000000003,
+      "cash": 918,
+      "supply": 612,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
+      "effect": 0
+    },
+    {
+      "level": 10,
+      "buildTimeHours": 0.0038,
+      "cash": 1055,
+      "supply": 704,
+      "connection": 0,
+      "reputation": 0,
+      "govReputation": 0,
+      "electricity": 8,
       "effect": 0
     }
   ]

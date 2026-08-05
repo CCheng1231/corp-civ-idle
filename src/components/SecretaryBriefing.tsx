@@ -150,13 +150,13 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
           </div>
         </section>
 
-        {jobReports.length > 0 ? (
-          <section
-            className="secretary-panel secretary-job-reports-panel"
-            aria-label="Job reports"
-          >
-            <header className="secretary-panel-head">
-              <h3>Job reports</h3>
+        <section
+          className="secretary-panel secretary-job-reports-panel"
+          aria-label="Job reports"
+        >
+          <header className="secretary-panel-head">
+            <h3>Job reports</h3>
+            <div className="secretary-job-reports-actions">
               <button
                 type="button"
                 className="btn linkish secretary-job-reports-log-link"
@@ -164,7 +164,17 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
               >
                 Open job log
               </button>
-            </header>
+              <button
+                type="button"
+                className="btn linkish secretary-job-reports-clear-link"
+                disabled={jobReports.length === 0}
+                onClick={() => dispatch({ type: "CLEAR_ALL_JOB_REPORTS" })}
+              >
+                Clear all
+              </button>
+            </div>
+          </header>
+          {jobReports.length > 0 ? (
             <ul className="secretary-job-reports-list">
               {jobReports.map((entry) => (
                 <li
@@ -202,8 +212,12 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
                 </li>
               ))}
             </ul>
-          </section>
-        ) : null}
+          ) : (
+            <p className="muted secretary-job-reports-empty">
+              No new reports — completed and withdrawn jobs will show here.
+            </p>
+          )}
+        </section>
 
         <section className="secretary-panel secretary-tips-panel">
           <header className="secretary-panel-head">

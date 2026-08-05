@@ -32,6 +32,10 @@ import {
   officeTowerCoords,
   pointAlongPolyline,
 } from "../game/mapTravel";
+import {
+  getRegionLabelCentroids,
+  type RegionLabelObstacle,
+} from "../game/mapRegionOutlines";
 import type {
   AxialCoord,
   GameAction,
@@ -127,51 +131,91 @@ function hash01(seed: number): number {
   return x - Math.floor(x);
 }
 
+const AXIAL_NEIGHBORS: AxialCoord[] = [
+  { q: 1, r: -1 },
+  { q: 1, r: 0 },
+  { q: 0, r: 1 },
+  { q: -1, r: 1 },
+  { q: -1, r: 0 },
+  { q: 0, r: -1 },
+];
+
+function chaikinClosed(
+  points: { x: number; y: number }[],
+  iterations: number,
+): { x: number; y: number }[] {
+  let pts = points;
+  for (let iter = 0; iter < iterations; iter += 1) {
+    const next: { x: number; y: number }[] = [];
+    for (let i = 0; i < pts.length; i += 1) {
+      const p0 = pts[i];
+      const p1 = pts[(i + 1) % pts.length];
+      next.push({
+        x: p0.x * 0.75 + p1.x * 0.25,
+        y: p0.y * 0.75 + p1.y * 0.25,
+      });
+      next.push({
+        x: p0.x * 0.25 + p1.x * 0.75,
+        y: p0.y * 0.25 + p1.y * 0.75,
+      });
+    }
+    pts = next;
+  }
+  return pts;
+}
+
+function pathCoord(value: number): string {
+  return value.toFixed(2);
+}
+
 /**
- * Curvy local wash patch — smooth bezier outline so region edges stay organic
- * without needing heavy Gaussian blur.
+ * Irregular watercolor pool — smooth bezier outline, stays crisp when zoomed.
  */
-function localTerrainPatchPath(
+function watercolorWashPath(
   cx: number,
   cy: number,
   radius: number,
   seed: number,
-  samples = 18,
+  samples = 28,
 ): string {
-  const pts: { x: number; y: number }[] = [];
+  const raw: { x: number; y: number }[] = [];
   for (let i = 0; i < samples; i += 1) {
     const t = (i / samples) * Math.PI * 2;
     const wobble =
-      0.68 +
-      0.34 * hash01(seed + i * 11) +
-      0.14 * Math.sin(t * 2.2 + seed) +
-      0.08 * Math.cos(t * 3.7 - seed * 0.6);
+      0.76 +
+      0.24 * hash01(seed + i * 13) +
+      0.1 * Math.sin(t * 1.6 + seed * 0.35) +
+      0.06 * Math.cos(t * 2.4 - seed * 0.55);
     const r = radius * wobble;
-    pts.push({
+    const stretch = 0.86 + 0.22 * hash01(seed + i * 5);
+    raw.push({
       x: cx + Math.cos(t) * r,
-      y: cy + Math.sin(t) * r * (0.86 + 0.18 * hash01(seed + i * 3)),
+      y: cy + Math.sin(t) * r * stretch,
     });
   }
 
+  const pts = chaikinClosed(raw, 1);
   const n = pts.length;
-  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  let d = `M${pathCoord(pts[0].x)},${pathCoord(pts[0].y)}`;
   for (let i = 0; i < n; i += 1) {
     const p0 = pts[(i - 1 + n) % n];
     const p1 = pts[i];
     const p2 = pts[(i + 1) % n];
     const p3 = pts[(i + 2) % n];
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+    const cp1x = p1.x + (p2.x - p0.x) / 5;
+    const cp1y = p1.y + (p2.y - p0.y) / 5;
+    const cp2x = p2.x - (p3.x - p1.x) / 5;
+    const cp2y = p2.y - (p3.y - p1.y) / 5;
+    d += ` C${pathCoord(cp1x)},${pathCoord(cp1y)} ${pathCoord(cp2x)},${pathCoord(cp2y)} ${pathCoord(p2.x)},${pathCoord(p2.y)}`;
   }
   return `${d} Z`;
 }
 
-type TerrainPatch = {
+/** Organic watercolor blob — no straight hex edges. */
+type WatercolorWash = {
   id: MapRegion;
   key: string;
+  variant: "core" | "a" | "b" | "bleed";
   d: string;
 };
 
@@ -532,11 +576,43 @@ const LANDMARK_LEGEND: {
   { id: "job", label: "Task force", className: "landmark-legend-job" },
 ];
 
+function buildLabelObstacles(
+  cells: AxialCoord[],
+  decorations: MapDecoration[],
+  state: GameState,
+): RegionLabelObstacle[] {
+  const obstacles: RegionLabelObstacle[] = decorations.map((deco) => ({
+    x: deco.x,
+    y: deco.y,
+    radius: HEX_RADIUS * 0.9,
+  }));
+
+  for (const coord of cells) {
+    const { x, y } = axialToPixel(coord.q, coord.r);
+    const isLandmark =
+      axialEquals(coord, MAP_GOV) ||
+      Boolean(towerAtCoord(coord)) ||
+      Boolean(
+        officeAtCoord(coord, {
+          established: state.branchEstablished,
+          coord: state.branchCoord,
+        }),
+      ) ||
+      isAvailableCommercialLot(coord, state);
+    if (isLandmark) {
+      obstacles.push({ x, y, radius: HEX_RADIUS * 1.05 });
+    }
+  }
+
+  return obstacles;
+}
+
 export function WorldView({ state, dispatch }: WorldViewProps) {
   const cells = useMemo(() => generateHexagonMap(), []);
   const bounds = useMemo(() => hexBounds(cells), [cells]);
-  const { terrainPatches, decorations } = useMemo(() => {
-    const patches: TerrainPatch[] = [];
+  const { watercolorWashes, decorations, regionLabelAnchors } = useMemo(() => {
+    const washes: WatercolorWash[] = [];
+    const cellsByKey = new Map(cells.map((coord) => [axialKey(coord), coord]));
     const freeByRegion: Record<MapRegion, AxialCoord[]> = {
       metropolis: [],
       suburban: [],
@@ -544,20 +620,65 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       countryside: [],
     };
 
-    // Dense overlapping patches so each region reads as one connected wash,
-    // without a single hull that fills holes (countryside over metro).
     cells.forEach((coord, index) => {
       const region = regionAtCoord(coord);
       const { x, y } = axialToPixel(coord.q, coord.r);
       const cellSeed = coord.q * 31 + coord.r * 17 + 9;
-      const radius = HEX_RADIUS * (1.38 + 0.28 * hash01(cellSeed + 8));
-      const ox = (hash01(cellSeed + 2) - 0.5) * HEX_RADIUS * 0.28;
-      const oy = (hash01(cellSeed + 4) - 0.5) * HEX_RADIUS * 0.28;
-      patches.push({
+      const coordKey = axialKey(coord);
+
+      const coreSeed = cellSeed + index;
+      washes.push({
         id: region,
-        key: `patch-${axialKey(coord)}`,
-        d: localTerrainPatchPath(x + ox, y + oy, radius, cellSeed + index),
+        key: `core-${coordKey}`,
+        variant: "core",
+        d: watercolorWashPath(
+          x + (hash01(coreSeed + 2) - 0.5) * HEX_RADIUS * 0.14,
+          y + (hash01(coreSeed + 4) - 0.5) * HEX_RADIUS * 0.14,
+          HEX_RADIUS * (1.92 + 0.18 * hash01(coreSeed + 8)),
+          coreSeed,
+        ),
       });
+
+      for (let w = 0; w < 2; w += 1) {
+        const washSeed = cellSeed + index + w * 991;
+        washes.push({
+          id: region,
+          key: `wash-${coordKey}-${w}`,
+          variant: w === 0 ? "a" : "b",
+          d: watercolorWashPath(
+            x + (hash01(washSeed + 2) - 0.5) * HEX_RADIUS * 0.38,
+            y + (hash01(washSeed + 4) - 0.5) * HEX_RADIUS * 0.38,
+            HEX_RADIUS * (1.52 + 0.28 * hash01(washSeed + 8)),
+            washSeed,
+          ),
+        });
+      }
+
+      for (let edge = 0; edge < AXIAL_NEIGHBORS.length; edge += 1) {
+        const offset = AXIAL_NEIGHBORS[edge];
+        const neighborCoord = {
+          q: coord.q + offset.q,
+          r: coord.r + offset.r,
+        };
+        const neighborKey = axialKey(neighborCoord);
+        if (!cellsByKey.has(neighborKey)) continue;
+        if (regionAtCoord(neighborCoord) === region) continue;
+
+        const neighborPixel = axialToPixel(neighborCoord.q, neighborCoord.r);
+        const bleedSeed = cellSeed + edge * 137 + index;
+        const bleedT = 0.5 + 0.12 * hash01(bleedSeed + 3);
+        washes.push({
+          id: region,
+          key: `bleed-${coordKey}-${edge}`,
+          variant: "bleed",
+          d: watercolorWashPath(
+            x + (neighborPixel.x - x) * bleedT,
+            y + (neighborPixel.y - y) * bleedT,
+            HEX_RADIUS * (1.22 + 0.2 * hash01(bleedSeed + 8)),
+            bleedSeed,
+          ),
+        });
+      }
 
       const occupied =
         axialEquals(coord, MAP_GOV) ||
@@ -600,11 +721,17 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       });
     }
 
-    patches.sort(
+    washes.sort(
       (a, b) => REGION_ORDER.indexOf(a.id) - REGION_ORDER.indexOf(b.id),
     );
-    return { terrainPatches: patches, decorations: decos };
-  }, [cells, state.branchEstablished, state.branchCoord]);
+    const labelObstacles = buildLabelObstacles(cells, decos, state);
+    const regionLabelAnchors = getRegionLabelCentroids(cells, labelObstacles);
+    return {
+      watercolorWashes: washes,
+      decorations: decos,
+      regionLabelAnchors,
+    };
+  }, [cells, state]);
   const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(null);
   const [legendOpen, setLegendOpen] = useState(true);
   const [legendHover, setLegendHover] = useState<LegendHover>(null);
@@ -944,19 +1071,51 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
           >
             <svg
               viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+              shapeRendering="geometricPrecision"
               role="img"
               aria-label="Regional map"
             >
               <defs>
+                {/* Light edge softening only — heavy blur/displace on the whole layer rasterizes low-res when zooming. */}
                 <filter
-                  id="map-terrain-soft"
-                  x="-25%"
-                  y="-25%"
-                  width="150%"
-                  height="150%"
+                  id="map-watercolor-soft"
+                  filterUnits="objectBoundingBox"
+                  x="-12%"
+                  y="-12%"
+                  width="124%"
+                  height="124%"
+                  colorInterpolationFilters="sRGB"
                 >
-                  <feGaussianBlur stdDeviation="3.2" />
+                  <feGaussianBlur stdDeviation="1.35" edgeMode="none" />
                 </filter>
+                <filter
+                  id="map-watercolor-grain"
+                  x="0"
+                  y="0"
+                  width="100%"
+                  height="100%"
+                  colorInterpolationFilters="sRGB"
+                >
+                  <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.72"
+                    numOctaves="3"
+                    seed="8"
+                    result="grain"
+                  />
+                  <feColorMatrix
+                    in="grain"
+                    type="matrix"
+                    values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0"
+                    result="grainAlpha"
+                  />
+                  <feBlend in="SourceGraphic" in2="grainAlpha" mode="multiply" />
+                </filter>
+                <radialGradient id="map-watercolor-undercoat" cx="48%" cy="42%" r="78%">
+                  <stop offset="0%" stopColor="#6e9874" />
+                  <stop offset="55%" stopColor="#628a68" />
+                  <stop offset="100%" stopColor="#567a5c" />
+                </radialGradient>
                 <radialGradient id="map-city-ground" cx="46%" cy="40%" r="74%">
                   <stop offset="0%" stopColor="#3a4d63" />
                   <stop offset="55%" stopColor="#314456" />
@@ -1002,54 +1161,62 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                     fill="url(#map-street-grid)"
                     pointerEvents="none"
                   />
-                  <g
-                    className="map-region-clouds"
-                    filter="url(#map-terrain-soft)"
+                  <rect
+                    className="map-region-undercoat"
+                    x={bounds.minX}
+                    y={bounds.minY}
+                    width={bounds.width}
+                    height={bounds.height}
+                    fill="url(#map-watercolor-undercoat)"
+                    filter="url(#map-watercolor-grain)"
                     pointerEvents="none"
-                  >
-                    {terrainPatches.map((patch) => {
-                      const regionHot =
-                        legendHover?.kind === "region" &&
-                        legendHover.id === patch.id;
-                      const regionDim =
-                        legendActive &&
-                        !(
-                          legendHover?.kind === "region" &&
-                          legendHover.id === patch.id
-                        );
-                      return (
-                        <path
-                          key={patch.key}
-                          d={patch.d}
-                          className={[
-                            "map-region-cloud",
-                            `map-region-cloud-${patch.id}`,
-                            regionHot ? "is-legend-hot" : "",
-                            regionDim ? "is-legend-dim" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        />
-                      );
-                    })}
-                  </g>
+                  />
+                  {REGION_ORDER.map((region) => (
+                    <g
+                      key={`region-layer-${region}`}
+                      className={`map-region-layer map-region-layer-${region}`}
+                      pointerEvents="none"
+                    >
+                      {watercolorWashes
+                        .filter((wash) => wash.id === region)
+                        .map((wash) => {
+                          const regionHot =
+                            legendHover?.kind === "region" &&
+                            legendHover.id === wash.id;
+                          const softEdge =
+                            wash.variant === "core" || wash.variant === "bleed";
+                          return (
+                            <path
+                              key={wash.key}
+                              d={wash.d}
+                              filter={
+                                softEdge
+                                  ? "url(#map-watercolor-soft)"
+                                  : undefined
+                              }
+                              className={[
+                                "map-region-wash",
+                                `map-region-wash-${wash.id}`,
+                                `map-region-wash-${wash.id}-${wash.variant}`,
+                                regionHot ? "is-legend-hot" : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            />
+                          );
+                        })}
+                    </g>
+                  ))}
                   <g className="map-decorations" pointerEvents="none">
                     {decorations.map((deco) => {
                       const regionHot =
                         legendHover?.kind === "region" &&
                         legendHover.id === deco.region;
-                      const regionDim =
-                        legendActive &&
-                        !(
-                          legendHover?.kind === "region" &&
-                          legendHover.id === deco.region
-                        );
                       return (
                         <g
                           key={deco.key}
                           className={[
                             regionHot ? "is-legend-hot" : "",
-                            regionDim ? "is-legend-dim" : "",
                           ]
                             .filter(Boolean)
                             .join(" ")}
@@ -1063,6 +1230,47 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                       );
                     })}
                   </g>
+                  {!isDev ? (
+                    <g className="map-region-labels" pointerEvents="none">
+                      {regionLabelAnchors.map(({ region, x, y }) => {
+                        const label = REGION_LABELS[region];
+                        const regionHot =
+                          legendHover?.kind === "region" &&
+                          legendHover.id === region;
+                        const textWidth = label.length * 6.4 + 14;
+                        return (
+                          <g
+                            key={`region-label-${region}`}
+                            className={[
+                              "map-region-label",
+                              `map-region-label-${region}`,
+                              regionHot ? "is-legend-hot" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            transform={`translate(${x},${y})`}
+                          >
+                            <rect
+                              className="map-region-label-bg"
+                              x={-textWidth / 2}
+                              y={-10}
+                              width={textWidth}
+                              height={18}
+                              rx={9}
+                            />
+                            <text
+                              className="map-region-label-text"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              y={1}
+                            >
+                              {label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  ) : null}
                 </>
               ) : null}
 

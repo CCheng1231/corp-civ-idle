@@ -73,6 +73,7 @@ export interface StructureUpgradePreviewLine {
   from: number | null;
   to: number;
   unit: string;
+  text?: string;
 }
 
 function pushPreviewLine(
@@ -98,34 +99,60 @@ export function structureUpgradePreviewLines(
   targetLevel: number,
 ): StructureUpgradePreviewLine[] {
   if (targetLevel <= currentLevel) return [];
+  return structureResultLinesAtLevel(structureId, targetLevel, currentLevel, {
+    includeBuildTime: true,
+  });
+}
+
+/** Final stats at `level` — used for maxed structure cards. */
+export function structureCompletedResultLines(
+  structureId: StructureId,
+  level: number,
+): StructureUpgradePreviewLine[] {
+  return structureResultLinesAtLevel(structureId, level, level, {
+    includeBuildTime: false,
+  });
+}
+
+function structureResultLinesAtLevel(
+  structureId: StructureId,
+  level: number,
+  fromLevel: number,
+  opts: { includeBuildTime: boolean },
+): StructureUpgradePreviewLine[] {
+  if (level <= 0) return [];
 
   const lines: StructureUpgradePreviewLine[] = [];
-  const buildRow = getStructureLevelRow(structureId, targetLevel);
-  if (buildRow && buildRow.buildTimeHours > 0) {
-    lines.push({
-      label: "Build time",
-      from: null,
-      to: buildRow.buildTimeHours,
-      unit: " hr",
-    });
+  const previewingUpgrade = fromLevel < level;
+
+  if (opts.includeBuildTime && previewingUpgrade) {
+    const buildRow = getStructureLevelRow(structureId, level);
+    if (buildRow && buildRow.buildTimeHours > 0) {
+      lines.push({
+        label: "Build time",
+        from: null,
+        to: buildRow.buildTimeHours,
+        unit: " hr",
+      });
+    }
   }
 
   const kind = STRUCTURE_EFFECT_KIND[structureId];
   switch (kind) {
     case "cash_per_hour":
-      pushPreviewLine(lines, "Cash/hr", currentLevel, targetLevel, structureId, "/hr");
+      pushPreviewLine(lines, "Cash/hr", fromLevel, level, structureId, "/hr");
       break;
     case "supply_per_hour":
-      pushPreviewLine(lines, "SUP/hr", currentLevel, targetLevel, structureId, "/hr");
+      pushPreviewLine(lines, "SUP/hr", fromLevel, level, structureId, "/hr");
       break;
     case "connection_per_hour":
-      pushPreviewLine(lines, "CON/hr", currentLevel, targetLevel, structureId, "/hr");
+      pushPreviewLine(lines, "CON/hr", fromLevel, level, structureId, "/hr");
       if (structureId === "social_media") {
         pushPreviewLine(
           lines,
           "Mood/hr",
-          currentLevel,
-          targetLevel,
+          fromLevel,
+          level,
           structureId,
           "/hr",
           (lvl) => (effectAtStructureLevel(structureId, lvl) * 5) / 8,
@@ -133,27 +160,66 @@ export function structureUpgradePreviewLines(
       }
       break;
     case "mood_per_hour":
-      pushPreviewLine(lines, "Mood/hr", currentLevel, targetLevel, structureId, "/hr");
+      pushPreviewLine(lines, "Mood/hr", fromLevel, level, structureId, "/hr");
+      break;
+    case "reputation_per_hour":
+      pushPreviewLine(lines, "REP/hr", fromLevel, level, structureId, "/hr");
+      break;
+    case "gov_reputation_per_hour":
+      pushPreviewLine(lines, "GREP/hr", fromLevel, level, structureId, "/hr");
       break;
     case "cash_holding":
-      pushPreviewLine(lines, "Cash cap", currentLevel, targetLevel, structureId, "");
+      pushPreviewLine(lines, "Cash cap", fromLevel, level, structureId, "");
       break;
     case "supply_holding":
-      pushPreviewLine(lines, "SUP cap", currentLevel, targetLevel, structureId, "");
+      pushPreviewLine(lines, "SUP cap", fromLevel, level, structureId, "");
+      break;
+    case "reputation_and_gov_holding":
+      pushPreviewLine(lines, "REP cap", fromLevel, level, structureId, "");
+      pushPreviewLine(lines, "GREP cap", fromLevel, level, structureId, "");
       break;
     case "office_space_bonus":
-      pushPreviewLine(lines, "Office space", currentLevel, targetLevel, structureId, "");
+      pushPreviewLine(lines, "Office space", fromLevel, level, structureId, "");
       break;
     case "power_capacity_bonus":
-      pushPreviewLine(lines, "Power capacity", currentLevel, targetLevel, structureId, "");
+      pushPreviewLine(
+        lines,
+        "Power capacity",
+        fromLevel,
+        level,
+        structureId,
+        "",
+      );
       break;
     case "none":
-      if (structureId === "dept_rnd") {
+      if (structureId === "dept_rnd" && level >= 1) {
         lines.push({
           label: "R&D gate level",
-          from: currentLevel > 0 ? currentLevel : null,
-          to: targetLevel,
+          from: previewingUpgrade && fromLevel > 0 ? fromLevel : null,
+          to: level,
           unit: "",
+        });
+      }
+      if (structureId === "recruitment_desk" && level >= 1) {
+        lines.push({
+          label: "Enables",
+          from: null,
+          to: 0,
+          unit: "",
+          text: previewingUpgrade
+            ? "Contractor recruitment"
+            : "Contractor recruitment active",
+        });
+      }
+      if (structureId === "mit_room" && level >= 1) {
+        lines.push({
+          label: "Enables",
+          from: null,
+          to: 0,
+          unit: "",
+          text: previewingUpgrade
+            ? "Tier-2 unit recruitment"
+            : "Tier-2 unit recruitment active",
         });
       }
       break;
@@ -210,9 +276,16 @@ export function applyRatesForStructureLevels(
       case "mood_per_hour":
         rates.mood += value;
         break;
+      case "reputation_per_hour":
+        rates.reputation += value;
+        break;
+      case "gov_reputation_per_hour":
+        rates.govReputation += value;
+        break;
       case "none":
       case "cash_holding":
       case "supply_holding":
+      case "reputation_and_gov_holding":
       case "office_space_bonus":
       case "power_capacity_bonus":
         break;
@@ -348,9 +421,17 @@ export function targetLevelForStructureQueueJob(
 }
 
 export function powerBonusFromLevels(levels: StructureLevels): number {
-  const level = levels.power_panel;
-  if (level <= 0) return 0;
-  return effectAtStructureLevel("power_panel", level);
+  let bonus = 0;
+  if (levels.power_panel > 0) {
+    bonus += effectAtStructureLevel("power_panel", levels.power_panel);
+  }
+  if (levels.electricity_generator > 0) {
+    bonus += effectAtStructureLevel(
+      "electricity_generator",
+      levels.electricity_generator,
+    );
+  }
+  return bonus;
 }
 
 export function buildTimeMsForQueueJob(

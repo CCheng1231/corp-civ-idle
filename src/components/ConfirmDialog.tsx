@@ -8,6 +8,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   refund?: ResourceCost;
+  refundNote?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   confirmLabel = "Cancel job",
   cancelLabel = "Keep",
   refund,
+  refundNote = "(Power 100%, other resources 95%)",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -37,10 +39,9 @@ export function ConfirmDialog({
           {refund && Object.keys(refund).length > 0 && (
             <p className="confirm-dialog-refund">
               Refund: {formatResourceCost(refund)}
-              <small className="muted">
-                {" "}
-                (Power 100%, other resources 95%)
-              </small>
+              {refundNote ? (
+                <small className="muted"> {refundNote}</small>
+              ) : null}
             </p>
           )}
         </div>

@@ -15,6 +15,7 @@ import {
   applyOfficeCost,
   applyOfficeRefund,
   canBuildStructure,
+  isStructureUnlocked,
   isStructureQueueFull,
   isResearchQueueFull,
   isRecruitmentQueueFull,
@@ -773,6 +774,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "CLEAR_ALL_JOB_REPORTS": {
+      const dismissed = new Set(state.dismissedJobReportIds ?? []);
+      for (const entry of state.activityLog) {
+        if (
+          entry.category === "job_complete" ||
+          entry.category === "job_cancel"
+        ) {
+          dismissed.add(entry.id);
+        }
+      }
+      return {
+        ...state,
+        dismissedJobReportIds: [...dismissed],
+      };
+    }
+
     case "DISMISS_OFFLINE_SUMMARY":
       if (!state.pendingOfflineSummary) return state;
       return { ...state, pendingOfflineSummary: null };
@@ -884,6 +901,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "BUY_STRUCTURE": {
       const def = getStructureDef(action.structureId);
+      if (!isStructureUnlocked(state, action.structureId)) return state;
       const projected = projectedStructureLevels(
         state,
         action.locationId,

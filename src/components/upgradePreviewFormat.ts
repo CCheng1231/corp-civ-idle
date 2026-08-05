@@ -36,3 +36,26 @@ export function formatPreviewDelta(
 export function formatPreviewText(text: string): string {
   return text;
 }
+
+export interface CompactBonusLine {
+  label: string;
+  from: number | null;
+  to: number;
+  unit: string;
+  text?: string;
+}
+
+/** One-line summary for collapsed maxed cards. */
+export function formatCompactBonus(lines: CompactBonusLine[]): string {
+  if (lines.length === 0) return "";
+  return lines
+    .map((line) => {
+      if (line.text) return line.text;
+      const value = formatPreviewValue(line.to, line.unit, line.label);
+      if (line.unit === "%" || line.label.includes("cap") || line.label.includes("/hr")) {
+        return `${line.label} ${value}`;
+      }
+      return `${line.label}: ${value}`;
+    })
+    .join(" · ");
+}

@@ -6,7 +6,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_cash",
     "name": "Efficiency Manuals for $",
-    "description": "5% increase in respective resources, per level",
+    "description": "Company-wide SOPs for cash handling — +5% Cash/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 1,
     "baseCost": {
@@ -34,7 +35,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_sup",
     "name": "Efficiency Manuals for SUP",
-    "description": "5% increase in respective resources, per level",
+    "description": "Tighten supply closets and reorder rules — +5% SUP/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 1,
     "baseCost": {
@@ -62,7 +64,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_con",
     "name": "Efficiency Manuals for CON",
-    "description": "5% increase in respective resources, per level",
+    "description": "Networking playbooks for client outreach — +5% Connection/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 5,
     "baseCost": {
@@ -90,7 +93,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_mood",
     "name": "Efficiency Manuals for Mood",
-    "description": "5% increase in respective resources, per level",
+    "description": "Morale guides for break-room culture — +5% Mood/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 5,
     "baseCost": {
@@ -118,7 +122,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_rep",
     "name": "Efficiency Manuals REP",
-    "description": "5% increase in respective resources, per level",
+    "description": "PR templates and stakeholder maps — +5% REP/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 6,
     "baseCost": {
@@ -146,7 +151,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "eff_manuals_grep",
     "name": "Efficiency Manuals GREP",
-    "description": "5% increase in respective resources, per level",
+    "description": "Government liaison procedures — +5% GREP/hr from structures per level. Max +25%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 6,
     "baseCost": {
@@ -174,7 +180,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "planning_ahead",
     "name": "Planning ahead",
-    "description": "3% increase in storage, per level",
+    "description": "Forecast storage needs before the next shipment — +3% Cash and SUP caps per level. Max +15%.",
+    "category": "resources",
     "maxLevel": 5,
     "rndLevelRequired": 2,
     "baseCost": {
@@ -210,7 +217,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "branch_management",
     "name": "Branch Management",
-    "description": "Unlock Branch Manager recruitment. Establish a branch by consuming 1 Branch Manager at a commercial lot (pay opening cost at HQ).",
+    "description": "Train branch leads and open your first remote office from a commercial lot.",
+    "category": "unlock",
     "maxLevel": 1,
     "rndLevelRequired": 6,
     "baseCost": {
@@ -230,7 +238,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "bid_modeling",
     "name": "Bid Modeling",
-    "description": "Placeholder; potential idea: Unlock option to bid project; also 4% project payout on $ mult per level",
+    "description": "Spreadsheet models for tower bids — +4% cash payout on projects per level. Max +20%.",
+    "category": "mult",
     "maxLevel": 5,
     "rndLevelRequired": 1,
     "baseCost": {
@@ -260,9 +269,125 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     }
   },
   {
+    "id": "discover_video_studio",
+    "name": "Discover: Video production studio",
+    "description": "Scout a site plan for a video studio — adds the build to your Office tab.",
+    "category": "discover",
+    "maxLevel": 1,
+    "rndLevelRequired": 1,
+    "baseCost": {
+      "cash": 100,
+      "supply": 100,
+      "connection": 100,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024
+    ],
+    "effects": {
+      "unlocksStructure": "video_production_studio"
+    }
+  },
+  {
+    "id": "discover_press_room",
+    "name": "Discover: Press Room",
+    "description": "Scout a site plan for a press room — adds the build to your Office tab.",
+    "category": "discover",
+    "maxLevel": 1,
+    "rndLevelRequired": 1,
+    "baseCost": {
+      "cash": 110,
+      "supply": 100,
+      "connection": 100,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024
+    ],
+    "effects": {
+      "unlocksStructure": "press_room"
+    }
+  },
+  {
+    "id": "discover_company_statue",
+    "name": "Discover: Company Statue",
+    "description": "Scout a site plan for a company statue — adds the build to your Office tab.",
+    "category": "discover",
+    "maxLevel": 1,
+    "rndLevelRequired": 1,
+    "baseCost": {
+      "cash": 120,
+      "supply": 100,
+      "connection": 100,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024
+    ],
+    "effects": {
+      "unlocksStructure": "company_statue"
+    }
+  },
+  {
+    "id": "discover_electricity_generator",
+    "name": "Discover: Electricity Generator",
+    "description": "Scout a site plan for a an electricity generator — adds the build to your Office tab.",
+    "category": "discover",
+    "maxLevel": 1,
+    "rndLevelRequired": 2,
+    "baseCost": {
+      "cash": 130,
+      "supply": 100,
+      "connection": 100,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024
+    ],
+    "effects": {
+      "unlocksStructure": "electricity_generator"
+    }
+  },
+  {
+    "id": "discover_mit_room",
+    "name": "Discover: MIT (Management in training) room",
+    "description": "Scout a site plan for a management training room — adds the build to your Office tab.",
+    "category": "discover",
+    "maxLevel": 1,
+    "rndLevelRequired": 2,
+    "baseCost": {
+      "cash": 140,
+      "supply": 100,
+      "connection": 100,
+      "mood": 0,
+      "reputation": 0,
+      "govReputation": 0
+    },
+    "costScale": 1.1,
+    "buildTimeHoursPerLevel": [
+      0.024
+    ],
+    "effects": {
+      "unlocksStructure": "mit_room"
+    }
+  },
+  {
     "id": "portfolio_management",
     "name": "Portfolio Management",
-    "description": "+1 concurrent job engagement per level (base cap 3)",
+    "description": "Run more jobs at once — +1 concurrent job engagement per level (base cap 3).",
+    "category": "unlock",
     "maxLevel": 2,
     "rndLevelRequired": 2,
     "baseCost": {
@@ -291,7 +416,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "massive_expansion",
     "name": "Massive Expansion",
-    "description": "+1 additional branch office slot per level (beyond the first). Each new branch still consumes 1 Branch Manager. Max 5 branches with level 4.",
+    "description": "Scale the branch network — +1 branch office slot per level beyond your first.",
+    "category": "unlock",
     "maxLevel": 4,
     "rndLevelRequired": 8,
     "baseCost": {

@@ -4,6 +4,9 @@ import type {
   Resources,
   StructureDefinition,
   ResearchDefinition,
+  ResearchId,
+  ResearchCategory,
+  StructureCategory,
   StructureId,
   StructureLevels,
   OfficeLocationId,
@@ -34,7 +37,6 @@ import {
   PHASE_A_PLACEHOLDER_ROWS,
 } from "./phaseA";
 import {
-  STRUCTURE_EFFECT_KIND,
   effectAtStructureLevel,
   officeSpaceBonusFromLevels,
   powerBonusFromLevels,
@@ -128,6 +130,29 @@ export function researchJobsAtOffice(
   return state.researchQueues[officeId] ?? [];
 }
 
+export function isResearchQueued(
+  state: GameState,
+  researchId: ResearchId,
+): boolean {
+  for (const officeId of OFFICE_IDS) {
+    if (
+      state.researchQueues[officeId]?.some(
+        (job) => job.researchId === researchId,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Card copy — player-facing text from researchData (build script). */
+export function researchDisplayDescription(
+  research: ResearchDefinition,
+): string {
+  return research.description;
+}
+
 export function isResearchQueueFull(
   state: GameState,
   officeId: OfficeLocationId,
@@ -158,6 +183,15 @@ export const OFFICE_EXPANSION_STRUCTURE_ID: StructureId = "office_expansion";
 /** Structures shown in the per-site structure panel (office expansion is separate). */
 export function structurePanelStructures(): StructureDefinition[] {
   return STRUCTURES.filter((s) => s.id !== OFFICE_EXPANSION_STRUCTURE_ID);
+}
+
+export function isStructureCompletedAtSite(
+  state: GameState,
+  officeId: OfficeLocationId,
+  structure: StructureDefinition,
+): boolean {
+  const level = state.structureLevelsByLocation[officeId][structure.id];
+  return level >= structure.maxLevel;
 }
 
 export function getStructureDefinition(structureId: StructureId): StructureDefinition {
@@ -371,43 +405,88 @@ export const INITIAL_RATES: ProductionRates = {
   govReputation: 0,
 };
 
-function structureDescription(structureId: StructureId, name: string): string {
-  const kind = STRUCTURE_EFFECT_KIND[structureId];
-  switch (kind) {
-    case "cash_per_hour":
-      return "Generates Cash/hr (total at level — see balance sheet).";
-    case "supply_per_hour":
-      return "Generates SUP/hr (total at level).";
-    case "connection_per_hour":
-      return structureId === "social_media"
-        ? "Generates CON/hr; Mood/hr = 5/8 of CON at same level."
-        : "Generates CON/hr (total at level).";
-    case "mood_per_hour":
-      return "Generates Mood/hr (total at level).";
-    case "cash_holding":
-      return "Raises company Cash holding cap (total at level).";
-    case "supply_holding":
-      return "Raises company SUP holding cap (total at level).";
-    case "office_space_bonus":
-      return "Expand via site summary button (instant). Space bonus total at level.";
-    case "power_capacity_bonus":
-      return "Adds site power capacity (bonus total at level).";
-    case "none":
-      return structureId === "dept_rnd"
-        ? "Unlocks research (R&D level gates research tree)."
-        : structureId === "recruitment_desk"
-          ? "Required infrastructure for contractor recruitment."
-          : "Infrastructure (costs from balance sheet).";
+function structurePlayerDescription(structureId: StructureId): string {
+  const copy: Partial<Record<StructureId, string>> = {
+    office_desk:
+      "Desks and workstations — your main source of Cash/hr at this site.",
+    bank_account:
+      "Corporate vault — raises how much Cash you can hold before gains stop.",
+    office_supply:
+      "Supply closets and vendors — generates SUP/hr for builds and jobs.",
+    storage_room:
+      "Overflow shelving — raises your SUP holding cap.",
+    dept_b2b:
+      "Business development floor — generates Connection/hr for outreach.",
+    break_room:
+      "Coffee, couches, and water-cooler talk — generates Mood/hr.",
+    social_media:
+      "Brand accounts and engagement — Connection/hr plus a Mood boost.",
+    video_production_studio:
+      "In-house filming crew — generates REP/hr for your reputation.",
+    press_room:
+      "Media desk and press releases — generates GREP/hr.",
+    company_statue:
+      "Lobby monument to your ambition — raises REP and GREP holding caps.",
+    power_panel:
+      "Electrical service panel — adds power capacity for builds and bids.",
+    electricity_generator:
+      "On-site generator bank — more power capacity once discovered.",
+    dept_rnd:
+      "Research department — higher levels unlock more of the tech tree.",
+    recruitment_desk:
+      "HR desk — required before you can queue contractor hires.",
+    mit_room:
+      "Management trainee program — required for senior unit recruitment.",
+  };
+  return copy[structureId] ?? "Office infrastructure at this site.";
+}
+
+function structureCategoryForId(structureId: StructureId): StructureCategory {
+  switch (structureId) {
+    case "office_desk":
+    case "bank_account":
+    case "office_supply":
+    case "storage_room":
+    case "company_statue":
+      return "essentials";
+    case "dept_b2b":
+    case "break_room":
+    case "social_media":
+    case "video_production_studio":
+    case "press_room":
+      return "departments";
+    case "power_panel":
+    case "electricity_generator":
+    case "dept_rnd":
+      return "infrastructure";
+    case "recruitment_desk":
+    case "mit_room":
+      return "staffing";
     default:
-      return name;
+      return "departments";
   }
 }
+
+export const STRUCTURE_CATEGORY_ORDER = [
+  "essentials",
+  "departments",
+  "infrastructure",
+  "staffing",
+] as const satisfies readonly StructureCategory[];
+
+export const STRUCTURE_CATEGORY_LABELS: Record<StructureCategory, string> = {
+  essentials: "Essentials",
+  departments: "Departments",
+  infrastructure: "Power & research",
+  staffing: "Recruitment",
+};
 
 export const STRUCTURES: StructureDefinition[] = PHASE_A_PLACEHOLDER_ROWS.map(
   (row) => ({
     id: row.structureId,
     name: row.name,
-    description: structureDescription(row.structureId, row.name),
+    description: structurePlayerDescription(row.structureId),
+    category: structureCategoryForId(row.structureId),
     maxLevel: structureMaxLevel(row.structureId),
     baseCost: { cash: 0 },
     costScale: 1,
@@ -417,6 +496,20 @@ export const STRUCTURES: StructureDefinition[] = PHASE_A_PLACEHOLDER_ROWS.map(
 );
 
 export const RESEARCH: ResearchDefinition[] = RESEARCH_DEFINITIONS;
+
+export const RESEARCH_CATEGORY_ORDER = [
+  "resources",
+  "mult",
+  "discover",
+  "unlock",
+] as const satisfies readonly ResearchCategory[];
+
+export const RESEARCH_CATEGORY_LABELS: Record<ResearchCategory, string> = {
+  resources: "Resource efficiency",
+  mult: "Project payouts",
+  discover: "Discover structures",
+  unlock: "Operations",
+};
 export { RECRUITMENT_UNITS } from "./recruitmentData";
 
 export const CONTRACTOR_TYPES: ContractorTypeDefinition[] = [
@@ -532,6 +625,7 @@ export function createInitialState(now = Date.now()): GameState {
       officeSiteSections: defaultOfficeSiteSections(),
       mapPresentation: "dev",
       mapPlayerGround: "hybrid",
+      mapRegionOutlines: true,
     },
   };
 
@@ -696,6 +790,7 @@ export function canBuildStructure(
   locationId: OfficeLocationId,
   structureId: StructureId,
 ): boolean {
+  if (!isStructureUnlocked(state, structureId)) return false;
   const def = STRUCTURES.find((s) => s.id === structureId);
   if (!def) return false;
   const levels = projectedStructureLevels(state, locationId);
@@ -704,6 +799,30 @@ export function canBuildStructure(
   const capacity = officeSpaceCapacityForLevels(levels);
   const used = officeSpaceUsedForLevels(levels);
   return used <= capacity;
+}
+
+export function researchUnlockForStructure(
+  structureId: StructureId,
+): ResearchDefinition | undefined {
+  return RESEARCH.find((r) => r.effects.unlocksStructure === structureId);
+}
+
+export function isStructureUnlocked(
+  state: GameState,
+  structureId: StructureId,
+): boolean {
+  if (ignoreCosts(state)) return true;
+  const unlockResearch = researchUnlockForStructure(structureId);
+  if (!unlockResearch) return true;
+  return (state.researchLevels[unlockResearch.id] ?? 0) >= 1;
+}
+
+export function structureUnlockRequirementLabel(
+  structureId: StructureId,
+): string | null {
+  const unlockResearch = researchUnlockForStructure(structureId);
+  if (!unlockResearch) return null;
+  return unlockResearch.name;
 }
 
 export function powerAvailable(snapshot: LocationSnapshot): number {

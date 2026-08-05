@@ -14,11 +14,10 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
-import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import { structureCost } from "../game/engine";
 import { effectAtStructureLevel } from "../game/structureBalance";
 import { formatCompactCost } from "./CompactStack";
-import { structureUpgradeBlocker } from "./OfficeStructurePanel";
+import { structureUpgradeBlocker, structureUpgradeBlockerDisplay } from "./OfficeStructurePanel";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
 
 interface OfficeSiteSummaryProps {
@@ -73,6 +72,8 @@ export function OfficeSiteSummary({
     expansionDef,
     isStructureQueueFull(state, officeId),
   );
+  const expansionBlockerMessage =
+    structureUpgradeBlockerDisplay(expansionBlocker);
   const canExpand = !expansionMaxed && !expansionBlocker;
   const freeSpace = officeSpaceAvailable(loc);
   const expansionCostParts = resourceCostParts(expansionCost);
@@ -105,7 +106,7 @@ export function OfficeSiteSummary({
           type="button"
           className="btn btn-compact office-expand-btn"
           disabled={!canExpand}
-          title={expansionBlocker ?? undefined}
+          title={expansionBlockerMessage ?? undefined}
           onClick={() =>
             dispatch({
               type: "BUY_STRUCTURE",
@@ -151,26 +152,10 @@ export function OfficeSiteSummary({
             )}
           </span>
         </button>
-        {expansionBlocker && !expansionMaxed && (
-          <span className="muted office-site-expand-blocker">{expansionBlocker}</span>
-        )}
-      </div>
-      <div className="office-site-summary-units">
-        <h4>Units</h4>
-        <ul className="office-site-staff-list">
-          {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
-            (unit) => (
-              <li key={unit.id}>
-                <span className="office-site-staff-role">{unit.name}</span>
-                <span className="office-site-staff-count">
-                  ×{roster[unit.id] ?? 0}
-                </span>
-              </li>
-            ),
-          )}
-        </ul>
-        {RECRUITMENT_UNITS.every((unit) => (roster[unit.id] ?? 0) <= 0) && (
-          <p className="muted">No units at this site.</p>
+        {expansionBlockerMessage && !expansionMaxed && (
+          <span className="muted office-site-expand-blocker">
+            {expansionBlockerMessage}
+          </span>
         )}
       </div>
     </div>
