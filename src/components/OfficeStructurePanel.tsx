@@ -226,18 +226,20 @@ export function OfficeStructurePanel({
       >
         <div className="structure-head">
           <strong>{structure.name}</strong>
-          <span>
-            {unlocked ? (
-              <>
+          {unlocked ? (
+            <div className="structure-level-meta">
+              <span className="structure-level-current">
                 Lv {level} → {targetLevel}
-                {structure.maxLevel > 1 ? (
-                  <span className="research-level-max"> · max {structure.maxLevel}</span>
-                ) : null}
-              </>
-            ) : (
-              <>Locked</>
-            )}
-          </span>
+              </span>
+              {structure.maxLevel > 1 ? (
+                <span className="structure-level-max">
+                  Max: {structure.maxLevel}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <span>Locked</span>
+          )}
         </div>
         {!inProgress && unlocked && (
           <div className="structure-upgrade-preview">
@@ -298,43 +300,45 @@ export function OfficeStructurePanel({
             {structure.officeSlotsWhenBuilt}
           </p>
         ) : null}
-        <button
-          type="button"
-          className="btn"
-          disabled={!canUpgrade}
-          onClick={() =>
-            dispatch({
-              type: "BUY_STRUCTURE",
-              structureId: structure.id,
-              locationId: officeId,
-            })
-          }
-        >
-          {!unlocked
-            ? "Locked"
-            : inProgress
-              ? "In progress"
-              : "Upgrade"}
-        </button>
-        {level > 0 && (
+        <div className="structure-card-actions">
           <button
             type="button"
-            className="btn btn-muted structure-sell-btn"
-            disabled={!canSell}
-            onClick={() => {
-              if (!canSell || !sellRefund) return;
-              setSellConfirm({
+            className="btn"
+            disabled={!canUpgrade}
+            onClick={() =>
+              dispatch({
+                type: "BUY_STRUCTURE",
                 structureId: structure.id,
-                structureName: structure.name,
-                refund: sellRefund,
-              });
-            }}
+                locationId: officeId,
+              })
+            }
           >
-            {!canSell && sellBlocked
-              ? "Queued — can't sell"
-              : "Sell 1 level"}
+            {!unlocked
+              ? "Locked"
+              : inProgress
+                ? "In progress"
+                : "Upgrade"}
           </button>
-        )}
+          {level > 0 && (
+            <button
+              type="button"
+              className="btn btn-muted structure-sell-btn"
+              disabled={!canSell}
+              onClick={() => {
+                if (!canSell || !sellRefund) return;
+                setSellConfirm({
+                  structureId: structure.id,
+                  structureName: structure.name,
+                  refund: sellRefund,
+                });
+              }}
+            >
+              {!canSell && sellBlocked
+                ? "Queued — can't sell"
+                : "Sell 1 level"}
+            </button>
+          )}
+        </div>
       </li>
     );
   }
