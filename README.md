@@ -28,3 +28,7 @@ npm run dev
 - Espionage / PvP systems
 - Player companies and government megaprojects (Phase 3)
 - Art pass: anime secretary, 2D assets, BGM
+
+## UI / agent handoff
+
+Player-facing UI conventions and how to resume work in a new chat: [`docs/ui-principles.md`](docs/ui-principles.md) (see also [`AGENTS.md`](AGENTS.md)).

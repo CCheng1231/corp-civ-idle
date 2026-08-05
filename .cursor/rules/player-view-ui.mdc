@@ -1,0 +1,48 @@
+---
+description: Player-facing UI — clean layout, meaningful categories, no redundant info
+globs: src/components/**/*.tsx,src/App.css
+alwaysApply: true
+---
+
+# Player view UI (corp-civ-idle)
+
+Gameplay may be deep and punishing; **UI must stay scannable**.
+
+**Handoff doc (new chats):** read `docs/ui-principles.md` and repo root `AGENTS.md` first for file map, resume checklist, and recent session state.
+
+## Categories
+
+- Group progression tabs (research, structures, recruitment) by **player-meaningful roles**, not internal/engine types (e.g. tier, sheet column, discover flag).
+- Use **few sections** (roughly 4–5). Too many categories defeats the purpose.
+- Research-gated content lives in its **functional** section (generator → infrastructure, MIT → recruitment), not a separate “discovered” bucket.
+
+## Screen real estate
+
+- **Queue first**, then catalog. Avoid intro paragraphs that repeat queue `count/max` labels.
+- **Collapse maxed/completed** cards to one line (name · level · bonus); expand for detail.
+- **Collapse category sections** when every item in the group is maxed.
+- Prefer **checkbox** filters in the queue header row, not extra toolbar rows.
+
+## No redundant messaging
+
+- **Cost line** (red/green) = affordability. Do not repeat cash/supply/power shortfalls in blocker text.
+- **Button label** = action state (Locked, Queue full, In progress). Do not duplicate in a line above.
+- Keep **Requires:** for locks when the button only says “Locked”.
+- Confirm destructive actions (sell/demolish) in a **dialog** with refund; do not show refund on the card.
+
+## Copy
+
+- Player-facing descriptions in-world; workbook placeholders (“respective resources”) stay in sheets/build scripts only.
+- Level header: `Lv 2 → 3 · max 5` — omit max when `maxLevel === 1`.
+
+## Shared patterns
+
+- Reuse `progression-grid` (220px min), `recruitment-grid` (200px min), `ProgressionCategorySection`, `ProgressionMaxedCard`, `StructureCostLine`, `QueueSection`.
+- Match recruitment grouping to research/structures (category sections + tier badge on card).
+- Recruitment cards: `recruitment-card-compact` — inline cost · time, 2-line role clamp, qty + button on one row.
+
+## New chat — minimal read order
+
+1. `docs/ui-principles.md` and `AGENTS.md`
+2. This rule file
+3. Target view (`ResearchView`, `OfficeStructurePanel`, or `RecruitmentView`) + `progressionUi.tsx` + relevant `App.css` sections only
