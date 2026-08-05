@@ -148,6 +148,8 @@ Completed in the UI pass leading to this doc:
 
 **Not committed** unless git history shows otherwise — check `git status` / `git diff` before assuming.
 
+**Session log:** **ChangeLog** tab in `20260804 Corp Idle Working.xlsx` (append via `scripts/append-changelog-aug4-progression-ui.mjs`; close Excel if EBUSY).
+
 **Likely follow-ups** (user taste, not blockers):
 
 - Further recruitment density (e.g. role in expand-only `<details>` if cards still feel tall).

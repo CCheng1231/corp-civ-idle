@@ -31,8 +31,4 @@ npm run dev
 
 ## UI / agent handoff
 
-Player-facing UI conventions and how to resume work in a new chat: [`docs/ui-principles.md`](docs/ui-principles.md) (see also [`AGENTS.md`](AGENTS.md)).
-
-## Changelog
-
-See [`CHANGELOG.md`](CHANGELOG.md) for session summaries and release notes.
+Player-facing UI conventions and how to resume work in a new chat: [`docs/ui-principles.md`](docs/ui-principles.md) (see also [`AGENTS.md`](AGENTS.md)). Session changelog: **ChangeLog** tab in `20260804 Corp Idle Working.xlsx`.
