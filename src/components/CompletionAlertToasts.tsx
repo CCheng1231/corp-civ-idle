@@ -17,6 +17,8 @@ function kindLabel(kind: CompletionAlert["kind"]): string {
       return "Research";
     case "recruitment":
       return "Recruitment";
+    case "job":
+      return "Task force";
   }
 }
 

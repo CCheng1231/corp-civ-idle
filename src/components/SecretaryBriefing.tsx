@@ -57,8 +57,13 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
     }
   }, [portraitSize]);
 
-  function openJobLogbook() {
-    dispatch({ type: "SET_VIEW", view: "logbook", logbookFilter: "jobs" });
+  function openJobLogbook(entryId?: string) {
+    dispatch({
+      type: "SET_VIEW",
+      view: "logbook",
+      logbookFilter: "jobs",
+      logbookHighlightEntryId: entryId ?? null,
+    });
   }
 
   return (
@@ -96,7 +101,7 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
       <div className="secretary-briefing">
         <section className="secretary-panel secretary-jobs-panel">
           <header className="secretary-panel-head">
-            <h3>Job engagements</h3>
+            <h3>Task forces</h3>
             <span className="secretary-jobs-cap">
               {active}/{cap}
             </span>
@@ -104,14 +109,14 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
           <div className="secretary-panel-body">
             {active === 0 ? (
               <p className="muted secretary-panel-lead">
-                No crews on contract — pick a posting below.
+                No task forces deployed — pick a posting below.
               </p>
             ) : (
               <p className="muted secretary-panel-lead">
-                {active} active engagement{active === 1 ? "" : "s"} in the field.
+                {active} task force{active === 1 ? "" : "s"} in the field.
               </p>
             )}
-            <div className="secretary-panel-extra" aria-label="Active engagements">
+            <div className="secretary-panel-extra" aria-label="Active task forces">
               {state.jobEngagements.length > 0 ? (
                 <ul className="secretary-active-jobs">
                   {state.jobEngagements.map((engagement) => {
@@ -160,7 +165,7 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
               <button
                 type="button"
                 className="btn linkish secretary-job-reports-log-link"
-                onClick={openJobLogbook}
+                onClick={() => openJobLogbook()}
               >
                 Open job log
               </button>
@@ -186,11 +191,11 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
                       {jobReportHeadline(entry)}
                     </p>
                     <p className="secretary-job-report-line2 muted">
-                      {jobReportBrief(entry)}{" "}
+                      {jobReportBrief(entry, state.activityLog)}{" "}
                       <button
                         type="button"
                         className="btn linkish secretary-job-report-detail-link"
-                        onClick={openJobLogbook}
+                        onClick={() => openJobLogbook(entry.id)}
                       >
                         Full details in logbook
                       </button>

@@ -477,6 +477,7 @@ export function saveGameState(state: GameState): void {
     pendingOfflineSummary: _welcome,
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
+    logbookHighlightEntryId: _logHighlight,
     ...persistable
   } = state;
   localStorage.setItem(SAVE_KEY, JSON.stringify(persistable));

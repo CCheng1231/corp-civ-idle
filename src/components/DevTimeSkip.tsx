@@ -34,7 +34,7 @@ export function DevTimeSkip({ dispatch }: DevTimeSkipProps) {
     <div className="dev-time-skip">
       <p className="muted setting-hint">
         Advances production, structure/research/hire queues, staff travel, job
-        engagement shifts, and posting expiry by the chosen amount.
+          task force shifts, and posting expiry by the chosen amount.
       </p>
       <div className="dev-skip-presets" role="group" aria-label="Skip presets">
         {PRESETS.map((preset) => (

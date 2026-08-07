@@ -175,7 +175,7 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
         </label>
         <p className="muted setting-hint">
           When on, structure builds, research, recruitment, staff travel, and
-          job engagement shifts finish immediately. Passive income still runs
+          task force shifts finish immediately. Passive income still runs
           normally.
         </p>
         <DevTimeSkip dispatch={dispatch} />

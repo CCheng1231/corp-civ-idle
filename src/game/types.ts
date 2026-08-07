@@ -351,6 +351,8 @@ export interface JobEngagement {
   unitHoursApplied: number;
   /** True after shift pay is banked and crew is walking home. */
   shiftPaid?: boolean;
+  /** Payout banked at shift end; echoed on the return-to-base log row. */
+  shiftPayoutGained?: ResourceCost;
 }
 
 export interface StructureBuildJob {
@@ -422,9 +424,11 @@ export interface GameState {
   pendingCompletionAlerts?: CompletionAlert[];
   /** Scroll/highlight target on Recruitment; stripped from saves. */
   recruitFocusUnitId?: UnitId | null;
+  /** Scroll/highlight target on Notes & logbook; stripped from saves. */
+  logbookHighlightEntryId?: string | null;
 }
 
-export type CompletionAlertKind = "structure" | "research" | "recruitment";
+export type CompletionAlertKind = "structure" | "research" | "recruitment" | "job";
 
 export interface CompletionAlert {
   id: string;
@@ -554,8 +558,10 @@ export type GameAction =
       view: MainView;
       logbookFilter?: string;
       recruitFocusUnitId?: UnitId | null;
+      logbookHighlightEntryId?: string | null;
     }
   | { type: "SET_LOGBOOK_FILTER"; filterId: string }
+  | { type: "CLEAR_LOGBOOK_HIGHLIGHT" }
   | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
   | { type: "CLEAR_ALL_JOB_REPORTS" }
   | { type: "DISMISS_OFFLINE_SUMMARY" }

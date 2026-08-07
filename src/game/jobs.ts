@@ -8,7 +8,9 @@ import {
   totalAssigned,
   unitDefinition,
 } from "./unitEffects";
-import { appendActivityLogs } from "./logbook";
+import { appendActivityLogs, cloneResourceCost } from "./logbook";
+import { pushCompletionAlert } from "./completionAlerts";
+import { formatNumber, OFFICE_LABELS } from "./constants";
 import type {
   CompletionBand,
   GameState,
@@ -305,18 +307,22 @@ function beginReturnTravel(
   state: GameState,
   engagementId: string,
   now: number,
+  shiftPayoutGained?: ResourceCost,
 ): GameState {
   const next = structuredClone(state);
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
   const travelMs = jobTravelDurationMs(next, current.officeId, current.towerId);
+  const returnStartedAt =
+    current.endsAt > 0 && current.endsAt <= now ? current.endsAt : now;
   next.jobEngagements[idx] = {
     ...current,
     phase: "returning",
-    travelStartedAt: now,
-    travelArrivesAt: scheduleTimerAt(next, now, travelMs),
+    travelStartedAt: returnStartedAt,
+    travelArrivesAt: scheduleTimerAt(next, returnStartedAt, travelMs),
     shiftPaid: true,
+    shiftPayoutGained: shiftPayoutGained ?? current.shiftPayoutGained,
   };
   return next;
 }
@@ -325,6 +331,7 @@ function completeReturnTravel(
   state: GameState,
   engagementId: string,
   now: number,
+  notify = true,
 ): GameState {
   const next = structuredClone(state);
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
@@ -336,18 +343,34 @@ function completeReturnTravel(
     current.crewAssigned,
   );
   next.jobEngagements.splice(idx, 1);
-  return logUnitsReturned(
+  const gained = cloneResourceCost(current.shiftPayoutGained) ?? {};
+  let withLog = logUnitsReturned(
     next,
     {
       engagement: current,
       def,
-      gained: {},
+      gained,
       category: "job_complete",
       summary: `Crew returned from ${def.title}`,
       impacts: ["Back at office"],
     },
     now,
   );
+  const cash = gained.cash ?? 0;
+  const detail =
+    cash > 0
+      ? `$${formatNumber(cash)} earned · see Secretary job reports`
+      : "Crew back at office · see Secretary job reports";
+  withLog = pushCompletionAlert(
+    withLog,
+    {
+      kind: "job",
+      title: `${def.title} · ${OFFICE_LABELS[current.officeId]}`,
+      detail,
+    },
+    notify,
+  );
+  return withLog;
 }
 
 function startWorkingPhase(
@@ -360,14 +383,15 @@ function startWorkingPhase(
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
   const def = jobDefinitionById(current.definitionId);
+  const workStartedAt = current.travelArrivesAt ?? now;
   next.jobEngagements[idx] = {
     ...current,
     phase: "working",
     travelStartedAt: null,
     travelArrivesAt: null,
-    startedAt: now,
-    endsAt: scheduleTimerAt(next, now, def.durationSec * 1000),
-    lastAccruedAt: now,
+    startedAt: workStartedAt,
+    endsAt: scheduleTimerAt(next, workStartedAt, def.durationSec * 1000),
+    lastAccruedAt: workStartedAt,
   };
   return next;
 }
@@ -501,7 +525,12 @@ function finalizeCompletedPosting(
       },
       now,
     );
-    next = beginReturnTravel(next, engagement.id, now);
+    next = beginReturnTravel(
+      next,
+      engagement.id,
+      now,
+      jobPayoutGained(cashPayout, resourceExtras),
+    );
   }
 
   next.completedProjects += 1;
@@ -509,7 +538,23 @@ function finalizeCompletedPosting(
   return next;
 }
 
-export function processJobEngagements(state: GameState, now: number): GameState {
+function jobEngagementsPassSignature(state: GameState): string {
+  return state.jobEngagements
+    .map(
+      (e) =>
+        `${e.id}:${e.phase}:${e.earnedSoFar}:${e.endsAt}:${e.travelArrivesAt}:${e.postingId}`,
+    )
+    .join("|");
+}
+
+const MAX_JOB_ENGAGEMENT_PASSES = 32;
+
+/** One simulation slice — outbound/work/return transitions for current state. */
+function processJobEngagementsPass(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
   if (
     state.jobEngagements.length === 0 &&
     !state.jobPostings.some((p) => p.status === "open" && p.expiresAt <= now)
@@ -530,7 +575,10 @@ export function processJobEngagements(state: GameState, now: number): GameState 
     next.jobPostings[i] = { ...posting, status: "expired" };
   }
 
-  for (const engagement of [...next.jobEngagements]) {
+  for (const engagementId of next.jobEngagements.map((e) => e.id)) {
+    const engagement = next.jobEngagements.find((e) => e.id === engagementId);
+    if (!engagement) continue;
+
     if (engagement.phase === "outbound") {
       if (travelHasArrived(next, engagement, now)) {
         next = startWorkingPhase(next, engagement.id, now);
@@ -539,27 +587,28 @@ export function processJobEngagements(state: GameState, now: number): GameState 
     }
 
     if (engagement.phase === "returning") {
-      if (travelHasArrived(next, engagement, now)) {
-        returnArrivedIds.push(engagement.id);
+      const returning = next.jobEngagements.find((e) => e.id === engagementId);
+      if (returning && travelHasArrived(next, returning, now)) {
+        returnArrivedIds.push(returning.id);
       }
       continue;
     }
 
-    // working — only accrue while posting still open
-    const posting = next.jobPostings.find((p) => p.id === engagement.postingId);
+    const working = next.jobEngagements.find((e) => e.id === engagementId);
+    if (!working || working.phase !== "working") continue;
+
+    const posting = next.jobPostings.find((p) => p.id === working.postingId);
     if (!posting || posting.status !== "open") continue;
 
-    next = accrueEngagementThrough(next, engagement.id, now);
+    next = accrueEngagementThrough(next, working.id, now);
 
-    const postingAfter = next.jobPostings.find(
-      (p) => p.id === engagement.postingId,
-    );
+    const postingAfter = next.jobPostings.find((p) => p.id === working.postingId);
     if (postingAfter?.status === "completed") {
       completedPostingIds.push(postingAfter.id);
       continue;
     }
 
-    const stillActive = next.jobEngagements.find((e) => e.id === engagement.id);
+    const stillActive = next.jobEngagements.find((e) => e.id === working.id);
     if (stillActive && shiftHasEnded(next, stillActive, now)) {
       shiftEndedEngagementIds.push(stillActive.id);
     }
@@ -576,7 +625,7 @@ export function processJobEngagements(state: GameState, now: number): GameState 
 
   for (const engagementId of returnArrivedIds) {
     if (!next.jobEngagements.some((e) => e.id === engagementId)) continue;
-    next = completeReturnTravel(next, engagementId, now);
+    next = completeReturnTravel(next, engagementId, now, notify);
   }
 
   for (const postingId of expiredPostingIds) {
@@ -603,6 +652,24 @@ export function processJobEngagements(state: GameState, now: number): GameState 
   return next;
 }
 
+/**
+ * Resolve job phases through offline/dev skips. Re-runs until stable so one
+ * catch-up can chain travel → work accrual → shift payout → return home.
+ */
+export function processJobEngagements(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
+  let next = state;
+  for (let pass = 0; pass < MAX_JOB_ENGAGEMENT_PASSES; pass += 1) {
+    const before = jobEngagementsPassSignature(next);
+    next = processJobEngagementsPass(next, now, notify);
+    if (jobEngagementsPassSignature(next) === before) break;
+  }
+  return next;
+}
+
 function settleShiftEndedEngagement(
   state: GameState,
   engagementId: string,
@@ -619,6 +686,7 @@ function settleShiftEndedEngagement(
   const current = next.jobEngagements[idx];
   const def = jobDefinitionById(current.definitionId);
   const payout = current.earnedSoFar;
+  const gained = jobPayoutGained(payout);
   next.resources.cash += payout;
   next.jobEngagements[idx] = { ...current, earnedSoFar: 0 };
   next = logUnitsReturned(
@@ -626,14 +694,14 @@ function settleShiftEndedEngagement(
     {
       engagement: current,
       def,
-      gained: jobPayoutGained(payout),
+      gained,
       category: "job_complete",
       summary: `Shift complete: ${def.title}`,
       impacts: ["Full shift payout", "Crew heading home"],
     },
     now,
   );
-  return beginReturnTravel(next, engagementId, now);
+  return beginReturnTravel(next, engagementId, now, gained);
 }
 
 function settleCancelledEngagement(
@@ -658,6 +726,7 @@ function settleCancelledEngagement(
   const current = next.jobEngagements[idx];
   const def = jobDefinitionById(current.definitionId);
   const payout = current.earnedSoFar * 0.5;
+  const gained = jobPayoutGained(payout);
   next.resources.cash += payout;
   next.jobEngagements[idx] = { ...current, earnedSoFar: 0 };
   next = logUnitsReturned(
@@ -665,7 +734,7 @@ function settleCancelledEngagement(
     {
       engagement: current,
       def,
-      gained: jobPayoutGained(payout),
+      gained,
       category: "job_cancel",
       summary:
         reason === "posting_expired"
@@ -675,7 +744,7 @@ function settleCancelledEngagement(
     },
     now,
   );
-  return beginReturnTravel(next, engagementId, now);
+  return beginReturnTravel(next, engagementId, now, gained);
 }
 
 export function cancelJobEngagement(
@@ -729,7 +798,7 @@ export function engageJobPosting(
   return next;
 }
 
-/** Short status line for Secretary / overlays. */
+/** Short status line for Secretary / map overlays. */
 export function engagementStatusLabel(
   state: GameState,
   engagement: JobEngagement,
@@ -750,7 +819,7 @@ export function validateEngagementAssignment(
   crewAssigned: UnitAssignment,
 ): string | null {
   if (!canEngageMoreJobs(state)) {
-    return `Engagement cap reached (${activeEngagementCount(state)}/${maxJobEngagements(state)})`;
+    return `Task force cap reached (${activeEngagementCount(state)}/${maxJobEngagements(state)})`;
   }
   const posting = postingById(state, postingId);
   if (!posting || posting.status !== "open") return "Posting unavailable";

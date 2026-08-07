@@ -20,7 +20,7 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
         description={
           <>
             Daily briefing and regional job board. Crews deploy from the
-            selected office, max {jobCap} engagements at once.
+            selected office — max {jobCap} task forces at once.
           </>
         }
         state={state}

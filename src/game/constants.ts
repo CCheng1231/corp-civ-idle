@@ -612,6 +612,7 @@ export function createInitialState(now = Date.now()): GameState {
     pendingOfflineSummary: null,
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,
+    logbookHighlightEntryId: null,
     settings: {
       masterVolume: 0.1,
       musicMuted: false,

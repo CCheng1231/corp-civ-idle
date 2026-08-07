@@ -34,6 +34,33 @@ export function scheduleTimerAt(
   return now + timerDelayMs(state, delayMs);
 }
 
+/**
+ * Start or resume a sequential queue job timer.
+ *
+ * Pass `activationTime` = previous job's `completesAt` when promoting the next
+ * queued item so time skip / offline catch-up can finish the whole queue in one
+ * pass. Compare deadlines against wall-clock `now`; only activation time moves
+ * along the chain.
+ */
+export function scheduleQueueJobTimer(
+  state: GameState,
+  job: { startedAt?: number | null; completesAt: number | null },
+  buildMs: number,
+  activationTime: number,
+): { startedAt: number; completesAt: number } {
+  const priorStartedAt = job.startedAt ?? null;
+  if (buildMs <= 0) {
+    const startedAt = priorStartedAt ?? activationTime;
+    return { startedAt, completesAt: activationTime };
+  }
+  const startedAt = priorStartedAt ?? activationTime;
+  const completesAt =
+    priorStartedAt != null
+      ? startedAt + buildMs
+      : scheduleTimerAt(state, activationTime, buildMs);
+  return { startedAt, completesAt };
+}
+
 /** Compact preview for structure cards (no seconds). */
 export function formatBuildTimeHours(hours: number): string {
   if (hours <= 0) return "—";

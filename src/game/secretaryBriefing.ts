@@ -1,8 +1,8 @@
-import { rosterAt, totalWorkforce } from "./constants";
+import { rosterAt, totalWorkforce, formatNumber } from "./constants";
 import type { GameState, LogEntry } from "./types";
 import { activeEngagementCount, maxJobEngagements } from "./jobs";
 import { openJobPostings } from "./jobBoard";
-import { formatLogCostCell } from "./logbook";
+import { formatLogCostCell, formatLogTimestamp } from "./logbook";
 
 export const SECRETARY_QUOTES = [
   "Synergy is just teamwork with a slide deck.",
@@ -40,10 +40,12 @@ export function secretaryTips(state: GameState): string[] {
 
   if (activeJobs < jobCap) {
     tips.push(
-      `${jobCap - activeJobs} job slot${jobCap - activeJobs === 1 ? "" : "s"} open — browse the board below and engage before postings expire.`,
+      `${jobCap - activeJobs} task force slot${jobCap - activeJobs === 1 ? "" : "s"} open — browse the board below and deploy before postings expire.`,
     );
   } else {
-    tips.push("Job cap is full. Wait for crews to return or cancel an engagement.");
+    tips.push(
+      "Task force cap is full. Wait for crews to return or recall a task force.",
+    );
   }
 
   if (staff <= 0) {
@@ -59,7 +61,9 @@ export function secretaryTips(state: GameState): string[] {
   }
 
   if (staff > 0 && activeJobs > 0 && activeJobs < jobCap) {
-    tips.push("You can run multiple shifts at once if you have spare units and open slots.");
+    tips.push(
+      "You can run multiple task forces at once if you have spare units and open slots.",
+    );
   }
 
   if (tips.length === 0) {
@@ -81,6 +85,48 @@ export function secretaryJobSummary(state: GameState): {
 
 const MAX_JOB_REPORTS = 5;
 
+/** Pre-return payout rows — secretary waits for the crew-back report. */
+export function isPreReturnJobLog(entry: LogEntry): boolean {
+  return (
+    /^Shift complete:/i.test(entry.summary) ||
+    /^Job completed:/i.test(entry.summary) ||
+    /^Withdrawn from .+ \((early|posting expired)\)$/i.test(entry.summary)
+  );
+}
+
+function jobTitleFromReturnLog(summary: string): string | null {
+  const match = summary.match(/^Crew returned from (.+)$/i);
+  return match?.[1] ?? null;
+}
+
+function jobTitleFromPayoutLog(summary: string): string | null {
+  let match = summary.match(/^Shift complete: (.+)$/i);
+  if (match) return match[1];
+  match = summary.match(/^Job completed: (.+)$/i);
+  if (match) return match[1];
+  match = summary.match(/^Withdrawn from (.+?) \((early|posting expired)\)$/i);
+  if (match) return match[1];
+  return null;
+}
+
+/** Shift-pay row for a return log (return rows often omit gained on older saves). */
+export function relatedJobPayoutLog(
+  activityLog: LogEntry[],
+  returnEntry: LogEntry,
+): LogEntry | null {
+  const title = jobTitleFromReturnLog(returnEntry.summary);
+  if (!title) return null;
+
+  let best: LogEntry | null = null;
+  for (const entry of activityLog) {
+    if (!isPreReturnJobLog(entry)) continue;
+    if (jobTitleFromPayoutLog(entry.summary) !== title) continue;
+    if (entry.at > returnEntry.at) continue;
+    if (!best || entry.at > best.at) best = entry;
+  }
+  return best;
+}
+
 /** Undismissed job log entries for the Secretary FYI box. */
 export function pendingJobReports(state: GameState): LogEntry[] {
   const dismissed = new Set(state.dismissedJobReportIds ?? []);
@@ -88,6 +134,7 @@ export function pendingJobReports(state: GameState): LogEntry[] {
     .filter(
       (entry) =>
         (entry.category === "job_complete" || entry.category === "job_cancel") &&
+        !isPreReturnJobLog(entry) &&
         !dismissed.has(entry.id),
     )
     .slice(0, MAX_JOB_REPORTS);
@@ -98,16 +145,38 @@ export function pendingJobCompletionReports(state: GameState): LogEntry[] {
   return pendingJobReports(state);
 }
 
-export function jobReportBrief(entry: LogEntry): string {
-  const gained = formatLogCostCell(entry.gained);
-  if (gained !== "—") {
-    if (entry.category === "job_cancel") {
-      return `Partial payout — earned ${gained}.`;
-    }
-    return `Earned ${gained}.`;
+export function jobReportMoneyGained(
+  entry: LogEntry,
+  activityLog?: LogEntry[],
+): string | null {
+  const sources = [entry];
+  if (activityLog) {
+    const payoutLog = relatedJobPayoutLog(activityLog, entry);
+    if (payoutLog) sources.push(payoutLog);
   }
-  const impact = entry.impacts?.[0];
-  return impact ?? "Crew returned to office.";
+  for (const source of sources) {
+    const cash = source.gained?.cash;
+    if (cash != null && cash > 0) {
+      return `$${formatNumber(cash)}`;
+    }
+    const other = formatLogCostCell(source.gained);
+    if (other !== "—") return other;
+  }
+  return null;
+}
+
+export function jobReportBrief(entry: LogEntry, activityLog?: LogEntry[]): string {
+  const parts: string[] = [];
+  const money = jobReportMoneyGained(entry, activityLog);
+  if (money) {
+    parts.push(
+      entry.category === "job_cancel" ? `${money} partial payout` : `${money} earned`,
+    );
+  } else {
+    parts.push("No payout");
+  }
+  parts.push(`Returned ${formatLogTimestamp(entry.at)}`);
+  return parts.join(" · ");
 }
 
 export function jobReportKindLabel(entry: LogEntry): string {

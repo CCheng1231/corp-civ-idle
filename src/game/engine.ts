@@ -36,6 +36,7 @@ import {
   recruitmentOrderBuildTimeHours,
 } from "./constants";
 import { buildOfflineWelcomeSummary } from "./offlineWelcome";
+import { pushCompletionAlert } from "./completionAlerts";
 import { cancelRefundFromSpent } from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
 import { formatQueueTimeHours } from "./timers";
@@ -71,10 +72,10 @@ import {
 } from "./structureBalance";
 import {
   scheduleTimerAt,
+  scheduleQueueJobTimer,
   timerHasNotElapsed,
 } from "./timers";
 import type {
-  CompletionAlert,
   GameAction,
   GameState,
   ProgressionEffects,
@@ -83,24 +84,6 @@ import type {
   StructureId,
   OfficeLocationId,
 } from "./types";
-
-const MAX_PENDING_COMPLETION_ALERTS = 8;
-
-function pushCompletionAlert(
-  state: GameState,
-  alert: Omit<CompletionAlert, "id">,
-  notify: boolean,
-): GameState {
-  if (!notify || !state.settings.notifications) return state;
-  const entry: CompletionAlert = {
-    ...alert,
-    id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  };
-  const pending = [...(state.pendingCompletionAlerts ?? []), entry].slice(
-    -MAX_PENDING_COMPLETION_ALERTS,
-  );
-  return { ...state, pendingCompletionAlerts: pending };
-}
 
 type LeveledDef = {
   maxLevel: number;
@@ -171,6 +154,14 @@ export function researchCost(state: GameState, researchId: ResearchId) {
   const def = getResearchDef(researchId);
   const level = projectedResearchLevels(state)[researchId];
   return progressionCost(level, def);
+}
+
+/** Cost to upgrade from `fromLevel` to `fromLevel + 1` (balance sheet; ignores queue). */
+export function researchUpgradeCostForLevel(
+  researchId: ResearchId,
+  fromLevel: number,
+): ResourceCost {
+  return progressionCost(fromLevel, getResearchDef(researchId));
 }
 
 export function computeProjectBonuses(state: GameState) {
@@ -262,19 +253,25 @@ function processStructureQueues(
 
   for (const officeId of OFFICE_IDS) {
     let queue = [...next.structureQueues[officeId]];
+    let queueClock = now;
 
     while (queue.length > 0) {
       if (queue[0].completesAt === null) {
         const buildMs = buildTimeMsForQueueJob(next, officeId, 0);
-        const startedAt = now;
-        const completesAt = scheduleTimerAt(next, now, buildMs);
-        queue[0] = { ...queue[0], startedAt, completesAt };
-        if (timerHasNotElapsed(now, completesAt, next)) break;
+        const timing = scheduleQueueJobTimer(
+          next,
+          queue[0],
+          buildMs,
+          queueClock,
+        );
+        queue[0] = { ...queue[0], ...timing };
+        if (timerHasNotElapsed(now, queue[0].completesAt!, next)) break;
       }
       const dueAt = queue[0].completesAt;
       if (dueAt === null || timerHasNotElapsed(now, dueAt, next)) break;
 
       const job = queue.shift()!;
+      queueClock = dueAt;
       next = applyStructurePurchase(next, officeId, job.structureId);
       next.structureQueues[officeId] = queue;
       const def = getStructureDef(job.structureId);
@@ -380,6 +377,7 @@ function processResearchQueues(
 
   for (const officeId of OFFICE_IDS) {
     let queue = [...(next.researchQueues[officeId] ?? [])];
+    let queueClock = now;
 
     while (queue.length > 0) {
       if (queue[0].completesAt === null) {
@@ -387,15 +385,20 @@ function processResearchQueues(
           queue[0].researchId,
           queue[0].targetLevel,
         );
-        const startedAt = now;
-        const completesAt = scheduleTimerAt(next, now, buildMs);
-        queue[0] = { ...queue[0], startedAt, completesAt };
-        if (timerHasNotElapsed(now, completesAt, next)) break;
+        const timing = scheduleQueueJobTimer(
+          next,
+          queue[0],
+          buildMs,
+          queueClock,
+        );
+        queue[0] = { ...queue[0], ...timing };
+        if (timerHasNotElapsed(now, queue[0].completesAt!, next)) break;
       }
       const dueAt = queue[0].completesAt;
       if (dueAt === null || timerHasNotElapsed(now, dueAt, next)) break;
 
       const job = queue.shift()!;
+      queueClock = dueAt;
       next = applyResearchEffects(next, job.researchId);
       next.researchQueues = { ...next.researchQueues, [officeId]: queue };
       const def = getResearchDef(job.researchId);
@@ -447,15 +450,11 @@ function processResearchQueues(
 function startRecruitmentJobTimer(
   state: GameState,
   job: import("./types").RecruitmentJob,
-  now: number,
+  activationTime: number,
 ): import("./types").RecruitmentJob {
-  const startedAt = now;
-  const completesAt = scheduleTimerAt(
-    state,
-    now,
-    recruitmentOrderDurationMs(job.count ?? 1),
-  );
-  return { ...job, startedAt, completesAt };
+  const buildMs = recruitmentOrderDurationMs(job.count ?? 1);
+  const timing = scheduleQueueJobTimer(state, job, buildMs, activationTime);
+  return { ...job, ...timing };
 }
 
 function recruitmentJobsForOffice(
@@ -491,8 +490,10 @@ function processRecruitmentJobs(
     let jobs = recruitmentJobsForOffice(next, officeId);
     if (jobs.length === 0) continue;
 
+    let queueClock = now;
+
     if (jobs[0].completesAt === null) {
-      jobs[0] = startRecruitmentJobTimer(next, jobs[0], now);
+      jobs[0] = startRecruitmentJobTimer(next, jobs[0], queueClock);
       next = setRecruitmentJobsForOffice(next, officeId, jobs);
     }
 
@@ -501,13 +502,15 @@ function processRecruitmentJobs(
       jobs[0].completesAt !== null &&
       !timerHasNotElapsed(now, jobs[0].completesAt!, next)
     ) {
+      const dueAt = jobs[0].completesAt!;
       const job = jobs.shift()!;
+      queueClock = dueAt;
       completed.push(job);
       const hireCount = job.count ?? 1;
       next.contractorsByLocation[job.officeId][job.unitId] =
         (next.contractorsByLocation[job.officeId][job.unitId] ?? 0) + hireCount;
       if (jobs.length > 0 && jobs[0].completesAt === null) {
-        jobs[0] = startRecruitmentJobTimer(next, jobs[0], now);
+        jobs[0] = startRecruitmentJobTimer(next, jobs[0], queueClock);
       }
       next = setRecruitmentJobsForOffice(next, officeId, jobs);
 
@@ -565,6 +568,7 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
       pendingOfflineSummary: null,
       pendingCompletionAlerts: [],
       recruitFocusUnitId: null,
+      logbookHighlightEntryId: null,
     },
     now,
   );
@@ -586,6 +590,7 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
         false,
       ),
       now,
+      false,
     ),
   );
   const awaySec = Math.max(0, (now - previousTickAt) / 1000);
@@ -632,8 +637,12 @@ function applyJobPhaseMilestone(state: GameState): GameState {
   return state;
 }
 
-function runJobSimulation(state: GameState, now: number): GameState {
-  const processed = processJobEngagements(state, now);
+function runJobSimulation(
+  state: GameState,
+  now: number,
+  notify = true,
+): GameState {
+  const processed = processJobEngagements(state, now, notify);
   return applyVictoryCheck(applyJobPhaseMilestone(withDerivedStats(processed)));
 }
 
@@ -726,8 +735,8 @@ function shiftSimulatedClock(state: GameState, shiftMs: number): GameState {
 
 /**
  * Dev time skip: shift all deadlines/accrual marks back, then run the normal
- * simulation catch-up at the real wall clock. New timers started during the
- * catch-up are scheduled from wall time (no post-skip rebase needed).
+ * simulation catch-up at the real wall clock. Queue processors chain
+ * activation times so multi-job queues can fully resolve in one skip.
  */
 export function devSkipTime(state: GameState, minutes: number): GameState {
   if (!Number.isFinite(minutes) || minutes <= 0) return state;
@@ -758,10 +767,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           action.view === "recruitment"
             ? (action.recruitFocusUnitId ?? null)
             : null,
+        logbookHighlightEntryId:
+          action.view === "logbook"
+            ? (action.logbookHighlightEntryId ?? null)
+            : null,
       };
 
     case "SET_LOGBOOK_FILTER":
       return { ...state, logbookFilterId: action.filterId };
+
+    case "CLEAR_LOGBOOK_HIGHLIGHT":
+      return { ...state, logbookHighlightEntryId: null };
 
     case "DISMISS_JOB_REPORT": {
       const dismissed = state.dismissedJobReportIds ?? [];

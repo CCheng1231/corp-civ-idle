@@ -38,20 +38,48 @@ interface ProgressionMaxedCardProps {
   name: string;
   levelLabel: string;
   compactBonus: string;
+  onNameClick?: () => void;
   children: ReactNode;
+}
+
+export function ProgressionNameButton({
+  name,
+  onClick,
+}: {
+  name: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="progression-name-btn"
+      onClick={(event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        onClick();
+      }}
+    >
+      {name}
+    </button>
+  );
 }
 
 export function ProgressionMaxedCard({
   name,
   levelLabel,
   compactBonus,
+  onNameClick,
   children,
 }: ProgressionMaxedCardProps) {
   return (
     <details className="progression-maxed-details">
       <summary className="progression-maxed-summary">
         <span className="progression-maxed-summary-main">
-          <strong>{name}</strong>
+          {onNameClick ? (
+            <ProgressionNameButton name={name} onClick={onNameClick} />
+          ) : (
+            <strong>{name}</strong>
+          )}
           <span className="progression-maxed-level">{levelLabel}</span>
         </span>
         {compactBonus ? (

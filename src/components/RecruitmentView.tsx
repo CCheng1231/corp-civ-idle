@@ -4,6 +4,7 @@ import {
   MAX_RECRUIT_QUEUE,
   OFFICE_LABELS,
   canAffordAtOffice,
+  countInCategory,
   formatNumber,
   isRecruitmentQueueFull,
   recruitBatchCost,
@@ -42,6 +43,26 @@ const CATEGORY_LABELS: Record<ContractorCategoryId, string> = {
   special: "Special",
 };
 
+const CATEGORY_SHORT: Record<ContractorCategoryId, string> = {
+  farming: "Farm",
+  defense: "Def",
+  intel: "Intel",
+  support: "Sup",
+  special: "Spec",
+};
+
+function officeStaffCategorySummary(
+  roster: ReturnType<typeof rosterAt>,
+): string {
+  const parts = RECRUITMENT_CATEGORY_ORDER.filter(
+    (category) => countInCategory(roster, category) > 0,
+  ).map(
+    (category) =>
+      `${CATEGORY_SHORT[category]} ${countInCategory(roster, category)}`,
+  );
+  return parts.length > 0 ? parts.join(" · ") : "No units at this site yet";
+}
+
 function recruitmentBlockerMessage(researchLocked: boolean): string | null {
   if (researchLocked) return "Requires Branch Management research";
   return null;
@@ -56,6 +77,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const queueFull = isRecruitmentQueueFull(state, officeId);
   const roster = rosterAt(state, officeId);
   const staffTotal = totalWorkforce(roster);
+  const pendingHires = queue.reduce((sum, job) => sum + (job.count ?? 1), 0);
+  const staffCategorySummary = officeStaffCategorySummary(roster);
   const focusUnitId = state.recruitFocusUnitId ?? null;
 
   useEffect(() => {
@@ -193,6 +216,21 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             now={now}
           />
         </QueueSection>
+        <section className="recruitment-site-staff">
+          <div className="recruitment-site-staff-head">
+            <h3 className="recruitment-site-staff-title">
+              Staff at {OFFICE_LABELS[officeId]}
+            </h3>
+            <div className="location-stat recruitment-staff-stat">
+              <span className="location-stat-label">On site</span>
+              <strong>{formatNumber(staffTotal)}</strong>
+              {pendingHires > 0 && (
+                <small>{formatNumber(pendingHires)} hiring</small>
+              )}
+            </div>
+          </div>
+          <p className="recruitment-staff-summary">{staffCategorySummary}</p>
+        </section>
         <details
           className="recruitment-roster-details"
           open={rosterOpen}
@@ -201,7 +239,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           }
         >
           <summary className="recruitment-roster-summary">
-            Staff at {OFFICE_LABELS[officeId]} · {formatNumber(staffTotal)} units
+            Unit breakdown
           </summary>
           {staffTotal > 0 ? (
             <ul className="office-site-staff-list recruitment-roster-list">

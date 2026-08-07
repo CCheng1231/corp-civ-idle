@@ -28,9 +28,12 @@ import {
 } from "../game/engine";
 import { formatQueueTimeHours } from "../game/timers";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
+import { buildStructureDetailModel } from "./progressionDetailModel";
 import {
   ProgressionCategorySection,
   ProgressionMaxedCard,
+  ProgressionNameButton,
 } from "./progressionUi";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
@@ -121,6 +124,12 @@ export function OfficeStructurePanel({
     structureName: string;
     refund: ResourceCost;
   } | null>(null);
+  const [detailStructure, setDetailStructure] =
+    useState<StructureDefinition | null>(null);
+
+  function openStructureDetail(structure: StructureDefinition) {
+    setDetailStructure(structure);
+  }
 
   function renderStructureCard(structure: StructureDefinition) {
     const level = locationStructures[structure.id];
@@ -172,6 +181,7 @@ export function OfficeStructurePanel({
             name={structure.name}
             levelLabel={levelLabel}
             compactBonus={compactBonus}
+            onNameClick={() => openStructureDetail(structure)}
           >
             {completedLines.length > 0 ? (
               <ul className="structure-upgrade-preview-effects">
@@ -225,7 +235,10 @@ export function OfficeStructurePanel({
         className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
       >
         <div className="structure-head">
-          <strong>{structure.name}</strong>
+          <ProgressionNameButton
+            name={structure.name}
+            onClick={() => openStructureDetail(structure)}
+          />
           {unlocked ? (
             <div className="structure-level-meta">
               <span className="structure-level-current">
@@ -423,6 +436,12 @@ export function OfficeStructurePanel({
             setSellConfirm(null);
           }}
           onCancel={() => setSellConfirm(null)}
+        />
+      )}
+      {detailStructure && (
+        <ProgressionDetailDialog
+          {...buildStructureDetailModel(state, officeId, detailStructure)}
+          onClose={() => setDetailStructure(null)}
         />
       )}
     </div>

@@ -27,9 +27,12 @@ import {
 } from "./upgradePreviewFormat";
 import { StructureCostLine } from "./StructureCostLine";
 import { LocationViewHeader } from "./LocationViewHeader";
+import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
+import { buildResearchDetailModel } from "./progressionDetailModel";
 import {
   ProgressionCategorySection,
   ProgressionMaxedCard,
+  ProgressionNameButton,
 } from "./progressionUi";
 import { ResearchQueueList, QueueSection } from "./StructureBuildQueueList";
 import type {
@@ -57,6 +60,13 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   const projected = projectedResearchLevels(state);
   const now = Date.now();
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [detailResearch, setDetailResearch] = useState<ResearchDefinition | null>(
+    null,
+  );
+
+  function openResearchDetail(research: ResearchDefinition) {
+    setDetailResearch(research);
+  }
 
   function renderResearchCard(research: ResearchDefinition) {
     const level = state.researchLevels[research.id];
@@ -97,6 +107,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             name={research.name}
             levelLabel={levelLabel}
             compactBonus={compactBonus}
+            onNameClick={() => openResearchDetail(research)}
           >
             {completedLines.length > 0 ? (
               <ul className="structure-upgrade-preview-effects">
@@ -131,7 +142,10 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
       >
         <div className="structure-head">
-          <strong>{research.name}</strong>
+          <ProgressionNameButton
+            name={research.name}
+            onClick={() => openResearchDetail(research)}
+          />
           <span className="research-level-line">
             Lv {level} → {targetLevel}
             {research.maxLevel > 1 ? (
@@ -279,6 +293,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           );
         })}
       </div>
+      {detailResearch && (
+        <ProgressionDetailDialog
+          {...buildResearchDetailModel(state, detailResearch)}
+          onClose={() => setDetailResearch(null)}
+        />
+      )}
     </div>
   );
 }

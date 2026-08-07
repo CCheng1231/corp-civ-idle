@@ -217,7 +217,7 @@ export function MapHexDrawer({
             <>
               <p className="map-hex-desc muted">
                 Client tower with contract postings. Crew capacity{" "}
-                {tower.companyCrewCapacity} per engagement.
+                {tower.companyCrewCapacity} per task force.
               </p>
               <dl className="map-hex-facts map-hex-facts-inline">
                 <div>

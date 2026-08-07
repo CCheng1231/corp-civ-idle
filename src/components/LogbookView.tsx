@@ -61,6 +61,7 @@ interface LogbookViewProps {
 
 export function LogbookView({ state, dispatch }: LogbookViewProps) {
   const filterId = state.logbookFilterId;
+  const highlightId = state.logbookHighlightEntryId ?? null;
   const [colWidths, setColWidths] = useState(loadColumnWidths);
   const resizeRef = useRef<{
     columnId: LogbookColumnId;
@@ -120,6 +121,18 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
       document.body.classList.remove("logbook-col-resizing");
     };
   }, [persistWidths]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.getElementById(`logbook-entry-${highlightId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const clearId = window.setTimeout(() => {
+      dispatch({ type: "CLEAR_LOGBOOK_HIGHLIGHT" });
+    }, 4000);
+    return () => window.clearTimeout(clearId);
+  }, [highlightId, filtered, dispatch]);
 
   return (
     <div className="logbook-view">
@@ -203,7 +216,13 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
             </thead>
             <tbody>
               {filtered.map((entry) => (
-                <tr key={entry.id}>
+                <tr
+                  key={entry.id}
+                  id={`logbook-entry-${entry.id}`}
+                  className={
+                    highlightId === entry.id ? "logbook-row-highlight" : undefined
+                  }
+                >
                   <td className="col-time">
                     <time dateTime={new Date(entry.at).toISOString()}>
                       {formatLogTimeCell(entry.at)}

@@ -109,7 +109,7 @@ export function structureCompletedResultLines(
   structureId: StructureId,
   level: number,
 ): StructureUpgradePreviewLine[] {
-  return structureResultLinesAtLevel(structureId, level, level, {
+  return structureResultLinesAtLevel(structureId, level, 0, {
     includeBuildTime: false,
   });
 }
@@ -472,6 +472,15 @@ export function reconcileStructureBuildTimers(
       }
 
       const buildMs = structureBuildTimeMs(job.structureId, targetLevel);
+      if (job.completesAt <= now) {
+        return {
+          ...job,
+          targetLevel,
+          startedAt: job.startedAt ?? job.completesAt - buildMs,
+          completesAt: job.completesAt,
+        };
+      }
+
       let startedAt = job.startedAt;
       if (startedAt == null) {
         const remaining = job.completesAt - now;

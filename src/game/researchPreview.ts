@@ -104,10 +104,10 @@ function researchResultLinesAtLevel(
     level >= 1
   ) {
     lines.push({
-      label: "Engagement cap",
+      label: "Task force cap",
       from: previewingUpgrade && fromLevel > 0 ? 3 + fromLevel : null,
       to: 3 + level,
-      unit: " jobs",
+      unit: " task forces",
     });
   }
 

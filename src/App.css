@@ -1004,8 +1004,58 @@
   width: 3.25rem;
 }
 
+.recruitment-site-staff {
+  margin: 0.75rem 0 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.recruitment-site-staff-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.recruitment-site-staff-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.recruitment-staff-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.45rem;
+  font-size: 0.82rem;
+}
+
+.recruitment-staff-stat .location-stat-label {
+  font-size: 0.72rem;
+}
+
+.recruitment-staff-stat strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.recruitment-staff-stat small {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.recruitment-staff-summary {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .recruitment-roster-details {
-  margin: 0.75rem 0 0.25rem;
+  margin: 0.35rem 0 0.25rem;
 }
 
 .recruitment-roster-summary {
@@ -1185,25 +1235,25 @@
 }
 
 .office-expand-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.4rem;
   max-width: 100%;
   text-align: left;
-  line-height: 1.25;
-  padding: 0.45rem 0.65rem;
+  line-height: 1.2;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.72rem;
 }
 
 .office-expand-btn-title {
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: inherit;
 }
 
 .office-expand-btn-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  display: inline;
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
@@ -1881,6 +1931,181 @@
   opacity: 0.72;
 }
 
+.progression-name-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px dotted transparent;
+}
+
+.progression-name-btn:hover,
+.progression-name-btn:focus-visible {
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+  outline: none;
+}
+
+.progression-maxed-summary-main .progression-name-btn {
+  font-size: inherit;
+}
+
+.progression-detail-dialog {
+  width: min(19.5rem, 96vw);
+  max-height: min(88vh, 640px);
+  padding: 0.85rem 0.95rem 0.95rem;
+}
+
+.progression-detail-header {
+  margin-bottom: 0.65rem;
+}
+
+.progression-detail-level {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progression-detail-queued {
+  color: var(--warn);
+}
+
+.progression-detail-close {
+  flex-shrink: 0;
+  min-width: 2rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.progression-detail-desc {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.progression-detail-requirement {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.progression-detail-status {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.progression-detail-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.progression-tree-section {
+  margin-bottom: 0.35rem;
+}
+
+.progression-tree-scroll {
+  max-height: min(42vh, 360px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.progression-tree-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.progression-tree-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(23, 30, 39, 0.98);
+  border-bottom: 1px solid var(--border);
+}
+
+.progression-tree-table td {
+  padding: 0.32rem 0.45rem;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progression-tree-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.progression-tree-lv {
+  width: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progression-tree-cost {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  min-width: 4.5rem;
+}
+
+.progression-tree-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.progression-tree-effect {
+  color: var(--text);
+  font-size: 0.68rem;
+}
+
+.progression-tree-row--done {
+  opacity: 0.55;
+}
+
+.progression-tree-row--done .progression-tree-lv {
+  color: var(--success);
+}
+
+.progression-tree-row--queued {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.progression-tree-row--queued .progression-tree-lv {
+  color: var(--warn);
+}
+
+.progression-tree-row--next {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.progression-tree-row--next .progression-tree-lv {
+  color: var(--accent);
+}
+
+.progression-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -2058,11 +2283,11 @@
 
 .world-view,
 .office-view {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 0;
 }
 
 .notes-editor {
@@ -2237,6 +2462,15 @@ body.logbook-col-resizing {
 
 .logbook-sheet tbody tr:hover td {
   background: rgba(110, 231, 183, 0.06);
+}
+
+.logbook-sheet tbody tr.logbook-row-highlight td {
+  background: rgba(110, 231, 183, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(110, 231, 183, 0.45);
+}
+
+.logbook-sheet tbody tr.logbook-row-highlight:hover td {
+  background: rgba(110, 231, 183, 0.22);
 }
 
 .logbook-event-title {
@@ -2857,8 +3091,8 @@ body.logbook-col-resizing {
       rgba(230, 159, 0, 0.04) 20px
     ),
     #141b22;
-  border-radius: 0.85rem;
-  box-shadow: inset 0 0 0 1px rgba(230, 159, 0, 0.18);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .map-presentation-dev .hex-tile {
@@ -3679,6 +3913,10 @@ body.logbook-col-resizing {
 
 .completion-alert-recruitment {
   border-color: rgba(251, 191, 36, 0.4);
+}
+
+.completion-alert-job {
+  border-color: rgba(244, 114, 182, 0.4);
 }
 
 .completion-alert-text {

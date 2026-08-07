@@ -11,8 +11,6 @@ import {
   isStructureQueueFull,
   projectedStructureLevels,
   resourceCostParts,
-  rosterAt,
-  totalWorkforce,
 } from "../game/constants";
 import { structureCost } from "../game/engine";
 import { effectAtStructureLevel } from "../game/structureBalance";
@@ -37,11 +35,7 @@ export function OfficeSiteSummary({
     officeSpaceUsed: 0,
     powerUsed: 0,
   };
-  const roster = rosterAt(state, officeId);
   const structures = state.structureLevelsByLocation[officeId];
-  const pendingHires = state.recruitmentJobs
-    .filter((j) => j.officeId === officeId)
-    .reduce((sum, j) => sum + (j.count ?? 1), 0);
 
   const expansionDef = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
   const projectedExpansion =
@@ -95,16 +89,11 @@ export function OfficeSiteSummary({
           </strong>
           <small>{formatNumber(powerAvailable(loc))} free</small>
         </div>
-        <div className="location-stat">
-          <span className="location-stat-label">Staff on site</span>
-          <strong>{totalWorkforce(roster)}</strong>
-          {pendingHires > 0 && <small>{pendingHires} hiring</small>}
-        </div>
       </div>
       <div className="office-site-expand-row">
         <button
           type="button"
-          className="btn btn-compact office-expand-btn"
+          className="btn office-expand-btn"
           disabled={!canExpand}
           title={expansionBlockerMessage ?? undefined}
           onClick={() =>

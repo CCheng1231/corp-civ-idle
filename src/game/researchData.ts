@@ -386,7 +386,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "portfolio_management",
     "name": "Portfolio Management",
-    "description": "Run more jobs at once — +1 concurrent job engagement per level (base cap 3).",
+    "description": "Run more jobs at once — +1 concurrent task force per level (base cap 3).",
     "category": "unlock",
     "maxLevel": 2,
     "rndLevelRequired": 2,
