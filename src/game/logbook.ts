@@ -8,6 +8,7 @@ import type {
 } from "./types";
 
 export const MAX_ACTIVITY_LOG_ENTRIES = 250;
+export const MAX_SECRETARY_JOB_REPORTS = 20;
 
 export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
   structure_upgrade: "Structure upgrades",
@@ -95,6 +96,47 @@ export function pushActivityLog(
   return [full, ...log].slice(0, MAX_ACTIVITY_LOG_ENTRIES);
 }
 
+/** Pre-return payout rows — secretary waits for the crew-back report. */
+export function isPreReturnJobLog(entry: LogEntry): boolean {
+  return (
+    /^Shift complete:/i.test(entry.summary) ||
+    /^Job completed:/i.test(entry.summary) ||
+    /^Withdrawn from .+ \((early|posting expired)\)$/i.test(entry.summary)
+  );
+}
+
+/** Secretary FYI rows (crew returned summaries, not pre-return payout lines). */
+export function isSecretaryJobReportEntry(
+  entry: Pick<LogEntry, "category" | "summary">,
+): boolean {
+  return (
+    (entry.category === "job_complete" || entry.category === "job_cancel") &&
+    !isPreReturnJobLog(entry as LogEntry)
+  );
+}
+
+/** Undismissed secretary job reports, newest first (activity log order). */
+export function pendingJobReportEntries(state: GameState): LogEntry[] {
+  const dismissed = new Set(state.dismissedJobReportIds ?? []);
+  return state.activityLog.filter(
+    (entry) => isSecretaryJobReportEntry(entry) && !dismissed.has(entry.id),
+  );
+}
+
+/** Auto-dismiss oldest reports when the undismissed queue exceeds the cap. */
+export function trimSecretaryJobReports(
+  state: GameState,
+  cap = MAX_SECRETARY_JOB_REPORTS,
+): GameState {
+  const pending = pendingJobReportEntries(state);
+  if (pending.length <= cap) return state;
+  const dismissed = new Set(state.dismissedJobReportIds ?? []);
+  for (const entry of pending.slice(cap)) {
+    dismissed.add(entry.id);
+  }
+  return { ...state, dismissedJobReportIds: [...dismissed] };
+}
+
 export function appendActivityLogs(
   state: GameState,
   entries: Omit<LogEntry, "id" | "at">[],
@@ -106,7 +148,11 @@ export function appendActivityLogs(
   for (const entry of entries) {
     log = pushActivityLog(log, { ...entry, at: timestamp });
   }
-  return { ...state, activityLog: log };
+  let next: GameState = { ...state, activityLog: log };
+  if (entries.some((entry) => isSecretaryJobReportEntry(entry))) {
+    next = trimSecretaryJobReports(next);
+  }
+  return next;
 }
 
 export function formatLogResourceCost(

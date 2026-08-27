@@ -2,7 +2,13 @@ import { rosterAt, totalWorkforce, formatNumber } from "./constants";
 import type { GameState, LogEntry } from "./types";
 import { activeEngagementCount, maxJobEngagements } from "./jobs";
 import { openJobPostings } from "./jobBoard";
-import { formatLogCostCell, formatLogTimestamp } from "./logbook";
+import {
+  formatLogCostCell,
+  formatLogTimestamp,
+  isPreReturnJobLog,
+  MAX_SECRETARY_JOB_REPORTS,
+  pendingJobReportEntries,
+} from "./logbook";
 
 export const SECRETARY_QUOTES = [
   "Synergy is just teamwork with a slide deck.",
@@ -83,17 +89,6 @@ export function secretaryJobSummary(state: GameState): {
   };
 }
 
-const MAX_JOB_REPORTS = 5;
-
-/** Pre-return payout rows — secretary waits for the crew-back report. */
-export function isPreReturnJobLog(entry: LogEntry): boolean {
-  return (
-    /^Shift complete:/i.test(entry.summary) ||
-    /^Job completed:/i.test(entry.summary) ||
-    /^Withdrawn from .+ \((early|posting expired)\)$/i.test(entry.summary)
-  );
-}
-
 function jobTitleFromReturnLog(summary: string): string | null {
   const match = summary.match(/^Crew returned from (.+)$/i);
   return match?.[1] ?? null;
@@ -129,15 +124,7 @@ export function relatedJobPayoutLog(
 
 /** Undismissed job log entries for the Secretary FYI box. */
 export function pendingJobReports(state: GameState): LogEntry[] {
-  const dismissed = new Set(state.dismissedJobReportIds ?? []);
-  return state.activityLog
-    .filter(
-      (entry) =>
-        (entry.category === "job_complete" || entry.category === "job_cancel") &&
-        !isPreReturnJobLog(entry) &&
-        !dismissed.has(entry.id),
-    )
-    .slice(0, MAX_JOB_REPORTS);
+  return pendingJobReportEntries(state).slice(0, MAX_SECRETARY_JOB_REPORTS);
 }
 
 /** @deprecated Use pendingJobReports */

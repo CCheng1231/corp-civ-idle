@@ -73,24 +73,28 @@ export function OfficeSiteSummary({
   const expansionCostParts = resourceCostParts(expansionCost);
 
   return (
-    <div className="office-site-summary">
-      <div className="office-site-summary-stats">
-        <div className="location-stat">
-          <span className="location-stat-label">Office space</span>
+    <div className="office-site-summary office-site-summary-compact">
+      <div className="office-site-capacity-row">
+        <div className="office-site-capacity-stat">
+          <span className="office-site-capacity-label">Space</span>
           <strong>
-            {formatNumber(loc.officeSpaceUsed)} / {formatNumber(loc.officeSpace)}
+            {formatNumber(loc.officeSpaceUsed)}/{formatNumber(loc.officeSpace)}
           </strong>
-          <small>{formatNumber(freeSpace)} free</small>
+          <span className="muted office-site-capacity-free">
+            {formatNumber(freeSpace)} free
+          </span>
         </div>
-        <div className="location-stat">
-          <span className="location-stat-label">Power</span>
+        <div className="office-site-capacity-stat">
+          <span className="office-site-capacity-label">Power</span>
           <strong>
-            {formatNumber(loc.powerUsed)} / {formatNumber(loc.power)}
+            {formatNumber(loc.powerUsed)}/{formatNumber(loc.power)}
           </strong>
-          <small>{formatNumber(powerAvailable(loc))} free</small>
+          <span className="muted office-site-capacity-free">
+            {formatNumber(powerAvailable(loc))} free
+          </span>
         </div>
       </div>
-      <div className="office-site-expand-row">
+      <div className="office-site-expand-row office-site-expand-row-compact">
         <button
           type="button"
           className="btn office-expand-btn"

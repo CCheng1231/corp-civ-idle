@@ -46,9 +46,11 @@ function initialDrawerSize(): JobBoardDrawerSize {
 interface JobBoardProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  /** Hide section title when nested in Secretary tab. */
+  embedded?: boolean;
 }
 
-export function JobBoard({ state, dispatch }: JobBoardProps) {
+export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
   const now = Date.now();
   const officeId = state.selectedOffice;
   const officeRoster = rosterAt(state, officeId);
@@ -179,10 +181,16 @@ export function JobBoard({ state, dispatch }: JobBoardProps) {
       : options.towers.filter((tower) => tower.region === filters.region);
 
   return (
-    <section className="job-board" aria-labelledby="job-board-title">
-      <header className="job-board-header">
-        <h2 id="job-board-title">Job board</h2>
-      </header>
+    <section
+      className={`job-board${embedded ? " job-board-embedded" : ""}`}
+      aria-labelledby={embedded ? undefined : "job-board-title"}
+      aria-label={embedded ? "Job board" : undefined}
+    >
+      {embedded ? null : (
+        <header className="job-board-header">
+          <h2 id="job-board-title">Job board</h2>
+        </header>
+      )}
 
       <div
         className={`job-board-layout${filtersExpanded ? " filters-expanded" : " filters-collapsed"}`}

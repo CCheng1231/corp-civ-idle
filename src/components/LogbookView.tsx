@@ -9,6 +9,9 @@ import {
   officeLabel,
 } from "../game/logbook";
 import type { GameAction, GameState, LogCategory } from "../game/types";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { tabQuote } from "../game/tabQuotes";
+import logbookPortrait from "../assets/Logbook.jpg";
 
 const LOGBOOK_COL_STORAGE_KEY = "corp-civ-idle-logbook-col-widths";
 
@@ -144,22 +147,32 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
         </p>
       </header>
 
-      <section className="logbook-notes-section" aria-label="Player notes">
-        <textarea
-          className="notes-editor logbook-notes-editor"
-          value={state.playerNotes}
-          onChange={(event) =>
-            dispatch({
-              type: "UPDATE_PLAYER_NOTES",
-              notes: event.target.value,
-            })
-          }
-          placeholder="Bids, research plans, rival gossip…"
-          spellCheck
-          aria-label="Player notes"
-        />
-      </section>
-
+      <TabPortraitLayout
+        src={logbookPortrait}
+        storageKey="corp-civ-idle-logbook-portrait-size"
+        defaultLargeOnDesktop
+        className="logbook-portrait-layout"
+        quote={tabQuote(state, "logbook")}
+        parallaxScroll={false}
+        portraitLayout="fixed"
+        portraitFooter={
+          <section className="logbook-notes-section tab-portrait-notes" aria-label="Player notes">
+            <textarea
+              className="notes-editor logbook-notes-editor"
+              value={state.playerNotes}
+              onChange={(event) =>
+                dispatch({
+                  type: "UPDATE_PLAYER_NOTES",
+                  notes: event.target.value,
+                })
+              }
+              placeholder="Bids, research plans, rival gossip…"
+              spellCheck
+              aria-label="Player notes"
+            />
+          </section>
+        }
+      >
       <div className="logbook-filters" role="tablist" aria-label="Log categories">
         {LOG_FILTER_GROUPS.map((group) => (
           <button
@@ -254,6 +267,7 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
           </p>
         </div>
       )}
+      </TabPortraitLayout>
     </div>
   );
 }

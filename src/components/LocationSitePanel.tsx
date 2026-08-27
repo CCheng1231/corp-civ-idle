@@ -33,10 +33,7 @@ export function LocationSitePanel({
 
   return (
     <article className="location-site-block">
-      <details className="office-site-section" open>
-        <summary>Summary</summary>
-        <OfficeSiteSummary state={state} dispatch={dispatch} officeId={officeId} />
-      </details>
+      <OfficeSiteSummary state={state} dispatch={dispatch} officeId={officeId} />
 
       <details
         className="office-site-section"

@@ -27,6 +27,9 @@ import {
 } from "./upgradePreviewFormat";
 import { StructureCostLine } from "./StructureCostLine";
 import { LocationViewHeader } from "./LocationViewHeader";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { tabQuote } from "../game/tabQuotes";
+import researchPortrait from "../assets/Research.webp";
 import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
 import { buildResearchDetailModel } from "./progressionDetailModel";
 import {
@@ -236,6 +239,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         dispatch={dispatch}
       />
       <div className="location-view-body">
+        <TabPortraitLayout
+          src={researchPortrait}
+          storageKey="corp-civ-idle-research-portrait-size"
+          defaultLargeOnDesktop
+          quote={tabQuote(state, "research")}
+        >
         <QueueSection
           label="Research queue"
           count={researchQueue.length}
@@ -292,6 +301,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             </ProgressionCategorySection>
           );
         })}
+        </TabPortraitLayout>
       </div>
       {detailResearch && (
         <ProgressionDetailDialog

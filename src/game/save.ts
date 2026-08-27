@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
+import { trimSecretaryJobReports } from "./logbook";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
@@ -458,7 +459,8 @@ function normalizeSave(parsed: LegacySave): GameState {
     merged.won = true;
   }
 
-  return finalizeLoadedState(merged, Date.now());
+  const trimmed = trimSecretaryJobReports(merged);
+  return finalizeLoadedState(trimmed, Date.now());
 }
 
 export function loadGameState(): GameState {

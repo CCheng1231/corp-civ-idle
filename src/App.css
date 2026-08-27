@@ -502,6 +502,10 @@
   min-height: 0;
 }
 
+.shortcut-nav-track {
+  display: contents;
+}
+
 .shortcut-link {
   display: flex;
   align-items: center;
@@ -559,6 +563,16 @@
 }
 
 /* Bottom nav — class is only applied when mobileNav is active */
+.layout-mobile-nav,
+.app-shell.viewport-preview-mobile {
+  --mobile-bottom-nav-space: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.layout-mobile-nav .main-panel,
+.app-shell.viewport-preview-mobile .main-panel {
+  padding-bottom: var(--mobile-bottom-nav-space);
+}
+
 .shortcut-sidebar-mobile {
   order: 2;
   position: fixed;
@@ -572,48 +586,70 @@
   border-top: 1px solid var(--border);
   background: rgba(23, 30, 39, 0.98);
   backdrop-filter: blur(12px);
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding: 0.2rem 0.2rem 0;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
   min-height: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-x: contain;
 }
 
 .shortcut-sidebar-mobile .shortcut-nav {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  width: 100%;
+  display: block;
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   gap: 0;
-  padding: 0.14rem 0.06rem;
+  padding: 0;
   overflow: hidden;
+  min-height: 56px;
+  touch-action: pan-x;
+  cursor: grab;
+}
+
+.shortcut-sidebar-mobile .shortcut-nav:active {
+  cursor: grabbing;
+}
+
+.shortcut-sidebar-mobile .shortcut-nav-track-mobile {
+  display: flex;
+  width: 100%;
+  will-change: transform;
 }
 
 .shortcut-sidebar-mobile .shortcut-link {
   box-sizing: border-box;
+  flex: 0 0 20%;
+  width: 20%;
   min-width: 0;
-  max-width: 100%;
-  width: 100%;
-  min-height: 1.65rem;
+  max-width: none;
+  min-height: 56px;
   overflow: hidden;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 0;
-  padding: 0.12rem 0.04rem;
-  font-size: clamp(0.46rem, 2.1vw, 0.54rem);
-  border-radius: 0.25rem;
+  padding: 0.45rem 0.2rem;
+  font-size: max(1rem, 16px);
+  color: #fff;
+  border-radius: 0.45rem;
   text-align: center;
 }
 
 .shortcut-sidebar-mobile .shortcut-link-short {
   box-sizing: border-box;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-shrink: 1;
   min-width: 0;
   width: 100%;
   max-width: 100%;
   display: block;
   font-size: inherit;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  letter-spacing: 0;
   line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -621,8 +657,47 @@
   text-align: center;
 }
 
+.shortcut-sidebar-mobile .shortcut-link.active {
+  background: rgba(232, 238, 245, 0.14);
+  border-color: rgba(232, 238, 245, 0.45);
+}
+
+.shortcut-sidebar-mobile .shortcut-link.active .shortcut-link-short {
+  color: #fff;
+}
+
 .shortcut-sidebar-mobile .shortcut-link-label {
   display: none;
+}
+
+.shortcut-mobile-more {
+  display: flex;
+  flex: 0 0 2.6rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  min-width: 2.6rem;
+  min-height: 56px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shortcut-mobile-more:hover,
+.shortcut-mobile-more:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.shortcut-mobile-chevron {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: block;
 }
 
 .main-view-panel {
@@ -4100,31 +4175,513 @@ body.logbook-col-resizing {
 }
 
 .office-scene {
-  display: grid;
-  grid-template-columns: min(15rem, 100%) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
-.office-scene.secretary-portrait-large {
-  grid-template-columns: min(22rem, 100%) minmax(0, 1fr);
+.tab-scene {
+  width: 100%;
 }
 
-.secretary-intro {
+.tab-hero-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.logbook-portrait-layout .tab-hero-main {
+  min-width: 0;
+}
+
+.tab-portrait-parallax-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  will-change: transform;
+}
+
+.tab-parallax-main {
+  will-change: transform;
+}
+
+/* Home / Hire / Research: tall vertical portrait + parallax drift */
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row {
+  align-items: stretch;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-portrait-column-sticky {
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-portrait-parallax-track {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row .tab-portrait-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row .secretary-portrait-frame {
+  flex: 1 1 auto;
+  aspect-ratio: unset;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 14rem;
+  max-height: none;
+}
+
+.tab-portrait-scene.tab-portrait-stretch.secretary-portrait-large
+  .secretary-portrait-frame {
+  min-height: 24rem;
+  max-height: min(40rem, 68vh);
+}
+
+/* Office sites: capped frame (low-res asset) */
+.tab-portrait-scene.tab-portrait-fixed .tab-sticky-hero-row {
+  align-items: flex-start;
+}
+
+.tab-portrait-scene.tab-portrait-fixed .tab-sticky-hero-row .tab-portrait-wrap {
+  flex: none;
+}
+
+.tab-portrait-scene.tab-portrait-fixed .secretary-portrait-frame {
+  flex: none;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  max-width: 18rem;
+  margin: 0 auto;
+  min-height: 14rem;
+  max-height: min(32rem, 55vh);
+}
+
+.tab-portrait-scene.tab-portrait-fixed.secretary-portrait-large .secretary-portrait-frame {
+  max-width: 22rem;
+  min-height: 18rem;
+  max-height: min(38rem, 62vh);
+}
+
+/* Home / Office sites: fixed tall portrait — HQ/Branch won't resize it */
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed .secretary-portrait-frame {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  flex: none;
+  aspect-ratio: 3 / 4;
+  min-height: 26rem;
+  max-height: min(48rem, 76vh);
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed.secretary-portrait-large
+  .secretary-portrait-frame {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  max-width: 15.5rem;
+  margin: 0 auto;
+  min-height: 40rem;
+  max-height: min(68rem, 90vh);
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large .secretary-hero-row {
+  grid-template-columns: minmax(11rem, 26%) minmax(0, 1fr);
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large
+  .secretary-portrait-column {
+  min-width: 0;
+  align-items: center;
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large .tab-portrait-quote,
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large
+  .secretary-portrait-resize {
+  width: 100%;
+  max-width: 15.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Portrait lock pages (Home, Office sites): frozen header + image, scroll body */
+.main-panel:has(.portrait-lock-page) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0.65rem;
+}
+
+.portrait-lock-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.portrait-lock-page .location-view-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.portrait-lock-layout-body {
+  gap: 0;
+  margin: 0;
+}
+
+.portrait-lock-tab.tab-portrait-scene {
+  flex: 1;
+  min-height: 0;
+}
+
+.portrait-lock-split-right {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.portrait-lock-frozen-header {
+  flex-shrink: 0;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.65rem;
+}
+
+.portrait-lock-frozen-header .main-view-header {
+  margin-bottom: 0;
+}
+
+.portrait-lock-scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-right: 0.15rem;
+}
+
+@media (min-width: 961px) {
+  .tab-portrait-scene.tab-portrait-locked {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tab-portrait-scene.tab-portrait-locked .tab-sticky-hero-row {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    align-items: stretch;
+  }
+
+  .tab-portrait-scene.tab-portrait-locked .tab-portrait-column-sticky {
+    position: relative;
+    top: auto;
+    align-self: stretch;
+    max-height: none;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .tab-portrait-scene.tab-portrait-locked .tab-portrait-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+    .secretary-portrait-frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    height: auto;
+    aspect-ratio: unset;
+  }
+
+  .tab-portrait-scene.tab-portrait-locked .tab-hero-main-scroll {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .portrait-lock-tab.tab-portrait-locked .tab-portrait-column-sticky {
+    padding-top: 0;
+    justify-content: flex-start;
+  }
+
+  .portrait-lock-tab.tab-portrait-locked .tab-portrait-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .main-panel:has(.portrait-lock-page) {
+    overflow: auto;
+    display: block;
+  }
+
+  .portrait-lock-page {
+    display: block;
+  }
+
+  .portrait-lock-page .location-view-body {
+    display: block;
+  }
+
+  .tab-portrait-scene.tab-portrait-locked .tab-hero-main-scroll {
+    overflow: visible;
+    height: auto;
+    max-height: none;
+  }
+
+  .portrait-lock-scroll-body {
+    overflow: visible;
+  }
+
+  .portrait-lock-frozen-header {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.tab-portrait-scene.tab-portrait-tall .secretary-portrait-frame {
+  min-height: 20rem;
+  max-height: min(44rem, 72vh);
+  max-width: 20rem;
+}
+
+.tab-portrait-scene.tab-portrait-tall.secretary-portrait-large .secretary-portrait-frame {
+  min-height: 28rem;
+  max-height: min(52rem, 78vh);
+  max-width: 24rem;
+}
+
+.tab-portrait-scene.tab-portrait-parallax .tab-portrait-column-sticky {
+  overflow: visible;
+}
+
+@media (min-width: 961px) {
+  .tab-portrait-scene.tab-portrait-parallax .tab-portrait-column-sticky {
+    overflow: visible;
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-portrait-parallax-track,
+  .tab-parallax-main {
+    transform: none !important;
+    will-change: auto;
+  }
+}
+
+.tab-sticky-hero-row {
+  align-items: flex-start;
+}
+
+.tab-portrait-column-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+@media (min-width: 961px) {
+  .tab-portrait-column-sticky {
+    position: sticky;
+    top: 0.5rem;
+    align-self: start;
+    max-height: calc(
+      100vh - 0.5rem - var(--mobile-bottom-nav-space, 0px) - 5.5rem
+    );
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
+
+.tab-portrait-quote {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tab-portrait-notes {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.tab-portrait-notes .logbook-notes-editor {
+  min-height: 6.5rem;
+  max-height: 10rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.secretary-work-panel {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  width: min(15rem, 100%);
+  min-width: 0;
 }
 
-.secretary-intro-large {
-  width: min(22rem, 100%);
+.secretary-work-tabs {
+  margin-bottom: 0;
+}
+
+.secretary-work-reports-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.secretary-work-reports-tab .secretary-job-reports-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.secretary-work-reports-tab .secretary-job-reports-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(16rem, 32vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.secretary-work-board-tab .job-board-embedded {
+  margin: 0;
+}
+
+.job-board-embedded .job-board-layout {
+  min-height: 0;
+}
+
+.office-site-summary-compact {
+  margin-bottom: 0.5rem;
+}
+
+.office-site-capacity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.office-site-capacity-stat {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.82rem;
+}
+
+.office-site-capacity-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.office-site-capacity-stat strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88rem;
+}
+
+.office-site-capacity-free {
+  font-size: 0.75rem;
+}
+
+.office-site-expand-row-compact {
+  margin: 0 0 0.75rem;
+}
+
+.office-site-expand-row-compact .office-expand-btn {
+  font-size: 0.82rem;
+  padding: 0.4rem 0.65rem;
+}
+
+.secretary-hero-row {
+  display: grid;
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.office-scene.secretary-portrait-large .secretary-hero-row {
+  grid-template-columns: minmax(22rem, 52%) minmax(0, 1fr);
+}
+
+.secretary-portrait-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.65rem;
+}
+
+.office-scene.secretary-portrait-large .secretary-portrait-column {
+  min-width: 22rem;
+}
+
+.secretary-hero-row .secretary-jobs-panel,
+.secretary-hero-row .secretary-job-reports-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.secretary-hero-row .secretary-job-reports-panel .secretary-panel-head {
+  flex-shrink: 0;
+}
+
+.secretary-hero-row .secretary-job-reports-panel .secretary-job-reports-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.secretary-hero-row .secretary-job-reports-panel .secretary-job-reports-empty {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .secretary-portrait-wrap {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  height: 100%;
 }
 
 .secretary-portrait-resize {
@@ -4132,10 +4689,12 @@ body.logbook-col-resizing {
   min-height: 0;
   padding: 0.32rem 0.55rem;
   font-size: 0.74rem;
+  flex-shrink: 0;
 }
 
 .secretary-portrait-frame {
   width: 100%;
+  min-height: 14rem;
   aspect-ratio: 4 / 5;
   border-radius: 1rem;
   border: 1px solid var(--border);
@@ -4144,13 +4703,24 @@ body.logbook-col-resizing {
   flex-shrink: 0;
 }
 
+.office-scene.secretary-portrait-large .secretary-portrait-frame {
+  min-height: 24rem;
+  max-height: min(40rem, 68vh);
+}
+
 .secretary-quote {
   margin: 0;
-  padding: 0.85rem 0.95rem;
+  padding: 0.75rem 0.95rem;
   border-radius: 0.75rem;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-left: 3px solid rgba(110, 231, 183, 0.55);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.office-scene > .secretary-quote:not(.tab-portrait-quote) {
+  width: 100%;
 }
 
 .secretary-quote p {
@@ -5007,25 +5577,40 @@ body.logbook-col-resizing {
     grid-template-columns: 1fr;
   }
 
-  .office-scene {
-    grid-template-columns: 1fr;
+  .secretary-hero-row {
+    grid-template-columns: minmax(8.5rem, 34%) minmax(0, 1fr);
+    gap: 0.65rem;
   }
 
-  .office-scene.secretary-portrait-large {
-    grid-template-columns: 1fr;
+  .office-scene.secretary-portrait-large .secretary-hero-row {
+    grid-template-columns: minmax(11.5rem, 46%) minmax(0, 1fr);
   }
 
-  .secretary-intro {
-    width: min(15rem, 100%);
-    margin-inline: auto;
+  .office-scene.secretary-portrait-large .secretary-portrait-column {
+    min-width: 11.5rem;
   }
 
-  .secretary-intro-large {
-    width: min(18rem, 72vw);
+  .secretary-portrait-frame {
+    min-height: 10.5rem;
+  }
+
+  .office-scene.secretary-portrait-large .secretary-portrait-frame {
+    min-height: 14.5rem;
+    max-height: min(22rem, 48vh);
   }
 
   .secretary-portrait-resize {
     min-height: 2.25rem;
+    font-size: 0.68rem;
+    padding: 0.28rem 0.4rem;
+  }
+
+  .secretary-quote {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .secretary-quote p {
+    font-size: 0.82rem;
   }
 
   .office-site-staff-list {
@@ -5149,7 +5734,7 @@ body.logbook-col-resizing {
 .app-shell.viewport-preview-mobile .main-panel {
   flex: 1;
   order: 1;
-  padding: 0.75rem 0.85rem calc(2.35rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.75rem 0.85rem var(--mobile-bottom-nav-space);
 }
 
 .app-shell.viewport-preview-mobile .job-board-list th.job-board-col-tower,
@@ -5176,19 +5761,6 @@ body.logbook-col-resizing {
   max-width: none;
 }
 
-.app-shell.viewport-preview-mobile .office-scene {
-  grid-template-columns: 1fr;
-}
-
-.app-shell.viewport-preview-mobile .secretary-intro {
-  width: min(15rem, 100%);
-  margin-inline: auto;
-}
-
-.app-shell.viewport-preview-mobile .secretary-intro-large {
-  width: min(18rem, 72vw);
-}
-
 .app-shell.viewport-preview-mobile .job-board-layout,
 .app-shell.viewport-preview-mobile .job-board-layout.filters-collapsed {
   grid-template-columns: 1fr;
@@ -5196,6 +5768,10 @@ body.logbook-col-resizing {
 
 /* Phone / narrow tablet: bottom nav, scrollable resources, touch targets */
 @media (max-width: 768px) {
+  .app-shell {
+    --mobile-bottom-nav-space: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
   .app-top-chrome {
     padding-top: env(safe-area-inset-top, 0);
   }
@@ -5274,18 +5850,13 @@ body.logbook-col-resizing {
   .main-panel {
     flex: 1;
     order: 1;
-    padding: 0.75rem 0.85rem
-      calc(2.35rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.75rem 0.85rem var(--mobile-bottom-nav-space);
   }
 
   .btn,
   .tab,
   .location-site-select {
     min-height: 2.75rem;
-  }
-
-  .shortcut-sidebar-mobile .shortcut-link {
-    min-height: 1.65rem;
   }
 
   .job-board-results-toolbar .job-board-filters-toggle,

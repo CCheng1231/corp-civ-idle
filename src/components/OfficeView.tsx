@@ -1,7 +1,6 @@
 import type { Dispatch } from "react";
 import { maxJobEngagements } from "../game/jobs";
 import type { GameAction, GameState } from "../game/types";
-import { JobBoard } from "./JobBoard";
 import { LocationViewHeader } from "./LocationViewHeader";
 import { SecretaryBriefing } from "./SecretaryBriefing";
 
@@ -10,6 +9,7 @@ interface OfficeViewProps {
   dispatch: Dispatch<GameAction>;
 }
 
+/** Nav: Secretary — briefing, job reports, and job board. */
 export function OfficeView({ state, dispatch }: OfficeViewProps) {
   const jobCap = maxJobEngagements(state);
 
@@ -28,7 +28,6 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
       />
       <div className="location-view-body">
         <SecretaryBriefing state={state} dispatch={dispatch} />
-        <JobBoard state={state} dispatch={dispatch} />
       </div>
     </div>
   );

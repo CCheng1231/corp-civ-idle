@@ -21,6 +21,9 @@ import type { GameAction, GameState, UnitId } from "../game/types";
 import { RecruitmentQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import { LocationViewHeader } from "./LocationViewHeader";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { tabQuote } from "../game/tabQuotes";
+import recruitmentPortrait from "../assets/Recruitment.png";
 
 interface RecruitmentViewProps {
   state: GameState;
@@ -202,6 +205,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         dispatch={dispatch}
       />
       <div className="location-view-body">
+        <TabPortraitLayout
+          src={recruitmentPortrait}
+          storageKey="corp-civ-idle-recruitment-portrait-size"
+          defaultLargeOnDesktop
+          quote={tabQuote(state, "recruitment")}
+        >
         <QueueSection
           label="Hiring queue"
           count={queue.length}
@@ -275,6 +284,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             </section>
           );
         })}
+        </TabPortraitLayout>
       </div>
     </div>
   );
