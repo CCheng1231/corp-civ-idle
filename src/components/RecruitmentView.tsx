@@ -21,7 +21,14 @@ import type { GameAction, GameState, UnitId } from "../game/types";
 import { RecruitmentQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import { LocationViewHeader } from "./LocationViewHeader";
-import { TabPortraitLayout } from "./TabPortraitLayout";
+import {
+  DUAL_PORTRAIT_TAB_PROPS,
+  TabPortraitLayout,
+  dualPortraitTabClass,
+  portraitLockBodyClass,
+  portraitLockPageClass,
+  useTabPortraitSize,
+} from "./TabPortraitLayout";
 import { tabQuote } from "../game/tabQuotes";
 import recruitmentPortrait from "../assets/Recruitment.png";
 
@@ -83,6 +90,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const pendingHires = queue.reduce((sum, job) => sum + (job.count ?? 1), 0);
   const staffCategorySummary = officeStaffCategorySummary(roster);
   const focusUnitId = state.recruitFocusUnitId ?? null;
+  const portraitStorageKey = "corp-civ-idle-recruitment-portrait-size";
+  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
+    portraitStorageKey,
+    true,
+  );
 
   useEffect(() => {
     if (!focusUnitId) return;
@@ -196,94 +208,114 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     );
   }
 
+  const recruitmentHeader = (
+    <LocationViewHeader
+      title="Recruitment"
+      description="Hire contractors at the selected office — one queue slot per order."
+      state={state}
+      dispatch={dispatch}
+    />
+  );
+
+  const recruitmentBody = (
+    <>
+      <section className="recruitment-site-staff">
+        <div className="recruitment-site-staff-head">
+          <h3 className="recruitment-site-staff-title">
+            Staff at {OFFICE_LABELS[officeId]}
+          </h3>
+          <div className="location-stat recruitment-staff-stat">
+            <span className="location-stat-label">On site</span>
+            <strong>{formatNumber(staffTotal)}</strong>
+            {pendingHires > 0 && (
+              <small>{formatNumber(pendingHires)} hiring</small>
+            )}
+          </div>
+        </div>
+        <p className="recruitment-staff-summary">{staffCategorySummary}</p>
+      </section>
+      <details
+        className="recruitment-roster-details"
+        open={rosterOpen}
+        onToggle={(event) =>
+          setRosterOpen((event.target as HTMLDetailsElement).open)
+        }
+      >
+        <summary className="recruitment-roster-summary">Unit breakdown</summary>
+        {staffTotal > 0 ? (
+          <ul className="office-site-staff-list recruitment-roster-list">
+            {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
+              (unit) => (
+                <li key={unit.id}>
+                  <span className="office-site-staff-role">{unit.name}</span>
+                  <span className="office-site-staff-count">
+                    ×{roster[unit.id] ?? 0}
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        ) : (
+          <p className="muted recruitment-roster-empty">No units at this site.</p>
+        )}
+      </details>
+      <QueueSection
+        label="Hiring queue"
+        count={queue.length}
+        max={MAX_RECRUIT_QUEUE}
+        className="location-queue-section recruitment-queue-section"
+      >
+        <RecruitmentQueueList
+          state={state}
+          jobs={queue}
+          officeId={officeId}
+          dispatch={dispatch}
+          now={now}
+        />
+      </QueueSection>
+      {RECRUITMENT_CATEGORY_ORDER.map((category) => {
+        const units = RECRUITMENT_UNITS.filter(
+          (unit) => unit.category === category,
+        );
+        if (units.length === 0) return null;
+
+        return (
+          <section key={category} className="research-type-section">
+            <h3 className="research-type-heading">{CATEGORY_LABELS[category]}</h3>
+            <ul className="structure-list recruitment-grid">
+              {units.map(renderUnitCard)}
+            </ul>
+          </section>
+        );
+      })}
+    </>
+  );
+
   return (
-    <div className="main-view-panel location-view-panel">
-      <LocationViewHeader
-        title="Recruitment"
-        description="Hire contractors at the selected office — one queue slot per order."
-        state={state}
-        dispatch={dispatch}
-      />
-      <div className="location-view-body">
+    <div
+      className={`main-view-panel location-view-panel ${portraitLockPageClass(portraitLarge)}`}
+    >
+      {portraitLarge ? recruitmentHeader : null}
+      <div
+        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
+      >
         <TabPortraitLayout
           src={recruitmentPortrait}
-          storageKey="corp-civ-idle-recruitment-portrait-size"
-          defaultLargeOnDesktop
+          storageKey={portraitStorageKey}
+          portraitSize={portraitSize}
+          onPortraitSizeChange={setPortraitSize}
           quote={tabQuote(state, "recruitment")}
+          {...DUAL_PORTRAIT_TAB_PROPS}
+          className={dualPortraitTabClass(portraitLarge)}
         >
-        <QueueSection
-          label="Hiring queue"
-          count={queue.length}
-          max={MAX_RECRUIT_QUEUE}
-          className="location-queue-section recruitment-queue-section"
-        >
-          <RecruitmentQueueList
-            state={state}
-            jobs={queue}
-            officeId={officeId}
-            dispatch={dispatch}
-            now={now}
-          />
-        </QueueSection>
-        <section className="recruitment-site-staff">
-          <div className="recruitment-site-staff-head">
-            <h3 className="recruitment-site-staff-title">
-              Staff at {OFFICE_LABELS[officeId]}
-            </h3>
-            <div className="location-stat recruitment-staff-stat">
-              <span className="location-stat-label">On site</span>
-              <strong>{formatNumber(staffTotal)}</strong>
-              {pendingHires > 0 && (
-                <small>{formatNumber(pendingHires)} hiring</small>
-              )}
+          {portraitLarge ? recruitmentBody : (
+            <div className="portrait-lock-split-right">
+              <div className="portrait-lock-frozen-header">
+                {recruitmentHeader}
+              </div>
+              <div className="portrait-lock-scroll-body">{recruitmentBody}</div>
             </div>
-          </div>
-          <p className="recruitment-staff-summary">{staffCategorySummary}</p>
-        </section>
-        <details
-          className="recruitment-roster-details"
-          open={rosterOpen}
-          onToggle={(event) =>
-            setRosterOpen((event.target as HTMLDetailsElement).open)
-          }
-        >
-          <summary className="recruitment-roster-summary">
-            Unit breakdown
-          </summary>
-          {staffTotal > 0 ? (
-            <ul className="office-site-staff-list recruitment-roster-list">
-              {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
-                (unit) => (
-                  <li key={unit.id}>
-                    <span className="office-site-staff-role">{unit.name}</span>
-                    <span className="office-site-staff-count">
-                      ×{roster[unit.id] ?? 0}
-                    </span>
-                  </li>
-                ),
-              )}
-            </ul>
-          ) : (
-            <p className="muted recruitment-roster-empty">No units at this site.</p>
           )}
-        </details>
-        {RECRUITMENT_CATEGORY_ORDER.map((category) => {
-          const units = RECRUITMENT_UNITS.filter(
-            (unit) => unit.category === category,
-          );
-          if (units.length === 0) return null;
-
-          return (
-            <section key={category} className="research-type-section">
-              <h3 className="research-type-heading">
-                {CATEGORY_LABELS[category]}
-              </h3>
-              <ul className="structure-list recruitment-grid">
-                {units.map(renderUnitCard)}
-              </ul>
-            </section>
-          );
-        })}
         </TabPortraitLayout>
       </div>
     </div>

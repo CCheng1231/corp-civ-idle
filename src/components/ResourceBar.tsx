@@ -1,10 +1,10 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   aggregateCategoryRoster,
   RESOURCE_LABELS,
   RESOURCE_BAR_KEYS,
   normalizeResourceWallet,
-  formatNumber,
-  formatResourceFull,
+  formatResourceShort,
   PHASE_LABELS,
   WIN_NET_WORTH,
   totalWorkforce,
@@ -41,15 +41,80 @@ function ResourceChip({
   const rate = state.rates[resourceKey] ?? 0;
   const breakdown = resourceRateBreakdown(state, resourceKey);
   const label = RESOURCE_LABELS[resourceKey];
+  const tipId = `resource-tip-${resourceKey}`;
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  const positionTip = useCallback(() => {
+    const wrap = wrapRef.current;
+    const tip = tipRef.current;
+    if (!wrap || !tip) return;
+
+    const tipRect = tip.getBoundingClientRect();
+    const rect = wrap.getBoundingClientRect();
+    const margin = 6;
+    let left = rect.left;
+    let top = rect.bottom + margin;
+
+    if (left + tipRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - tipRect.width - margin;
+    }
+    if (top + tipRect.height > window.innerHeight - margin) {
+      top = rect.top - tipRect.height - margin;
+    }
+    left = Math.max(margin, left);
+    top = Math.max(margin, top);
+
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  }, []);
+
+  useEffect(() => {
+    const tip = tipRef.current;
+    if (!open) {
+      if (tip) {
+        tip.style.left = "";
+        tip.style.top = "";
+      }
+      return;
+    }
+
+    const run = () => positionTip();
+    run();
+    window.addEventListener("scroll", run, true);
+    window.addEventListener("resize", run);
+    return () => {
+      window.removeEventListener("scroll", run, true);
+      window.removeEventListener("resize", run);
+    };
+  }, [open, positionTip]);
 
   return (
-    <div className="resource-chip-wrap">
-      <div className="resource-chip" tabIndex={0}>
+    <div
+      ref={wrapRef}
+      className="resource-chip-wrap"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        className="resource-chip"
+        aria-expanded={open}
+        aria-describedby={open ? tipId : undefined}
+        onClick={() => setOpen((prev) => !prev)}
+        onBlur={(event) => {
+          if (!wrapRef.current?.contains(event.relatedTarget as Node)) {
+            setOpen(false);
+          }
+        }}
+      >
         <div className="resource-chip-main">
           <span className="resource-label">{label}</span>
-          <span className="resource-value">{formatResourceFull(amount)}</span>
+          <span className="resource-value">{formatResourceShort(amount)}</span>
           <span className="resource-rate">
-            +{formatResourceFull(rate)}
+            +{formatResourceShort(rate)}
             {RATE_UNIT_LABEL}
           </span>
         </div>
@@ -73,13 +138,18 @@ function ResourceChip({
             />
           )}
         </div>
-      </div>
-      <div className="resource-chip-tip" role="tooltip">
+      </button>
+      <div
+        ref={tipRef}
+        id={tipId}
+        className={`resource-chip-tip${open ? " resource-chip-tip-visible" : ""}`}
+        role="tooltip"
+      >
         <div className="resource-chip-tip-title">{label}</div>
         <div className="resource-chip-tip-cap">
           {hasCap
-            ? `${formatResourceFull(amount)} / ${formatResourceFull(cap!)} cap (${capPercent!.toFixed(1)}%)`
-            : `${formatResourceFull(amount)} — no holding cap`}
+            ? `${formatResourceShort(amount)} / ${formatResourceShort(cap!)} cap (${capPercent!.toFixed(1)}%)`
+            : `${formatResourceShort(amount)} — no holding cap`}
         </div>
         <div className="resource-chip-tip-rate-head">
           <span>Rate</span>
@@ -116,36 +186,43 @@ export function ResourceBar({ state }: ResourceBarProps) {
 
   return (
     <header className="resource-bar">
-      <div className="brand">
-        <span className="brand-mark">CC</span>
-        <strong>Corp Civ Idle</strong>
-        <span className="phase-tag">{PHASE_LABELS[state.phase]}</span>
-      </div>
-      <div className="resource-grid">
-        {RESOURCE_BAR_KEYS.map((key) => (
-          <ResourceChip
-            key={key}
-            state={state}
-            resourceKey={key}
-            amount={resources[key]}
-            cap={resourceCapForKey(caps, key)}
-          />
-        ))}
-      </div>
-      <div
-        className="net-worth"
-        title={`${staffSummary}. Power per office on map.`}
-      >
-        <div className="net-worth-row">
-          <span className="net-worth-label">Net worth</span>
-          <strong>{formatNumber(state.netWorth)}</strong>
-          <span className="net-worth-goal">/ {formatNumber(WIN_NET_WORTH)}</span>
+      <div className="resource-bar-row">
+        <div className="brand">
+          <span className="brand-mark">CC</span>
+          <strong>Corp Civ Idle</strong>
+          <span className="phase-tag">{PHASE_LABELS[state.phase]}</span>
         </div>
-        <div className="goal-bar" aria-label="Progress to win condition">
+        <div className="resource-grid">
+          {RESOURCE_BAR_KEYS.map((key) => (
+            <ResourceChip
+              key={key}
+              state={state}
+              resourceKey={key}
+              amount={resources[key]}
+              cap={resourceCapForKey(caps, key)}
+            />
+          ))}
+        </div>
+        <div
+          className="net-worth"
+          title={`${staffSummary}. Power per office on map.`}
+        >
+          <div className="net-worth-row">
+            <span className="net-worth-label">NW</span>
+            <strong>{formatResourceShort(state.netWorth)}</strong>
+            <span className="net-worth-goal">
+              / {formatResourceShort(WIN_NET_WORTH)}
+            </span>
+          </div>
           <div
-            className="goal-bar-fill"
-            style={{ width: `${goalProgress}%` }}
-          />
+            className="goal-bar"
+            aria-label={`${goalProgress.toFixed(0)}% to win`}
+          >
+            <div
+              className="goal-bar-fill"
+              style={{ width: `${goalProgress}%` }}
+            />
+          </div>
         </div>
       </div>
     </header>

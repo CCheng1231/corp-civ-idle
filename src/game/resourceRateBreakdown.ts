@@ -1,4 +1,4 @@
-import { OFFICE_IDS, RESEARCH, formatResourceFull } from "./constants";
+import { OFFICE_IDS, RESEARCH, formatResourceShort } from "./constants";
 import {
   formatSiteRateBonusPercent,
   officeDisplayName,
@@ -94,5 +94,5 @@ export function resourceRateBreakdown(
 
 export function formatRateAmount(amount: number): string {
   const prefix = amount >= 0 ? "+" : "";
-  return `${prefix}${formatResourceFull(amount)}${RATE_UNIT_LABEL}`;
+  return `${prefix}${formatResourceShort(amount)}${RATE_UNIT_LABEL}`;
 }

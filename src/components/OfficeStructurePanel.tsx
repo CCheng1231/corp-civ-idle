@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from "react";
+import { useState, type Dispatch, type ReactNode } from "react";
 import {
   structurePanelStructures,
   STRUCTURE_CATEGORY_LABELS,
@@ -106,12 +106,15 @@ interface OfficeStructurePanelProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
+  /** Site capacity / expansion — shown after build queue (Hire tab pattern). */
+  siteSummary?: ReactNode;
 }
 
 export function OfficeStructurePanel({
   state,
   dispatch,
   officeId,
+  siteSummary,
 }: OfficeStructurePanelProps) {
   const locationStructures = state.structureLevelsByLocation[officeId];
   const projectedStructures = projectedStructureLevels(state, officeId);
@@ -362,6 +365,7 @@ export function OfficeStructurePanel({
         label="Build queue"
         count={buildQueue.length}
         max={MAX_STRUCTURE_QUEUE}
+        className="location-queue-section office-build-queue-section"
         headerExtra={
           <label className="progression-hide-completed-check">
             <input
@@ -381,6 +385,7 @@ export function OfficeStructurePanel({
           now={now}
         />
       </QueueSection>
+      {siteSummary}
       {STRUCTURE_CATEGORY_ORDER.map((category) => {
         const items = structurePanelStructures().filter(
           (structure) => structure.category === category,

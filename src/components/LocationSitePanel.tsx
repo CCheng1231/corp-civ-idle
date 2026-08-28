@@ -14,41 +14,22 @@ export function LocationSitePanel({
   dispatch,
   officeId,
 }: LocationSitePanelProps) {
-  const sectionPrefs = state.settings.officeSiteSections[officeId];
-
-  function setStructuresOpen(open: boolean) {
-    dispatch({
-      type: "UPDATE_SETTINGS",
-      settings: {
-        officeSiteSections: {
-          ...state.settings.officeSiteSections,
-          [officeId]: {
-            ...sectionPrefs,
-            structuresOpen: open,
-          },
-        },
-      },
-    });
-  }
-
   return (
-    <article className="location-site-block">
-      <OfficeSiteSummary state={state} dispatch={dispatch} officeId={officeId} />
-
-      <details
-        className="office-site-section"
-        open={sectionPrefs.structuresOpen}
-        onToggle={(e) =>
-          setStructuresOpen((e.currentTarget as HTMLDetailsElement).open)
+    <article className="location-site-block office-sites-panel">
+      <OfficeStructurePanel
+        state={state}
+        dispatch={dispatch}
+        officeId={officeId}
+        siteSummary={
+          <section className="office-site-capacity-section">
+            <OfficeSiteSummary
+              state={state}
+              dispatch={dispatch}
+              officeId={officeId}
+            />
+          </section>
         }
-      >
-        <summary>Structure upgrades</summary>
-        <OfficeStructurePanel
-          state={state}
-          dispatch={dispatch}
-          officeId={officeId}
-        />
-      </details>
+      />
     </article>
   );
 }

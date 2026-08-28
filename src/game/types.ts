@@ -562,6 +562,7 @@ export type GameAction =
     }
   | { type: "SET_LOGBOOK_FILTER"; filterId: string }
   | { type: "CLEAR_LOGBOOK_HIGHLIGHT" }
+  | { type: "CLEAR_ACTIVITY_LOG" }
   | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
   | { type: "CLEAR_ALL_JOB_REPORTS" }
   | { type: "DISMISS_OFFLINE_SUMMARY" }

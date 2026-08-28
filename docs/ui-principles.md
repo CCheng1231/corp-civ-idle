@@ -8,13 +8,14 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
 
 1. **This file** — philosophy, file map, recent state.
 2. **`.cursor/rules/player-view-ui.mdc`** — always-applied rules for `src/components/**` and `src/App.css`.
-3. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
-4. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
+3. **`.cursor/rules/cross-platform-layout.mdc`** — Android / iOS / PC scaling, safe areas, 48px touch targets.
+4. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
+5. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
    - Research → `ResearchView.tsx`
    - Structures → `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
    - Recruitment → `RecruitmentView.tsx`
-5. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
-6. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
+6. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
+7. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
 
 Optional if touching balance copy or unlocks: `scripts/build-research-data.mjs`, `scripts/build-structure-balance.mjs` (sheet placeholders stay here, not in player copy).
 

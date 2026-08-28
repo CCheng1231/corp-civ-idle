@@ -779,6 +779,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "CLEAR_LOGBOOK_HIGHLIGHT":
       return { ...state, logbookHighlightEntryId: null };
 
+    case "CLEAR_ACTIVITY_LOG":
+      return {
+        ...state,
+        activityLog: [],
+        logbookHighlightEntryId: null,
+      };
+
     case "DISMISS_JOB_REPORT": {
       const dismissed = state.dismissedJobReportIds ?? [];
       if (dismissed.includes(action.logEntryId)) {

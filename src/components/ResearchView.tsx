@@ -27,7 +27,14 @@ import {
 } from "./upgradePreviewFormat";
 import { StructureCostLine } from "./StructureCostLine";
 import { LocationViewHeader } from "./LocationViewHeader";
-import { TabPortraitLayout } from "./TabPortraitLayout";
+import {
+  DUAL_PORTRAIT_TAB_PROPS,
+  TabPortraitLayout,
+  dualPortraitTabClass,
+  portraitLockBodyClass,
+  portraitLockPageClass,
+  useTabPortraitSize,
+} from "./TabPortraitLayout";
 import { tabQuote } from "../game/tabQuotes";
 import researchPortrait from "../assets/Research.webp";
 import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
@@ -65,6 +72,11 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   const [hideCompleted, setHideCompleted] = useState(false);
   const [detailResearch, setDetailResearch] = useState<ResearchDefinition | null>(
     null,
+  );
+  const portraitStorageKey = "corp-civ-idle-research-portrait-size";
+  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
+    portraitStorageKey,
+    true,
   );
 
   function openResearchDetail(research: ResearchDefinition) {
@@ -230,21 +242,8 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     );
   }
 
-  return (
-    <div className="main-view-panel location-view-panel">
-      <LocationViewHeader
-        title="Research"
-        description="Firm-wide tech tree at the selected office."
-        state={state}
-        dispatch={dispatch}
-      />
-      <div className="location-view-body">
-        <TabPortraitLayout
-          src={researchPortrait}
-          storageKey="corp-civ-idle-research-portrait-size"
-          defaultLargeOnDesktop
-          quote={tabQuote(state, "research")}
-        >
+  const researchCatalog = (
+    <>
         <QueueSection
           label="Research queue"
           count={researchQueue.length}
@@ -301,6 +300,41 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             </ProgressionCategorySection>
           );
         })}
+    </>
+  );
+
+  const researchHeader = (
+    <LocationViewHeader
+      title="Research"
+      description="Firm-wide tech tree at the selected office."
+      state={state}
+      dispatch={dispatch}
+    />
+  );
+
+  return (
+    <div
+      className={`main-view-panel location-view-panel ${portraitLockPageClass(portraitLarge)}`}
+    >
+      {portraitLarge ? researchHeader : null}
+      <div
+        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
+      >
+        <TabPortraitLayout
+          src={researchPortrait}
+          storageKey={portraitStorageKey}
+          portraitSize={portraitSize}
+          onPortraitSizeChange={setPortraitSize}
+          quote={tabQuote(state, "research")}
+          {...DUAL_PORTRAIT_TAB_PROPS}
+          className={dualPortraitTabClass(portraitLarge)}
+        >
+          {portraitLarge ? researchCatalog : (
+            <div className="portrait-lock-split-right">
+              <div className="portrait-lock-frozen-header">{researchHeader}</div>
+              <div className="portrait-lock-scroll-body">{researchCatalog}</div>
+            </div>
+          )}
         </TabPortraitLayout>
       </div>
       {detailResearch && (

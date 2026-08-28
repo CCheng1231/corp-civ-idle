@@ -995,7 +995,23 @@ export function canAffordCostPart(
   return state.resources[k] >= part.amount;
 }
 
-/** Top resource bar — no K/M shortening; locale grouping for readability. */
+/** Resource bar & compact UI — 1000 → 1k, 100000 → 100k */
+export function formatResourceShort(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  const n = Math.abs(value) < 1e-9 ? 0 : value;
+  if (n >= 1_000_000) {
+    const scaled = n / 1_000_000;
+    return `${scaled % 1 === 0 ? scaled : scaled.toFixed(1)}m`;
+  }
+  if (n >= 1_000) {
+    const scaled = n / 1_000;
+    return `${scaled % 1 === 0 ? scaled : scaled.toFixed(1)}k`;
+  }
+  if (Math.abs(n - Math.round(n)) < 1e-6) return String(Math.round(n));
+  return n.toFixed(n < 10 ? 1 : 0);
+}
+
+/** Top resource bar detail / sheets — locale grouping, no shortening. */
 export function formatResourceFull(value: number): string {
   if (!Number.isFinite(value)) return "0";
   const n = Math.abs(value) < 1e-9 ? 0 : value;

@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { DraggableTabPortraitFrame } from "./DraggableTabPortraitFrame";
 import { useTabPortraitParallax } from "../hooks/useTabPortraitParallax";
 
-type PortraitSize = "compact" | "large";
+export type PortraitSize = "compact" | "large";
 
 function initialPortraitSize(
   storageKey: string,
@@ -23,6 +24,57 @@ function initialPortraitSize(
   return "compact";
 }
 
+export function portraitPanStorageKeyFor(storageKey: string): string {
+  return storageKey.endsWith("-portrait-size")
+    ? storageKey.replace(/-portrait-size$/, "-portrait-pan")
+    : `${storageKey}-pan`;
+}
+
+/** Compact = portrait lock; large = Hire-style stretch at same column width. */
+export const DUAL_PORTRAIT_TAB_PROPS = {
+  largePortraitLikeHire: true,
+  portraitLayout: "fixed" as const,
+  parallaxScroll: false,
+  portraitLocked: true,
+};
+
+export function dualPortraitTabClass(portraitLarge: boolean): string {
+  return portraitLarge
+    ? "tab-portrait-hire-stretch"
+    : "tab-portrait-vertical-layout portrait-lock-tab";
+}
+
+export function portraitLockPageClass(portraitLarge: boolean): string {
+  return portraitLarge ? "" : "portrait-lock-page";
+}
+
+export function portraitLockBodyClass(portraitLarge: boolean): string {
+  return portraitLarge ? "" : "portrait-lock-layout-body";
+}
+
+export function useTabPortraitSize(
+  storageKey: string,
+  defaultLargeOnDesktop = false,
+) {
+  const [portraitSize, setPortraitSize] = useState<PortraitSize>(() =>
+    initialPortraitSize(storageKey, defaultLargeOnDesktop),
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, portraitSize);
+    } catch {
+      /* ignore */
+    }
+  }, [portraitSize, storageKey]);
+
+  return {
+    portraitSize,
+    setPortraitSize,
+    portraitLarge: portraitSize === "large",
+  };
+}
+
 export function TabPortraitQuote({ quote }: { quote: string }) {
   return (
     <blockquote className="secretary-quote tab-portrait-quote">
@@ -35,20 +87,28 @@ interface TabPortraitLayoutProps {
   src: string;
   storageKey: string;
   defaultLargeOnDesktop?: boolean;
+  portraitSize?: PortraitSize;
+  onPortraitSizeChange?: (size: PortraitSize) => void;
   className?: string;
   quote?: string;
   portraitFooter?: ReactNode;
   /** Extra vertical span for Secretary portrait column. */
   tallPortrait?: boolean;
   /**
-   * stretch — tall portrait grows with right column (Home, Hire, Research).
-   * fixed — capped frame (Office sites).
+   * stretch — tall portrait grows with right column (Hire, Research).
+   * fixed — capped frame (Home, Office portrait lock).
    */
   portraitLayout?: "stretch" | "fixed";
   /** Slower left-column drift vs right content while scrolling. */
   parallaxScroll?: boolean;
   /** Right column scrolls; portrait stays visible (Home tab). */
   portraitLocked?: boolean;
+  /**
+   * Office tab: compact = frozen portrait lock; large = stretch + parallax like Hire.
+   */
+  largePortraitLikeHire?: boolean;
+  /** Office tab: drag to pan portrait; persists offset; default = centered crop. */
+  portraitPanStorageKey?: string;
   children: ReactNode;
 }
 
@@ -60,6 +120,8 @@ export function TabPortraitLayout({
   src,
   storageKey,
   defaultLargeOnDesktop = false,
+  portraitSize: portraitSizeProp,
+  onPortraitSizeChange,
   className = "",
   quote,
   portraitFooter,
@@ -67,25 +129,39 @@ export function TabPortraitLayout({
   portraitLayout = "stretch",
   parallaxScroll = true,
   portraitLocked = false,
+  largePortraitLikeHire = false,
+  portraitPanStorageKey,
   children,
 }: TabPortraitLayoutProps) {
-  const [portraitSize, setPortraitSize] = useState<PortraitSize>(() =>
+  const [internalSize, setInternalSize] = useState<PortraitSize>(() =>
     initialPortraitSize(storageKey, defaultLargeOnDesktop),
   );
+  const portraitSize = portraitSizeProp ?? internalSize;
+  const setPortraitSize = onPortraitSizeChange ?? setInternalSize;
+  const basePanStorageKey =
+    portraitPanStorageKey ?? portraitPanStorageKeyFor(storageKey);
+  const effectivePanStorageKey = `${basePanStorageKey}-${portraitSize}`;
   const portraitLarge = portraitSize === "large";
-  const layout: "stretch" | "fixed" =
-    tallPortrait ? "fixed" : portraitLayout;
+  const hireStretch = largePortraitLikeHire && portraitLarge;
+  const layout: "stretch" | "fixed" = hireStretch
+    ? "stretch"
+    : tallPortrait
+      ? "fixed"
+      : portraitLayout;
+  const effectiveParallax = hireStretch ? true : parallaxScroll;
+  const effectiveLocked = hireStretch ? false : portraitLocked;
   const { sceneRef, portraitTrackRef, mainTrackRef } = useTabPortraitParallax(
-    parallaxScroll && !portraitLocked,
+    effectiveParallax && !effectiveLocked,
   );
 
   useEffect(() => {
+    if (portraitSizeProp !== undefined) return;
     try {
       localStorage.setItem(storageKey, portraitSize);
     } catch {
       /* ignore */
     }
-  }, [portraitSize, storageKey]);
+  }, [portraitSize, portraitSizeProp, storageKey]);
 
   const sceneClass = [
     "tab-scene",
@@ -94,43 +170,52 @@ export function TabPortraitLayout({
     layout === "fixed" ? "tab-portrait-fixed" : "tab-portrait-stretch",
     tallPortrait ? "tab-portrait-tall" : "",
     portraitLarge ? "secretary-portrait-large" : "",
-    parallaxScroll && !portraitLocked ? "tab-portrait-parallax" : "",
-    portraitLocked ? "tab-portrait-locked" : "",
+    effectiveParallax && !effectiveLocked ? "tab-portrait-parallax" : "",
+    effectiveLocked ? "tab-portrait-locked" : "",
     className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const togglePortraitSize = () =>
+    setPortraitSize(portraitLarge ? "compact" : "large");
+
+  const quoteOverlay = Boolean(quote);
+
+  const portraitWrapClass = [
+    "secretary-portrait-wrap",
+    "tab-portrait-wrap",
+    quoteOverlay ? "tab-portrait-stack" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   const portraitColumnBody = (
     <>
-      <div className="secretary-portrait-wrap tab-portrait-wrap">
-        <div className="secretary-portrait-frame">
-          <img src={src} alt="" className="secretary-portrait" aria-hidden />
-        </div>
-        <button
-          type="button"
-          className="tab secretary-portrait-resize"
-          aria-pressed={portraitLarge}
-          onClick={() =>
-            setPortraitSize((size) => (size === "large" ? "compact" : "large"))
-          }
-        >
-          {portraitLarge ? "Smaller portrait" : "Larger portrait"}
-        </button>
+      <div className={portraitWrapClass}>
+        <DraggableTabPortraitFrame
+          src={src}
+          panStorageKey={effectivePanStorageKey}
+          onPortraitToggle={togglePortraitSize}
+        />
+        {quoteOverlay ? (
+          <div className="tab-portrait-quote-foot">
+            <TabPortraitQuote quote={quote!} />
+          </div>
+        ) : null}
       </div>
-      {quote ? <TabPortraitQuote quote={quote} /> : null}
       {portraitFooter}
     </>
   );
 
   return (
     <div
-      ref={parallaxScroll && !portraitLocked ? sceneRef : undefined}
+      ref={effectiveParallax && !effectiveLocked ? sceneRef : undefined}
       className={sceneClass}
     >
       <div className="secretary-hero-row tab-sticky-hero-row">
         <div className="secretary-portrait-column tab-portrait-column-sticky">
-          {parallaxScroll && !portraitLocked ? (
+          {effectiveParallax && !effectiveLocked ? (
             <div
               ref={portraitTrackRef}
               className="tab-portrait-parallax-track tab-portrait-side"
@@ -142,8 +227,8 @@ export function TabPortraitLayout({
           )}
         </div>
         <div
-          ref={parallaxScroll && !portraitLocked ? mainTrackRef : undefined}
-          className={`tab-hero-main${parallaxScroll && !portraitLocked ? " tab-parallax-main" : ""}${portraitLocked ? " tab-hero-main-scroll" : ""}`}
+          ref={effectiveParallax && !effectiveLocked ? mainTrackRef : undefined}
+          className={`tab-hero-main${effectiveParallax && !effectiveLocked ? " tab-parallax-main" : ""}${effectiveLocked ? " tab-hero-main-scroll" : ""}`}
         >
           {children}
         </div>

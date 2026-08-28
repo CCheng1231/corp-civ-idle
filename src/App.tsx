@@ -33,7 +33,7 @@ function App() {
   }, [state.settings.uiScale]);
 
   return (
-    <div className={`app-shell${viewportClass}`}>
+    <div className={`app-shell${viewportClass}${mobileNav ? " app-shell-mobile-nav" : ""}`}>
       {state.pendingOfflineSummary ? (
         <OfflineWelcomeDialog
           summary={state.pendingOfflineSummary}

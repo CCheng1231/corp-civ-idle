@@ -1,0 +1,29 @@
+---
+description: Cross-platform UI scaling — Android, iOS, PC (logical units, safe areas, touch targets)
+globs: src/components/**/*.tsx,src/App.css,src/index.css
+alwaysApply: true
+---
+
+# Cross-platform layout (corp-civ-idle)
+
+Target platforms: **Android, iOS, and PC**. Treat UI as a responsive game shell, not a fixed phone resolution.
+
+## Scaling rules (strict)
+
+1. **Never hardcode physical hardware pixels** (e.g. 1080×2340). Dev preview frames (e.g. 360×780) are for testing only — not runtime layout targets.
+
+2. **Logical dimensions** — Base UI math on **CSS/logical units**. Baseline viewport width: **360–393** logical units. Prefer `rem`, `%`, `flex`, `minmax()`, `clamp()` over fixed px tied to a single device.
+
+3. **Flexible layout** — Use **Flexbox / Grid**, min/max constraints, and proportional columns so UI scales across **16:9 through ~21:9** aspect ratios without separate fixed layouts per device.
+
+4. **Safe areas** — Respect **`env(safe-area-inset-*)`** at top and bottom (and sides when needed) for notches, punch holes, and home indicators (Samsung S24, iPhone 15/16, etc.). Combine with `--mobile-bottom-nav-space`; do not place critical UI under system gestures.
+
+5. **Touch targets** — Interactive controls (buttons, tabs, nav, toggles) need **≥ 48×48 logical units** minimum hit area on touch platforms (`min-height` / `min-width` + padding).
+
+## PC
+
+Same system: wider breakpoints and flex growth — not a separate hardcoded phone layout.
+
+## New chat
+
+Read with [`AGENTS.md`](../../AGENTS.md) and [`player-view-ui.mdc`](player-view-ui.mdc) before UI/layout work.
