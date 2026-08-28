@@ -6,6 +6,7 @@ import {
   resetGameState,
 } from "../game/save";
 import { DevTimeSkip } from "./DevTimeSkip";
+import { AudioControls } from "./AudioControls";
 import type { GameAction, GameState } from "../game/types";
 
 interface SettingsViewProps {
@@ -137,6 +138,18 @@ export function SettingsView({ state, dispatch }: SettingsViewProps) {
         <p className="muted setting-hint">
           Override responsive layout for UI testing. Mobile forces bottom nav and
           phone-style breakpoints on any window size.
+        </p>
+      </section>
+
+      <section className="settings-block">
+        <h3>Audio</h3>
+        <AudioControls
+          settings={state.settings}
+          dispatch={dispatch}
+          variant="settings"
+        />
+        <p className="muted setting-hint">
+          Background music plays while the game is open.
         </p>
       </section>
 

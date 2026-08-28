@@ -11,6 +11,7 @@ import {
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
 import { pushCompletionAlert } from "./completionAlerts";
 import { formatNumber, OFFICE_LABELS } from "./constants";
+import { resolveOfficeLocation } from "./officeSelection";
 import type {
   CompletionBand,
   GameState,
@@ -768,7 +769,7 @@ export function engageJobPosting(
   if (posting.expiresAt <= now) return state;
 
   const def = jobDefinitionById(posting.definitionId);
-  const officeId = state.selectedOffice;
+  const officeId = resolveOfficeLocation(state);
   const roster = state.contractorsByLocation[officeId];
   if (!canAssignFromRoster(roster, crewAssigned)) return state;
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) return state;
@@ -826,6 +827,9 @@ export function validateEngagementAssignment(
   const def = jobDefinitionById(posting.definitionId);
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) {
     return `Requires ${def.requiredCategory} units tier ${def.minUnitTier}+`;
+  }
+  if (state.selectedOffice === "all") {
+    return "Pick an office";
   }
   const roster = state.contractorsByLocation[state.selectedOffice];
   if (!canAssignFromRoster(roster, crewAssigned)) {

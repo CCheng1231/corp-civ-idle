@@ -11,10 +11,10 @@ import type { GameAction, GameState, MainView } from "../game/types";
 const SHORTCUTS: { view: MainView; label: string; short: string }[] = [
   { view: "world", label: "World map", short: "World" },
   { view: "overview", label: "Overview", short: "Home" },
-  { view: "operations", label: "Office sites", short: "Office" },
-  { view: "recruitment", label: "Recruitment", short: "Hire" },
-  { view: "research", label: "Research", short: "R&D" },
-  { view: "office", label: "Secretary", short: "Sec" },
+  { view: "operations", label: "Office", short: "Office" },
+  { view: "recruitment", label: "Recruit", short: "Recruit" },
+  { view: "research", label: "R&D", short: "R&D" },
+  { view: "office", label: "Sec", short: "Sec" },
   { view: "logbook", label: "Notes & logbook", short: "Log" },
   { view: "settings", label: "Settings", short: "Set" },
 ];
@@ -237,10 +237,10 @@ export function ShortcutSidebar({
 export const MAIN_VIEW_TITLES: Record<MainView, string> = {
   overview: "HQ overview",
   world: "World map",
-  operations: "Office sites & upgrades",
-  recruitment: "Recruitment",
-  research: "Research",
-  office: "Office / Secretary",
+  operations: "Office & upgrades",
+  recruitment: "Recruit contractors",
+  research: "R&D — firm-wide tech",
+  office: "Sec — jobs & reports",
   logbook: "Notes & logbook",
   settings: "Settings",
 };

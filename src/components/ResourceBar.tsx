@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  aggregateCategoryRoster,
   RESOURCE_LABELS,
   RESOURCE_BAR_KEYS,
   normalizeResourceWallet,
   formatResourceShort,
-  PHASE_LABELS,
-  WIN_NET_WORTH,
-  totalWorkforce,
 } from "../game/constants";
 import { RATE_UNIT_LABEL } from "../game/phaseA";
 import {
@@ -175,24 +171,65 @@ function ResourceChip({
 }
 
 export function ResourceBar({ state }: ResourceBarProps) {
-  const goalProgress = Math.min(100, (state.netWorth / WIN_NET_WORTH) * 100);
-  const categoryRoster = aggregateCategoryRoster(state.contractorsByLocation);
   const resources = normalizeResourceWallet(state.resources);
   const caps = computeResourceCaps(state);
-  const staffTotal =
-    totalWorkforce(state.contractorsByLocation.hq) +
-    totalWorkforce(state.contractorsByLocation.branch);
-  const staffSummary = `Staff ${staffTotal} · Farm ${categoryRoster.farming} · Def ${categoryRoster.defense} · Intel ${categoryRoster.intel} · Sup ${categoryRoster.support}`;
+  const gridDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    scrollLeft: number;
+    dragging: boolean;
+  } | null>(null);
 
   return (
     <header className="resource-bar">
       <div className="resource-bar-row">
-        <div className="brand">
-          <span className="brand-mark">CC</span>
-          <strong>Corp Civ Idle</strong>
-          <span className="phase-tag">{PHASE_LABELS[state.phase]}</span>
+        <div className="brand" title="Corp Civ Idle">
+          <span className="brand-mark" aria-hidden="true">
+            CC
+          </span>
+          <strong className="brand-title">Corp Civ Idle</strong>
         </div>
-        <div className="resource-grid">
+        <div
+          className="resource-grid"
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            const el = event.currentTarget;
+            gridDragRef.current = {
+              pointerId: event.pointerId,
+              startX: event.clientX,
+              scrollLeft: el.scrollLeft,
+              dragging: false,
+            };
+          }}
+          onPointerMove={(event) => {
+            const drag = gridDragRef.current;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            const el = event.currentTarget;
+            const dx = event.clientX - drag.startX;
+            if (!drag.dragging) {
+              if (dx * dx < 16) return;
+              drag.dragging = true;
+              el.setPointerCapture(event.pointerId);
+            }
+            el.scrollLeft = drag.scrollLeft - dx;
+          }}
+          onPointerUp={(event) => {
+            const drag = gridDragRef.current;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+            gridDragRef.current = null;
+          }}
+          onPointerCancel={(event) => {
+            const drag = gridDragRef.current;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+            gridDragRef.current = null;
+          }}
+        >
           {RESOURCE_BAR_KEYS.map((key) => (
             <ResourceChip
               key={key}
@@ -202,27 +239,6 @@ export function ResourceBar({ state }: ResourceBarProps) {
               cap={resourceCapForKey(caps, key)}
             />
           ))}
-        </div>
-        <div
-          className="net-worth"
-          title={`${staffSummary}. Power per office on map.`}
-        >
-          <div className="net-worth-row">
-            <span className="net-worth-label">NW</span>
-            <strong>{formatResourceShort(state.netWorth)}</strong>
-            <span className="net-worth-goal">
-              / {formatResourceShort(WIN_NET_WORTH)}
-            </span>
-          </div>
-          <div
-            className="goal-bar"
-            aria-label={`${goalProgress.toFixed(0)}% to win`}
-          >
-            <div
-              className="goal-bar-fill"
-              style={{ width: `${goalProgress}%` }}
-            />
-          </div>
         </div>
       </div>
     </header>

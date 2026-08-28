@@ -15,6 +15,8 @@ export type ResourceCost = Partial<Resources & { electricity: number }>;
 
 export type OfficeLocationId = "hq" | "branch";
 
+export type OfficeSelectionId = OfficeLocationId | "all";
+
 export interface LocationSnapshot {
   /** Total power capacity at this site (not passive). */
   power: number;
@@ -394,7 +396,9 @@ export interface GameState {
   structureQueues: StructureQueuesByLocation;
   researchQueues: ResearchQueuesByLocation;
   researchLevels: Record<ResearchId, number>;
-  selectedOffice: OfficeLocationId;
+  selectedOffice: OfficeSelectionId;
+  /** Last HQ/Branch when viewing all offices. */
+  lastSelectedOffice: OfficeLocationId;
   branchEstablished: boolean;
   branchCoord: AxialCoord | null;
   /** Player-renameable; default e.g. "Branch 1 @ Suburban". */
@@ -521,7 +525,7 @@ export type GameAction =
   | { type: "CANCEL_STRUCTURE_JOB"; locationId: OfficeLocationId; jobId: string }
   | { type: "CANCEL_RESEARCH_JOB"; officeId: OfficeLocationId; jobId: string }
   | { type: "CANCEL_RECRUITMENT_JOB"; jobId: string }
-  | { type: "SELECT_OFFICE"; officeId: OfficeLocationId }
+  | { type: "SELECT_OFFICE"; officeId: OfficeSelectionId }
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
   | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null }

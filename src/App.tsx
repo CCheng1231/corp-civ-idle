@@ -1,5 +1,4 @@
 import { useEffect, useReducer, useState } from "react";
-import { AudioControls } from "./components/AudioControls";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
@@ -46,7 +45,6 @@ function App() {
         dispatch={dispatch}
       />
       <div className="app-top-chrome">
-        <AudioControls settings={state.settings} dispatch={dispatch} />
         <ResourceBar state={state} />
         {state.won && (
           <div className="victory-banner" role="status">

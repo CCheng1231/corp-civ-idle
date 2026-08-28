@@ -2,7 +2,6 @@ import { useEffect, useState, type Dispatch } from "react";
 import {
   MAX_RECRUIT_BATCH,
   MAX_RECRUIT_QUEUE,
-  OFFICE_LABELS,
   canAffordAtOffice,
   countInCategory,
   formatNumber,
@@ -17,20 +16,20 @@ import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { RecruitmentUnitDefinition } from "../game/recruitmentData";
 import type { ContractorCategoryId } from "../game/types";
 import { formatQueueTimeHours } from "../game/timers";
-import type { GameAction, GameState, UnitId } from "../game/types";
-import { RecruitmentQueueList, QueueSection } from "./StructureBuildQueueList";
+import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
+import { RecruitmentQueueList } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
-import { LocationViewHeader } from "./LocationViewHeader";
-import {
-  DUAL_PORTRAIT_TAB_PROPS,
-  TabPortraitLayout,
-  dualPortraitTabClass,
-  portraitLockBodyClass,
-  portraitLockPageClass,
-  useTabPortraitSize,
-} from "./TabPortraitLayout";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import recruitmentPortrait from "../assets/Recruitment.png";
+import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
+import {
+  isAllOfficesSelected,
+  recruitmentJobsForOffices,
+  resolveOfficeLocation,
+  totalStaffAcrossOffices,
+} from "../game/officeSelection";
 
 interface RecruitmentViewProps {
   state: GameState;
@@ -73,28 +72,62 @@ function officeStaffCategorySummary(
   return parts.length > 0 ? parts.join(" · ") : "No units at this site yet";
 }
 
+function isRecruitmentUnitLocked(
+  state: GameState,
+  unit: RecruitmentUnitDefinition,
+): boolean {
+  return (
+    unit.id === "branch_manager" &&
+    (state.researchLevels.branch_management ?? 0) < 1
+  );
+}
+
 function recruitmentBlockerMessage(researchLocked: boolean): string | null {
   if (researchLocked) return "Requires Branch Management research";
   return null;
 }
 
 export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
-  const officeId = state.selectedOffice;
+  const showAll = isAllOfficesSelected(state.selectedOffice);
+  const officeId: OfficeLocationId = resolveOfficeLocation(state);
+  const actionsLocked = showAll;
   const now = Date.now();
   const [counts, setCounts] = useState<Partial<Record<UnitId, number>>>({});
   const [rosterOpen, setRosterOpen] = useState(false);
-  const queue = recruitmentJobsAtOffice(state, officeId);
-  const queueFull = isRecruitmentQueueFull(state, officeId);
+  const [hideLocked, setHideLocked] = useState(false);
+  const hireQueueCount = showAll
+    ? recruitmentJobsForOffices(state).length
+    : recruitmentJobsAtOffice(state, officeId).length;
+  const pendingHires = showAll
+    ? recruitmentJobsForOffices(state).reduce(
+        (sum, entry) => sum + (entry.job.count ?? 1),
+        0,
+      )
+    : recruitmentJobsAtOffice(state, officeId).reduce(
+        (sum, job) => sum + (job.count ?? 1),
+        0,
+      );
+  const queueFull = actionsLocked
+    ? true
+    : isRecruitmentQueueFull(state, officeId);
   const roster = rosterAt(state, officeId);
-  const staffTotal = totalWorkforce(roster);
-  const pendingHires = queue.reduce((sum, job) => sum + (job.count ?? 1), 0);
-  const staffCategorySummary = officeStaffCategorySummary(roster);
+  const staffTotal = showAll
+    ? totalStaffAcrossOffices(state)
+    : totalWorkforce(roster);
+  const staffCategorySummary = showAll
+    ? ownedOfficeIds(state)
+        .map((siteId) => {
+          const siteRoster = rosterAt(state, siteId);
+          const summary = officeStaffCategorySummary(siteRoster);
+          return summary === "No units at this site yet"
+            ? null
+            : `${officeDisplayName(state, siteId)}: ${summary}`;
+        })
+        .filter(Boolean)
+        .join(" · ") || "No units across offices yet"
+    : officeStaffCategorySummary(roster);
   const focusUnitId = state.recruitFocusUnitId ?? null;
   const portraitStorageKey = "corp-civ-idle-recruitment-portrait-size";
-  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
-    portraitStorageKey,
-    true,
-  );
 
   useEffect(() => {
     if (!focusUnitId) return;
@@ -128,11 +161,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   function renderUnitCard(unit: RecruitmentUnitDefinition) {
     const count = counts[unit.id] ?? 1;
     const cost = recruitBatchCost(unit.id, count);
-    const researchLocked =
-      unit.id === "branch_manager" &&
-      (state.researchLevels.branch_management ?? 0) < 1;
+    const researchLocked = isRecruitmentUnitLocked(state, unit);
     const affordable =
-      !researchLocked && canAffordAtOffice(state, officeId, cost);
+      !actionsLocked &&
+      !researchLocked &&
+      canAffordAtOffice(state, officeId, cost);
     const orderHours = recruitmentOrderBuildTimeHours(count);
     const blocker = recruitmentBlockerMessage(researchLocked);
 
@@ -179,7 +212,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
                 min={1}
                 max={MAX_RECRUIT_BATCH}
                 value={count}
-                disabled={queueFull || researchLocked}
+                disabled={actionsLocked || queueFull || researchLocked}
                 onChange={(e) => {
                   const n = Math.max(
                     1,
@@ -195,7 +228,9 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               disabled={!affordable || queueFull || researchLocked}
               onClick={() => hire(unit.id)}
             >
-              {researchLocked
+              {actionsLocked
+                ? "Pick an office"
+                : researchLocked
                 ? "Locked"
                 : queueFull
                   ? "Queue full"
@@ -208,32 +243,68 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     );
   }
 
-  const recruitmentHeader = (
-    <LocationViewHeader
-      title="Recruitment"
-      description="Hire contractors at the selected office — one queue slot per order."
-      state={state}
-      dispatch={dispatch}
-    />
-  );
-
-  const recruitmentBody = (
+  const recruitBesidePortrait = (
     <>
-      <section className="recruitment-site-staff">
-        <div className="recruitment-site-staff-head">
-          <h3 className="recruitment-site-staff-title">
-            Staff at {OFFICE_LABELS[officeId]}
-          </h3>
-          <div className="location-stat recruitment-staff-stat">
-            <span className="location-stat-label">On site</span>
-            <strong>{formatNumber(staffTotal)}</strong>
-            {pendingHires > 0 && (
-              <small>{formatNumber(pendingHires)} hiring</small>
-            )}
+      <TabSiteHeader title="Recruit" state={state} dispatch={dispatch} />
+      <section className="location-view-section tab-queue-section tab-compact-queue">
+        <div className="tab-queue-heading">
+          <h3>Hiring in progress</h3>
+          <div className="tab-queue-heading-actions">
+            <span
+              className="tab-queue-count muted"
+              aria-label={`Hiring queue ${hireQueueCount}${showAll ? "" : ` of ${MAX_RECRUIT_QUEUE}`}`}
+            >
+              {hireQueueCount}
+              {showAll ? "" : `/${MAX_RECRUIT_QUEUE}`}
+            </span>
+            <label className="progression-hide-completed-check tab-queue-filter">
+              <input
+                type="checkbox"
+                checked={hideLocked}
+                onChange={(event) => setHideLocked(event.target.checked)}
+              />
+              Hide locked
+            </label>
           </div>
         </div>
-        <p className="recruitment-staff-summary">{staffCategorySummary}</p>
+        <RecruitmentQueueList
+          state={state}
+          {...(showAll
+            ? {
+                entries: recruitmentJobsForOffices(state),
+                maxSlots: ownedOfficeIds(state).length * MAX_RECRUIT_QUEUE,
+              }
+            : {
+                jobs: recruitmentJobsAtOffice(state, officeId),
+                officeId,
+              })}
+          dispatch={dispatch}
+          now={now}
+          compact
+          emptyLabel="No hires queued."
+        />
       </section>
+      <section className="recruitment-staff-beside" aria-label="Staff on site">
+        <div className="recruitment-staff-beside-row">
+          <span className="recruitment-staff-beside-label">
+            {showAll ? "Firm-wide" : "On site"}
+          </span>
+          <strong className="recruitment-staff-beside-total">
+            {formatNumber(staffTotal)}
+          </strong>
+          {pendingHires > 0 && (
+            <span className="recruitment-staff-beside-pending">
+              +{formatNumber(pendingHires)} hiring
+            </span>
+          )}
+        </div>
+        <p className="recruitment-staff-beside-summary">{staffCategorySummary}</p>
+      </section>
+    </>
+  );
+
+  const recruitBelowPortrait = (
+    <>
       <details
         className="recruitment-roster-details"
         open={rosterOpen}
@@ -242,7 +313,32 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         }
       >
         <summary className="recruitment-roster-summary">Unit breakdown</summary>
-        {staffTotal > 0 ? (
+        {showAll ? (
+          ownedOfficeIds(state).map((siteId) => {
+            const siteRoster = rosterAt(state, siteId);
+            const siteTotal = totalWorkforce(siteRoster);
+            if (siteTotal <= 0) return null;
+            return (
+              <ul
+                key={siteId}
+                className="office-site-staff-list recruitment-roster-list"
+              >
+                {RECRUITMENT_UNITS.filter(
+                  (unit) => (siteRoster[unit.id] ?? 0) > 0,
+                ).map((unit) => (
+                  <li key={`${siteId}-${unit.id}`}>
+                    <span className="office-site-staff-role">
+                      {officeDisplayName(state, siteId)} · {unit.name}
+                    </span>
+                    <span className="office-site-staff-count">
+                      ×{siteRoster[unit.id] ?? 0}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            );
+          })
+        ) : staffTotal > 0 ? (
           <ul className="office-site-staff-list recruitment-roster-list">
             {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
               (unit) => (
@@ -259,23 +355,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           <p className="muted recruitment-roster-empty">No units at this site.</p>
         )}
       </details>
-      <QueueSection
-        label="Hiring queue"
-        count={queue.length}
-        max={MAX_RECRUIT_QUEUE}
-        className="location-queue-section recruitment-queue-section"
-      >
-        <RecruitmentQueueList
-          state={state}
-          jobs={queue}
-          officeId={officeId}
-          dispatch={dispatch}
-          now={now}
-        />
-      </QueueSection>
       {RECRUITMENT_CATEGORY_ORDER.map((category) => {
         const units = RECRUITMENT_UNITS.filter(
           (unit) => unit.category === category,
+        ).filter(
+          (unit) => !hideLocked || !isRecruitmentUnitLocked(state, unit),
         );
         if (units.length === 0) return null;
 
@@ -292,31 +376,21 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   );
 
   return (
-    <div
-      className={`main-view-panel location-view-panel ${portraitLockPageClass(portraitLarge)}`}
-    >
-      {portraitLarge ? recruitmentHeader : null}
-      <div
-        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
-      >
+    <div className="main-view-panel location-view-panel recruitment-view">
+      <div className="location-view-body">
         <TabPortraitLayout
           src={recruitmentPortrait}
           storageKey={portraitStorageKey}
-          portraitSize={portraitSize}
-          onPortraitSizeChange={setPortraitSize}
           quote={tabQuote(state, "recruitment")}
-          {...DUAL_PORTRAIT_TAB_PROPS}
-          className={dualPortraitTabClass(portraitLarge)}
+          portraitLayout="stretch"
+          parallaxScroll={false}
+          portraitLocked={false}
+          allowPortraitResize={false}
+          className="tab-portrait-fit"
         >
-          {portraitLarge ? recruitmentBody : (
-            <div className="portrait-lock-split-right">
-              <div className="portrait-lock-frozen-header">
-                {recruitmentHeader}
-              </div>
-              <div className="portrait-lock-scroll-body">{recruitmentBody}</div>
-            </div>
-          )}
+          {recruitBesidePortrait}
         </TabPortraitLayout>
+        <div className="tab-below-portrait">{recruitBelowPortrait}</div>
       </div>
     </div>
   );

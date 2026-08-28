@@ -109,6 +109,8 @@ interface TabPortraitLayoutProps {
   largePortraitLikeHire?: boolean;
   /** Office tab: drag to pan portrait; persists offset; default = centered crop. */
   portraitPanStorageKey?: string;
+  /** When false, portrait stays fixed size (Home, Office tab shell). */
+  allowPortraitResize?: boolean;
   children: ReactNode;
 }
 
@@ -131,12 +133,15 @@ export function TabPortraitLayout({
   portraitLocked = false,
   largePortraitLikeHire = false,
   portraitPanStorageKey,
+  allowPortraitResize = true,
   children,
 }: TabPortraitLayoutProps) {
   const [internalSize, setInternalSize] = useState<PortraitSize>(() =>
     initialPortraitSize(storageKey, defaultLargeOnDesktop),
   );
-  const portraitSize = portraitSizeProp ?? internalSize;
+  const portraitSize = allowPortraitResize
+    ? (portraitSizeProp ?? internalSize)
+    : "compact";
   const setPortraitSize = onPortraitSizeChange ?? setInternalSize;
   const basePanStorageKey =
     portraitPanStorageKey ?? portraitPanStorageKeyFor(storageKey);
@@ -177,8 +182,9 @@ export function TabPortraitLayout({
     .filter(Boolean)
     .join(" ");
 
-  const togglePortraitSize = () =>
-    setPortraitSize(portraitLarge ? "compact" : "large");
+  const togglePortraitSize = allowPortraitResize
+    ? () => setPortraitSize(portraitLarge ? "compact" : "large")
+    : undefined;
 
   const quoteOverlay = Boolean(quote);
 

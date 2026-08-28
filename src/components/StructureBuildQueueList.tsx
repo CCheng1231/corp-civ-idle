@@ -21,6 +21,7 @@ import type {
   RecruitmentJob,
   StructureBuildJob,
 } from "../game/types";
+import type { OfficeTaggedJob } from "../game/officeSelection";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 type QueueJobKind = "structure" | "research" | "recruitment";
@@ -92,25 +93,50 @@ interface QueueRowProps {
   state: GameState;
   role: string;
   name: string;
+  siteLabel?: string;
   timing: QueueJobTiming;
   waitBeforeStartMs: number;
   now: number;
   onCancel?: () => void;
+  compact?: boolean;
 }
 
 function QueueRow({
   state,
   role,
   name,
+  siteLabel,
   timing,
   waitBeforeStartMs,
   now,
   onCancel,
+  compact = false,
 }: QueueRowProps) {
   return (
-    <li className={onCancel ? "build-queue-row-with-cancel" : undefined}>
-      <span className="queue-role">{role}</span>
-      <span className="queue-name">{name}</span>
+    <li
+      className={
+        onCancel
+          ? compact
+            ? "build-queue-row-with-cancel build-queue-row-compact"
+            : "build-queue-row-with-cancel"
+          : compact
+            ? "build-queue-row-compact"
+            : undefined
+      }
+    >
+      {!compact && <span className="queue-role">{role}</span>}
+      <span className="queue-name">
+        {siteLabel ? (
+          <>
+            <span className="queue-site-label">{siteLabel}</span>
+            <span className="queue-site-sep" aria-hidden>
+              {" "}
+              ·{" "}
+            </span>
+          </>
+        ) : null}
+        {name}
+      </span>
       <span className="queue-status">
         {formatQueueJobStatus(state, timing, waitBeforeStartMs, now)}
       </span>
@@ -129,33 +155,47 @@ function QueueRow({
 
 interface StructureBuildQueueListProps {
   state: GameState;
-  jobs: StructureBuildJob[];
-  locationId: OfficeLocationId;
+  jobs?: StructureBuildJob[];
+  locationId?: OfficeLocationId;
+  entries?: OfficeTaggedJob<StructureBuildJob>[];
   dispatch?: Dispatch<GameAction>;
   now?: number;
   emptyLabel?: string;
   maxSlots?: number;
+  compact?: boolean;
 }
 
 export function StructureBuildQueueList({
   state,
-  jobs,
-  locationId,
+  jobs = [],
+  locationId = "hq",
+  entries,
   dispatch,
   now = Date.now(),
   emptyLabel = "No builds queued.",
   maxSlots = 2,
+  compact = false,
 }: StructureBuildQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
+  const rows =
+    entries ??
+    jobs.map((job) => ({
+      job,
+      officeId: locationId,
+      siteLabel: "",
+    }));
 
-  function requestCancel(job: StructureBuildJob) {
+  function requestCancel(
+    job: StructureBuildJob,
+    officeId: OfficeLocationId,
+  ) {
     const structureName =
       STRUCTURES.find((s) => s.id === job.structureId)?.name ?? job.structureId;
     const targetLevel = job.targetLevel ?? 1;
     setPending({
       kind: "structure",
       jobId: job.id,
-      officeId: locationId,
+      officeId,
       label: `${structureName} → Lv ${targetLevel}`,
       refund: cancelRefundFromSpent(job.spentCost),
     });
@@ -175,17 +215,17 @@ export function StructureBuildQueueList({
 
   return (
     <>
-      <QueueSlot count={jobs.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
-        <ul className="build-queue">
+      <QueueSlot count={rows.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
+        <ul className={`build-queue${compact ? " build-queue-compact" : ""}`}>
           {(() => {
-            const timings: QueueJobTiming[] = jobs.map((job) => ({
+            const timings: QueueJobTiming[] = rows.map(({ job }) => ({
               completesAt: job.completesAt,
               durationMs: structureBuildTimeMs(
                 job.structureId,
                 job.targetLevel ?? 1,
               ),
             }));
-            return jobs.map((job, index) => {
+            return rows.map(({ job, officeId: rowOfficeId, siteLabel }, index) => {
               const structureName =
                 STRUCTURES.find((s) => s.id === job.structureId)?.name ??
                 job.structureId;
@@ -198,10 +238,16 @@ export function StructureBuildQueueList({
                   state={state}
                   role={role}
                   name={name}
+                  siteLabel={siteLabel || undefined}
                   timing={timings[index]}
                   waitBeforeStartMs={queueWaitBeforeIndex(timings, index, now)}
                   now={now}
-                  onCancel={dispatch ? () => requestCancel(job) : undefined}
+                  onCancel={
+                    dispatch
+                      ? () => requestCancel(job, rowOfficeId)
+                      : undefined
+                  }
+                  compact={compact}
                 />
               );
             });
@@ -227,32 +273,43 @@ export function StructureBuildQueueList({
 
 interface ResearchQueueListProps {
   state: GameState;
-  jobs: ResearchJob[];
-  officeId: OfficeLocationId;
+  jobs?: ResearchJob[];
+  officeId?: OfficeLocationId;
+  entries?: OfficeTaggedJob<ResearchJob>[];
   dispatch: Dispatch<GameAction>;
   now?: number;
   emptyLabel?: string;
   maxSlots?: number;
+  compact?: boolean;
 }
 
 export function ResearchQueueList({
   state,
-  jobs,
-  officeId,
+  jobs = [],
+  officeId = "hq",
+  entries,
   dispatch,
   now = Date.now(),
   emptyLabel = "No research queued.",
   maxSlots = 2,
+  compact = false,
 }: ResearchQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
+  const rows =
+    entries ??
+    jobs.map((job) => ({
+      job,
+      officeId,
+      siteLabel: "",
+    }));
 
-  function requestCancel(job: ResearchJob) {
+  function requestCancel(job: ResearchJob, rowOfficeId: OfficeLocationId) {
     const name =
       RESEARCH.find((r) => r.id === job.researchId)?.name ?? job.researchId;
     setPending({
       kind: "research",
       jobId: job.id,
-      officeId,
+      officeId: rowOfficeId,
       label: name,
       refund: cancelRefundFromSpent(job.spentCost),
     });
@@ -270,14 +327,14 @@ export function ResearchQueueList({
 
   return (
     <>
-      <QueueSlot count={jobs.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
-        <ul className="build-queue">
+      <QueueSlot count={rows.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
+        <ul className={`build-queue${compact ? " build-queue-compact" : ""}`}>
           {(() => {
-            const timings: QueueJobTiming[] = jobs.map((job) => ({
+            const timings: QueueJobTiming[] = rows.map(({ job }) => ({
               completesAt: job.completesAt,
               durationMs: researchBuildTimeMs(job.researchId, job.targetLevel),
             }));
-            return jobs.map((job, index) => {
+            return rows.map(({ job, officeId: rowOfficeId, siteLabel }, index) => {
               const name =
                 RESEARCH.find((r) => r.id === job.researchId)?.name ??
                 job.researchId;
@@ -288,10 +345,12 @@ export function ResearchQueueList({
                   state={state}
                   role={role}
                   name={`${name} → Lv ${job.targetLevel}`}
+                  siteLabel={siteLabel || undefined}
                   timing={timings[index]}
                   waitBeforeStartMs={queueWaitBeforeIndex(timings, index, now)}
                   now={now}
-                  onCancel={() => requestCancel(job)}
+                  onCancel={() => requestCancel(job, rowOfficeId)}
+                  compact={compact}
                 />
               );
             });
@@ -317,37 +376,52 @@ export function ResearchQueueList({
 
 interface RecruitmentQueueListProps {
   state: GameState;
-  jobs: RecruitmentJob[];
-  officeId: OfficeLocationId;
+  jobs?: RecruitmentJob[];
+  officeId?: OfficeLocationId;
+  entries?: OfficeTaggedJob<RecruitmentJob>[];
   dispatch: Dispatch<GameAction>;
   now?: number;
   emptyLabel?: string;
   maxSlots?: number;
+  compact?: boolean;
 }
 
 export function RecruitmentQueueList({
   state,
-  jobs,
-  officeId,
+  jobs = [],
+  officeId = "hq",
+  entries,
   dispatch,
   now = Date.now(),
   emptyLabel = "No hires queued.",
   maxSlots = 2,
+  compact = false,
 }: RecruitmentQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
 
-  const sorted = [...jobs].sort(
+  const rows = (
+    entries ??
+    jobs.map((job) => ({
+      job,
+      officeId,
+      siteLabel: "",
+    }))
+  ).sort(
     (a, b) =>
-      (a.completesAt ?? Number.MAX_SAFE_INTEGER) -
-      (b.completesAt ?? Number.MAX_SAFE_INTEGER),
+      (a.job.completesAt ?? Number.MAX_SAFE_INTEGER) -
+      (b.job.completesAt ?? Number.MAX_SAFE_INTEGER),
   );
 
-  function requestCancel(job: RecruitmentJob, unitName: string) {
+  function requestCancel(
+    job: RecruitmentJob,
+    rowOfficeId: OfficeLocationId,
+    unitName: string,
+  ) {
     const orderCount = job.count ?? 1;
     setPending({
       kind: "recruitment",
       jobId: job.id,
-      officeId,
+      officeId: rowOfficeId,
       label: `${orderCount}× ${unitName}`,
       refund: cancelRefundFromSpent(job.spentCost),
     });
@@ -364,14 +438,14 @@ export function RecruitmentQueueList({
 
   return (
     <>
-      <QueueSlot count={sorted.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
-        <ul className="build-queue">
+      <QueueSlot count={rows.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
+        <ul className={`build-queue${compact ? " build-queue-compact" : ""}`}>
           {(() => {
-            const timings: QueueJobTiming[] = sorted.map((job) => ({
+            const timings: QueueJobTiming[] = rows.map(({ job }) => ({
               completesAt: job.completesAt,
               durationMs: recruitmentOrderDurationMs(job.count ?? 1),
             }));
-            return sorted.map((job, index) => {
+            return rows.map(({ job, officeId: rowOfficeId, siteLabel }, index) => {
               const unit = unitDefinition(job.unitId);
               const orderCount = job.count ?? 1;
               const role =
@@ -382,10 +456,12 @@ export function RecruitmentQueueList({
                   state={state}
                   role={role}
                   name={`${orderCount}× ${unit.name}`}
+                  siteLabel={siteLabel || undefined}
                   timing={timings[index]}
                   waitBeforeStartMs={queueWaitBeforeIndex(timings, index, now)}
                   now={now}
-                  onCancel={() => requestCancel(job, unit.name)}
+                  onCancel={() => requestCancel(job, rowOfficeId, unit.name)}
+                  compact={compact}
                 />
               );
             });

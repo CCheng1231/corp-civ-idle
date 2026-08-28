@@ -593,6 +593,7 @@ export function createInitialState(now = Date.now()): GameState {
     researchQueues: emptyResearchQueues(),
     researchLevels,
     selectedOffice: "hq",
+    lastSelectedOffice: "hq",
     branchEstablished: false,
     branchCoord: null,
     branchName: null,

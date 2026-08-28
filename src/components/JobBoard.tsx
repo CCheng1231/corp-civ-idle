@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type Dispatch } from "react";
 import { rosterAt } from "../game/constants";
+import { resolveOfficeLocation } from "../game/officeSelection";
 import {
   activeJobBoardFilterSummaries,
   countActiveJobBoardFilters,
@@ -52,7 +53,7 @@ interface JobBoardProps {
 
 export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
   const now = Date.now();
-  const officeId = state.selectedOffice;
+  const officeId = resolveOfficeLocation(state);
   const officeRoster = rosterAt(state, officeId);
   const [filters, setFilters] = useState<JobBoardFilters>(DEFAULT_JOB_BOARD_FILTERS);
   const [sort, setSort] = useState<JobBoardSort>("expires_soon");

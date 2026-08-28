@@ -419,7 +419,19 @@ function normalizeSave(parsed: LegacySave): GameState {
       return { ...transfer, unitId };
     }),
     recruitmentJobs: migrateRecruitmentJobs(parsed),
-    selectedOffice: parsed.selectedOffice ?? "hq",
+    selectedOffice:
+      parsed.selectedOffice === "all" ||
+      parsed.selectedOffice === "hq" ||
+      parsed.selectedOffice === "branch"
+        ? parsed.selectedOffice
+        : "hq",
+    lastSelectedOffice:
+      parsed.lastSelectedOffice === "branch" ||
+      parsed.lastSelectedOffice === "hq"
+        ? parsed.lastSelectedOffice
+        : parsed.selectedOffice === "branch" || parsed.selectedOffice === "hq"
+          ? parsed.selectedOffice
+          : "hq",
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
     dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
@@ -439,6 +451,12 @@ function normalizeSave(parsed: LegacySave): GameState {
 
   if (merged.selectedOffice === "branch" && !merged.branchEstablished) {
     merged.selectedOffice = "hq";
+  }
+  if (merged.selectedOffice === "all" && !merged.branchEstablished) {
+    merged.selectedOffice = "hq";
+  }
+  if (merged.lastSelectedOffice === "branch" && !merged.branchEstablished) {
+    merged.lastSelectedOffice = "hq";
   }
 
   merged.locationStats = computeLocationStats({

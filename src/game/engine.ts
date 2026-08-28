@@ -35,6 +35,7 @@ import {
   recruitmentOrderDurationMs,
   recruitmentOrderBuildTimeHours,
 } from "./constants";
+import { resolveOfficeLocation } from "./officeSelection";
 import { buildOfflineWelcomeSummary } from "./offlineWelcome";
 import { pushCompletionAlert } from "./completionAlerts";
 import { cancelRefundFromSpent } from "./refunds";
@@ -834,7 +835,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (action.officeId === "branch" && !state.branchEstablished) {
         return state;
       }
-      return { ...state, selectedOffice: action.officeId };
+      if (action.officeId === "all" && !state.branchEstablished) {
+        return state;
+      }
+      if (action.officeId === "hq" || action.officeId === "branch") {
+        return {
+          ...state,
+          selectedOffice: action.officeId,
+          lastSelectedOffice: action.officeId,
+        };
+      }
+      return { ...state, selectedOffice: "all" };
     }
 
     case "SELECT_TOWER":
@@ -867,7 +878,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       next.branchCoord = { ...site.coord };
       next.branchName = defaultBranchName(site.coord, 1);
       next.selectedCommercialHex = null;
-      next.selectedOffice = "branch";
+      next.selectedOffice = "all";
+      next.lastSelectedOffice = "branch";
       return appendActivityLogs(next, [
         {
           category: "research",
@@ -1059,7 +1071,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "BUY_RESEARCH": {
-      const officeId = action.officeId ?? state.selectedOffice;
+      const officeId = resolveOfficeLocation(
+        state,
+        action.officeId,
+      );
       const def = getResearchDef(action.researchId);
       if (!isResearchUnlocked(state, def)) return state;
       const projected = projectedResearchLevels(state)[action.researchId];
@@ -1125,6 +1140,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "RECRUIT_CONTRACTOR": {
+      if (state.selectedOffice === "all") return state;
       const inner = gameReducer(state, {
         type: "START_RECRUITMENT",
         officeId: state.selectedOffice,

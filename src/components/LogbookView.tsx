@@ -10,19 +10,15 @@ import {
   officeLabel,
 } from "../game/logbook";
 import type { GameAction, GameState, LogCategory } from "../game/types";
-import {
-  DUAL_PORTRAIT_TAB_PROPS,
-  TabPortraitLayout,
-  dualPortraitTabClass,
-  portraitLockBodyClass,
-  portraitLockPageClass,
-  useTabPortraitSize,
-} from "./TabPortraitLayout";
+import { isAllOfficesSelected } from "../game/officeSelection";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import logbookPortrait from "../assets/Logbook.jpg";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 const LOGBOOK_COL_STORAGE_KEY = "corp-civ-idle-logbook-col-widths";
+const LOGBOOK_PORTRAIT_SIZE_KEY = "corp-civ-idle-logbook-portrait-size";
 const LOGBOOK_PAGE_SIZE = 50;
 
 const LOGBOOK_COLUMNS = [
@@ -49,6 +45,8 @@ const DEFAULT_COL_WIDTHS: Record<LogbookColumnId, number> = {
 
 const MIN_COL_WIDTH = 56;
 
+const FILTERABLE_GROUPS = LOG_FILTER_GROUPS.filter((group) => group.id !== "all");
+
 function loadColumnWidths(): Record<LogbookColumnId, number> {
   try {
     const raw = localStorage.getItem(LOGBOOK_COL_STORAGE_KEY);
@@ -67,6 +65,22 @@ function loadColumnWidths(): Record<LogbookColumnId, number> {
   }
 }
 
+function initialFilterIds(filterId: string): Set<string> {
+  if (filterId === "all") return new Set(["all"]);
+  return new Set([filterId]);
+}
+
+function filterSummaryLabel(selectedFilterIds: Set<string>): string {
+  if (selectedFilterIds.has("all") || selectedFilterIds.size === 0) {
+    return "All";
+  }
+  const labels = LOG_FILTER_GROUPS.filter((group) =>
+    selectedFilterIds.has(group.id),
+  ).map((group) => group.label);
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.length} selected`;
+}
+
 interface LogbookViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -78,11 +92,11 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
   const [colWidths, setColWidths] = useState(loadColumnWidths);
   const [page, setPage] = useState(0);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const portraitStorageKey = "corp-civ-idle-logbook-portrait-size";
-  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
-    portraitStorageKey,
-    true,
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedFilterIds, setSelectedFilterIds] = useState<Set<string>>(() =>
+    initialFilterIds(filterId),
   );
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{
     columnId: LogbookColumnId;
     startX: number;
@@ -96,14 +110,32 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     scrollTop: number;
     dragging: boolean;
   } | null>(null);
+
+  const filtersActive =
+    !selectedFilterIds.has("all") && selectedFilterIds.size > 0;
+
   const filtered = useMemo(() => {
-    const group = LOG_FILTER_GROUPS.find((g) => g.id === filterId);
-    if (!group || group.categories.length === 0) {
-      return state.activityLog;
+    let entries = state.activityLog;
+    if (!isAllOfficesSelected(state.selectedOffice)) {
+      entries = entries.filter(
+        (entry) => entry.officeId === state.selectedOffice,
+      );
     }
-    const allowed = new Set<LogCategory>(group.categories);
-    return state.activityLog.filter((entry) => allowed.has(entry.category));
-  }, [state.activityLog, filterId]);
+    if (!filtersActive) {
+      return entries;
+    }
+    const allowed = new Set<LogCategory>();
+    for (const group of LOG_FILTER_GROUPS) {
+      if (!selectedFilterIds.has(group.id)) continue;
+      for (const category of group.categories) {
+        allowed.add(category);
+      }
+    }
+    if (allowed.size === 0) {
+      return entries;
+    }
+    return entries.filter((entry) => allowed.has(entry.category));
+  }, [state.activityLog, state.selectedOffice, selectedFilterIds, filtersActive]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / LOGBOOK_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
@@ -113,8 +145,12 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     filtered.length === 0 ? 0 : Math.min(pageStart + LOGBOOK_PAGE_SIZE, filtered.length);
 
   useEffect(() => {
-    setPage(0);
+    setSelectedFilterIds(initialFilterIds(filterId));
   }, [filterId]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedFilterIds]);
 
   useEffect(() => {
     if (page > totalPages - 1) {
@@ -129,6 +165,17 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
       setPage(Math.floor(index / LOGBOOK_PAGE_SIZE));
     }
   }, [highlightId, filtered]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const root = filterPopoverRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      setFilterOpen(false);
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [filterOpen]);
 
   const persistWidths = useCallback((widths: Record<LogbookColumnId, number>) => {
     localStorage.setItem(LOGBOOK_COL_STORAGE_KEY, JSON.stringify(widths));
@@ -186,227 +233,304 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     return () => window.clearTimeout(clearId);
   }, [highlightId, filtered, currentPage, dispatch]);
 
-  const logbookHeader = (
-    <header className="main-view-header location-view-header logbook-view-header">
-      <div className="logbook-header-title-row">
-        <h2>Notes &amp; logbook</h2>
-        <button
-          type="button"
-          className="btn linkish logbook-clear-all-btn"
-          disabled={state.activityLog.length === 0}
-          onClick={() => setClearConfirmOpen(true)}
-        >
-          Clear all
-        </button>
-      </div>
-      <p className="muted">
-        Personal notes save with your game. Activity sheet below — newest rows
-        first ({state.activityLog.length}/{MAX_ACTIVITY_LOG_ENTRIES} stored,{" "}
-        {LOGBOOK_PAGE_SIZE} per page). Drag column edges to resize.
-      </p>
-    </header>
+  function toggleFilterGroup(groupId: string, checked: boolean) {
+    setSelectedFilterIds((prev) => {
+      const next = new Set(prev);
+      if (groupId === "all") {
+        return checked ? new Set(["all"]) : new Set();
+      }
+      next.delete("all");
+      if (checked) {
+        next.add(groupId);
+      } else {
+        next.delete(groupId);
+      }
+      if (next.size === 0) {
+        return new Set(["all"]);
+      }
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setSelectedFilterIds(new Set(["all"]));
+    dispatch({ type: "SET_LOGBOOK_FILTER", filterId: "all" });
+  }
+
+  function applyFilterSelection() {
+    if (!selectedFilterIds.has("all") && selectedFilterIds.size === 1) {
+      const [onlyId] = [...selectedFilterIds];
+      dispatch({ type: "SET_LOGBOOK_FILTER", filterId: onlyId });
+    } else {
+      dispatch({ type: "SET_LOGBOOK_FILTER", filterId: "all" });
+    }
+    setFilterOpen(false);
+  }
+
+  const logbookBesidePortrait = (
+    <>
+      <TabSiteHeader title="Logbook" state={state} dispatch={dispatch} />
+      <section className="logbook-notes-section" aria-label="Player notes">
+        <textarea
+          className="notes-editor logbook-notes-editor"
+          value={state.playerNotes}
+          onChange={(event) =>
+            dispatch({
+              type: "UPDATE_PLAYER_NOTES",
+              notes: event.target.value,
+            })
+          }
+          placeholder="Write your own note"
+          spellCheck
+          aria-label="Player notes"
+        />
+      </section>
+    </>
   );
 
-  const logbookNotes = (
-    <section className="logbook-notes-section" aria-label="Player notes">
-      <textarea
-        className="notes-editor logbook-notes-editor"
-        value={state.playerNotes}
-        onChange={(event) =>
-          dispatch({
-            type: "UPDATE_PLAYER_NOTES",
-            notes: event.target.value,
-          })
-        }
-        placeholder="Bids, research plans, rival gossip…"
-        spellCheck
-        aria-label="Player notes"
-      />
-    </section>
-  );
-
-  const logbookActivity = (
-    <div className="logbook-activity-panel">
-      <div className="logbook-filters" role="tablist" aria-label="Log categories">
-        {LOG_FILTER_GROUPS.map((group) => (
-          <button
-            key={group.id}
-            type="button"
-            role="tab"
-            aria-selected={filterId === group.id}
-            className={filterId === group.id ? "tab active" : "tab"}
-            onClick={() =>
-              dispatch({ type: "SET_LOGBOOK_FILTER", filterId: group.id })
-            }
-          >
-            {group.label}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className="muted logbook-empty">No entries in this category yet.</p>
-      ) : (
-        <div
-          className="logbook-sheet-wrap"
-          onPointerDown={(event) => {
-            if (event.button !== 0) return;
-            if ((event.target as HTMLElement).closest(".logbook-col-resize")) {
-              return;
-            }
-            const el = event.currentTarget;
-            sheetDragRef.current = {
-              pointerId: event.pointerId,
-              startX: event.clientX,
-              startY: event.clientY,
-              scrollLeft: el.scrollLeft,
-              scrollTop: el.scrollTop,
-              dragging: false,
-            };
-          }}
-          onPointerMove={(event) => {
-            const drag = sheetDragRef.current;
-            if (!drag || drag.pointerId !== event.pointerId) return;
-            const el = event.currentTarget;
-            const dx = event.clientX - drag.startX;
-            const dy = event.clientY - drag.startY;
-            if (!drag.dragging) {
-              if (dx * dx + dy * dy < 16) return;
-              drag.dragging = true;
-              el.setPointerCapture(event.pointerId);
-            }
-            el.scrollLeft = drag.scrollLeft - dx;
-            el.scrollTop = drag.scrollTop - dy;
-          }}
-          onPointerUp={(event) => {
-            const drag = sheetDragRef.current;
-            if (!drag || drag.pointerId !== event.pointerId) return;
-            if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.releasePointerCapture(event.pointerId);
-            }
-            sheetDragRef.current = null;
-          }}
-          onPointerCancel={(event) => {
-            const drag = sheetDragRef.current;
-            if (!drag || drag.pointerId !== event.pointerId) return;
-            if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.releasePointerCapture(event.pointerId);
-            }
-            sheetDragRef.current = null;
-          }}
-        >
-          <table className="logbook-sheet">
-            <colgroup>
-              {LOGBOOK_COLUMNS.map((col) => (
-                <col
-                  key={col.id}
-                  style={{ width: `${colWidths[col.id]}px` }}
-                />
-              ))}
-            </colgroup>
-            <thead>
-              <tr>
-                {LOGBOOK_COLUMNS.map((col) => (
-                  <th
-                    key={col.id}
-                    scope="col"
-                    className={`col-${col.id}`}
-                    style={{ width: `${colWidths[col.id]}px` }}
+  const logbookBelowPortrait = (
+    <>
+      <div className="logbook-activity-panel">
+        <div className="logbook-activity-toolbar">
+          <div className="logbook-filter-popover-wrap" ref={filterPopoverRef}>
+            <label className="logbook-filter-trigger progression-hide-completed-check tab-queue-filter">
+              <input
+                type="checkbox"
+                checked={filterOpen}
+                onChange={(event) => setFilterOpen(event.target.checked)}
+                aria-controls="logbook-filter-panel"
+                aria-expanded={filterOpen}
+              />
+              Filter
+              {filtersActive ? (
+                <span className="logbook-filter-active-label">
+                  · {filterSummaryLabel(selectedFilterIds)}
+                </span>
+              ) : null}
+            </label>
+            {filterOpen ? (
+              <div
+                id="logbook-filter-panel"
+                className="logbook-filter-panel"
+                role="group"
+                aria-label="Log categories"
+              >
+                <div className="logbook-filter-panel-options">
+                  {FILTERABLE_GROUPS.map((group) => (
+                    <label
+                      key={group.id}
+                      className="logbook-filter-option progression-hide-completed-check"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFilterIds.has(group.id)}
+                        onChange={(event) =>
+                          toggleFilterGroup(group.id, event.target.checked)
+                        }
+                      />
+                      {group.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="logbook-filter-panel-actions">
+                  <button
+                    type="button"
+                    className="logbook-filter-action-btn"
+                    onClick={clearFilters}
                   >
-                    <span className="logbook-col-label">{col.label}</span>
-                    <span
-                      className="logbook-col-resize"
-                      role="separator"
-                      aria-orientation="vertical"
-                      aria-label={`Resize ${col.label} column`}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        startResize(col.id, event.clientX);
-                      }}
-                    />
-                  </th>
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="logbook-filter-action-btn logbook-filter-action-btn-primary"
+                    onClick={applyFilterSelection}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <div className="logbook-activity-meta">
+            <span
+              className="logbook-activity-count muted"
+              aria-label={`${state.activityLog.length} of ${MAX_ACTIVITY_LOG_ENTRIES} log entries stored`}
+            >
+              {state.activityLog.length}/{MAX_ACTIVITY_LOG_ENTRIES}
+            </span>
+            <button
+              type="button"
+              className="logbook-clear-all-btn"
+              disabled={state.activityLog.length === 0}
+              onClick={() => setClearConfirmOpen(true)}
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="muted logbook-empty">No entries in this category yet.</p>
+        ) : (
+          <div
+            className="logbook-sheet-wrap"
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              if ((event.target as HTMLElement).closest(".logbook-col-resize")) {
+                return;
+              }
+              const el = event.currentTarget;
+              sheetDragRef.current = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                scrollLeft: el.scrollLeft,
+                scrollTop: el.scrollTop,
+                dragging: false,
+              };
+            }}
+            onPointerMove={(event) => {
+              const drag = sheetDragRef.current;
+              if (!drag || drag.pointerId !== event.pointerId) return;
+              const el = event.currentTarget;
+              const dx = event.clientX - drag.startX;
+              const dy = event.clientY - drag.startY;
+              if (!drag.dragging) {
+                if (dx * dx + dy * dy < 16) return;
+                drag.dragging = true;
+                el.setPointerCapture(event.pointerId);
+              }
+              el.scrollLeft = drag.scrollLeft - dx;
+              el.scrollTop = drag.scrollTop - dy;
+            }}
+            onPointerUp={(event) => {
+              const drag = sheetDragRef.current;
+              if (!drag || drag.pointerId !== event.pointerId) return;
+              if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              sheetDragRef.current = null;
+            }}
+            onPointerCancel={(event) => {
+              const drag = sheetDragRef.current;
+              if (!drag || drag.pointerId !== event.pointerId) return;
+              if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              sheetDragRef.current = null;
+            }}
+          >
+            <table className="logbook-sheet">
+              <colgroup>
+                {LOGBOOK_COLUMNS.map((col) => (
+                  <col
+                    key={col.id}
+                    style={{ width: `${colWidths[col.id]}px` }}
+                  />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((entry) => (
-                <tr
-                  key={entry.id}
-                  id={`logbook-entry-${entry.id}`}
-                  className={
-                    highlightId === entry.id ? "logbook-row-highlight" : undefined
+              </colgroup>
+              <thead>
+                <tr>
+                  {LOGBOOK_COLUMNS.map((col) => (
+                    <th
+                      key={col.id}
+                      scope="col"
+                      className={`col-${col.id}`}
+                      style={{ width: `${colWidths[col.id]}px` }}
+                    >
+                      <span className="logbook-col-label">{col.label}</span>
+                      <span
+                        className="logbook-col-resize"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize ${col.label} column`}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          startResize(col.id, event.clientX);
+                        }}
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    id={`logbook-entry-${entry.id}`}
+                    className={
+                      highlightId === entry.id ? "logbook-row-highlight" : undefined
+                    }
+                  >
+                    <td className="col-time">
+                      <time dateTime={new Date(entry.at).toISOString()}>
+                        {formatLogTimeCell(entry.at)}
+                      </time>
+                    </td>
+                    <td className="col-category">
+                      {LOG_CATEGORY_LABELS[entry.category]}
+                    </td>
+                    <td className="col-event">
+                      <span className="logbook-event-title">{entry.summary}</span>
+                      {entry.detail && (
+                        <span className="logbook-event-detail">{entry.detail}</span>
+                      )}
+                    </td>
+                    <td className="col-site">
+                      {entry.officeId ? officeLabel(entry.officeId) : "—"}
+                    </td>
+                    <td className="col-spent">{formatLogCostCell(entry.spent)}</td>
+                    <td className="col-gained">{formatLogCostCell(entry.gained)}</td>
+                    <td className="col-effects">
+                      {formatLogImpactsCell(entry.impacts)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {totalPages > 1 ? (
+              <nav
+                className="logbook-sheet-pagination"
+                aria-label="Logbook pages"
+              >
+                <button
+                  type="button"
+                  className="tab logbook-page-btn"
+                  disabled={currentPage === 0}
+                  aria-label="Previous page"
+                  onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                >
+                  ←
+                </button>
+                <span className="logbook-page-label">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="tab logbook-page-btn"
+                  disabled={currentPage >= totalPages - 1}
+                  aria-label="Next page"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages - 1, prev + 1))
                   }
                 >
-                  <td className="col-time">
-                    <time dateTime={new Date(entry.at).toISOString()}>
-                      {formatLogTimeCell(entry.at)}
-                    </time>
-                  </td>
-                  <td className="col-category">
-                    {LOG_CATEGORY_LABELS[entry.category]}
-                  </td>
-                  <td className="col-event">
-                    <span className="logbook-event-title">{entry.summary}</span>
-                    {entry.detail && (
-                      <span className="logbook-event-detail">{entry.detail}</span>
-                    )}
-                  </td>
-                  <td className="col-site">
-                    {entry.officeId ? officeLabel(entry.officeId) : "—"}
-                  </td>
-                  <td className="col-spent">{formatLogCostCell(entry.spent)}</td>
-                  <td className="col-gained">{formatLogCostCell(entry.gained)}</td>
-                  <td className="col-effects">
-                    {formatLogImpactsCell(entry.impacts)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {totalPages > 1 ? (
-            <nav
-              className="logbook-sheet-pagination"
-              aria-label="Logbook pages"
-            >
-              <button
-                type="button"
-                className="tab logbook-page-btn"
-                disabled={currentPage === 0}
-                aria-label="Previous page"
-                onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-              >
-                ←
-              </button>
-              <span className="logbook-page-label">
-                Page {currentPage + 1} of {totalPages}
-              </span>
-              <button
-                type="button"
-                className="tab logbook-page-btn"
-                disabled={currentPage >= totalPages - 1}
-                aria-label="Next page"
-                onClick={() =>
-                  setPage((prev) => Math.min(totalPages - 1, prev + 1))
-                }
-              >
-                →
-              </button>
-            </nav>
-          ) : null}
-          <p className="muted logbook-sheet-foot">
-            Showing {filtered.length === 0 ? 0 : pageStart + 1}–{showingEnd} of{" "}
-            {filtered.length}
-            {filterId !== "all" ? " in filter" : ""}
-          </p>
-        </div>
-      )}
-    </div>
+                  →
+                </button>
+              </nav>
+            ) : null}
+            <p className="muted logbook-sheet-foot">
+              Showing {filtered.length === 0 ? 0 : pageStart + 1}–{showingEnd} of{" "}
+              {filtered.length}
+              {filtersActive ? " in filter" : ""}
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 
   return (
-    <div
-      className={`main-view-panel location-view-panel logbook-view ${portraitLockPageClass(portraitLarge)}`}
-    >
+    <div className="main-view-panel location-view-panel logbook-view">
       {clearConfirmOpen ? (
         <ConfirmDialog
           title="Clear activity log?"
@@ -421,34 +545,20 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
           onCancel={() => setClearConfirmOpen(false)}
         />
       ) : null}
-      {portraitLarge ? logbookHeader : null}
-      <div
-        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
-      >
+      <div className="location-view-body">
         <TabPortraitLayout
           src={logbookPortrait}
-          storageKey={portraitStorageKey}
-          portraitSize={portraitSize}
-          onPortraitSizeChange={setPortraitSize}
-          className={`logbook-portrait-layout ${dualPortraitTabClass(portraitLarge)}`}
+          storageKey={LOGBOOK_PORTRAIT_SIZE_KEY}
           quote={tabQuote(state, "logbook")}
-          {...DUAL_PORTRAIT_TAB_PROPS}
+          portraitLayout="stretch"
+          parallaxScroll={false}
+          portraitLocked={false}
+          allowPortraitResize={false}
+          className="tab-portrait-fit"
         >
-          {portraitLarge ? (
-            <>
-              {logbookNotes}
-              {logbookActivity}
-            </>
-          ) : (
-            <div className="portrait-lock-split-right">
-              <div className="portrait-lock-frozen-header">
-                {logbookHeader}
-                {logbookNotes}
-              </div>
-              <div className="portrait-lock-scroll-body">{logbookActivity}</div>
-            </div>
-          )}
+          {logbookBesidePortrait}
         </TabPortraitLayout>
+        <div className="tab-below-portrait">{logbookBelowPortrait}</div>
       </div>
     </div>
   );

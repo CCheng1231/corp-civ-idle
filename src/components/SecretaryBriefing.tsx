@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch, type ReactNode } from "react";
+import { useState, useEffect, type Dispatch } from "react";
 import { formatNumber } from "../game/constants";
 import {
   engagementStatusLabel,
@@ -8,23 +8,13 @@ import {
   jobReportBrief,
   jobReportHeadline,
   pendingJobReports,
-  secretaryQuote,
   secretaryTips,
   secretaryJobSummary,
 } from "../game/secretaryBriefing";
 import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
-import secretaryPortrait from "../assets/secretary.jpg";
 import { JobBoard } from "./JobBoard";
-import {
-  DUAL_PORTRAIT_TAB_PROPS,
-  TabPortraitLayout,
-  dualPortraitTabClass,
-  useTabPortraitSize,
-  type PortraitSize,
-} from "./TabPortraitLayout";
 
-const SECRETARY_PORTRAIT_SIZE_KEY = "corp-civ-idle-secretary-portrait-size";
 const SECRETARY_WORK_TAB_KEY = "corp-civ-idle-secretary-work-tab";
 
 type SecretaryWorkTab = "reports" | "board";
@@ -42,28 +32,14 @@ function initialWorkTab(): SecretaryWorkTab {
 interface SecretaryBriefingProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
-  portraitSize?: PortraitSize;
-  onPortraitSizeChange?: (size: PortraitSize) => void;
-  portraitHeader?: ReactNode;
 }
 
-export function SecretaryBriefing({
-  state,
-  dispatch,
-  portraitSize: portraitSizeProp,
-  onPortraitSizeChange,
-  portraitHeader,
-}: SecretaryBriefingProps) {
-  const quote = secretaryQuote(state);
+export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
   const tips = secretaryTips(state);
   const { active, cap } = secretaryJobSummary(state);
   const jobReports = pendingJobReports(state);
   const now = Date.now();
   const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialWorkTab);
-  const { portraitSize, setPortraitSize } = useTabPortraitSize(
-    SECRETARY_PORTRAIT_SIZE_KEY,
-    true,
-  );
 
   useEffect(() => {
     try {
@@ -72,9 +48,6 @@ export function SecretaryBriefing({
       /* ignore */
     }
   }, [workTab]);
-  const effectivePortraitSize = portraitSizeProp ?? portraitSize;
-  const effectiveSetPortraitSize = onPortraitSizeChange ?? setPortraitSize;
-  const effectivePortraitLarge = effectivePortraitSize === "large";
 
   function openJobLogbook(entryId?: string) {
     dispatch({
@@ -85,7 +58,7 @@ export function SecretaryBriefing({
     });
   }
 
-  const secretaryWorkPanel = (
+  return (
     <div className="secretary-work-panel">
       <div
         className="secretary-work-tabs logbook-filters"
@@ -284,27 +257,5 @@ export function SecretaryBriefing({
         </div>
       </div>
     </div>
-  );
-
-  return (
-    <TabPortraitLayout
-      src={secretaryPortrait}
-      storageKey={SECRETARY_PORTRAIT_SIZE_KEY}
-      portraitSize={effectivePortraitSize}
-      onPortraitSizeChange={effectiveSetPortraitSize}
-      quote={quote}
-      tallPortrait
-      {...DUAL_PORTRAIT_TAB_PROPS}
-      className={`secretary-tab-scene ${dualPortraitTabClass(effectivePortraitLarge)}`}
-    >
-      {effectivePortraitLarge ? secretaryWorkPanel : (
-        <div className="portrait-lock-split-right">
-          {portraitHeader ? (
-            <div className="portrait-lock-frozen-header">{portraitHeader}</div>
-          ) : null}
-          <div className="portrait-lock-scroll-body">{secretaryWorkPanel}</div>
-        </div>
-      )}
-    </TabPortraitLayout>
   );
 }

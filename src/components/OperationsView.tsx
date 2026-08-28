@@ -1,82 +1,100 @@
-import { type Dispatch } from "react";
-import { LocationSitePanel } from "./LocationSitePanel";
-import { LocationViewHeader } from "./LocationViewHeader";
+import { useState, type Dispatch } from "react";
+import { MAX_STRUCTURE_QUEUE } from "../game/constants";
+import { ownedOfficeIds } from "../game/mapWorld";
 import {
-  DUAL_PORTRAIT_TAB_PROPS,
-  TabPortraitLayout,
-  dualPortraitTabClass,
-  portraitLockBodyClass,
-  portraitLockPageClass,
-  useTabPortraitSize,
-} from "./TabPortraitLayout";
+  isAllOfficesSelected,
+  resolveOfficeLocation,
+  structureJobsForOffices,
+} from "../game/officeSelection";
+import { LocationSitePanel } from "./LocationSitePanel";
+import { OfficeBuildQueueSection } from "./OfficeStructurePanel";
+import { OfficeSiteSummary } from "./OfficeSiteSummary";
+import { StructureBuildQueueList } from "./StructureBuildQueueList";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import officePortrait from "../assets/office.jpg";
-import type { GameAction, GameState } from "../game/types";
+import type { GameAction, GameState, OfficeLocationId } from "../game/types";
 
 interface OperationsViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
 }
 
-/** Nav: Office sites — structure upgrades per HQ/Branch. */
+/** Nav: Office — structure upgrades per HQ/Branch. */
 export function OperationsView({ state, dispatch }: OperationsViewProps) {
-  const officeId = state.selectedOffice;
+  const showAll = isAllOfficesSelected(state.selectedOffice);
+  const officeId: OfficeLocationId = resolveOfficeLocation(state);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const portraitStorageKey = "corp-civ-idle-operations-portrait-size";
-  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
-    portraitStorageKey,
-    false,
+  const buildEntries = structureJobsForOffices(state);
+  const officeCount = ownedOfficeIds(state).length;
+
+  const officeBesidePortrait = (
+    <>
+      <TabSiteHeader title="Office" state={state} dispatch={dispatch} />
+      {showAll ? (
+        <section className="location-view-section tab-queue-section tab-compact-queue">
+          <div className="tab-queue-heading">
+            <h3>Building in progress</h3>
+            <span className="tab-queue-count muted">{buildEntries.length}</span>
+          </div>
+          <StructureBuildQueueList
+            state={state}
+            entries={buildEntries}
+            dispatch={dispatch}
+            compact
+            maxSlots={officeCount * MAX_STRUCTURE_QUEUE}
+            emptyLabel="No builds queued."
+          />
+        </section>
+      ) : (
+        <>
+          <OfficeBuildQueueSection
+            state={state}
+            dispatch={dispatch}
+            officeId={officeId}
+            compact
+            hideCompleted={hideCompleted}
+            onHideCompletedChange={setHideCompleted}
+          />
+          <OfficeSiteSummary
+            state={state}
+            dispatch={dispatch}
+            officeId={officeId}
+            variant="beside"
+          />
+        </>
+      )}
+    </>
   );
 
   return (
-    <div
-      className={`main-view-panel location-view-panel ${portraitLockPageClass(portraitLarge)}`}
-    >
-      {portraitLarge ? (
-        <LocationViewHeader
-          title="Office sites"
-          description="Site summary and structure upgrades. Queues, hiring, and research use the office selected here."
-          state={state}
-          dispatch={dispatch}
-        />
-      ) : null}
-      <div
-        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
-      >
+    <div className="main-view-panel location-view-panel operations-view">
+      <div className="location-view-body">
         <TabPortraitLayout
           src={officePortrait}
           storageKey={portraitStorageKey}
-          portraitSize={portraitSize}
-          onPortraitSizeChange={setPortraitSize}
           quote={tabQuote(state, "office")}
-          {...DUAL_PORTRAIT_TAB_PROPS}
-          className={dualPortraitTabClass(portraitLarge)}
+          portraitLayout="stretch"
+          parallaxScroll={false}
+          portraitLocked={false}
+          allowPortraitResize={false}
+          className="tab-portrait-fit"
         >
-          {portraitLarge ? (
-            <LocationSitePanel
-              state={state}
-              dispatch={dispatch}
-              officeId={officeId}
-            />
-          ) : (
-            <div className="portrait-lock-split-right">
-              <div className="portrait-lock-frozen-header">
-                <LocationViewHeader
-                  title="Office sites"
-                  description="Site summary and structure upgrades. Queues, hiring, and research use the office selected here."
-                  state={state}
-                  dispatch={dispatch}
-                />
-              </div>
-              <div className="portrait-lock-scroll-body">
-                <LocationSitePanel
-                  state={state}
-                  dispatch={dispatch}
-                  officeId={officeId}
-                />
-              </div>
-            </div>
-          )}
+          {officeBesidePortrait}
         </TabPortraitLayout>
+        <div className="tab-below-portrait">
+          <LocationSitePanel
+            state={state}
+            dispatch={dispatch}
+            officeId={officeId}
+            hideCompleted={hideCompleted}
+            onHideCompletedChange={setHideCompleted}
+            showBuildQueue={false}
+            readOnly={showAll}
+          />
+        </div>
       </div>
     </div>
   );

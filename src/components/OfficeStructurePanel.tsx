@@ -108,6 +108,93 @@ interface OfficeStructurePanelProps {
   officeId: OfficeLocationId;
   /** Site capacity / expansion — shown after build queue (Hire tab pattern). */
   siteSummary?: ReactNode;
+  showBuildQueue?: boolean;
+  hideCompleted: boolean;
+  onHideCompletedChange: (value: boolean) => void;
+  readOnly?: boolean;
+}
+
+interface OfficeBuildQueueSectionProps {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+  officeId: OfficeLocationId;
+  compact?: boolean;
+  hideCompleted: boolean;
+  onHideCompletedChange: (value: boolean) => void;
+}
+
+export function OfficeBuildQueueSection({
+  state,
+  dispatch,
+  officeId,
+  compact = false,
+  hideCompleted,
+  onHideCompletedChange,
+}: OfficeBuildQueueSectionProps) {
+  const buildQueue = state.structureQueues[officeId];
+  const now = Date.now();
+
+  if (compact) {
+    return (
+      <section className="location-view-section tab-queue-section tab-compact-queue">
+        <div className="tab-queue-heading">
+          <h3>Building in progress</h3>
+          <div className="tab-queue-heading-actions">
+            <span
+              className="tab-queue-count muted"
+              aria-label={`Build queue ${buildQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
+            >
+              {buildQueue.length}/{MAX_STRUCTURE_QUEUE}
+            </span>
+            <label className="progression-hide-completed-check tab-queue-filter">
+              <input
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={(event) => onHideCompletedChange(event.target.checked)}
+              />
+              Hide maxed
+            </label>
+          </div>
+        </div>
+        <StructureBuildQueueList
+          state={state}
+          jobs={buildQueue}
+          locationId={officeId}
+          dispatch={dispatch}
+          now={now}
+          compact
+          emptyLabel="No builds queued."
+        />
+      </section>
+    );
+  }
+
+  return (
+    <QueueSection
+      label="Build queue"
+      count={buildQueue.length}
+      max={MAX_STRUCTURE_QUEUE}
+      className="location-queue-section office-build-queue-section"
+      headerExtra={
+        <label className="progression-hide-completed-check">
+          <input
+            type="checkbox"
+            checked={hideCompleted}
+            onChange={(event) => onHideCompletedChange(event.target.checked)}
+          />
+          Hide maxed
+        </label>
+      }
+    >
+      <StructureBuildQueueList
+        state={state}
+        jobs={buildQueue}
+        locationId={officeId}
+        dispatch={dispatch}
+        now={now}
+      />
+    </QueueSection>
+  );
 }
 
 export function OfficeStructurePanel({
@@ -115,13 +202,14 @@ export function OfficeStructurePanel({
   dispatch,
   officeId,
   siteSummary,
+  showBuildQueue = true,
+  hideCompleted,
+  onHideCompletedChange,
+  readOnly = false,
 }: OfficeStructurePanelProps) {
   const locationStructures = state.structureLevelsByLocation[officeId];
   const projectedStructures = projectedStructureLevels(state, officeId);
-  const buildQueue = state.structureQueues[officeId];
   const queueFull = isStructureQueueFull(state, officeId);
-  const now = Date.now();
-  const [hideCompleted, setHideCompleted] = useState(false);
   const [sellConfirm, setSellConfirm] = useState<{
     structureId: StructureId;
     structureName: string;
@@ -149,8 +237,10 @@ export function OfficeStructurePanel({
       queueFull,
     );
     const blockerMessage = structureUpgradeBlockerDisplay(blocker);
-    const canUpgrade = unlocked && !maxed && !inProgress && blocker === null;
-    const canSell = canSellStructureLevel(state, officeId, structure.id);
+    const canUpgrade =
+      !readOnly && unlocked && !maxed && !inProgress && blocker === null;
+    const canSell =
+      !readOnly && canSellStructureLevel(state, officeId, structure.id);
     const sellRefund = structureDemolishRefund(state, officeId, structure.id);
     const sellBlocked = isStructureQueuedAt(state, officeId, structure.id);
     const targetLevel = inProgress
@@ -331,6 +421,8 @@ export function OfficeStructurePanel({
           >
             {!unlocked
               ? "Locked"
+              : readOnly
+                ? "Pick an office"
               : inProgress
                 ? "In progress"
                 : "Upgrade"}
@@ -360,31 +452,19 @@ export function OfficeStructurePanel({
   }
 
   return (
-    <div className="office-structures-panel" onClick={(e) => e.stopPropagation()}>
-      <QueueSection
-        label="Build queue"
-        count={buildQueue.length}
-        max={MAX_STRUCTURE_QUEUE}
-        className="location-queue-section office-build-queue-section"
-        headerExtra={
-          <label className="progression-hide-completed-check">
-            <input
-              type="checkbox"
-              checked={hideCompleted}
-              onChange={(event) => setHideCompleted(event.target.checked)}
-            />
-            Hide maxed
-          </label>
-        }
-      >
-        <StructureBuildQueueList
+    <div
+      className={`office-structures-panel${readOnly ? " office-structures-readonly" : ""}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {showBuildQueue ? (
+        <OfficeBuildQueueSection
           state={state}
-          jobs={buildQueue}
-          locationId={officeId}
           dispatch={dispatch}
-          now={now}
+          officeId={officeId}
+          hideCompleted={hideCompleted}
+          onHideCompletedChange={onHideCompletedChange}
         />
-      </QueueSection>
+      ) : null}
       {siteSummary}
       {STRUCTURE_CATEGORY_ORDER.map((category) => {
         const items = structurePanelStructures().filter(

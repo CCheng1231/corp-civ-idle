@@ -9,7 +9,8 @@ import {
   recruitBatchCost,
 } from "../game/constants";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
-import type { GameAction, GameState, UnitId } from "../game/types";
+import { resolveOfficeLocation } from "../game/officeSelection";
+import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
 
 interface RecruitmentMenuProps {
   state: GameState;
@@ -22,7 +23,7 @@ export function RecruitmentMenu({
   dispatch,
   onClose,
 }: RecruitmentMenuProps) {
-  const officeId = state.selectedOffice;
+  const officeId: OfficeLocationId = resolveOfficeLocation(state);
   const loc = state.locationStats[officeId];
   const defensePct = espionageDefensePercent(state);
 

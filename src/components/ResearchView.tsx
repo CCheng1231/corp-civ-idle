@@ -26,17 +26,15 @@ import {
   formatCompactBonus,
 } from "./upgradePreviewFormat";
 import { StructureCostLine } from "./StructureCostLine";
-import { LocationViewHeader } from "./LocationViewHeader";
-import {
-  DUAL_PORTRAIT_TAB_PROPS,
-  TabPortraitLayout,
-  dualPortraitTabClass,
-  portraitLockBodyClass,
-  portraitLockPageClass,
-  useTabPortraitSize,
-} from "./TabPortraitLayout";
+import { TabPortraitLayout } from "./TabPortraitLayout";
+import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import researchPortrait from "../assets/Research.webp";
+import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
+import {
+  isAllOfficesSelected,
+  resolveOfficeLocation,
+} from "../game/officeSelection";
 import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
 import { buildResearchDetailModel } from "./progressionDetailModel";
 import {
@@ -44,10 +42,11 @@ import {
   ProgressionMaxedCard,
   ProgressionNameButton,
 } from "./progressionUi";
-import { ResearchQueueList, QueueSection } from "./StructureBuildQueueList";
+import { ResearchQueueList } from "./StructureBuildQueueList";
 import type {
   GameAction,
   GameState,
+  OfficeLocationId,
   ResearchDefinition,
 } from "../game/types";
 
@@ -64,7 +63,9 @@ function isResearchCompleted(
 }
 
 export function ResearchView({ state, dispatch }: ResearchViewProps) {
-  const office = state.selectedOffice;
+  const showAll = isAllOfficesSelected(state.selectedOffice);
+  const office: OfficeLocationId = resolveOfficeLocation(state);
+  const actionsLocked = showAll;
   const researchQueue = researchJobsAtOffice(state, office);
   const queueFull = isResearchQueueFull(state, office);
   const projected = projectedResearchLevels(state);
@@ -74,10 +75,10 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     null,
   );
   const portraitStorageKey = "corp-civ-idle-research-portrait-size";
-  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
-    portraitStorageKey,
-    true,
-  );
+  const researchCompletedCount = RESEARCH.filter((research) =>
+    isResearchCompleted(state, research),
+  ).length;
+  const researchTotalCount = RESEARCH.length;
 
   function openResearchDetail(research: ResearchDefinition) {
     setDetailResearch(research);
@@ -93,7 +94,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     const affordable = canAffordAtOffice(state, office, cost);
     const queueBlocked = queueFull && !inProgress;
     const disabled =
-      !unlocked || maxed || inProgress || !affordable || queueBlocked;
+      actionsLocked ||
+      !unlocked ||
+      maxed ||
+      inProgress ||
+      !affordable ||
+      queueBlocked;
     const targetLevel = inProgress
       ? projectedLevel
       : Math.min(level + 1, research.maxLevel);
@@ -232,6 +238,8 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         >
           {!unlocked
             ? "Locked"
+            : actionsLocked
+              ? "Pick an office"
             : inProgress
               ? "In progress"
               : queueBlocked
@@ -242,100 +250,136 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     );
   }
 
-  const researchCatalog = (
+  const researchBesidePortrait = (
     <>
-        <QueueSection
-          label="Research queue"
-          count={researchQueue.length}
-          max={MAX_RESEARCH_QUEUE}
-          className="location-queue-section research-queue-section"
-          headerExtra={
-            <label className="progression-hide-completed-check">
-              <input
-                type="checkbox"
-                checked={hideCompleted}
-                onChange={(event) => setHideCompleted(event.target.checked)}
+      <TabSiteHeader title="R&D" state={state} dispatch={dispatch} />
+      {showAll ? (
+        ownedOfficeIds(state).map((siteId) => {
+          const siteQueue = researchJobsAtOffice(state, siteId);
+          return (
+            <section
+              key={siteId}
+              className="location-view-section tab-queue-section tab-compact-queue"
+            >
+              <div className="tab-queue-heading">
+                <h3>{officeDisplayName(state, siteId)}</h3>
+                <span
+                  className="tab-queue-count muted"
+                  aria-label={`Research queue ${siteQueue.length} of ${MAX_RESEARCH_QUEUE}`}
+                >
+                  {siteQueue.length}/{MAX_RESEARCH_QUEUE}
+                </span>
+              </div>
+              <ResearchQueueList
+                state={state}
+                jobs={siteQueue}
+                officeId={siteId}
+                dispatch={dispatch}
+                now={now}
+                compact
+                emptyLabel="No research queued."
               />
-              Hide completed
-            </label>
-          }
-        >
+            </section>
+          );
+        })
+      ) : (
+        <section className="location-view-section tab-queue-section tab-compact-queue">
+          <div className="tab-queue-heading">
+            <h3>Research in progress</h3>
+            <div className="tab-queue-heading-actions">
+              <span
+                className="tab-queue-count muted"
+                aria-label={`Research queue ${researchQueue.length} of ${MAX_RESEARCH_QUEUE}`}
+              >
+                {researchQueue.length}/{MAX_RESEARCH_QUEUE}
+              </span>
+              <label className="progression-hide-completed-check tab-queue-filter">
+                <input
+                  type="checkbox"
+                  checked={hideCompleted}
+                  onChange={(event) => setHideCompleted(event.target.checked)}
+                />
+                Hide completed
+              </label>
+            </div>
+          </div>
           <ResearchQueueList
             state={state}
             jobs={researchQueue}
             officeId={office}
             dispatch={dispatch}
             now={now}
+            compact
+            emptyLabel="No research queued."
           />
-        </QueueSection>
-        {RESEARCH_CATEGORY_ORDER.map((category) => {
-          const items = RESEARCH.filter(
-            (research) => research.category === category,
-          ).filter(
-            (research) =>
-              !hideCompleted || !isResearchCompleted(state, research),
-          );
-          if (items.length === 0) return null;
-
-          const maxedCount = items.filter((research) =>
-            isResearchCompleted(state, research),
-          ).length;
-          const defaultOpen = items.some(
-            (research) =>
-              !isResearchCompleted(state, research) ||
-              isResearchQueued(state, research.id),
-          );
-
-          return (
-            <ProgressionCategorySection
-              key={category}
-              title={RESEARCH_CATEGORY_LABELS[category]}
-              defaultOpen={defaultOpen}
-              maxedCount={maxedCount}
-              totalCount={items.length}
-            >
-              <ul className="structure-list progression-grid">
-                {items.map(renderResearchCard)}
-              </ul>
-            </ProgressionCategorySection>
-          );
-        })}
+        </section>
+      )}
+      <p
+        className="research-progress-beside"
+        aria-label={`${researchCompletedCount} of ${researchTotalCount} research completed`}
+      >
+        <span className="research-progress-beside-label">Firm-wide</span>
+        <strong className="research-progress-beside-count">
+          {researchCompletedCount}/{researchTotalCount}
+        </strong>
+        <span className="research-progress-beside-suffix">completed</span>
+      </p>
     </>
   );
 
-  const researchHeader = (
-    <LocationViewHeader
-      title="Research"
-      description="Firm-wide tech tree at the selected office."
-      state={state}
-      dispatch={dispatch}
-    />
+  const researchBelowPortrait = (
+    <>
+      {RESEARCH_CATEGORY_ORDER.map((category) => {
+        const items = RESEARCH.filter(
+          (research) => research.category === category,
+        ).filter(
+          (research) =>
+            !hideCompleted || !isResearchCompleted(state, research),
+        );
+        if (items.length === 0) return null;
+
+        const maxedCount = items.filter((research) =>
+          isResearchCompleted(state, research),
+        ).length;
+        const defaultOpen = items.some(
+          (research) =>
+            !isResearchCompleted(state, research) ||
+            isResearchQueued(state, research.id),
+        );
+
+        return (
+          <ProgressionCategorySection
+            key={category}
+            title={RESEARCH_CATEGORY_LABELS[category]}
+            defaultOpen={defaultOpen}
+            maxedCount={maxedCount}
+            totalCount={items.length}
+          >
+            <ul className="structure-list progression-grid">
+              {items.map(renderResearchCard)}
+            </ul>
+          </ProgressionCategorySection>
+        );
+      })}
+    </>
   );
 
   return (
-    <div
-      className={`main-view-panel location-view-panel ${portraitLockPageClass(portraitLarge)}`}
-    >
-      {portraitLarge ? researchHeader : null}
-      <div
-        className={`location-view-body ${portraitLockBodyClass(portraitLarge)}`}
-      >
+    <div className="main-view-panel location-view-panel research-view">
+      <div className="location-view-body">
         <TabPortraitLayout
           src={researchPortrait}
           storageKey={portraitStorageKey}
-          portraitSize={portraitSize}
-          onPortraitSizeChange={setPortraitSize}
           quote={tabQuote(state, "research")}
-          {...DUAL_PORTRAIT_TAB_PROPS}
-          className={dualPortraitTabClass(portraitLarge)}
+          portraitLayout="stretch"
+          parallaxScroll={false}
+          portraitLocked={false}
+          allowPortraitResize={false}
+          className="tab-portrait-fit"
         >
-          {portraitLarge ? researchCatalog : (
-            <div className="portrait-lock-split-right">
-              <div className="portrait-lock-frozen-header">{researchHeader}</div>
-              <div className="portrait-lock-scroll-body">{researchCatalog}</div>
-            </div>
-          )}
+          {researchBesidePortrait}
         </TabPortraitLayout>
+        <div className="tab-below-portrait">{researchBelowPortrait}</div>
       </div>
       {detailResearch && (
         <ProgressionDetailDialog

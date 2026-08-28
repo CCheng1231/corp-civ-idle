@@ -22,12 +22,15 @@ interface OfficeSiteSummaryProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
+  /** inline = space/power; expansion = expand only; beside = capacity + expand for portrait column */
+  variant?: "full" | "inline" | "expansion" | "beside";
 }
 
 export function OfficeSiteSummary({
   state,
   dispatch,
   officeId,
+  variant = "full",
 }: OfficeSiteSummaryProps) {
   const loc = state.locationStats?.[officeId] ?? {
     power: BASE_LOCATION_POWER,
@@ -72,32 +75,52 @@ export function OfficeSiteSummary({
   const freeSpace = officeSpaceAvailable(loc);
   const expansionCostParts = resourceCostParts(expansionCost);
 
-  return (
-    <div className="office-site-summary office-site-summary-compact">
-      <div className="office-site-capacity-row">
-        <div className="office-site-capacity-stat">
-          <span className="office-site-capacity-label">Space</span>
-          <strong>
-            {formatNumber(loc.officeSpaceUsed)}/{formatNumber(loc.officeSpace)}
-          </strong>
-          <span className="muted office-site-capacity-free">
-            {formatNumber(freeSpace)} free
-          </span>
-        </div>
-        <div className="office-site-capacity-stat">
-          <span className="office-site-capacity-label">Power</span>
-          <strong>
-            {formatNumber(loc.powerUsed)}/{formatNumber(loc.power)}
-          </strong>
-          <span className="muted office-site-capacity-free">
-            {formatNumber(powerAvailable(loc))} free
-          </span>
-        </div>
+  const capacityRow = (
+    <div className="office-site-capacity-row">
+      <div className="office-site-capacity-stat">
+        <span className="office-site-capacity-label">Space</span>
+        <strong>
+          {formatNumber(loc.officeSpaceUsed)}/{formatNumber(loc.officeSpace)}
+        </strong>
+        <span className="office-site-capacity-free">
+          {formatNumber(freeSpace)} free
+        </span>
       </div>
-      <div className="office-site-expand-row office-site-expand-row-compact">
+      <div className="office-site-capacity-stat">
+        <span className="office-site-capacity-label">Power</span>
+        <strong>
+          {formatNumber(loc.powerUsed)}/{formatNumber(loc.power)}
+        </strong>
+        <span className="office-site-capacity-free">
+          {formatNumber(powerAvailable(loc))} free
+        </span>
+      </div>
+    </div>
+  );
+
+  const expansionBesideRow = (
+    <div className="office-site-expand-beside">
+      <div className="office-expand-meta">
+        <span className="office-expand-meta-label">Expand</span>
+        {expansionMaxed ? (
+          <span className="muted">Maxed</span>
+        ) : (
+          <>
+            <span className="office-expand-level">
+              Lv {expansionLevel} → {expansionLevel + 1}
+            </span>
+            {spaceGain > 0 && (
+              <span className="office-expand-slots">
+                +{formatCompactCost(spaceGain)} slots
+              </span>
+            )}
+          </>
+        )}
+      </div>
+      {!expansionMaxed && (
         <button
           type="button"
-          className="btn office-expand-btn"
+          className="btn btn-compact office-expand-btn-mini"
           disabled={!canExpand}
           title={expansionBlockerMessage ?? undefined}
           onClick={() =>
@@ -108,49 +131,128 @@ export function OfficeSiteSummary({
             })
           }
         >
-          <span className="office-expand-btn-title">
-            {expansionMaxed
-              ? "Office expansion maxed"
-              : `Expand office · Lv ${expansionLevel} → ${expansionLevel + 1}`}
-          </span>
-          <span className="office-expand-btn-detail">
-            {!expansionMaxed && expansionCostParts.length > 0 && (
-              <span className="office-expand-btn-cost">
-                {expansionCostParts.map((part, index) => (
-                  <span key={part.key}>
-                    {index > 0 && (
-                      <span className="office-expand-btn-sep"> · </span>
-                    )}
-                    <span className="compact-stack-label">
-                      {part.label}:
-                    </span>{" "}
-                    <span
-                      className={
-                        canAffordCostPart(state, officeId, part)
-                          ? "structure-cost-affordable"
-                          : "structure-cost-unaffordable"
-                      }
-                    >
-                      {formatCompactCost(part.amount)}
-                    </span>
-                  </span>
-                ))}
-                {spaceGain > 0 && (
-                  <>
+          {expansionCostParts.length > 0 ? (
+            <span className="office-expand-btn-cost">
+              {expansionCostParts.map((part, index) => (
+                <span key={part.key}>
+                  {index > 0 && (
                     <span className="office-expand-btn-sep"> · </span>
-                    <span className="muted">+{formatCompactCost(spaceGain)} slots</span>
-                  </>
-                )}
-              </span>
-            )}
-          </span>
+                  )}
+                  <span className="compact-stack-label">{part.label}:</span>{" "}
+                  <span
+                    className={
+                      canAffordCostPart(state, officeId, part)
+                        ? "structure-cost-affordable"
+                        : "structure-cost-unaffordable"
+                    }
+                  >
+                    {formatCompactCost(part.amount)}
+                  </span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            "Expand"
+          )}
         </button>
-        {expansionBlockerMessage && !expansionMaxed && (
-          <span className="muted office-site-expand-blocker">
-            {expansionBlockerMessage}
-          </span>
-        )}
+      )}
+      {expansionBlockerMessage && !expansionMaxed && (
+        <span className="muted office-site-expand-blocker">
+          {expansionBlockerMessage}
+        </span>
+      )}
+    </div>
+  );
+
+  const expansionRow = (
+    <div className="office-site-expand-row office-site-expand-row-compact">
+      <button
+        type="button"
+        className="btn office-expand-btn"
+        disabled={!canExpand}
+        title={expansionBlockerMessage ?? undefined}
+        onClick={() =>
+          dispatch({
+            type: "BUY_STRUCTURE",
+            structureId: OFFICE_EXPANSION_STRUCTURE_ID,
+            locationId: officeId,
+          })
+        }
+      >
+        <span className="office-expand-btn-title">
+          {expansionMaxed
+            ? "Office expansion maxed"
+            : `Expand office · Lv ${expansionLevel} → ${expansionLevel + 1}`}
+        </span>
+        <span className="office-expand-btn-detail">
+          {!expansionMaxed && expansionCostParts.length > 0 && (
+            <span className="office-expand-btn-cost">
+              {expansionCostParts.map((part, index) => (
+                <span key={part.key}>
+                  {index > 0 && (
+                    <span className="office-expand-btn-sep"> · </span>
+                  )}
+                  <span className="compact-stack-label">
+                    {part.label}:
+                  </span>{" "}
+                  <span
+                    className={
+                      canAffordCostPart(state, officeId, part)
+                        ? "structure-cost-affordable"
+                        : "structure-cost-unaffordable"
+                    }
+                  >
+                    {formatCompactCost(part.amount)}
+                  </span>
+                </span>
+              ))}
+              {spaceGain > 0 && (
+                <>
+                  <span className="office-expand-btn-sep"> · </span>
+                  <span className="muted">+{formatCompactCost(spaceGain)} slots</span>
+                </>
+              )}
+            </span>
+          )}
+        </span>
+      </button>
+      {expansionBlockerMessage && !expansionMaxed && (
+        <span className="muted office-site-expand-blocker">
+          {expansionBlockerMessage}
+        </span>
+      )}
+    </div>
+  );
+
+  if (variant === "beside") {
+    return (
+      <div className="office-site-summary office-site-summary-beside">
+        {capacityRow}
+        {expansionBesideRow}
       </div>
+    );
+  }
+
+  if (variant === "inline") {
+    return (
+      <div className="office-site-summary office-site-summary-inline">
+        {capacityRow}
+      </div>
+    );
+  }
+
+  if (variant === "expansion") {
+    return (
+      <div className="office-site-summary office-site-summary-expansion">
+        {expansionBesideRow}
+      </div>
+    );
+  }
+
+  return (
+    <div className="office-site-summary office-site-summary-compact">
+      {capacityRow}
+      {expansionRow}
     </div>
   );
 }

@@ -4,10 +4,61 @@ import type { GameAction, GameState } from "../game/types";
 interface AudioControlsProps {
   settings: GameState["settings"];
   dispatch: Dispatch<GameAction>;
+  variant?: "overlay" | "settings";
 }
 
-export function AudioControls({ settings, dispatch }: AudioControlsProps) {
+export function AudioControls({
+  settings,
+  dispatch,
+  variant = "overlay",
+}: AudioControlsProps) {
   const { masterVolume, musicMuted } = settings;
+  const volumePercent = Math.round(masterVolume * 100);
+
+  if (variant === "settings") {
+    return (
+      <div className="audio-controls audio-controls-settings" aria-label="Music controls">
+        <label className="audio-volume-row">
+          <span>Music volume</span>
+          <span className="setting-row-inline">
+            <input
+              type="range"
+              className="audio-volume-slider"
+              min={0}
+              max={1}
+              step={0.05}
+              value={masterVolume}
+              aria-label="Music volume"
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: { masterVolume: Number(e.target.value) },
+                })
+              }
+            />
+            <span className="setting-value">{volumePercent}%</span>
+          </span>
+        </label>
+        <div className="audio-mute-row">
+          <span>Music</span>
+          <button
+            type="button"
+            className="audio-mute-btn"
+            aria-label={musicMuted ? "Unmute music" : "Mute music"}
+            aria-pressed={musicMuted}
+            onClick={() =>
+              dispatch({
+                type: "UPDATE_SETTINGS",
+                settings: { musicMuted: !musicMuted },
+              })
+            }
+          >
+            {musicMuted ? <MutedIcon /> : <VolumeIcon />}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="audio-controls" aria-label="Music controls">

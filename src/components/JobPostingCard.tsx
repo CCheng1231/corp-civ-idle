@@ -1,5 +1,6 @@
 import { type Dispatch } from "react";
 import { formatNumber, rosterAt } from "../game/constants";
+import { resolveOfficeLocation, isAllOfficesSelected } from "../game/officeSelection";
 import {
   actualShiftReturnPerHour,
   BUSINESS_TYPE_LABELS,
@@ -87,8 +88,9 @@ export function JobPostingCard({
   onAssignmentChange,
   showTower = false,
 }: JobPostingCardProps) {
-  const officeId = state.selectedOffice;
+  const officeId = resolveOfficeLocation(state);
   const officeRoster = rosterAt(state, officeId);
+  const engageLocked = isAllOfficesSelected(state.selectedOffice);
   const def = jobDefinitionForPosting(posting);
   const tower = towerById(posting.towerId);
   const band = completionBand(posting.unitHoursCompleted, def.unitHoursTotal);
@@ -100,7 +102,7 @@ export function JobPostingCard({
     posting.id,
     assignment,
   );
-  const disabled = Boolean(blockReason);
+  const disabled = engageLocked || Boolean(blockReason);
   const expiresIn = formatTimerRemaining(
     state,
     posting.expiresAt,

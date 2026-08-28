@@ -1,4 +1,8 @@
 import { rosterAt, totalWorkforce, formatNumber } from "./constants";
+import {
+  isAllOfficesSelected,
+  totalStaffAcrossOffices,
+} from "./officeSelection";
 import type { GameState, LogEntry } from "./types";
 import { activeEngagementCount, maxJobEngagements } from "./jobs";
 import { openJobPostings } from "./jobBoard";
@@ -41,7 +45,9 @@ export function secretaryTips(state: GameState): string[] {
   const officeId = state.selectedOffice;
   const activeJobs = activeEngagementCount(state);
   const jobCap = maxJobEngagements(state);
-  const staff = totalWorkforce(rosterAt(state, officeId));
+  const staff = isAllOfficesSelected(officeId)
+    ? totalStaffAcrossOffices(state)
+    : totalWorkforce(rosterAt(state, officeId));
   const openPostings = openJobPostings(state).length;
 
   if (activeJobs < jobCap) {
@@ -55,7 +61,11 @@ export function secretaryTips(state: GameState): string[] {
   }
 
   if (staff <= 0) {
-    tips.push("No units at the selected office — hire on the Recruitment tab before taking contracts.");
+    tips.push(
+      isAllOfficesSelected(officeId)
+        ? "No units across offices — hire on the Recruitment tab before taking contracts."
+        : "No units at the selected office — hire on the Recruitment tab before taking contracts.",
+    );
   } else if (activeJobs === 0) {
     tips.push("Assign units on a posting card, then hit Engage. Tier 1 jobs show full payout rates.");
   }
