@@ -60,7 +60,7 @@ export function SecretaryBriefing({
   const jobReports = pendingJobReports(state);
   const now = Date.now();
   const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialWorkTab);
-  const { portraitSize, setPortraitSize, portraitLarge } = useTabPortraitSize(
+  const { portraitSize, setPortraitSize } = useTabPortraitSize(
     SECRETARY_PORTRAIT_SIZE_KEY,
     true,
   );
