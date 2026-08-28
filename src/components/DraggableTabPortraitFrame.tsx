@@ -5,6 +5,9 @@ interface TabPortraitFrameProps {
   src: string;
   panStorageKey?: string;
   onPortraitToggle?: () => void;
+  className?: string;
+  /** Default crop bias (0 = top, 100 = bottom). Portraits use 12. */
+  focalYPercent?: number;
 }
 
 const DOUBLE_TAP_MS = 320;
@@ -84,13 +87,14 @@ function usePortraitDoubleTap(onPortraitToggle?: () => void) {
 function StaticTabPortraitFrame({
   src,
   onPortraitToggle,
+  className,
 }: TabPortraitFrameProps) {
   const { frameTitle, doubleTapClass, onDoubleClick, pointerHandlers } =
     usePortraitDoubleTap(onPortraitToggle);
 
   return (
     <div
-      className={`secretary-portrait-frame${doubleTapClass ? ` ${doubleTapClass}` : ""}`}
+      className={`secretary-portrait-frame${doubleTapClass ? ` ${doubleTapClass}` : ""}${className ? ` ${className}` : ""}`}
       title={frameTitle}
     >
       <img
@@ -110,6 +114,8 @@ function PannableTabPortraitFrame({
   src,
   panStorageKey,
   onPortraitToggle,
+  className,
+  focalYPercent,
 }: TabPortraitFrameProps & { panStorageKey: string }) {
   const {
     pan,
@@ -123,7 +129,7 @@ function PannableTabPortraitFrame({
     onPointerUp,
     onPointerCancel,
     surfaceTransform,
-  } = usePortraitPan(panStorageKey);
+  } = usePortraitPan(panStorageKey, { focalYPercent });
 
   const { frameTitle, doubleTapClass, onDoubleClick, pointerHandlers } =
     usePortraitDoubleTap(onPortraitToggle);
@@ -161,7 +167,7 @@ function PannableTabPortraitFrame({
   return (
     <div
       ref={frameRef}
-      className={`secretary-portrait-frame tab-portrait-frame-pannable${pan.x !== 0 || pan.y !== 0 ? " tab-portrait-frame-panned" : ""}${doubleTapClass ? ` ${doubleTapClass}` : ""}`}
+      className={`secretary-portrait-frame tab-portrait-frame-pannable${pan.x !== 0 || pan.y !== 0 ? " tab-portrait-frame-panned" : ""}${doubleTapClass ? ` ${doubleTapClass}` : ""}${className ? ` ${className}` : ""}`}
       title={frameTitle}
     >
       <button

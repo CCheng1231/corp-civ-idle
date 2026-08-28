@@ -24,10 +24,13 @@ import {
 } from "../game/officeSelection";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
+import { DraggableTabPortraitFrame } from "./DraggableTabPortraitFrame";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import homePortrait from "../assets/Home.jpg";
+import homeStaffArt from "../assets/Home_Staff.png";
+import homeStructureArt from "../assets/Home_Structure.jpg";
 import {
   RecruitmentQueueList,
   ResearchQueueList,
@@ -66,27 +69,24 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
 
   const overviewNetWorth = (
     <p
-      className="tab-net-worth-inline"
+      className="overview-net-worth-banner"
       aria-label={`Net worth ${formatResourceShort(state.netWorth)} of ${formatResourceShort(WIN_NET_WORTH)} goal`}
     >
       <span className="tab-net-worth-label">Net worth</span>
-      <strong className="tab-net-worth-value">
-        {formatResourceShort(state.netWorth)}
-      </strong>
-      <span className="tab-net-worth-goal muted">
-        / {formatResourceShort(WIN_NET_WORTH)}
+      <span className="overview-net-worth-amounts">
+        <strong className="tab-net-worth-value">
+          {formatResourceShort(state.netWorth)}
+        </strong>
+        <span className="tab-net-worth-goal">
+          / {formatResourceShort(WIN_NET_WORTH)}
+        </span>
       </span>
     </p>
   );
 
   const overviewBesidePortrait = (
     <>
-      <TabSiteHeader
-        title="Overview"
-        state={state}
-        dispatch={dispatch}
-        titleExtra={overviewNetWorth}
-      />
+      <TabSiteHeader title="Overview" state={state} dispatch={dispatch} />
       <div className="tab-hero-queues">
         <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
           <div className="tab-queue-heading">
@@ -113,7 +113,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
             dispatch={dispatch}
             now={now}
             compact
-            emptyLabel="No builds queued."
+            emptyLabel=""
           />
         </section>
         <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
@@ -141,7 +141,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
             dispatch={dispatch}
             now={now}
             compact
-            emptyLabel="No research queued."
+            emptyLabel=""
           />
         </section>
         <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
@@ -169,7 +169,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
             dispatch={dispatch}
             now={now}
             compact
-            emptyLabel="No hires queued."
+            emptyLabel=""
           />
         </section>
       </div>
@@ -233,8 +233,16 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
 
   const overviewBelowPortrait = (
     <>
+      {overviewNetWorth}
       <section className="overview-section location-view-section">
         <h3>Structure levels{showAll ? "" : ` — ${officeLabel}`}</h3>
+        <div className="overview-scene-banner">
+          <DraggableTabPortraitFrame
+            src={homeStructureArt}
+            panStorageKey="corp-civ-idle-overview-structure-art-pan"
+            focalYPercent={42}
+          />
+        </div>
         {showAll
           ? officeIds.map((siteId) =>
               renderStructureLevels(
@@ -270,6 +278,13 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
 
       <section className="overview-section location-view-section">
         <h3>Staff{showAll ? "" : ` — ${officeLabel}`}</h3>
+        <div className="overview-scene-banner">
+          <DraggableTabPortraitFrame
+            src={homeStaffArt}
+            panStorageKey="corp-civ-idle-overview-staff-art-pan"
+            focalYPercent={42}
+          />
+        </div>
         {showAll
           ? officeIds.map((siteId) =>
               renderStaff(siteId, officeDisplayName(state, siteId)),

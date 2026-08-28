@@ -94,7 +94,11 @@ function clampPan(
   };
 }
 
-export function usePortraitPan(storageKey: string) {
+export function usePortraitPan(
+  storageKey: string,
+  options?: { focalYPercent?: number },
+) {
+  const focalYPercent = options?.focalYPercent ?? DEFAULT_FOCAL_Y_PERCENT;
   const [pan, setPan] = useState<PortraitPan>(() => readPan(storageKey));
   const [layout, setLayout] = useState<PortraitImageLayout | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -118,6 +122,7 @@ export function usePortraitPan(storageKey: string) {
       frame.clientHeight,
       natural.width,
       natural.height,
+      focalYPercent,
     );
     if (!nextLayout) return;
 
@@ -130,7 +135,7 @@ export function usePortraitPan(storageKey: string) {
         nextLayout,
       ),
     );
-  }, []);
+  }, [focalYPercent]);
 
   useEffect(() => {
     try {

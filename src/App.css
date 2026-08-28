@@ -1,4 +1,5 @@
 .app-shell {
+  position: relative;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -14,7 +15,7 @@
 }
 
 .resource-bar {
-  padding: 0.35rem 0.65rem;
+  padding: 0.22rem 0.4rem;
   border-bottom: 1px solid var(--border);
   background: rgba(15, 20, 25, 0.97);
   backdrop-filter: blur(10px);
@@ -36,13 +37,13 @@
 }
 
 .brand-mark {
-  width: 1.55rem;
-  height: 1.55rem;
-  border-radius: 0.4rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.32rem;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 0.64rem;
+  font-size: 0.52rem;
   background: linear-gradient(135deg, var(--accent-2), #4f46e5);
 }
 
@@ -58,7 +59,7 @@
 .resource-grid {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.3rem;
+  gap: 0;
   flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
@@ -77,23 +78,59 @@
   cursor: grabbing;
 }
 
-/* Header chips: value only; rate + cap in tooltip */
+/* Header resources: no boxes — light divider between items */
 .resource-bar .resource-chip-wrap {
-  flex: 0 0 5.15rem;
-  width: 5.15rem;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+.resource-bar .resource-chip-wrap + .resource-chip-wrap {
+  border-left: none;
+  position: relative;
+}
+
+.resource-bar .resource-chip-wrap + .resource-chip-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgba(232, 238, 245, 0.2);
 }
 
 .resource-bar .resource-chip {
-  flex: 0 0 5.15rem;
-  width: 5.15rem;
-  height: 2.1rem;
-  min-height: 2.1rem;
-  padding: 0.22rem 0.36rem;
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 1.7rem;
+  padding: 0.12rem 0.38rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .resource-bar .resource-rate,
 .resource-bar .resource-cap-bar {
   display: none !important;
+}
+
+.resource-bar .resource-chip-main {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.08rem;
+}
+
+.resource-bar .resource-label {
+  font-size: 0.56rem;
+  max-width: 100%;
+}
+
+.resource-bar .resource-value {
+  font-size: 0.6rem;
 }
 
 .net-worth {
@@ -153,9 +190,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   padding: 0.24rem 0.4rem;
   cursor: help;
   font: inherit;
@@ -165,23 +202,23 @@
 }
 
 .resource-chip-tip {
-  position: fixed;
+  position: absolute;
   left: 0;
   top: 0;
   z-index: 400;
   display: none;
   flex-direction: column;
-  gap: 0.35rem;
-  min-width: 13.5rem;
-  max-width: 18rem;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.55rem;
+  gap: 0.28rem;
+  min-width: 12.5rem;
+  max-width: 16.5rem;
+  padding: 0.42rem 0.5rem;
+  border-radius: 0.4rem;
   border: 1px solid var(--border);
   background: rgba(23, 30, 39, 0.98);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
   pointer-events: none;
-  font-size: 0.75rem;
-  line-height: 1.35;
+  font-size: 0.62rem;
+  line-height: 1.3;
 }
 
 .resource-chip-tip.resource-chip-tip-visible {
@@ -190,7 +227,7 @@
 
 .resource-chip-tip-title {
   font-weight: 650;
-  font-size: 0.8rem;
+  font-size: 0.68rem;
 }
 
 .resource-chip-tip-cap {
@@ -210,7 +247,7 @@
 .resource-chip-tip-rate-head strong {
   font-family: "JetBrains Mono", monospace;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: 0.62rem;
 }
 
 .resource-chip-tip-breakdown {
@@ -232,13 +269,15 @@
 .resource-chip-tip-breakdown li span:last-child {
   flex-shrink: 0;
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.72rem;
+  font-size: 0.6rem;
   color: var(--text);
 }
 
-.resource-chip-tip-empty {
+.resource-chip-tip .resource-chip-tip-empty {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.52rem;
+  line-height: 1.25;
+  color: var(--muted);
 }
 
 .resource-chip-main {
@@ -250,10 +289,10 @@
 }
 
 .resource-label {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -262,8 +301,8 @@
 
 .resource-value {
   font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
-  line-height: 1.1;
+  font-size: 0.62rem;
+  line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -658,7 +697,7 @@
 /* Bottom nav — class is only applied when mobileNav is active */
 .layout-mobile-nav,
 .app-shell.viewport-preview-mobile {
-  --mobile-bottom-nav-space: calc(96px + env(safe-area-inset-bottom, 0px));
+  --mobile-bottom-nav-space: calc(52px + env(safe-area-inset-bottom, 0px));
 }
 
 .layout-mobile-nav .main-panel,
@@ -679,8 +718,7 @@
   border-top: 1px solid var(--border);
   background: rgba(23, 30, 39, 0.98);
   backdrop-filter: blur(12px);
-  padding: 0.2rem 0.2rem 0;
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  padding: 0.12rem 0.12rem max(0.12rem, env(safe-area-inset-bottom, 0px));
   min-height: auto;
   user-select: none;
   -webkit-user-select: none;
@@ -696,8 +734,8 @@
   gap: 0;
   padding: 0;
   overflow: hidden;
-  min-height: 56px;
-  touch-action: pan-x;
+  min-height: 48px;
+  touch-action: none;
   cursor: grab;
 }
 
@@ -717,17 +755,18 @@
   width: 20%;
   min-width: 0;
   max-width: none;
-  min-height: 56px;
+  min-height: 48px;
   overflow: hidden;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 0;
-  padding: 0.45rem 0.2rem;
-  font-size: max(1rem, 16px);
+  padding: 0.2rem 0.1rem;
+  font-size: 0.68rem;
   color: #fff;
-  border-radius: 0.45rem;
+  border-radius: 0.35rem;
   text-align: center;
+  touch-action: none;
 }
 
 .shortcut-sidebar-mobile .shortcut-link-short {
@@ -738,14 +777,14 @@
   width: 100%;
   max-width: 100%;
   display: block;
-  font-size: inherit;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 650;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
-  letter-spacing: 0;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
   text-align: center;
 }
@@ -765,12 +804,12 @@
 
 .shortcut-mobile-more {
   display: flex;
-  flex: 0 0 2.6rem;
+  flex: 0 0 2rem;
   align-items: center;
   justify-content: center;
-  width: 2.6rem;
-  min-width: 2.6rem;
-  min-height: 56px;
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 48px;
   margin: 0;
   padding: 0;
   border: none;
@@ -1935,12 +1974,31 @@
 .logbook-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
   .tab-portrait-frame-pannable,
 .overview-view .overview-portrait-fit.tab-portrait-scene .tab-portrait-stack
-  .tab-portrait-frame-pannable {
+  .tab-portrait-frame-pannable,
+.overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame {
   flex: none;
   width: 100%;
   min-height: 11.5rem;
   height: 14.5rem;
   max-height: 17.5rem;
+  aspect-ratio: unset;
 }
 
 .tab-below-portrait > .location-view-section:first-child,
@@ -2132,6 +2190,123 @@
 .overview-net-worth-goal {
   font-size: 0.68rem;
   line-height: 1;
+}
+
+/* Home: net worth sits in the bottom panel, above structure levels */
+.overview-net-worth-banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+  padding: 0.15rem 0;
+  line-height: 1.15;
+}
+
+.overview-net-worth-amounts {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.overview-net-worth-banner .tab-net-worth-label {
+  color: var(--accent);
+  font-size: 0.52rem;
+}
+
+.overview-net-worth-banner .tab-net-worth-value {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.overview-net-worth-banner .tab-net-worth-goal {
+  color: var(--accent-2);
+  font-size: 0.58rem;
+}
+
+.overview-view .tab-below-portrait > .overview-net-worth-banner + .location-view-section {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Home right panel: smaller type; empty queues show count only */
+.overview-view .tab-hero-main .tab-title-row h2 {
+  font-size: 0.95rem;
+}
+
+.overview-view .tab-hero-main .tab-queue-heading h3 {
+  font-size: 0.68rem;
+}
+
+.overview-view .tab-hero-main .tab-queue-count {
+  font-size: 0.62rem;
+}
+
+.overview-view .tab-hero-main .tab-compact-queue .build-queue li {
+  font-size: 0.64rem;
+}
+
+.overview-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
+  font-size: 0.58rem;
+}
+
+.overview-view .tab-hero-main .tab-office-select {
+  font-size: 0.66rem;
+  min-height: 1.45rem;
+}
+
+.overview-view .tab-hero-main .location-office-hint {
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+}
+
+/* Home bottom panel: a little smaller than other tabs */
+.overview-view .tab-below-portrait .overview-section h3 {
+  font-size: 0.75rem;
+  margin-bottom: 0.32rem;
+}
+
+/* Home: preview strip under Structure levels — full width, short, pannable */
+.overview-scene-banner {
+  width: 100%;
+  margin: 0 0 0.4rem;
+}
+
+.overview-scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .overview-scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pannable {
+  width: 100%;
+  min-height: 0 !important;
+  height: 2.85rem !important;
+  max-height: none !important;
+  max-width: none;
+  aspect-ratio: unset !important;
+  border-radius: 0.45rem;
+  flex: none;
+}
+
+.overview-scene-banner
+  .tab-portrait-frame-pannable
+  .secretary-portrait.tab-portrait-pannable:not(.tab-portrait-pannable-ready) {
+  object-position: center 42%;
+}
+
+.overview-view .tab-below-portrait .overview-research-list,
+.overview-view .tab-below-portrait .overview-empty-note,
+.overview-view .tab-below-portrait .overview-staff-total,
+.overview-view .tab-below-portrait .overview-units-total,
+.overview-view .tab-below-portrait .overview-research-note {
+  font-size: 0.72rem;
+}
+
+.overview-view .tab-below-portrait .office-site-staff-list {
+  font-size: 0.7rem;
+}
+
+.overview-view .tab-below-portrait .overview-staff-total {
+  margin: 0.35rem 0 0;
 }
 
 /* Tab portrait fit: lighter quote strip */
@@ -5510,6 +5685,23 @@ body.logbook-col-resizing {
   flex-shrink: 1;
 }
 
+/* Shared tab image size — Research (R&D) 14.5rem frame */
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack .tab-portrait-frame-pannable {
+  flex: none;
+  width: 100%;
+  min-height: 11.5rem;
+  height: 14.5rem;
+  max-height: 17.5rem;
+  aspect-ratio: unset;
+}
+
 .tab-portrait-scene .tab-portrait-quote-foot,
 .tab-portrait-scene.tab-portrait-locked .tab-portrait-quote-foot,
 .tab-portrait-scene.tab-portrait-tall .tab-portrait-quote-foot {
@@ -7345,15 +7537,16 @@ body.logbook-col-resizing {
   }
 
   .resource-bar .resource-chip-wrap {
-    flex: 0 0 4.85rem;
-    width: 4.85rem;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
   }
 
   .resource-bar .resource-chip {
-    flex: 0 0 4.85rem;
-    width: 4.85rem;
-    height: 2rem;
-    min-height: 2rem;
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 1.7rem;
   }
 
   .secretary-hero-row {
@@ -7534,10 +7727,232 @@ body.logbook-col-resizing {
   border-bottom: 1px solid rgba(110, 231, 183, 0.2);
 }
 
+/* Galaxy S24 portrait device frame (360×780 logical — dev preview only) */
+html.viewport-preview-galaxy-s24,
+html.viewport-preview-galaxy-s24 body {
+  background: #07090c;
+  overflow: auto;
+  height: 100%;
+}
+
+html.viewport-preview-galaxy-s24 #root {
+  min-height: 100vh;
+  height: auto;
+}
+
+.device-preview-stage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1rem 0.75rem;
+  box-sizing: border-box;
+}
+
+.device-preview-caption {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.device-preview-fit {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.device-preview-scale {
+  transform-origin: top left;
+}
+
+.device-preview-bezel {
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 44px;
+  background: #1a1a1c;
+  box-shadow:
+    0 0 0 2px #3a3a3c,
+    0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.device-preview-screen {
+  position: relative;
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.device-preview-webview {
+  overflow: hidden;
+  background: var(--bg);
+  container-type: size;
+  /* Containing block so position:fixed chrome stays inside the webview */
+  transform: translateZ(0);
+}
+
+.device-preview-webview .app-shell.viewport-preview-galaxy-s24 {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  --mobile-bottom-nav-space: 52px;
+}
+
+html.viewport-preview-galaxy-s24 .resource-bar {
+  padding: 0.18rem 0.28rem;
+}
+
+html.viewport-preview-galaxy-s24 .brand-title {
+  display: none;
+}
+
+html.viewport-preview-galaxy-s24 .brand-mark {
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.5rem;
+}
+
+html.viewport-preview-galaxy-s24 .resource-bar-row {
+  gap: 0.2rem;
+}
+
+html.viewport-preview-galaxy-s24 .resource-bar .resource-chip-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+html.viewport-preview-galaxy-s24 .resource-bar .resource-chip {
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 1.65rem;
+  padding: 0.1rem 0.28rem;
+}
+
+html.viewport-preview-galaxy-s24 .btn,
+html.viewport-preview-galaxy-s24 .tab,
+html.viewport-preview-galaxy-s24 .location-site-select {
+  min-height: 2.75rem;
+}
+
+html.viewport-preview-galaxy-s24 .research-grid,
+html.viewport-preview-galaxy-s24 .office-structure-grid,
+html.viewport-preview-galaxy-s24 .location-grid,
+html.viewport-preview-galaxy-s24 .location-queue-grid,
+html.viewport-preview-galaxy-s24 .contractor-roster-grid,
+html.viewport-preview-galaxy-s24 .office-site-staff-list,
+html.viewport-preview-galaxy-s24 .job-board-layout,
+html.viewport-preview-galaxy-s24 .job-board-layout.filters-collapsed {
+  grid-template-columns: 1fr;
+}
+
+html.viewport-preview-galaxy-s24 .office-site-summary-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html.viewport-preview-galaxy-s24 .main-view-panel {
+  max-width: none;
+}
+
+html.viewport-preview-galaxy-s24 .hex-map svg {
+  max-height: 55%;
+}
+
+html.viewport-preview-galaxy-s24 .secretary-hero-row,
+html.viewport-preview-galaxy-s24 .office-scene.tab-portrait-hire-stretch .secretary-hero-row,
+html.viewport-preview-galaxy-s24 .office-scene.office-portrait-hire-stretch .secretary-hero-row,
+html.viewport-preview-galaxy-s24 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row {
+  grid-template-columns: minmax(7.25rem, 32%) minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+html.viewport-preview-galaxy-s24 .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .office-scene.tab-portrait-hire-stretch .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .office-scene.office-portrait-hire-stretch .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .tab-portrait-scene.tab-portrait-tall:not(.secretary-tab-scene)
+  .secretary-portrait-frame {
+  width: 100%;
+  min-height: 0 !important;
+  max-height: none !important;
+  max-width: none;
+  aspect-ratio: 4 / 5;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+html.viewport-preview-galaxy-s24 .tab-portrait-fit .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .tab-portrait-fit .tab-portrait-frame-pannable {
+  width: 100%;
+  min-height: 11.5rem !important;
+  height: 14.5rem !important;
+  max-height: 17.5rem !important;
+  max-width: none;
+  aspect-ratio: unset;
+  flex: none;
+}
+
+html.viewport-preview-galaxy-s24 .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .overview-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .operations-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .recruitment-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .research-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .secretary-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .logbook-view .tab-portrait-fit .tab-portrait-column-sticky,
+html.viewport-preview-galaxy-s24 .overview-view .overview-portrait-fit .tab-portrait-column-sticky {
+  position: relative;
+  top: auto;
+  align-self: start;
+  max-height: none;
+  overflow: visible;
+}
+
+html.viewport-preview-galaxy-s24 .job-board-filters {
+  position: static;
+}
+
+html.viewport-preview-galaxy-s24 .job-board-header-hint {
+  display: none;
+}
+
+html.viewport-preview-galaxy-s24 .job-board-detail-drawer {
+  width: 88%;
+  max-width: none;
+}
+
+html.viewport-preview-galaxy-s24 .completion-alert-stack {
+  width: min(20rem, calc(100% - 1rem));
+  top: 0.5rem;
+}
+
+html.viewport-preview-galaxy-s24 .modal-backdrop {
+  padding: 0.5rem;
+}
+
+html.viewport-preview-galaxy-s24 .modal {
+  max-height: min(90%, 720px);
+}
+
+html.viewport-preview-galaxy-s24 .shortcut-sidebar-mobile {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: 0.12rem;
+}
+
 /* Phone / narrow tablet: bottom nav, scrollable resources, touch targets */
 @media (max-width: 768px) {
   .app-shell {
-    --mobile-bottom-nav-space: calc(96px + env(safe-area-inset-bottom, 0px));
+    --mobile-bottom-nav-space: calc(52px + env(safe-area-inset-bottom, 0px));
   }
 
   .app-top-chrome {
@@ -7545,7 +7960,7 @@ body.logbook-col-resizing {
   }
 
   .resource-bar {
-    padding: calc(0.3rem + env(safe-area-inset-top, 0px)) 0.45rem 0.3rem;
+    padding: calc(0.16rem + env(safe-area-inset-top, 0px)) 0.4rem 0.16rem;
   }
 
   .resource-bar-row {
@@ -7558,9 +7973,9 @@ body.logbook-col-resizing {
   }
 
   .brand-mark {
-    width: 1.45rem;
-    height: 1.45rem;
-    font-size: 0.6rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 0.5rem;
   }
 
   .resource-grid {
@@ -7568,9 +7983,9 @@ body.logbook-col-resizing {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    gap: 0.28rem;
+    gap: 0;
     margin: 0;
-    padding: 0 0.05rem;
+    padding: 0;
   }
 
   .resource-grid::-webkit-scrollbar {
@@ -7578,16 +7993,17 @@ body.logbook-col-resizing {
   }
 
   .resource-bar .resource-chip-wrap {
-    flex: 0 0 4.85rem;
-    width: 4.85rem;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
   }
 
   .resource-bar .resource-chip {
-    flex: 0 0 4.85rem;
-    width: 4.85rem;
-    height: 2rem;
-    min-height: 2rem;
-    padding: 0.2rem 0.32rem;
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 1.65rem;
+    padding: 0.1rem 0.28rem;
   }
 
   .resource-chip-main {
@@ -7664,16 +8080,17 @@ body.logbook-col-resizing {
 }
 
 .app-shell-mobile-nav .resource-chip-wrap {
-  flex: 0 0 5.35rem;
-  width: 5.35rem;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
 }
 
 .app-shell-mobile-nav .resource-chip {
-  flex: 0 0 5.35rem;
-  width: 5.35rem;
-  height: 2.15rem;
-  min-height: 2.15rem;
-  padding: 0.24rem 0.38rem;
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 1.65rem;
+  padding: 0.1rem 0.28rem;
   overflow: visible;
 }
 
