@@ -2268,13 +2268,17 @@
   margin-bottom: 0.32rem;
 }
 
-/* Home: preview strip under Structure levels — full width, short, pannable */
+/* Short full-width pannable scene strip (Home / Office categories) */
+.scene-banner,
 .overview-scene-banner {
   width: 100%;
   margin: 0 0 0.4rem;
 }
 
+.scene-banner .secretary-portrait-frame,
 .overview-scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .scene-banner .tab-portrait-frame-pannable,
 html.viewport-preview-galaxy-s24 .overview-scene-banner .secretary-portrait-frame,
 html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pannable {
   width: 100%;
@@ -2287,6 +2291,9 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   flex: none;
 }
 
+.scene-banner
+  .tab-portrait-frame-pannable
+  .secretary-portrait.tab-portrait-pannable:not(.tab-portrait-pannable-ready),
 .overview-scene-banner
   .tab-portrait-frame-pannable
   .secretary-portrait.tab-portrait-pannable:not(.tab-portrait-pannable-ready) {
@@ -2307,6 +2314,26 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
 
 .overview-view .tab-below-portrait .overview-staff-total {
   margin: 0.35rem 0 0;
+}
+
+.overview-view .tab-below-portrait .overview-staff-section {
+  padding-bottom: 1.5rem;
+}
+
+/* Office catalog: no outer grey panel; extra space above nav */
+.operations-view .tab-below-portrait > .office-sites-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  padding-bottom: 1.5rem;
+}
+
+.operations-view .structure-upgrade-preview {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.15rem 0;
 }
 
 /* Tab portrait fit: lighter quote strip */

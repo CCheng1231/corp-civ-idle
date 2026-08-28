@@ -25,7 +25,7 @@ export function LocationSitePanel({
   const officeLabel = officeDisplayName(state, officeId);
 
   return (
-    <article className="location-site-block office-sites-panel">
+    <article className="office-sites-panel">
       {readOnly ? (
         <p className="muted office-catalog-readonly-note">
           Viewing {officeLabel} — pick an office to upgrade.

@@ -45,7 +45,7 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
             dispatch={dispatch}
             compact
             maxSlots={officeCount * MAX_STRUCTURE_QUEUE}
-            emptyLabel="No builds queued."
+            emptyLabel=""
           />
         </section>
       ) : (

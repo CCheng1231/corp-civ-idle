@@ -35,6 +35,7 @@ import {
   ProgressionMaxedCard,
   ProgressionNameButton,
 } from "./progressionUi";
+import { SceneBanner } from "./SceneBanner";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import {
@@ -49,7 +50,34 @@ import type {
   ResourceCost,
   StructureDefinition,
   StructureId,
+  StructureCategory,
 } from "../game/types";
+import officeDepartmentsArt from "../assets/Office_Departments.jpg";
+import officeEssentialsArt from "../assets/Office_Essentials.jpg";
+import officePowerArt from "../assets/Office_Power.jpg";
+import officeRecruitmentArt from "../assets/Office_Recruitment.jpg";
+
+const OFFICE_CATEGORY_SCENE: Record<
+  StructureCategory,
+  { src: string; storageKey: string }
+> = {
+  essentials: {
+    src: officeEssentialsArt,
+    storageKey: "corp-civ-idle-office-essentials-art-pan",
+  },
+  departments: {
+    src: officeDepartmentsArt,
+    storageKey: "corp-civ-idle-office-departments-art-pan",
+  },
+  infrastructure: {
+    src: officePowerArt,
+    storageKey: "corp-civ-idle-office-power-art-pan",
+  },
+  staffing: {
+    src: officeRecruitmentArt,
+    storageKey: "corp-civ-idle-office-recruitment-art-pan",
+  },
+};
 
 export function structureUpgradeBlocker(
   state: GameState,
@@ -163,7 +191,7 @@ export function OfficeBuildQueueSection({
           dispatch={dispatch}
           now={now}
           compact
-          emptyLabel="No builds queued."
+          emptyLabel=""
         />
       </section>
     );
@@ -492,6 +520,12 @@ export function OfficeStructurePanel({
             defaultOpen={defaultOpen}
             maxedCount={maxedCount}
             totalCount={items.length}
+            banner={
+              <SceneBanner
+                src={OFFICE_CATEGORY_SCENE[category].src}
+                storageKey={OFFICE_CATEGORY_SCENE[category].storageKey}
+              />
+            }
           >
             <ul className="structure-list progression-grid">
               {items.map(renderStructureCard)}

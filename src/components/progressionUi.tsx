@@ -6,6 +6,7 @@ interface ProgressionCategorySectionProps {
   defaultOpen: boolean;
   maxedCount: number;
   totalCount: number;
+  banner?: ReactNode;
   children: ReactNode;
 }
 
@@ -14,6 +15,7 @@ export function ProgressionCategorySection({
   defaultOpen,
   maxedCount,
   totalCount,
+  banner,
   children,
 }: ProgressionCategorySectionProps) {
   const allMaxed = totalCount > 0 && maxedCount === totalCount;
@@ -29,6 +31,7 @@ export function ProgressionCategorySection({
           <span className="progression-category-meta"> · {totalCount} maxed</span>
         ) : null}
       </summary>
+      {banner}
       {children}
     </details>
   );

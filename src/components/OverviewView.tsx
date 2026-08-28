@@ -24,7 +24,7 @@ import {
 } from "../game/officeSelection";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
-import { DraggableTabPortraitFrame } from "./DraggableTabPortraitFrame";
+import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
@@ -63,6 +63,12 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
   const researchActive = RESEARCH.filter(
     (def) => projectedResearch[def.id] > 0,
   );
+  const staffTotal = showAll
+    ? officeIds.reduce(
+        (sum, siteId) => sum + totalWorkforce(rosterAt(state, siteId)),
+        0,
+      )
+    : totalWorkforce(rosterAt(state, officeId));
   const portraitStorageKey = "corp-civ-idle-overview-portrait-size";
   const mergedQueueMax =
     officeIds.length * MAX_STRUCTURE_QUEUE;
@@ -212,7 +218,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
     if (units.length === 0) {
       return (
         <p key={siteId} className="muted overview-empty-note">
-          {siteLabel}: no units on site.
+          {showAll ? `${siteLabel}: no units.` : "No units."}
         </p>
       );
     }
@@ -236,13 +242,10 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
       {overviewNetWorth}
       <section className="overview-section location-view-section">
         <h3>Structure levels{showAll ? "" : ` — ${officeLabel}`}</h3>
-        <div className="overview-scene-banner">
-          <DraggableTabPortraitFrame
-            src={homeStructureArt}
-            panStorageKey="corp-civ-idle-overview-structure-art-pan"
-            focalYPercent={42}
-          />
-        </div>
+        <SceneBanner
+          src={homeStructureArt}
+          storageKey="corp-civ-idle-overview-structure-art-pan"
+        />
         {showAll
           ? officeIds.map((siteId) =>
               renderStructureLevels(
@@ -276,35 +279,23 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
         </section>
       )}
 
-      <section className="overview-section location-view-section">
+      <section className="overview-section location-view-section overview-staff-section">
         <h3>Staff{showAll ? "" : ` — ${officeLabel}`}</h3>
-        <div className="overview-scene-banner">
-          <DraggableTabPortraitFrame
-            src={homeStaffArt}
-            panStorageKey="corp-civ-idle-overview-staff-art-pan"
-            focalYPercent={42}
-          />
-        </div>
+        <SceneBanner
+          src={homeStaffArt}
+          storageKey="corp-civ-idle-overview-staff-art-pan"
+        />
         {showAll
           ? officeIds.map((siteId) =>
               renderStaff(siteId, officeDisplayName(state, siteId)),
             )
           : renderStaff(officeId, officeLabel)}
-        {!showAll ? (
+        {staffTotal > 0 ? (
           <p className="muted overview-staff-total">
-            Total on site: {formatNumber(totalWorkforce(rosterAt(state, officeId)))}
+            {showAll ? "Firm total: " : "Total on site: "}
+            {formatNumber(staffTotal)}
           </p>
-        ) : (
-          <p className="muted overview-staff-total">
-            Firm total:{" "}
-            {formatNumber(
-              officeIds.reduce(
-                (sum, siteId) => sum + totalWorkforce(rosterAt(state, siteId)),
-                0,
-              ),
-            )}
-          </p>
-        )}
+        ) : null}
       </section>
     </>
   );
