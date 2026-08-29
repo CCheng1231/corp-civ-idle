@@ -1,5 +1,7 @@
 import { useEffect, useReducer, useState } from "react";
+import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
+import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
 import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
 import { ShortcutSidebar } from "./components/ShortcutSidebar";
@@ -10,15 +12,30 @@ import { WIN_NET_WORTH, formatNumber } from "./game/constants";
 import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
 import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
+import { useOnlineWorld } from "./hooks/useOnlineWorld";
+import { readSession, writeSession } from "./multiplayer/session";
+import type { OnlineSession } from "./multiplayer/types";
+import { isOnlineSession } from "./multiplayer/types";
 import "./App.css";
 
-function App() {
-  const [state, dispatch] = useReducer(gameReducer, undefined, loadGameState);
+function GameShell({ session }: { session: OnlineSession }) {
+  const [state, dispatch] = useReducer(
+    gameReducer,
+    session,
+    (s) => loadGameState(s),
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const viewportPreview = state.settings.viewportPreview ?? "auto";
+  const mobilePreview = viewportPreview === "mobile";
   const mobileNav = useMobileNavLayout(viewportPreview);
-  const viewportClass =
-    viewportPreview === "auto" ? "" : ` viewport-preview-${viewportPreview}`;
+  const online = isOnlineSession(session);
+
+  useOnlineWorld({
+    session,
+    state,
+    dispatch,
+    enabled: online,
+  });
 
   useGameLoop(dispatch);
   useBgm(state.settings.masterVolume, state.settings.musicMuted);
@@ -31,8 +48,23 @@ function App() {
     document.documentElement.style.fontSize = `${state.settings.uiScale * 100}%`;
   }, [state.settings.uiScale]);
 
-  return (
-    <div className={`app-shell${viewportClass}${mobileNav ? " app-shell-mobile-nav" : ""}`}>
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("viewport-preview-galaxy-s24", mobilePreview);
+    return () => root.classList.remove("viewport-preview-galaxy-s24");
+  }, [mobilePreview]);
+
+  const viewportClass = [
+    viewportPreview !== "auto" ? `viewport-preview-${viewportPreview}` : "",
+    mobilePreview ? "viewport-preview-galaxy-s24" : "",
+    mobileNav ? "app-shell-mobile-nav" : "",
+    online ? "app-shell-online" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const shell = (
+    <div className={`app-shell${viewportClass ? ` ${viewportClass}` : ""}`}>
       {state.pendingOfflineSummary ? (
         <OfflineWelcomeDialog
           summary={state.pendingOfflineSummary}
@@ -45,7 +77,15 @@ function App() {
         dispatch={dispatch}
       />
       <div className="app-top-chrome">
-        <ResourceBar state={state} />
+        <ResourceBar state={state} session={session} />
+        {online && state.onlineConnectionStatus ? (
+          <div
+            className={`online-status-banner online-status-${state.onlineConnectionStatus}`}
+            role="status"
+          >
+            Online · {state.onlineConnectionStatus}
+          </div>
+        ) : null}
         {state.won && (
           <div className="victory-banner" role="status">
             <strong>You win!</strong> Net worth reached{" "}
@@ -64,11 +104,34 @@ function App() {
           mobileNav={mobileNav}
         />
         <main className="main-panel">
-          <MainContent state={state} dispatch={dispatch} />
+          <MainContent state={state} dispatch={dispatch} session={session} />
         </main>
       </div>
     </div>
   );
+
+  return mobilePreview ? (
+    <DevicePreviewFrame>{shell}</DevicePreviewFrame>
+  ) : (
+    shell
+  );
+}
+
+function App() {
+  const [session, setSession] = useState<OnlineSession | null>(() =>
+    readSession(),
+  );
+
+  function handleStart(next: OnlineSession) {
+    writeSession(next);
+    setSession(next);
+  }
+
+  if (!session) {
+    return <AccountGate onStart={handleStart} />;
+  }
+
+  return <GameShell session={session} />;
 }
 
 export default App;

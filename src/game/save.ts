@@ -19,6 +19,7 @@ import {
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
 import { trimSecretaryJobReports } from "./logbook";
+import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
@@ -40,6 +41,13 @@ import type {
   UnitRoster,
   ContractorCategoryId,
 } from "./types";
+import type { OnlineSession, PlayerId } from "../multiplayer/types";
+import {
+  offlineSaveKey,
+  onlineCacheKey,
+  deserializePrivateState,
+  serializePrivateState,
+} from "../multiplayer/companySave";
 
 export const ALERT_AUTO_DISMISS_SEC_MIN = 2;
 export const ALERT_AUTO_DISMISS_SEC_MAX = 30;
@@ -481,30 +489,98 @@ function normalizeSave(parsed: LegacySave): GameState {
   return finalizeLoadedState(trimmed, Date.now());
 }
 
-export function loadGameState(): GameState {
+export function loadOnlineStateFromRemote(
+  session: OnlineSession,
+  remote: Record<string, unknown>,
+): GameState {
+  const merged = normalizeSave({
+    ...createInitialState(),
+    ...deserializePrivateState(remote, session),
+  } as LegacySave);
+  merged.onlineSession = session;
+  return applyOnlineDevRestrictions(finalizeLoadedState(merged, Date.now()));
+}
+
+export function loadGameState(session?: OnlineSession | null): GameState {
+  if (session?.playMode === "online") {
+    try {
+      const cached = localStorage.getItem(onlineCacheKey(session));
+      if (cached) {
+        const parsed = JSON.parse(cached) as LegacySave;
+        return applyOnlineDevRestrictions(
+          normalizeSave({
+            ...parsed,
+            ...deserializePrivateState(parsed as Record<string, unknown>, session),
+          }),
+        );
+      }
+    } catch {
+      /* fall through */
+    }
+    const fresh = createInitialState();
+    fresh.onlineSession = session;
+    fresh.jobPostings = [];
+    fresh.companyPresence = {};
+    fresh.completedPostingPayouts = [];
+    return applyOnlineDevRestrictions(fresh);
+  }
+
+  const key = session?.playerId
+    ? offlineSaveKey(session.playerId)
+    : SAVE_KEY;
+
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return createInitialState();
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      const fresh = createInitialState();
+      if (session) fresh.onlineSession = session;
+      return fresh;
+    }
     const parsed = JSON.parse(raw) as LegacySave;
-    return normalizeSave(parsed);
+    const normalized = normalizeSave(parsed);
+    if (session) normalized.onlineSession = session;
+    return normalized;
   } catch {
-    return createInitialState();
+    const fresh = createInitialState();
+    if (session) fresh.onlineSession = session;
+    return fresh;
   }
 }
 
 export function saveGameState(state: GameState): void {
+  const session = state.onlineSession;
+  if (session?.playMode === "online") {
+    localStorage.setItem(
+      onlineCacheKey(session),
+      JSON.stringify(serializePrivateState(state)),
+    );
+    return;
+  }
+
+  const key =
+    session?.playerId != null
+      ? offlineSaveKey(session.playerId)
+      : SAVE_KEY;
+
   const {
     pendingOfflineSummary: _welcome,
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
     logbookHighlightEntryId: _logHighlight,
+    companyPresence: _presence,
+    onlineConnectionStatus: _conn,
+    onlineSession: _session,
     ...persistable
   } = state;
-  localStorage.setItem(SAVE_KEY, JSON.stringify(persistable));
+  localStorage.setItem(key, JSON.stringify(persistable));
 }
 
-export function resetGameState(preserveSettings?: GameState["settings"]): GameState {
-  localStorage.removeItem(SAVE_KEY);
+export function resetGameState(
+  preserveSettings?: GameState["settings"],
+  playerId?: PlayerId,
+): GameState {
+  const key = playerId ? offlineSaveKey(playerId) : SAVE_KEY;
+  localStorage.removeItem(key);
   const fresh = createInitialState();
   if (preserveSettings) {
     fresh.settings = {

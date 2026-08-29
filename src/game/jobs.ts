@@ -12,6 +12,10 @@ import { appendActivityLogs, cloneResourceCost } from "./logbook";
 import { pushCompletionAlert } from "./completionAlerts";
 import { formatNumber, OFFICE_LABELS } from "./constants";
 import { resolveOfficeLocation } from "./officeSelection";
+import {
+  activePlayerId,
+  isOnlineMode,
+} from "../multiplayer/playerHq";
 import type {
   CompletionBand,
   GameState,
@@ -244,7 +248,6 @@ function applyEffectiveWork(
   return { posting: next, effectiveHours, earnedCash };
 }
 
-/** Accrue work and earnings up to `accrueUntilMs` (exclusive of already processed time). */
 function accrueEngagementThrough(
   state: GameState,
   engagementId: string,
@@ -270,11 +273,32 @@ function accrueEngagementThrough(
   const deltaHours = deltaMs / 3_600_000;
   const offeredUnitHours =
     totalAssigned(engagement.crewAssigned) * deltaHours;
+  const playerId = activePlayerId(state);
+
+  if (isOnlineMode(state)) {
+    const posting = next.jobPostings[postingIdx];
+    const remaining = Math.max(
+      0,
+      def.unitHoursTotal - posting.unitHoursCompleted,
+    );
+    const effectiveHours = Math.min(offeredUnitHours, remaining);
+    const earnedCash = effectiveHours * def.cashPerUnitHour;
+    next.jobEngagements[engIdx] = {
+      ...engagement,
+      lastAccruedAt: accrueUntil,
+      earnedSoFar: engagement.earnedSoFar + earnedCash,
+      unitHoursApplied: engagement.unitHoursApplied + effectiveHours,
+      pendingSyncUnitHours:
+        (engagement.pendingSyncUnitHours ?? 0) + effectiveHours,
+    };
+    return next;
+  }
+
   const work = applyEffectiveWork(
     next.jobPostings[postingIdx],
     def,
     offeredUnitHours,
-    LOCAL_PLAYER_ID,
+    playerId,
   );
   next.jobPostings[postingIdx] = work.posting;
   next.jobEngagements[engIdx] = {
@@ -487,7 +511,7 @@ function finalizeCompletedPosting(
   const def = jobDefinitionById(posting.definitionId);
   const totalCash = hiddenTotalCash(def);
   const bonusCash = totalCash * def.bonusPercent;
-  const share = contributorShare(posting.contributors, LOCAL_PLAYER_ID);
+  const share = contributorShare(posting.contributors, activePlayerId(state));
 
   const related = next.jobEngagements.filter(
     (e) => e.postingId === postingId && e.phase === "working",
@@ -535,7 +559,25 @@ function finalizeCompletedPosting(
   }
 
   next.completedProjects += 1;
-  next = respawnPosting(next, def, now);
+  if (!isOnlineMode(next)) {
+    next = respawnPosting(next, def, now);
+  }
+  return next;
+}
+
+/** Online: pay local crews when shared posting completes (listener-driven). */
+export function handleOnlinePostingCompleted(
+  state: GameState,
+  postingId: string,
+  now: number,
+): GameState {
+  if (state.completedPostingPayouts?.includes(postingId)) return state;
+  const posting = state.jobPostings.find((p) => p.id === postingId);
+  if (!posting || posting.status !== "completed") return state;
+
+  let next = finalizeCompletedPosting(state, postingId, now);
+  const payouts = [...(next.completedPostingPayouts ?? []), postingId];
+  next.completedPostingPayouts = payouts;
   return next;
 }
 
@@ -568,12 +610,15 @@ function processJobEngagementsPass(
   const completedPostingIds: string[] = [];
   const shiftEndedEngagementIds: string[] = [];
   const returnArrivedIds: string[] = [];
+  const online = isOnlineMode(state);
 
-  for (let i = 0; i < next.jobPostings.length; i += 1) {
-    const posting = next.jobPostings[i];
-    if (posting.status !== "open" || posting.expiresAt > now) continue;
-    expiredPostingIds.push(posting.id);
-    next.jobPostings[i] = { ...posting, status: "expired" };
+  if (!online) {
+    for (let i = 0; i < next.jobPostings.length; i += 1) {
+      const posting = next.jobPostings[i];
+      if (posting.status !== "open" || posting.expiresAt > now) continue;
+      expiredPostingIds.push(posting.id);
+      next.jobPostings[i] = { ...posting, status: "expired" };
+    }
   }
 
   for (const engagementId of next.jobEngagements.map((e) => e.id)) {
@@ -604,7 +649,7 @@ function processJobEngagementsPass(
     next = accrueEngagementThrough(next, working.id, now);
 
     const postingAfter = next.jobPostings.find((p) => p.id === working.postingId);
-    if (postingAfter?.status === "completed") {
+    if (!online && postingAfter?.status === "completed") {
       completedPostingIds.push(postingAfter.id);
       continue;
     }
@@ -630,6 +675,7 @@ function processJobEngagementsPass(
   }
 
   for (const postingId of expiredPostingIds) {
+    if (online) continue;
     for (const engagement of [...next.jobEngagements]) {
       if (engagement.postingId !== postingId) continue;
       if (engagement.phase === "outbound") {

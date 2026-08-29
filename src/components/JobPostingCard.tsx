@@ -103,6 +103,7 @@ export function JobPostingCard({
     assignment,
   );
   const disabled = engageLocked || Boolean(blockReason);
+  const online = state.onlineSession?.playMode === "online";
   const expiresIn = formatTimerRemaining(
     state,
     posting.expiresAt,
@@ -119,6 +120,7 @@ export function JobPostingCard({
     <article className="project-card job-posting-card">
       <header>
         <strong>{def.title}</strong>
+        {online ? <span className="job-shared-badge">Shared world</span> : null}
         <span>{BUSINESS_TYPE_LABELS[def.businessType]}</span>
         {showTower && (
           <span className="job-posting-tower muted">

@@ -7758,17 +7758,18 @@ body.logbook-col-resizing {
 html.viewport-preview-galaxy-s24,
 html.viewport-preview-galaxy-s24 body {
   background: #07090c;
-  overflow: auto;
+  overflow: hidden;
   height: 100%;
 }
 
 html.viewport-preview-galaxy-s24 #root {
-  min-height: 100vh;
-  height: auto;
+  min-height: 100%;
+  height: 100%;
 }
 
 .device-preview-stage {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7816,6 +7817,7 @@ html.viewport-preview-galaxy-s24 #root {
   overflow: hidden;
   background: var(--bg);
   container-type: size;
+  container-name: s24-screen;
   /* Containing block so position:fixed chrome stays inside the webview */
   transform: translateZ(0);
 }
@@ -7826,6 +7828,17 @@ html.viewport-preview-galaxy-s24 #root {
   min-height: 0;
   max-height: none;
   --mobile-bottom-nav-space: 52px;
+}
+
+.device-preview-webview .portrait-lock-page,
+.device-preview-webview .portrait-lock-tab.tab-portrait-scene {
+  --portrait-lock-viewport: calc(
+    100cqh - 5.5rem - var(--mobile-bottom-nav-space, 0px) - 1.25rem
+  );
+}
+
+.device-preview-webview .job-board-detail-drawer.is-large {
+  max-height: min(90cqh, calc(100cqh - 5rem));
 }
 
 html.viewport-preview-galaxy-s24 .resource-bar {
@@ -8132,4 +8145,145 @@ html.viewport-preview-galaxy-s24 .shortcut-sidebar-mobile {
 .app-shell-mobile-nav .resource-chip-wrap .resource-rate,
 .app-shell-mobile-nav .resource-chip-wrap .resource-cap-bar {
   display: none !important;
+}
+
+/* —— Online multiplayer —— */
+.account-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(110, 231, 183, 0.12),
+    transparent 55%
+  );
+}
+
+.account-gate-card {
+  width: min(420px, 100%);
+  padding: 1.5rem 1.35rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.account-gate-header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.account-gate-section {
+  margin-top: 1.25rem;
+}
+
+.account-gate-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.account-gate-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.account-gate-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+}
+
+.account-gate-warning {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  font-size: 0.82rem;
+}
+
+.account-gate-start {
+  width: 100%;
+  margin-top: 1.35rem;
+}
+
+.brand-online-badge,
+.brand-player-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.brand-online-badge {
+  background: rgba(110, 231, 183, 0.2);
+  color: #6ee7b7;
+}
+
+.brand-player-badge {
+  background: rgba(147, 197, 253, 0.15);
+  color: #93c5fd;
+}
+
+.online-status-banner {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+  border-bottom: 1px solid var(--border);
+}
+
+.online-status-connected {
+  background: rgba(110, 231, 183, 0.08);
+  color: #6ee7b7;
+}
+
+.online-status-connecting {
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+}
+
+.online-status-error {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+
+.settings-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.job-shared-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(110, 231, 183, 0.15);
+  color: #6ee7b7;
+  margin-right: 0.35rem;
+}
+
+.map-peer-node {
+  fill: rgba(147, 197, 253, 0.35);
+  stroke: rgba(147, 197, 253, 0.85);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.map-peer-label {
+  font-size: 0.62rem;
+  fill: #93c5fd;
+  font-weight: 600;
 }

@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // MVP dev trust model — lock down before public launch.
+    match /worlds/dev/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

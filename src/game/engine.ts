@@ -44,9 +44,14 @@ import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
   engageJobPosting,
+  handleOnlinePostingCompleted,
   jobDefinitionById,
   processJobEngagements,
 } from "./jobs";
+import {
+  applyOnlineDevRestrictions,
+  isOnlineMode,
+} from "../multiplayer/playerHq";
 import {
   BRANCH_OPENING_COST,
   branchManagementResearched,
@@ -903,11 +908,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "UPDATE_SETTINGS": {
+      const patch = isOnlineMode(state)
+        ? (() => {
+            const { ignoreCosts: _c, ignoreTimers: _t, ...rest } =
+              action.settings;
+            const settings = { ...rest };
+            if (settings.mapPresentation === "dev") {
+              settings.mapPresentation = "player";
+            }
+            return settings;
+          })()
+        : action.settings;
       const next = {
         ...state,
-        settings: { ...state.settings, ...action.settings },
+        settings: { ...state.settings, ...patch },
       };
-      if (action.settings.ignoreTimers !== undefined) {
+      if (patch.ignoreTimers !== undefined) {
         return finalizeLoadedState(next, Date.now());
       }
       return next;
@@ -932,6 +948,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "DEV_SKIP_TIME":
+      if (isOnlineMode(state)) return state;
       return devSkipTime(state, action.minutes);
 
     case "BUY_STRUCTURE": {
@@ -1301,6 +1318,67 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "START_PROJECT":
     case "COMPLETE_PROJECT":
       return state;
+
+    case "SYNC_SHARED_JOBS":
+      return {
+        ...state,
+        jobPostings: action.jobPostings,
+      };
+
+    case "SYNC_COMPANY_PRESENCE":
+      return {
+        ...state,
+        companyPresence: action.companyPresence,
+      };
+
+    case "SET_ONLINE_SESSION":
+      return applyOnlineDevRestrictions({
+        ...state,
+        onlineSession: action.session,
+      });
+
+    case "SET_ONLINE_CONNECTION_STATUS":
+      return {
+        ...state,
+        onlineConnectionStatus: action.status,
+      };
+
+    case "ONLINE_HANDLE_COMPLETED_POSTING":
+      return handleOnlinePostingCompleted(
+        state,
+        action.postingId,
+        action.now,
+      );
+
+    case "MARK_POSTING_PAYOUT_DONE":
+      if (state.completedPostingPayouts?.includes(action.postingId)) {
+        return state;
+      }
+      return {
+        ...state,
+        completedPostingPayouts: [
+          ...(state.completedPostingPayouts ?? []),
+          action.postingId,
+        ],
+      };
+
+    case "CLEAR_PENDING_SYNC": {
+      const idx = state.jobEngagements.findIndex(
+        (e) => e.id === action.engagementId,
+      );
+      if (idx < 0) return state;
+      const engagement = state.jobEngagements[idx];
+      const remaining = Math.max(
+        0,
+        (engagement.pendingSyncUnitHours ?? 0) - action.hours,
+      );
+      const next = structuredClone(state);
+      next.jobEngagements[idx] = {
+        ...engagement,
+        pendingSyncUnitHours: remaining,
+      };
+      return next;
+    }
 
     default:
       return state;

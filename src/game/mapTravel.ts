@@ -4,6 +4,7 @@ import {
   HEX_RADIUS,
   officeCoordFor,
 } from "./hexLayout";
+import { hqCoordForState } from "../multiplayer/playerHq";
 import { towerById } from "./mapWorld";
 import type {
   AxialCoord,
@@ -37,7 +38,8 @@ export function jobTravelHexes(
   officeId: OfficeLocationId,
   towerId: TowerId,
 ): number {
-  const from = officeCoordFor(officeId, state.branchCoord);
+  const hq = hqCoordForState(state);
+  const from = officeCoordFor(officeId, state.branchCoord, hq);
   const to = towerById(towerId).coord;
   return Math.max(1, axialDistance(from, to));
 }
@@ -55,8 +57,9 @@ export function officeTowerCoords(
   officeId: OfficeLocationId,
   towerId: TowerId,
 ): { from: AxialCoord; to: AxialCoord } {
+  const hq = hqCoordForState(state);
   return {
-    from: officeCoordFor(officeId, state.branchCoord),
+    from: officeCoordFor(officeId, state.branchCoord, hq),
     to: { ...towerById(towerId).coord },
   };
 }

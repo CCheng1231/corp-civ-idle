@@ -8,12 +8,15 @@ import { RecruitmentView } from "./RecruitmentView";
 import { ResearchView } from "./ResearchView";
 import { SettingsView } from "./SettingsView";
 import type { GameAction, GameState } from "../game/types";
+import type { OnlineSession } from "../multiplayer/types";
+
 interface MainContentProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  session?: OnlineSession;
 }
 
-export function MainContent({ state, dispatch }: MainContentProps) {
+export function MainContent({ state, dispatch, session }: MainContentProps) {
   switch (state.view) {
     case "overview":
       return <OverviewView state={state} dispatch={dispatch} />;
@@ -29,7 +32,9 @@ export function MainContent({ state, dispatch }: MainContentProps) {
     case "logbook":
       return <LogbookView state={state} dispatch={dispatch} />;
     case "settings":
-      return <SettingsView state={state} dispatch={dispatch} />;
+      return (
+        <SettingsView state={state} dispatch={dispatch} session={session} />
+      );
     default:
       return <OperationsView state={state} dispatch={dispatch} />;
   }

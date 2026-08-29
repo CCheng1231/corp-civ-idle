@@ -5,7 +5,6 @@ import {
   MAP_GOV,
   MAP_HQ,
   MAP_RADIUS,
-  officeAtCoord,
 } from "./hexLayout";
 import type {
   GameState,
@@ -24,6 +23,7 @@ import {
   splitResourceCost,
   unitAvailableAt,
 } from "./constants";
+import { hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
   metropolis: "Metropolis",
@@ -275,12 +275,7 @@ export function isAvailableCommercialLot(
   state: GameState,
 ): boolean {
   if (!commercialSiteAt(coord)) return false;
-  return (
-    officeAtCoord(coord, {
-      established: state.branchEstablished,
-      coord: state.branchCoord,
-    }) === null
-  );
+  return officeAtForState(coord, state) === null;
 }
 
 export function regionAtCoord(coord: AxialCoord): MapRegion {
@@ -463,4 +458,11 @@ export function commercialHexEquals(
 
 export function hexDistanceFromHq(coord: AxialCoord): number {
   return axialDistance(MAP_HQ_COORD, coord);
+}
+
+export function hexDistanceFromHqForState(
+  state: GameState,
+  coord: AxialCoord,
+): number {
+  return axialDistance(hqCoordForState(state), coord);
 }

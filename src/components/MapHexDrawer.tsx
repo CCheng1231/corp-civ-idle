@@ -148,7 +148,7 @@ export function MapHexDrawer({
   const info = mapHexInfo(coord, state);
   const title = mapHexTitle(info, state);
   const kindLabel = mapHexKindLabel(info);
-  const distanceLabel = mapHexDistanceLabel(coord);
+  const distanceLabel = mapHexDistanceLabel(state, coord);
   const now = Date.now();
 
   function openSecretaryForTower(towerId: TowerId) {

@@ -27,6 +27,7 @@ import type {
 import {
   officeSeparationHexes,
 } from "./hexLayout";
+import { hqCoordForState } from "../multiplayer/playerHq";
 import { travelDurationMs } from "./mapTravel";
 import {
   HQ_BASE_OFFICE_SPACE,
@@ -239,7 +240,7 @@ export function contractorTransferHexDistance(
 ): number {
   if (from === "branch" && !state.branchEstablished) return 0;
   if (to === "branch" && !state.branchEstablished) return 0;
-  return officeSeparationHexes(from, to, state.branchCoord);
+  return officeSeparationHexes(from, to, state.branchCoord, hqCoordForState(state));
 }
 
 export function contractorTransferDurationMs(

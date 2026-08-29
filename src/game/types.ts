@@ -1,3 +1,9 @@
+import type {
+  CompanyPresence,
+  OnlineSession,
+  PlayerId,
+} from "../multiplayer/types";
+
 export type ResourceKey =
   | "cash"
   | "supply"
@@ -355,6 +361,8 @@ export interface JobEngagement {
   shiftPaid?: boolean;
   /** Payout banked at shift end; echoed on the return-to-base log row. */
   shiftPayoutGained?: ResourceCost;
+  /** Online: unit-hours not yet flushed to shared Firestore posting. */
+  pendingSyncUnitHours?: number;
 }
 
 export interface StructureBuildJob {
@@ -430,6 +438,14 @@ export interface GameState {
   recruitFocusUnitId?: UnitId | null;
   /** Scroll/highlight target on Notes & logbook; stripped from saves. */
   logbookHighlightEntryId?: string | null;
+  /** Active Tim/Chris session — not persisted in offline blob. */
+  onlineSession?: OnlineSession | null;
+  /** Other companies on the shared map (Online). */
+  companyPresence?: Partial<Record<PlayerId, CompanyPresence>>;
+  /** Online: posting ids this client already paid out for. */
+  completedPostingPayouts?: string[];
+  /** Online Firestore listener status (UI only). */
+  onlineConnectionStatus?: "connecting" | "connected" | "error" | "disconnected";
 }
 
 export type CompletionAlertKind = "structure" | "research" | "recruitment" | "job";
@@ -574,4 +590,20 @@ export type GameAction =
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }
   | { type: "UPDATE_SETTINGS"; settings: Partial<GameSettings> }
   | { type: "DEV_SKIP_TIME"; minutes: number }
-  | { type: "LOAD"; state: GameState };
+  | { type: "LOAD"; state: GameState }
+  | {
+      type: "SYNC_SHARED_JOBS";
+      jobPostings: JobPosting[];
+    }
+  | {
+      type: "SYNC_COMPANY_PRESENCE";
+      companyPresence: Partial<Record<PlayerId, CompanyPresence>>;
+    }
+  | { type: "SET_ONLINE_SESSION"; session: OnlineSession | null }
+  | {
+      type: "SET_ONLINE_CONNECTION_STATUS";
+      status: GameState["onlineConnectionStatus"];
+    }
+  | { type: "ONLINE_HANDLE_COMPLETED_POSTING"; postingId: string; now: number }
+  | { type: "MARK_POSTING_PAYOUT_DONE"; postingId: string }
+  | { type: "CLEAR_PENDING_SYNC"; engagementId: string; hours: number };

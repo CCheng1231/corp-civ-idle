@@ -24,7 +24,6 @@ import {
   generateHexagonMap,
   hexBounds,
   hexPolygonPoints,
-  officeAtCoord,
 } from "../game/hexLayout";
 import {
   hexPath,
@@ -36,6 +35,8 @@ import {
   getRegionLabelCentroids,
   type RegionLabelObstacle,
 } from "../game/mapRegionOutlines";
+import { isOnlineMode, officeAtForState } from "../multiplayer/playerHq";
+import { PLAYER_IDS } from "../multiplayer/types";
 import type {
   AxialCoord,
   GameAction,
@@ -362,10 +363,7 @@ function MapDecorationMark({
 
 function hexVariant(coord: AxialCoord, state: GameState): HexVariant {
   if (axialEquals(coord, MAP_GOV)) return "gov";
-  const officeId = officeAtCoord(coord, {
-    established: state.branchEstablished,
-    coord: state.branchCoord,
-  });
+  const officeId = officeAtForState(coord, state);
   if (officeId === "hq") return "hq";
   if (officeId === "branch") return "branch";
   if (towerAtCoord(coord)) return "tower";
@@ -386,7 +384,7 @@ function regionClass(coord: AxialCoord): string {
 }
 
 function hexOfficeLabel(
-  officeId: ReturnType<typeof officeAtCoord>,
+  officeId: ReturnType<typeof officeAtForState>,
   towerId: ReturnType<typeof towerAtCoord>,
 ): { text: string; kind: "hq" | "branch" | "tower" } | null {
   if (officeId === "hq") return { text: "HQ", kind: "hq" };
@@ -593,10 +591,7 @@ function buildLabelObstacles(
       axialEquals(coord, MAP_GOV) ||
       Boolean(towerAtCoord(coord)) ||
       Boolean(
-        officeAtCoord(coord, {
-          established: state.branchEstablished,
-          coord: state.branchCoord,
-        }),
+        officeAtForState(coord, state),
       ) ||
       isAvailableCommercialLot(coord, state);
     if (isLandmark) {
@@ -683,12 +678,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       const occupied =
         axialEquals(coord, MAP_GOV) ||
         Boolean(towerAtCoord(coord)) ||
-        Boolean(
-          officeAtCoord(coord, {
-            established: state.branchEstablished,
-            coord: state.branchCoord,
-          }),
-        ) ||
+        Boolean(officeAtForState(coord, state)) ||
         isAvailableCommercialLot(coord, state);
       if (!occupied) freeByRegion[region].push(coord);
     });
@@ -749,7 +739,8 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     hitCoord: AxialCoord | null;
   } | null>(null);
   const now = Date.now();
-  const isDev = state.settings.mapPresentation === "dev";
+  const online = isOnlineMode(state);
+  const isDev = !online && state.settings.mapPresentation === "dev";
   const ground = state.settings.mapPlayerGround ?? "hybrid";
   const legendActive = legendHover !== null;
 
@@ -796,10 +787,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
   function inspectHex(coord: AxialCoord) {
     setInspectedCoord({ ...coord });
 
-    const officeId = officeAtCoord(coord, {
-      established: state.branchEstablished,
-      coord: state.branchCoord,
-    });
+    const officeId = officeAtForState(coord, state);
     const towerId = towerAtCoord(coord);
 
     if (officeId) {
@@ -888,6 +876,31 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     ),
   ];
 
+  const peerMarkers = useMemo(() => {
+    if (state.onlineSession?.playMode !== "online") return [];
+    const selfId = state.onlineSession.playerId;
+    return PLAYER_IDS.filter((id) => id !== selfId)
+      .map((id) => state.companyPresence?.[id])
+      .filter((presence) => Boolean(presence))
+      .flatMap((presence) => {
+        const items: { coord: AxialCoord; label: string; key: string }[] = [
+          {
+            coord: presence!.hqCoord,
+            label: `${presence!.displayName} HQ`,
+            key: `${presence!.playerId}-hq`,
+          },
+        ];
+        if (presence!.branchEstablished && presence!.branchCoord) {
+          items.push({
+            coord: presence!.branchCoord,
+            label: presence!.branchName ?? `${presence!.displayName} branch`,
+            key: `${presence!.playerId}-branch`,
+          });
+        }
+        return items;
+      });
+  }, [state.companyPresence, state.onlineSession]);
+
   return (
     <div
       className={`world-view map-presentation-${isDev ? "dev" : "player"} map-ground-${ground}${
@@ -902,33 +915,37 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
             : "City map — try Streets / Terrain / Hybrid; hover the legend to spotlight."}
         </p>
         <div className="world-map-controls" role="group" aria-label="Map view mode">
-          <span className="world-map-controls-label">View</span>
-          <button
-            type="button"
-            className={`tab${isDev ? " active" : ""}`}
-            aria-pressed={isDev}
-            onClick={() =>
-              dispatch({
-                type: "UPDATE_SETTINGS",
-                settings: { mapPresentation: "dev" },
-              })
-            }
-          >
-            Developer
-          </button>
-          <button
-            type="button"
-            className={`tab${!isDev ? " active" : ""}`}
-            aria-pressed={!isDev}
-            onClick={() =>
-              dispatch({
-                type: "UPDATE_SETTINGS",
-                settings: { mapPresentation: "player" },
-              })
-            }
-          >
-            Player
-          </button>
+          {!online ? (
+            <>
+              <span className="world-map-controls-label">View</span>
+              <button
+                type="button"
+                className={`tab${isDev ? " active" : ""}`}
+                aria-pressed={isDev}
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_SETTINGS",
+                    settings: { mapPresentation: "dev" },
+                  })
+                }
+              >
+                Developer
+              </button>
+              <button
+                type="button"
+                className={`tab${!isDev ? " active" : ""}`}
+                aria-pressed={!isDev}
+                onClick={() =>
+                  dispatch({
+                    type: "UPDATE_SETTINGS",
+                    settings: { mapPresentation: "player" },
+                  })
+                }
+              >
+                Player
+              </button>
+            </>
+          ) : null}
         </div>
         {!isDev ? (
           <div
@@ -1279,10 +1296,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                 const variant = hexVariant(coord, state);
                 const isDefault = variant === "default";
                 const towerId = towerAtCoord(coord);
-                const officeId = officeAtCoord(coord, {
-                  established: state.branchEstablished,
-                  coord: state.branchCoord,
-                });
+                const officeId = officeAtForState(coord, state);
                 const isInspected =
                   inspectedCoord !== null && axialEquals(coord, inspectedCoord);
                 const mapLabel = hexOfficeLabel(officeId, towerId);
@@ -1402,6 +1416,30 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                         Gov
                       </text>
                     ) : null}
+                  </g>
+                );
+              })}
+
+              {peerMarkers.map((marker) => {
+                const { x, y } = axialToPixel(marker.coord.q, marker.coord.r);
+                return (
+                  <g key={marker.key} className="map-peer-marker">
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={PLAYER_HIT_RADIUS * 0.82}
+                      className="map-peer-node"
+                    />
+                    <text
+                      x={x}
+                      y={y + 22}
+                      className="hex-label hex-label-player map-peer-label"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      pointerEvents="none"
+                    >
+                      {marker.label}
+                    </text>
                   </g>
                 );
               })}

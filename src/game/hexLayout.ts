@@ -92,8 +92,9 @@ export function axialEquals(a: AxialCoord, b: AxialCoord): boolean {
 export function officeAtCoord(
   coord: AxialCoord,
   branch: { established: boolean; coord: AxialCoord | null },
+  hqCoord: AxialCoord = MAP_HQ,
 ): OfficeLocationId | null {
-  if (axialEquals(coord, MAP_HQ)) return "hq";
+  if (axialEquals(coord, hqCoord)) return "hq";
   if (
     branch.established &&
     branch.coord &&
@@ -107,8 +108,9 @@ export function officeAtCoord(
 export function officeCoordFor(
   officeId: OfficeLocationId,
   branchCoord: AxialCoord | null,
+  hqCoord: AxialCoord = MAP_HQ,
 ): AxialCoord {
-  if (officeId === "hq") return MAP_HQ;
+  if (officeId === "hq") return hqCoord;
   return branchCoord ?? MAP_BRANCH;
 }
 
@@ -129,10 +131,11 @@ export function officeSeparationHexes(
   from: OfficeLocationId,
   to: OfficeLocationId,
   branchCoord: AxialCoord | null,
+  hqCoord: AxialCoord = MAP_HQ,
 ): number {
   if (from === to) return 0;
   return axialDistance(
-    officeCoordFor(from, branchCoord),
-    officeCoordFor(to, branchCoord),
+    officeCoordFor(from, branchCoord, hqCoord),
+    officeCoordFor(to, branchCoord, hqCoord),
   );
 }
