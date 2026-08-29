@@ -8263,6 +8263,30 @@ html.viewport-preview-galaxy-s24 .shortcut-sidebar-mobile {
   margin-bottom: 0.75rem;
 }
 
+.settings-online-reset-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.settings-online-reset-group:first-of-type {
+  margin-top: 0;
+}
+
+.settings-online-reset-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings-online-reset-group .settings-account-actions {
+  margin-bottom: 0;
+}
+
 .job-shared-badge {
   font-size: 0.68rem;
   font-weight: 600;

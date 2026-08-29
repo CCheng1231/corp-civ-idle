@@ -23,7 +23,7 @@ import {
   splitResourceCost,
   unitAvailableAt,
 } from "./constants";
-import { hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
+import { CHRIS_HQ, hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
   metropolis: "Metropolis",
@@ -279,8 +279,8 @@ export function isAvailableCommercialLot(
 }
 
 export function regionAtCoord(coord: AxialCoord): MapRegion {
-  // Company HQ is authored as countryside for starts / future creation.
-  if (axialEquals(coord, MAP_HQ)) return HQ_REGION;
+  // Company HQs are authored as countryside for starts / future creation.
+  if (axialEquals(coord, MAP_HQ) || axialEquals(coord, CHRIS_HQ)) return HQ_REGION;
 
   const d = axialDistance(coord, MAP_GOV);
   const effective = Math.max(

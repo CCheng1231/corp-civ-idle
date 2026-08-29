@@ -1,4 +1,4 @@
-import { type Dispatch } from "react";
+import { type Dispatch, useState } from "react";
 import {
   ALERT_AUTO_DISMISS_SEC_MAX,
   ALERT_AUTO_DISMISS_SEC_MIN,
@@ -8,25 +8,46 @@ import {
 import { DevTimeSkip } from "./DevTimeSkip";
 import { AudioControls } from "./AudioControls";
 import type { GameAction, GameState } from "../game/types";
-import type { OnlineSession } from "../multiplayer/types";
-import { PLAYER_LABELS, isOnlineSession } from "../multiplayer/types";
+import type { OnlineSession, PlayerId } from "../multiplayer/types";
+import { PLAYER_IDS, PLAYER_LABELS, isOnlineSession } from "../multiplayer/types";
 import { isFirebaseConfigured } from "../multiplayer/firebase";
 import { clearSession, writeSession, createSession } from "../multiplayer/session";
+import {
+  savePrivateState,
+  resetOnlineDatabase,
+  resetOnlinePlayerAccount,
+  resetOnlineSharedWorldPreserveAccounts,
+} from "../multiplayer/worldSync";
+import { saveGameState } from "../game/save";
 interface SettingsViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   session?: OnlineSession;
 }
 
+type OnlineResetTarget = "world" | "shared-world" | PlayerId;
+
 export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
   const online = session ? isOnlineSession(session) : false;
+  const [resettingOnline, setResettingOnline] = useState<OnlineResetTarget | null>(
+    null,
+  );
 
-  function switchAccount() {    if (
+  async function switchAccount() {
+    if (
       !window.confirm(
         "Return to account picker? Unsaved progress is auto-saved for Online.",
       )
     ) {
       return;
+    }
+    if (session && isOnlineSession(session)) {
+      saveGameState({ ...state, onlineSession: session });
+      try {
+        await savePrivateState(session, { ...state, onlineSession: session });
+      } catch (err) {
+        console.error("Failed to flush online save before account switch", err);
+      }
     }
     clearSession();
     window.location.reload();
@@ -48,6 +69,59 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     writeSession(createSession(session.playerId, mode));
     window.location.reload();
   }
+
+  async function resetOnline(target: OnlineResetTarget) {
+    if (!session || !isOnlineSession(session)) return;
+    if (!isFirebaseConfigured()) {
+      window.alert("Firebase is not configured.");
+      return;
+    }
+
+    const confirmed =
+      target === "world"
+        ? window.confirm(
+            `Reset the entire online world (${session.worldId})? This deletes Tim and Chris private saves, map presence, and the shared job board for every client. Fresh postings are reseeded. This cannot be undone.`,
+          )
+        : target === "shared-world"
+          ? window.confirm(
+              `Reset shared world state (${session.worldId})? This wipes and reseeds the shared job board and clears active task forces for all players. Tim and Chris company progress (structures, resources, research, branches) is kept.`,
+            )
+          : window.confirm(
+              `Reset ${PLAYER_LABELS[target]}'s online account? This deletes their private company save and map presence. The shared job board is kept. This cannot be undone.`,
+            );
+    if (!confirmed) return;
+
+    setResettingOnline(target);
+    try {
+      if (target === "world") {
+        await resetOnlineDatabase(session);
+      } else if (target === "shared-world") {
+        await resetOnlineSharedWorldPreserveAccounts(session);
+      } else {
+        await resetOnlinePlayerAccount(session, target);
+      }
+
+      if (
+        target === "world" ||
+        target === "shared-world" ||
+        target === session.playerId
+      ) {
+        window.location.reload();
+        return;
+      }
+
+      window.alert(`${PLAYER_LABELS[target]} online account reset.`);
+      setResettingOnline(null);
+    } catch (err) {
+      console.error("Online reset failed", err);
+      window.alert(
+        "Online reset failed. Check the console and Firestore connection.",
+      );
+      setResettingOnline(null);
+    }
+  }
+
+  const onlineResetBusy = resettingOnline !== null;
 
   return (
     <div className="main-view-panel">
@@ -264,6 +338,77 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             normally.
           </p>
           <DevTimeSkip dispatch={dispatch} />
+        </section>
+      ) : null}
+
+      {online && session ? (
+        <section className="settings-block">
+          <h3>Online world</h3>
+          <p className="muted setting-hint">
+            Dev resets for Firestore world <code>{session.worldId}</code>.
+            Account resets clear one player&apos;s save. Shared-world reset
+            reseeds the job board only. Full world reset wipes everything.
+          </p>
+          <div className="settings-online-reset-group">
+            <span className="settings-online-reset-label">Reset account</span>
+            <div
+              className="settings-account-actions"
+              role="group"
+              aria-label="Reset online account"
+            >
+              {PLAYER_IDS.map((playerId) => (
+                <button
+                  key={playerId}
+                  type="button"
+                  className="btn danger-btn"
+                  disabled={
+                    onlineResetBusy ||
+                    state.onlineConnectionStatus === "connecting"
+                  }
+                  onClick={() => void resetOnline(playerId)}
+                >
+                  {resettingOnline === playerId
+                    ? "Resetting…"
+                    : PLAYER_LABELS[playerId]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-online-reset-group">
+            <span className="settings-online-reset-label">Reset world</span>
+            <div
+              className="settings-account-actions"
+              role="group"
+              aria-label="Reset online world"
+            >
+              <button
+                type="button"
+                className="btn danger-btn"
+                disabled={
+                  onlineResetBusy ||
+                  state.onlineConnectionStatus === "connecting"
+                }
+                onClick={() => void resetOnline("shared-world")}
+              >
+                {resettingOnline === "shared-world"
+                  ? "Resetting…"
+                  : "Shared world only"}
+              </button>
+              <button
+                type="button"
+                className="btn danger-btn"
+                disabled={
+                  onlineResetBusy ||
+                  state.onlineConnectionStatus === "connecting"
+                }
+                onClick={() => void resetOnline("world")}
+              >
+                {resettingOnline === "world"
+                  ? "Resetting…"
+                  : "Entire world + accounts"}
+              </button>
+            </div>
+          </div>
         </section>
       ) : null}
 

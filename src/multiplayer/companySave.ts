@@ -1,5 +1,6 @@
 import type { GameState, JobPosting } from "../game/types";
-import type { OnlineSession } from "./types";
+import type { OnlineSession, PlayerId, WorldId } from "./types";
+import { PLAYER_IDS } from "./types";
 
 const OFFLINE_SAVE_PREFIX = "corp-civ-idle-save-v2";
 const ONLINE_CACHE_PREFIX = "corp-civ-idle-online-cache";
@@ -10,6 +11,24 @@ export function offlineSaveKey(playerId: string): string {
 
 export function onlineCacheKey(session: OnlineSession): string {
   return `${ONLINE_CACHE_PREFIX}-${session.worldId}-${session.playerId}`;
+}
+
+/** Drop browser caches for every online account in a world. */
+export function clearAllOnlineLocalCaches(worldId: WorldId = "dev"): void {
+  if (typeof localStorage === "undefined") return;
+  for (const playerId of PLAYER_IDS) {
+    clearOnlineLocalCache(playerId, worldId);
+  }
+}
+
+export function clearOnlineLocalCache(
+  playerId: PlayerId,
+  worldId: WorldId = "dev",
+): void {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem(
+    onlineCacheKey({ playerId, playMode: "online", worldId }),
+  );
 }
 
 /** Fields excluded from persistence (session/ephemeral). */
