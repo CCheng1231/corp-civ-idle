@@ -923,7 +923,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         settings: { ...state.settings, ...patch },
       };
-      if (patch.ignoreTimers !== undefined) {
+      if (action.settings.ignoreTimers !== undefined) {
         return finalizeLoadedState(next, Date.now());
       }
       return next;
