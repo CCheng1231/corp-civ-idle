@@ -21,16 +21,38 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     logbookHighlightEntryId: _logHighlight,
     companyPresence: _presence,
     onlineConnectionStatus: _conn,
+    onlineSession: _session,
     ...persistable
   } = state;
   return persistable;
 }
 
+/** Firestore rejects undefined anywhere in a document. */
+export function stripUndefinedDeep(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item));
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (child === undefined) continue;
+    out[key] = stripUndefinedDeep(child);
+  }
+  return out;
+}
+
 /** Private company blob for Firestore / local cache — no shared jobPostings. */
-export function serializePrivateState(state: GameState): Record<string, unknown> {
+export function serializePrivateState(
+  state: GameState,
+  updatedAt = Date.now(),
+): Record<string, unknown> {
   const stripped = stripEphemeral(state) as GameState;
   const { jobPostings: _jobs, ...privateFields } = stripped;
-  return privateFields as Record<string, unknown>;
+  return stripUndefinedDeep({
+    ...privateFields,
+    updatedAt,
+  }) as Record<string, unknown>;
 }
 
 export function deserializePrivateState(

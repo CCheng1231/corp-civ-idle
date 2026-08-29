@@ -184,6 +184,20 @@ export function subscribeCompanies(
   );
 }
 
+export function subscribePrivateState(
+  session: OnlineSession,
+  onChange: (data: Record<string, unknown> | null) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    privateStateRef(session.playerId, session.worldId),
+    (snap) => {
+      onChange(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
+    },
+    (err) => onError(err),
+  );
+}
+
 export async function flushPostingWorkDelta(
   session: OnlineSession,
   postingId: string,
