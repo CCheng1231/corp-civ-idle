@@ -27,6 +27,8 @@ function GameShell({ session }: { session: OnlineSession }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const viewportPreview = state.settings.viewportPreview ?? "auto";
   const mobilePreview = viewportPreview === "mobile";
+  const galaxyS24Preview = viewportPreview === "galaxy-s24";
+  const deviceFramePreview = mobilePreview || galaxyS24Preview;
   const mobileNav = useMobileNavLayout(viewportPreview);
   const online = isOnlineSession(session);
 
@@ -50,13 +52,13 @@ function GameShell({ session }: { session: OnlineSession }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("viewport-preview-galaxy-s24", mobilePreview);
+    root.classList.toggle("viewport-preview-galaxy-s24", deviceFramePreview);
     return () => root.classList.remove("viewport-preview-galaxy-s24");
-  }, [mobilePreview]);
+  }, [deviceFramePreview]);
 
   const viewportClass = [
-    viewportPreview !== "auto" ? `viewport-preview-${viewportPreview}` : "",
-    mobilePreview ? "viewport-preview-galaxy-s24" : "",
+    viewportPreview === "desktop" ? "viewport-preview-desktop" : "",
+    deviceFramePreview ? "viewport-preview-mobile viewport-preview-galaxy-s24" : "",
     mobileNav ? "app-shell-mobile-nav" : "",
     online ? "app-shell-online" : "",
   ]
@@ -110,7 +112,7 @@ function GameShell({ session }: { session: OnlineSession }) {
     </div>
   );
 
-  return mobilePreview ? (
+  return deviceFramePreview ? (
     <DevicePreviewFrame>{shell}</DevicePreviewFrame>
   ) : (
     shell

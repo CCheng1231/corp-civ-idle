@@ -146,6 +146,8 @@ Completed in the UI pass leading to this doc:
 - Recruitment density pass: `recruitment-grid`, compact hire footer, 2-line role clamp.
 - Progression grid narrowed to 220px (from 260px).
 - Discover structure unlocks wired end-to-end.
+- **UI scale default is 100%** (`UI_SCALE_DEFAULT = 1`). Design against 100%; use 125% as the squeeze check.
+- Home: net worth in the bottom panel above structure levels; empty queues show `0/2` only.
 
 **Not committed** unless git history shows otherwise — check `git status` / `git diff` before assuming.
 

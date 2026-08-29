@@ -68,7 +68,7 @@ export function QueueSection({
 interface QueueSlotProps {
   count: number;
   maxSlots?: number;
-  emptyLabel: string;
+  emptyLabel?: string;
   children: ReactNode;
 }
 
@@ -78,6 +78,9 @@ function QueueSlot({
   emptyLabel,
   children,
 }: QueueSlotProps) {
+  if (count === 0 && !emptyLabel) {
+    return null;
+  }
   return (
     <div className="build-queue-slot" data-max-slots={maxSlots}>
       {count === 0 ? (

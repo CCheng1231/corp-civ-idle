@@ -5,6 +5,12 @@ import {
   clampAlertAutoDismissSec,
   resetGameState,
 } from "../game/save";
+import {
+  UI_SCALE_DEFAULT,
+  UI_SCALE_MAX,
+  UI_SCALE_MIN,
+} from "../game/constants";
+import { GALAXY_S24_PORTRAIT } from "../game/devicePreview";
 import { DevTimeSkip } from "./DevTimeSkip";
 import { AudioControls } from "./AudioControls";
 import type { GameAction, GameState } from "../game/types";
@@ -21,7 +27,8 @@ interface SettingsViewProps {
 export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
   const online = session ? isOnlineSession(session) : false;
 
-  function switchAccount() {    if (
+  function switchAccount() {
+    if (
       !window.confirm(
         "Return to account picker? Unsaved progress is auto-saved for Online.",
       )
@@ -96,20 +103,37 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         <h3>Display</h3>
         <label className="setting-row">
           UI scale
-          <input
-            type="range"
-            min={0.85}
-            max={1.25}
-            step={0.05}
-            value={state.settings.uiScale}
-            onChange={(e) =>
-              dispatch({
-                type: "UPDATE_SETTINGS",
-                settings: { uiScale: Number(e.target.value) },
-              })
-            }
-          />
+          <span className="setting-row-inline">
+            <input
+              type="range"
+              min={UI_SCALE_MIN}
+              max={UI_SCALE_MAX}
+              step={0.05}
+              value={state.settings.uiScale}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: { uiScale: Number(e.target.value) },
+                })
+              }
+            />
+            <span className="setting-value">
+              {Math.round(state.settings.uiScale * 100)}%
+              {state.settings.uiScale <= UI_SCALE_MIN
+                ? " · min"
+                : state.settings.uiScale >= UI_SCALE_MAX
+                  ? " · max"
+                  : state.settings.uiScale === UI_SCALE_DEFAULT
+                    ? " · default"
+                    : ""}
+            </span>
+          </span>
         </label>
+        <p className="muted setting-hint">
+          Layout is designed at 100%. Same control as on the phone — 85% min,
+          100% default, 125% max. Match this before comparing the Galaxy S24
+          preview to a screenshot.
+        </p>
         <label className="setting-row">
           Completion alerts
           <input
@@ -204,11 +228,33 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               </button>
             ))}
           </div>
+          <div
+            className="viewport-preview-toggle"
+            role="group"
+            aria-label="Device frame preview"
+          >
+            <button
+              type="button"
+              className={
+                state.settings.viewportPreview === GALAXY_S24_PORTRAIT.id
+                  ? "tab active"
+                  : "tab"
+              }
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: { viewportPreview: GALAXY_S24_PORTRAIT.id },
+                })
+              }
+            >
+              {GALAXY_S24_PORTRAIT.label}
+            </button>
+          </div>
         </div>
         <p className="muted setting-hint">
-          Override layout for UI testing. Mobile locks the UI to a Galaxy S24
-          frame (360×780 CSS · 1080×2340 @3×), bottom nav, and phone breakpoints,
-          scaled to fit your window.
+          Override layout for UI testing. Mobile forces bottom nav and phone
+          breakpoints. Galaxy S24 is a 360×780 CSS viewport (1080×2340 at 3×)
+          in a device frame — the same size the game uses on that phone.
         </p>
       </section>
 
@@ -283,6 +329,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             Reset save
           </button>
         </section>
-      ) : null}    </div>
+      ) : null}
+    </div>
   );
 }

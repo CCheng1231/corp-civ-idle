@@ -63,6 +63,18 @@ import {
 
 export const SAVE_KEY = "corp-civ-idle-save-v2";
 export const TICK_MS = 1000;
+
+/** Layout is designed at 100%. Slider range is for accessibility, not a second layout. */
+export const UI_SCALE_MIN = 0.85;
+export const UI_SCALE_DEFAULT = 1;
+export const UI_SCALE_MAX = 1.25;
+
+export function clampUiScale(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return UI_SCALE_DEFAULT;
+  const stepped = Math.round(n / 0.05) * 0.05;
+  return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, stepped));
+}
 /** Max real-time seconds of passive production applied after being away. */
 export const OFFLINE_CATCHUP_CAP_SEC = 24 * 60 * 60;
 export const WIN_NET_WORTH = 100_000_000;
@@ -370,6 +382,16 @@ export const RESOURCE_LABELS: Record<keyof Resources, string> = {
   govReputation: "GREP",
 };
 
+/** Compact labels on the top bar. Tooltips still use `RESOURCE_LABELS`. */
+export const RESOURCE_BAR_LABELS: Record<keyof Resources, string> = {
+  cash: "Cash",
+  supply: "Supply",
+  connection: "Con",
+  mood: "MD",
+  reputation: "REP",
+  govReputation: "GREP",
+};
+
 /** Order for the top resource bar (Cash + Supply first). */
 export const RESOURCE_BAR_KEYS: (keyof Resources)[] = [
   "cash",
@@ -618,7 +640,7 @@ export function createInitialState(now = Date.now()): GameState {
     settings: {
       masterVolume: 0.1,
       musicMuted: false,
-      uiScale: 1,
+      uiScale: UI_SCALE_DEFAULT,
       notifications: true,
       alertAutoDismiss: true,
       alertAutoDismissSec: 7,
@@ -997,20 +1019,16 @@ export function canAffordCostPart(
   return state.resources[k] >= part.amount;
 }
 
-/** Resource bar & compact UI — 1000 → 1k, 100000 → 100k */
+/** Resource bar & compact UI — 1000 → 1.00k, 100000 → 100.00k */
 export function formatResourceShort(value: number): string {
   if (!Number.isFinite(value)) return "0";
   const n = Math.abs(value) < 1e-9 ? 0 : value;
-  if (n >= 1_000_000) {
-    const scaled = n / 1_000_000;
-    return `${scaled % 1 === 0 ? scaled : scaled.toFixed(1)}m`;
-  }
-  if (n >= 1_000) {
-    const scaled = n / 1_000;
-    return `${scaled % 1 === 0 ? scaled : scaled.toFixed(1)}k`;
-  }
-  if (Math.abs(n - Math.round(n)) < 1e-6) return String(Math.round(n));
-  return n.toFixed(n < 10 ? 1 : 0);
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(2)}m`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(2)}k`;
+  if (Math.abs(abs - Math.round(abs)) < 1e-6) return `${sign}${Math.round(abs)}`;
+  return `${sign}${abs.toFixed(abs < 10 ? 1 : 0)}`;
 }
 
 /** Top resource bar detail / sheets — locale grouping, no shortening. */

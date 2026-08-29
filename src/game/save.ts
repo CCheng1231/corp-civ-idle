@@ -15,6 +15,7 @@ import {
   computeLocationStats,
   WIN_NET_WORTH,
   staffAtLocation,
+  clampUiScale,
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState } from "./engine";
@@ -378,6 +379,7 @@ function normalizeSave(parsed: LegacySave): GameState {
     settings: {
       ...base.settings,
       ...parsed.settings,
+      uiScale: clampUiScale(parsed.settings?.uiScale ?? base.settings.uiScale),
       notifications: parsed.settings?.notifications ?? true,
       alertAutoDismiss: parsed.settings?.alertAutoDismiss ?? true,
       alertAutoDismissSec: clampAlertAutoDismissSec(
@@ -386,7 +388,8 @@ function normalizeSave(parsed: LegacySave): GameState {
       viewportPreview:
         parsed.settings?.viewportPreview === "mobile" ||
         parsed.settings?.viewportPreview === "desktop" ||
-        parsed.settings?.viewportPreview === "auto"
+        parsed.settings?.viewportPreview === "auto" ||
+        parsed.settings?.viewportPreview === "galaxy-s24"
           ? parsed.settings.viewportPreview
           : "auto",
       officeSiteSections: {

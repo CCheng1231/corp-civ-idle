@@ -7,7 +7,9 @@ function resolveMobileNav(
   viewportPreview: ViewportPreview,
   windowMobile: boolean,
 ): boolean {
-  if (viewportPreview === "mobile") return true;
+  if (viewportPreview === "mobile" || viewportPreview === "galaxy-s24") {
+    return true;
+  }
   if (viewportPreview === "desktop") return false;
   return windowMobile;
 }

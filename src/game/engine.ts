@@ -34,6 +34,7 @@ import {
   OFFLINE_CATCHUP_CAP_SEC,
   recruitmentOrderDurationMs,
   recruitmentOrderBuildTimeHours,
+  clampUiScale,
 } from "./constants";
 import { resolveOfficeLocation } from "./officeSelection";
 import { buildOfflineWelcomeSummary } from "./offlineWelcome";
@@ -919,9 +920,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             return settings;
           })()
         : action.settings;
+      const settings = { ...state.settings, ...patch };
+      if (patch.uiScale !== undefined) {
+        settings.uiScale = clampUiScale(patch.uiScale);
+      }
       const next = {
         ...state,
-        settings: { ...state.settings, ...patch },
+        settings,
       };
       if (action.settings.ignoreTimers !== undefined) {
         return finalizeLoadedState(next, Date.now());

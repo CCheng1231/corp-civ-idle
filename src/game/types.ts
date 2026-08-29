@@ -458,7 +458,7 @@ export interface CompletionAlert {
   detail?: string;
 }
 
-export type ViewportPreview = "auto" | "desktop" | "mobile";
+export type ViewportPreview = "auto" | "desktop" | "mobile" | "galaxy-s24";
 export type MapPresentation = "dev" | "player";
 /** Player map ground look (Google Maps–like variants in game palette). */
 export type MapPlayerGround = "streets" | "terrain" | "hybrid";
@@ -473,7 +473,7 @@ export interface GameSettings {
   alertAutoDismiss: boolean;
   /** Seconds before auto-dismiss (used when alertAutoDismiss is on). */
   alertAutoDismissSec: number;
-  /** Force desktop or mobile layout for UI testing (auto = match window width). */
+  /** Force desktop, mobile, or a device frame for UI testing (auto = match window width). */
   viewportPreview: ViewportPreview;
   /** Dev: complete builds, recruitment, travel, and contracts immediately. */
   ignoreTimers: boolean;

@@ -78,6 +78,7 @@ export function ShortcutSidebar({
   const pointerRef = useRef<{
     id: number;
     startX: number;
+    lastX: number;
     dragging: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
@@ -118,6 +119,7 @@ export function ShortcutSidebar({
     pointerRef.current = {
       id: event.pointerId,
       startX: event.clientX,
+      lastX: event.clientX,
       dragging: false,
     };
   };
@@ -125,6 +127,7 @@ export function ShortcutSidebar({
   const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
+    pointer.lastX = event.clientX;
     const dx = event.clientX - pointer.startX;
     if (!pointer.dragging && Math.abs(dx) < DRAG_START_PX) return;
     if (!pointer.dragging) {
@@ -146,7 +149,13 @@ export function ShortcutSidebar({
   const onPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
-    finishDrag(event.clientX);
+    finishDrag(pointer.lastX);
+  };
+
+  const onLostPointerCapture = (event: ReactPointerEvent<HTMLElement>) => {
+    const pointer = pointerRef.current;
+    if (!pointer || pointer.id !== event.pointerId) return;
+    finishDrag(pointer.lastX);
   };
 
   const onNavClickCapture = (event: ReactMouseEvent<HTMLElement>) => {
@@ -186,6 +195,7 @@ export function ShortcutSidebar({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onLostPointerCapture={onLostPointerCapture}
         onClickCapture={onNavClickCapture}
       >
         <div

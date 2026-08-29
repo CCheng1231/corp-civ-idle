@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   RESOURCE_LABELS,
+  RESOURCE_BAR_LABELS,
   RESOURCE_BAR_KEYS,
   normalizeResourceWallet,
   formatResourceShort,
@@ -40,32 +42,46 @@ function ResourceChip({
   const rate = state.rates[resourceKey] ?? 0;
   const breakdown = resourceRateBreakdown(state, resourceKey);
   const label = RESOURCE_LABELS[resourceKey];
+  const barLabel = RESOURCE_BAR_LABELS[resourceKey];
   const tipId = `resource-tip-${resourceKey}`;
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [shell, setShell] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setShell(
+      (wrapRef.current?.closest(".app-shell") as HTMLElement | null) ?? null,
+    );
+  }, []);
 
   const positionTip = useCallback(() => {
     const wrap = wrapRef.current;
     const tip = tipRef.current;
     if (!wrap || !tip) return;
 
-    const tipRect = tip.getBoundingClientRect();
-    const rect = wrap.getBoundingClientRect();
-    const margin = 6;
-    let left = rect.left;
-    let top = rect.bottom + margin;
+    const origin = (wrap.closest(".app-shell") as HTMLElement | null) ?? document.documentElement;
+    const wrapRect = wrap.getBoundingClientRect();
+    const originRect = origin.getBoundingClientRect();
+    const margin = 8;
+    let left = wrapRect.left - originRect.left;
+    let top = wrapRect.bottom - originRect.top + 4;
 
-    if (left + tipRect.width > window.innerWidth - margin) {
-      left = window.innerWidth - tipRect.width - margin;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+    tip.style.right = "auto";
+    tip.style.bottom = "auto";
+
+    const tipRect = tip.getBoundingClientRect();
+    if (left + tipRect.width > originRect.width - margin) {
+      left = originRect.width - tipRect.width - margin;
     }
-    if (top + tipRect.height > window.innerHeight - margin) {
-      top = rect.top - tipRect.height - margin;
+    if (top + tipRect.height > originRect.height - margin) {
+      top = wrapRect.top - originRect.top - tipRect.height - 4;
     }
     left = Math.max(margin, left);
     top = Math.max(margin, top);
-
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
   }, []);
@@ -82,35 +98,41 @@ function ResourceChip({
 
     const run = () => positionTip();
     run();
+    const frame = requestAnimationFrame(run);
     window.addEventListener("scroll", run, true);
     window.addEventListener("resize", run);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("scroll", run, true);
       window.removeEventListener("resize", run);
     };
   }, [open, positionTip]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (wrapRef.current?.contains(target) || tipRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
   return (
-    <div
-      ref={wrapRef}
-      className="resource-chip-wrap"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div ref={wrapRef} className="resource-chip-wrap">
       <button
         type="button"
         className="resource-chip"
         aria-expanded={open}
+        aria-label={`${label} ${formatResourceShort(amount)}`}
         aria-describedby={open ? tipId : undefined}
         onClick={() => setOpen((prev) => !prev)}
-        onBlur={(event) => {
-          if (!wrapRef.current?.contains(event.relatedTarget as Node)) {
-            setOpen(false);
-          }
-        }}
       >
         <div className="resource-chip-main">
-          <span className="resource-label">{label}</span>
+          <span className="resource-label">{barLabel}</span>
           <span className="resource-value">{formatResourceShort(amount)}</span>
           <span className="resource-rate">
             +{formatResourceShort(rate)}
@@ -138,37 +160,42 @@ function ResourceChip({
           )}
         </div>
       </button>
-      <div
-        ref={tipRef}
-        id={tipId}
-        className={`resource-chip-tip${open ? " resource-chip-tip-visible" : ""}`}
-        role="tooltip"
-      >
-        <div className="resource-chip-tip-title">{label}</div>
-        <div className="resource-chip-tip-cap">
-          {hasCap
-            ? `${formatResourceShort(amount)} / ${formatResourceShort(cap!)} cap (${capPercent!.toFixed(1)}%)`
-            : `${formatResourceShort(amount)} — no holding cap`}
-        </div>
-        <div className="resource-chip-tip-rate-head">
-          <span>Rate</span>
-          <strong>{formatRateAmount(rate)}</strong>
-        </div>
-        {breakdown.length > 0 ? (
-          <ul className="resource-chip-tip-breakdown">
-            {breakdown.map((line) => (
-              <li key={line.label}>
-                <span>{line.label}</span>
-                <span>{formatRateAmount(line.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="resource-chip-tip-empty muted">
-            No passive sources — build structures or hire staff.
-          </p>
-        )}
-      </div>
+      {open && shell
+        ? createPortal(
+            <div
+              ref={tipRef}
+              id={tipId}
+              className="resource-chip-tip resource-chip-tip-visible"
+              role="tooltip"
+            >
+              <div className="resource-chip-tip-title">{label}</div>
+              <div className="resource-chip-tip-cap">
+                {hasCap
+                  ? `${formatResourceShort(amount)} / ${formatResourceShort(cap!)} cap (${capPercent!.toFixed(1)}%)`
+                  : `${formatResourceShort(amount)} — no holding cap`}
+              </div>
+              <div className="resource-chip-tip-rate-head">
+                <span>Rate</span>
+                <strong>{formatRateAmount(rate)}</strong>
+              </div>
+              {breakdown.length > 0 ? (
+                <ul className="resource-chip-tip-breakdown">
+                  {breakdown.map((line) => (
+                    <li key={line.label}>
+                      <span>{line.label}</span>
+                      <span>{formatRateAmount(line.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="resource-chip-tip-empty">
+                  No passive sources — build structures or hire staff.
+                </p>
+              )}
+            </div>,
+            shell,
+          )
+        : null}
     </div>
   );
 }
