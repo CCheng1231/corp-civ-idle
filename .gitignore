@@ -7,3 +7,8 @@ credentials/
 *.sa.json
 *-service-account*.json
 .DS_Store
+
+# Local backup / reference workbooks (live file is 20260827 Corp Idle Working.xlsx)
+/20260803 Corp Idle Working - original.xlsx
+/20260807 Corp Idle Working.xlsx
+/Corp-Civ-Balance-engine-sync.xlsx
