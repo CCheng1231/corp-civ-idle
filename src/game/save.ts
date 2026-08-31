@@ -41,6 +41,7 @@ import type {
   UnitId,
   UnitRoster,
   ContractorCategoryId,
+  JobEngagement,
 } from "./types";
 import type { OnlineSession, PlayerId } from "../multiplayer/types";
 import {
@@ -273,39 +274,50 @@ function migrateUnitId(
   return DEFAULT_TIER1_UNIT[fallbackCategory ?? "farming"];
 }
 
+function migrateEngagementRow(engagement: JobEngagement): JobEngagement {
+  let endsAt = engagement.endsAt;
+  if (!endsAt) {
+    try {
+      const def = jobDefinitionById(engagement.definitionId);
+      endsAt = engagement.startedAt + def.durationSec * 1000;
+    } catch {
+      endsAt = engagement.startedAt + 3600 * 1000;
+    }
+  }
+  const phase = engagement.phase ?? "working";
+  return {
+    ...engagement,
+    endsAt,
+    phase,
+    travelStartedAt: engagement.travelStartedAt ?? null,
+    travelArrivesAt: engagement.travelArrivesAt ?? null,
+    shiftPaid: engagement.shiftPaid ?? false,
+  };
+}
+
 function migrateJobFields(
   parsed: LegacySave,
   now: number,
 ): Pick<GameState, "jobPostings" | "jobEngagements"> {
-  if (parsed.jobPostings?.length && parsed.jobEngagements) {
+  const engagements = (parsed.jobEngagements ?? []).map(migrateEngagementRow);
+
+  // Online private saves omit shared jobPostings — still restore task forces.
+  if (engagements.length > 0) {
     return {
-      jobPostings: parsed.jobPostings,
-      jobEngagements: parsed.jobEngagements.map((engagement) => {
-        let endsAt = engagement.endsAt;
-        if (!endsAt) {
-          try {
-            const def = jobDefinitionById(engagement.definitionId);
-            endsAt = engagement.startedAt + def.durationSec * 1000;
-          } catch {
-            endsAt = engagement.startedAt + 3600 * 1000;
-          }
-        }
-        const phase = engagement.phase ?? "working";
-        return {
-          ...engagement,
-          endsAt,
-          phase,
-          travelStartedAt: engagement.travelStartedAt ?? null,
-          travelArrivesAt: engagement.travelArrivesAt ?? null,
-          shiftPaid: engagement.shiftPaid ?? false,
-        };
-      }),
+      jobPostings: parsed.jobPostings?.length ? parsed.jobPostings : [],
+      jobEngagements: engagements,
     };
   }
 
-  const jobPostings = initializeJobPostings(now);
+  if (parsed.jobPostings?.length) {
+    return {
+      jobPostings: parsed.jobPostings,
+      jobEngagements: [],
+    };
+  }
+
   return {
-    jobPostings,
+    jobPostings: initializeJobPostings(now),
     jobEngagements: [],
   };
 }

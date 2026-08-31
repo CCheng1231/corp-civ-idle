@@ -13,6 +13,7 @@ import {
   seedSharedJobPostingsIfNeeded,
   subscribeCompanies,
   subscribeJobPostings,
+  subscribePrivateState,
   upsertCompanyPresence,
 } from "../multiplayer/worldSync";
 import { loadOnlineStateFromRemote } from "../game/save";
@@ -20,6 +21,7 @@ import { loadOnlineStateFromRemote } from "../game/save";
 const FLUSH_INTERVAL_MS = 5000;
 const PRESENCE_INTERVAL_MS = 15000;
 const PRIVATE_SAVE_MS = 500;
+const IGNORE_OWN_REMOTE_MS = 2000;
 
 interface UseOnlineWorldOptions {
   session: OnlineSession;
@@ -38,6 +40,7 @@ export function useOnlineWorld({
   stateRef.current = state;
   const handledCompletedRef = useRef<Set<string>>(new Set());
   const handledClosedRef = useRef<Set<string>>(new Set());
+  const ignoreRemoteUntilRef = useRef(0);
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
@@ -140,13 +143,27 @@ export function useOnlineWorld({
       (err) => console.error("Company listener error", err),
     );
 
+    const unsubPrivate = subscribePrivateState(
+      session,
+      (remote) => {
+        if (!remote || Date.now() < ignoreRemoteUntilRef.current) return;
+        dispatch({
+          type: "LOAD",
+          state: loadOnlineStateFromRemote(session, remote),
+        });
+      },
+      (err) => console.error("Private state listener error", err),
+    );
+
     return () => {
       cancelled = true;
+      setBootstrapped(false);
       unsubJobs();
       unsubCompanies();
+      unsubPrivate();
       dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "disconnected" });
     };
-  }, [session, enabled, dispatch, bootstrapped]);
+  }, [session, enabled, dispatch]);
 
   useEffect(() => {
     if (!enabled || !bootstrapped) return;
@@ -166,11 +183,32 @@ export function useOnlineWorld({
 
   useEffect(() => {
     if (!enabled || !bootstrapped) return;
+
+    const flushPrivate = () => {
+      ignoreRemoteUntilRef.current = Date.now() + IGNORE_OWN_REMOTE_MS;
+      return savePrivateState(session, stateRef.current).catch((err) => {
+        console.error("Private state save failed", err);
+        dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "error" });
+      });
+    };
+
     const id = window.setTimeout(() => {
-      void savePrivateState(session, stateRef.current).catch(console.error);
+      void flushPrivate();
     }, PRIVATE_SAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [session, enabled, state, bootstrapped]);
+
+    const onHide = () => {
+      if (document.visibilityState !== "hidden") return;
+      void flushPrivate();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onHide);
+
+    return () => {
+      window.clearTimeout(id);
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [session, enabled, state, dispatch, bootstrapped]);
 }
 
 async function flushPendingWork(

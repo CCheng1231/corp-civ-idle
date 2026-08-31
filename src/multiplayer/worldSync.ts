@@ -17,7 +17,7 @@ import {
   jobDefinitionById,
 } from "../game/jobs";
 import type { JobPosting } from "../game/types";
-import { parseJobPosting, serializePrivateState } from "./companySave";
+import { parseJobPosting, serializePrivateState, clearAllOnlineLocalCaches, clearOnlineLocalCache } from "./companySave";
 import { getDb } from "./firebase";
 import { playerHqCoord } from "./playerHq";
 import type {
@@ -28,6 +28,7 @@ import type {
   WorldMeta,
 } from "./types";
 import { PLAYER_LABELS } from "./types";
+import { PLAYER_IDS } from "./types";
 import type { GameState } from "../game/types";
 
 const WORLD_ID: WorldId = "dev";
@@ -184,6 +185,20 @@ export function subscribeCompanies(
   );
 }
 
+export function subscribePrivateState(
+  session: OnlineSession,
+  onChange: (data: Record<string, unknown> | null) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    privateStateRef(session.playerId, session.worldId),
+    (snap) => {
+      onChange(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
+    },
+    (err) => onError(err),
+  );
+}
+
 export async function flushPostingWorkDelta(
   session: OnlineSession,
   postingId: string,
@@ -292,4 +307,61 @@ export async function deletePrivateStateDoc(
   worldId: WorldId = WORLD_ID,
 ): Promise<void> {
   await deleteDoc(privateStateRef(playerId, worldId));
+}
+
+async function deleteCompanyDoc(
+  playerId: PlayerId,
+  worldId: WorldId,
+): Promise<void> {
+  try {
+    await deletePrivateStateDoc(playerId, worldId);
+  } catch {
+    /* doc may not exist */
+  }
+  try {
+    await deleteDoc(companyRef(playerId, worldId));
+  } catch {
+    /* doc may not exist */
+  }
+}
+
+/** Dev: wipe one player's private save, presence, and local online cache. */
+export async function resetOnlinePlayerAccount(
+  session: OnlineSession,
+  playerId: PlayerId,
+): Promise<void> {
+  await deleteCompanyDoc(playerId, session.worldId);
+  clearOnlineLocalCache(playerId, session.worldId);
+}
+
+/** Dev: reseed shared job board; keep private saves and map presence. */
+export async function resetOnlineSharedWorldPreserveAccounts(
+  session: OnlineSession,
+): Promise<void> {
+  await resetSharedWorld(session);
+  await Promise.all(
+    PLAYER_IDS.map(async (playerId) => {
+      const snap = await getDoc(privateStateRef(playerId, session.worldId));
+      if (!snap.exists()) return;
+      await setDoc(
+        privateStateRef(playerId, session.worldId),
+        {
+          jobEngagements: [],
+          completedPostingPayouts: [],
+        },
+        { merge: true },
+      );
+    }),
+  );
+}
+
+/** Dev: wipe shared job board + all player saves/presence for this world. */
+export async function resetOnlineDatabase(
+  session: OnlineSession,
+): Promise<void> {
+  await Promise.all(
+    PLAYER_IDS.map((playerId) => deleteCompanyDoc(playerId, session.worldId)),
+  );
+  await resetSharedWorld(session);
+  clearAllOnlineLocalCaches(session.worldId);
 }

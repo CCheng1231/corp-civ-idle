@@ -2,8 +2,8 @@ import { MAP_HQ, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
 import type { PlayerId } from "./types";
 
-/** Chris HQ — fixed countryside-adjacent hex, distinct from Tim. */
-export const CHRIS_HQ: AxialCoord = { q: -4, r: -6 };
+/** Chris HQ — fixed countryside-adjacent hex, distinct from Tim (must fit MAP_RADIUS). */
+export const CHRIS_HQ: AxialCoord = { q: -3, r: -4 };
 
 const HQ_BY_PLAYER: Record<PlayerId, AxialCoord> = {
   tim: MAP_HQ,
