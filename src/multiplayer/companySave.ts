@@ -38,6 +38,7 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
     logbookHighlightEntryId: _logHighlight,
+    jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
     onlineConnectionStatus: _conn,
     onlineSession: _session,

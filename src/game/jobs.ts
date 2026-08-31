@@ -1,5 +1,7 @@
 import { JOB_DEFINITIONS } from "./jobHubData";
-import { jobTravelDurationMs } from "./mapTravel";
+import {
+  jobTravelDurationMsForDefinition,
+} from "./mapTravel";
 import {
   addAssignmentToRoster,
   canAssignFromRoster,
@@ -10,13 +12,14 @@ import {
 } from "./unitEffects";
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
 import { pushCompletionAlert } from "./completionAlerts";
-import { formatNumber, OFFICE_LABELS } from "./constants";
+import { formatNumber, officeSiteLabel } from "./constants";
 import { resolveOfficeLocation } from "./officeSelection";
 import {
   activePlayerId,
   isOnlineMode,
 } from "../multiplayer/playerHq";
 import type {
+  CommercialLotId,
   CompletionBand,
   GameState,
   JobDefinition,
@@ -54,6 +57,15 @@ export function postingsForTower(
 ): JobPosting[] {
   return state.jobPostings.filter(
     (p) => p.towerId === towerId && p.status === "open",
+  );
+}
+
+export function postingsForCommercialLot(
+  state: GameState,
+  commercialLotId: CommercialLotId,
+): JobPosting[] {
+  return state.jobPostings.filter(
+    (p) => p.commercialLotId === commercialLotId && p.status === "open",
   );
 }
 
@@ -184,7 +196,8 @@ export function createPostingFromDefinition(
   return {
     id: newPostingId(def.id, now),
     definitionId: def.id,
-    towerId: def.towerId,
+    towerId: def.towerId ?? null,
+    commercialLotId: def.commercialLotId ?? null,
     spawnedAt: now,
     expiresAt: now + def.expirationSec * 1000,
     unitHoursCompleted: 0,
@@ -338,7 +351,12 @@ function beginReturnTravel(
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
-  const travelMs = jobTravelDurationMs(next, current.officeId, current.towerId);
+  const def = jobDefinitionById(current.definitionId);
+  const travelMs = jobTravelDurationMsForDefinition(
+    next,
+    current.officeId,
+    def,
+  );
   const returnStartedAt =
     current.endsAt > 0 && current.endsAt <= now ? current.endsAt : now;
   next.jobEngagements[idx] = {
@@ -390,7 +408,7 @@ function completeReturnTravel(
     withLog,
     {
       kind: "job",
-      title: `${def.title} · ${OFFICE_LABELS[current.officeId]}`,
+      title: `${def.title} · ${officeSiteLabel(withLog, current.officeId)}`,
       detail,
     },
     notify,
@@ -825,12 +843,13 @@ export function engageJobPosting(
     roster,
     crewAssigned,
   );
-  const travelMs = jobTravelDurationMs(next, officeId, def.towerId);
+  const travelMs = jobTravelDurationMsForDefinition(next, officeId, def);
   next.jobEngagements.push({
     id: `eng_${postingId}_${now}`,
     postingId,
     definitionId: def.id,
-    towerId: def.towerId,
+    towerId: def.towerId ?? null,
+    commercialLotId: def.commercialLotId ?? null,
     officeId,
     crewAssigned,
     phase: "outbound",

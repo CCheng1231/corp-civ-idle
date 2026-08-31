@@ -1,7 +1,10 @@
 /** Pointy-top hex layout (Civilization-style tessellation). */
 
-import type { OfficeLocationId } from "./types";
-import type { AxialCoord } from "./types";
+import type { AxialCoord, EstablishedBranchSite, OfficeLocationId } from "./types";
+import {
+  branchOfficeIdForSite,
+  branchSiteCoord,
+} from "./branchSites";
 
 /** Hex circumradius in px — roomier than the original 26 for player city map. */
 export const HEX_RADIUS = 42;
@@ -91,34 +94,31 @@ export function axialEquals(a: AxialCoord, b: AxialCoord): boolean {
 
 export function officeAtCoord(
   coord: AxialCoord,
-  branch: { established: boolean; coord: AxialCoord | null },
+  branch: { branchSites: EstablishedBranchSite[] },
   hqCoord: AxialCoord = MAP_HQ,
 ): OfficeLocationId | null {
   if (axialEquals(coord, hqCoord)) return "hq";
-  if (
-    branch.established &&
-    branch.coord &&
-    axialEquals(coord, branch.coord)
-  ) {
-    return "branch";
+  for (const site of branch.branchSites) {
+    if (axialEquals(coord, branchSiteCoord(site))) {
+      return branchOfficeIdForSite(site);
+    }
   }
   return null;
 }
 
 export function officeCoordFor(
   officeId: OfficeLocationId,
-  branchCoord: AxialCoord | null,
+  _branchCoord: AxialCoord | null,
   hqCoord: AxialCoord = MAP_HQ,
 ): AxialCoord {
   if (officeId === "hq") return hqCoord;
-  return branchCoord ?? MAP_BRANCH;
+  return MAP_BRANCH;
 }
 
-/** @deprecated use officeCoordFor — legacy default branch tile */
-export const OFFICE_COORDS: Record<OfficeLocationId, AxialCoord> = {
+/** @deprecated use branchSiteCoordForOffice — HQ-only fallback map */
+export const OFFICE_COORDS = {
   hq: MAP_HQ,
-  branch: MAP_BRANCH,
-};
+} as const satisfies Record<"hq", AxialCoord>;
 
 /** Cube / axial hex steps between two tiles. */
 export function axialDistance(a: AxialCoord, b: AxialCoord): number {

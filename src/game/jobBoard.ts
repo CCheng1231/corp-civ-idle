@@ -4,7 +4,7 @@ import {
   jobDefinitionForPosting,
   returnPerHour,
 } from "./jobs";
-import { OFFICE_TOWERS, REGION_LABELS, towerById } from "./mapWorld";
+import { OFFICE_TOWERS, REGION_LABELS, jobSiteRegionForPosting, towerById } from "./mapWorld";
 import type {
   BusinessType,
   ContractorCategoryId,
@@ -131,13 +131,14 @@ export function filterAndSortJobPostings(
 ): JobPosting[] {
   const filtered = postings.filter((posting) => {
     const def = jobDefinitionForPosting(posting);
-    const tower = towerById(posting.towerId);
+    const region = jobSiteRegionForPosting(posting, def);
 
-    if (filters.region !== "all" && tower.region !== filters.region) {
+    if (filters.region !== "all" && region !== filters.region) {
       return false;
     }
-    if (filters.towerId !== "all" && posting.towerId !== filters.towerId) {
-      return false;
+    if (filters.towerId !== "all") {
+      if (posting.commercialLotId) return false;
+      if (posting.towerId !== filters.towerId) return false;
     }
     if (filters.businessType !== "all" && def.businessType !== filters.businessType) {
       return false;

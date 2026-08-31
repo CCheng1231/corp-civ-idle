@@ -1,14 +1,18 @@
 import { type Dispatch } from "react";
 import {
   CONTRACTOR_TRANSFER_SEC_PER_HEX,
-  OFFICE_LABELS,
   contractorTransferDurationMs,
   contractorTransferHexDistance,
+  officeSiteLabel,
   otherOffice,
   totalWorkforce,
   unitAvailableAt,
 } from "../game/constants";
-import { ownedOfficeIds } from "../game/mapWorld";
+import {
+  branchOfficeIds,
+  hasBranchOffices,
+  ownedOfficeIds,
+} from "../game/branchSites";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import { unitDefinition } from "../game/unitEffects";
 import { formatTimerRemaining } from "../game/timers";
@@ -41,9 +45,11 @@ export function ContractorOfficeRoster({
 }: ContractorOfficeRosterProps) {
   const now = Date.now();
   const offices = ownedOfficeIds(state);
-  const hqBranchHexes = state.branchEstablished
-    ? contractorTransferHexDistance(state, "hq", "branch")
-    : 0;
+  const firstBranchId = branchOfficeIds(state)[0];
+  const hqBranchHexes =
+    firstBranchId != null
+      ? contractorTransferHexDistance(state, "hq", firstBranchId)
+      : 0;
 
   function sendOne(
     from: OfficeLocationId,
@@ -63,7 +69,7 @@ export function ContractorOfficeRoster({
     <section className="contractor-roster-panel">
       <h3>Staff by office</h3>
       <p className="muted">
-        {state.branchEstablished ? (
+        {hasBranchOffices(state) ? (
           <>
             HQ and Branch are {hqBranchHexes} hexes apart on the map.
             Relocating staff takes {CONTRACTOR_TRANSFER_SEC_PER_HEX}s per hex.
@@ -79,7 +85,7 @@ export function ContractorOfficeRoster({
         {offices.map((officeId) => {
           const roster = state.contractorsByLocation[officeId];
           const destination =
-            offices.length > 1 ? otherOffice(officeId) : null;
+            offices.length > 1 ? otherOffice(state, officeId) : null;
           const visibleUnits = RECRUITMENT_UNITS.filter(
             (unit) => (roster[unit.id] ?? 0) > 0,
           );
@@ -87,7 +93,7 @@ export function ContractorOfficeRoster({
           return (
             <div key={officeId} className="contractor-roster-card">
               <div className="contractor-roster-head">
-                <strong>{OFFICE_LABELS[officeId]}</strong>
+                <strong>{officeSiteLabel(state, officeId)}</strong>
                 <span className="muted">{totalWorkforce(roster)} on site</span>
               </div>
               {visibleUnits.length === 0 ? (
@@ -124,7 +130,7 @@ export function ContractorOfficeRoster({
                           }}
                         >
                           {destination
-                            ? `Send 1 → ${OFFICE_LABELS[destination]}`
+                            ? `Send 1 → ${officeSiteLabel(state, destination)}`
                             : "No branch yet"}
                         </button>
                       </li>
@@ -152,8 +158,8 @@ export function ContractorOfficeRoster({
                 <li key={transfer.id}>
                   <span className="queue-role">{transfer.count}×</span>
                   <span className="queue-name">
-                    {unit.name}: {OFFICE_LABELS[transfer.from]} →{" "}
-                    {OFFICE_LABELS[transfer.to]}
+                    {unit.name}: {officeSiteLabel(state, transfer.from)} →{" "}
+                    {officeSiteLabel(state, transfer.to)}
                   </span>
                   <span className="queue-status">{remaining}</span>
                 </li>

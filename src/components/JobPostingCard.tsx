@@ -14,7 +14,7 @@ import {
   validateEngagementAssignment,
 } from "../game/jobs";
 import { formatJobDurationSec } from "../game/jobBoard";
-import { REGION_LABELS, towerById } from "../game/mapWorld";
+import { REGION_LABELS, jobSiteLabelForPosting, jobSiteRegionForPosting } from "../game/mapWorld";
 import { formatTimerRemaining } from "../game/timers";
 import { totalAssigned } from "../game/unitEffects";
 import type {
@@ -92,7 +92,8 @@ export function JobPostingCard({
   const officeRoster = rosterAt(state, officeId);
   const engageLocked = isAllOfficesSelected(state.selectedOffice);
   const def = jobDefinitionForPosting(posting);
-  const tower = towerById(posting.towerId);
+  const siteLabel = jobSiteLabelForPosting(posting, def);
+  const siteRegion = jobSiteRegionForPosting(posting, def);
   const band = completionBand(posting.unitHoursCompleted, def.unitHoursTotal);
   const unitCount = totalAssigned(assignment);
   const expectedPerHour = returnPerHour(def, unitCount);
@@ -124,7 +125,7 @@ export function JobPostingCard({
         <span>{BUSINESS_TYPE_LABELS[def.businessType]}</span>
         {showTower && (
           <span className="job-posting-tower muted">
-            {tower.name} · {REGION_LABELS[tower.region]}
+            {siteLabel} · {REGION_LABELS[siteRegion]}
           </span>
         )}
       </header>

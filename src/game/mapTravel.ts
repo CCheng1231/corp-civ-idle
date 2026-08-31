@@ -2,13 +2,21 @@ import {
   axialDistance,
   axialToPixel,
   HEX_RADIUS,
-  officeCoordFor,
 } from "./hexLayout";
 import { hqCoordForState } from "../multiplayer/playerHq";
-import { towerById } from "./mapWorld";
+import { branchSiteCoordForOffice } from "./branchSites";
+import {
+  jobSiteCoordForDefinition,
+  jobSiteCoordForPosting,
+  towerById,
+} from "./mapWorld";
+import { jobDefinitionById } from "./jobs";
 import type {
   AxialCoord,
   GameState,
+  JobDefinition,
+  JobEngagement,
+  JobPosting,
   OfficeLocationId,
   TowerId,
 } from "./types";
@@ -33,15 +41,45 @@ export function hexPath(a: AxialCoord, b: AxialCoord): AxialCoord[] {
   return results;
 }
 
+export function jobTravelHexesToCoord(
+  state: GameState,
+  officeId: OfficeLocationId,
+  target: AxialCoord,
+): number {
+  const hq = hqCoordForState(state);
+  const from =
+    officeId === "hq"
+      ? hq
+      : (branchSiteCoordForOffice(state, officeId) ?? hq);
+  return Math.max(1, axialDistance(from, target));
+}
+
+export function jobTravelDurationMsToCoord(
+  state: GameState,
+  officeId: OfficeLocationId,
+  target: AxialCoord,
+): number {
+  return travelDurationMs(jobTravelHexesToCoord(state, officeId, target));
+}
+
+export function jobTravelDurationMsForDefinition(
+  state: GameState,
+  officeId: OfficeLocationId,
+  def: JobDefinition,
+): number {
+  return jobTravelDurationMsToCoord(
+    state,
+    officeId,
+    jobSiteCoordForDefinition(def),
+  );
+}
+
 export function jobTravelHexes(
   state: GameState,
   officeId: OfficeLocationId,
   towerId: TowerId,
 ): number {
-  const hq = hqCoordForState(state);
-  const from = officeCoordFor(officeId, state.branchCoord, hq);
-  const to = towerById(towerId).coord;
-  return Math.max(1, axialDistance(from, to));
+  return jobTravelHexesToCoord(state, officeId, towerById(towerId).coord);
 }
 
 export function jobTravelDurationMs(
@@ -52,16 +90,61 @@ export function jobTravelDurationMs(
   return travelDurationMs(jobTravelHexes(state, officeId, towerId));
 }
 
+export function jobSiteCoords(
+  state: GameState,
+  officeId: OfficeLocationId,
+  target: AxialCoord,
+): { from: AxialCoord; to: AxialCoord } {
+  const hq = hqCoordForState(state);
+  const from =
+    officeId === "hq"
+      ? hq
+      : (branchSiteCoordForOffice(state, officeId) ?? hq);
+  return {
+    from,
+    to: { ...target },
+  };
+}
+
 export function officeTowerCoords(
   state: GameState,
   officeId: OfficeLocationId,
   towerId: TowerId,
 ): { from: AxialCoord; to: AxialCoord } {
-  const hq = hqCoordForState(state);
-  return {
-    from: officeCoordFor(officeId, state.branchCoord, hq),
-    to: { ...towerById(towerId).coord },
-  };
+  return jobSiteCoords(state, officeId, towerById(towerId).coord);
+}
+
+export function officeJobSiteCoords(
+  state: GameState,
+  officeId: OfficeLocationId,
+  target: AxialCoord,
+): { from: AxialCoord; to: AxialCoord } {
+  return jobSiteCoords(state, officeId, target);
+}
+
+export function jobSiteCoordsForEngagement(
+  state: GameState,
+  engagement: JobEngagement,
+): { from: AxialCoord; to: AxialCoord } {
+  const posting = state.jobPostings.find((p) => p.id === engagement.postingId);
+  const def = jobDefinitionById(engagement.definitionId);
+  const target = posting
+    ? jobSiteCoordForPosting(posting, def)
+    : jobSiteCoordForDefinition(def);
+  return jobSiteCoords(state, engagement.officeId, target);
+}
+
+export function jobSiteCoordsForPosting(
+  state: GameState,
+  officeId: OfficeLocationId,
+  posting: JobPosting,
+): { from: AxialCoord; to: AxialCoord } {
+  const def = jobDefinitionById(posting.definitionId);
+  return jobSiteCoords(
+    state,
+    officeId,
+    jobSiteCoordForPosting(posting, def),
+  );
 }
 
 /** Pixel centers along a hex path (dev dotted route). */

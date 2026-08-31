@@ -9,6 +9,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   refund?: ResourceCost;
   refundNote?: string;
+  confirmTone?: "danger" | "primary";
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -20,6 +21,7 @@ export function ConfirmDialog({
   cancelLabel = "Keep",
   refund,
   refundNote = "(Power 100%, other resources 95%)",
+  confirmTone = "danger",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -49,7 +51,11 @@ export function ConfirmDialog({
           <button type="button" className="tab" onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button type="button" className="btn danger-btn" onClick={onConfirm}>
+          <button
+            type="button"
+            className={confirmTone === "primary" ? "btn primary" : "btn danger-btn"}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </footer>

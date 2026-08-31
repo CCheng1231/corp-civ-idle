@@ -15,7 +15,7 @@ import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
 import { useOnlineWorld } from "./hooks/useOnlineWorld";
 import { readSession, writeSession } from "./multiplayer/session";
 import type { OnlineSession } from "./multiplayer/types";
-import { isOnlineSession } from "./multiplayer/types";
+import { PLAYER_LABELS, isOnlineSession } from "./multiplayer/types";
 import "./App.css";
 
 function GameShell({ session }: { session: OnlineSession }) {
@@ -27,8 +27,6 @@ function GameShell({ session }: { session: OnlineSession }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const viewportPreview = state.settings.viewportPreview ?? "auto";
   const mobilePreview = viewportPreview === "mobile";
-  const galaxyS24Preview = viewportPreview === "galaxy-s24";
-  const deviceFramePreview = mobilePreview || galaxyS24Preview;
   const mobileNav = useMobileNavLayout(viewportPreview);
   const online = isOnlineSession(session);
 
@@ -52,13 +50,13 @@ function GameShell({ session }: { session: OnlineSession }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("viewport-preview-galaxy-s24", deviceFramePreview);
+    root.classList.toggle("viewport-preview-galaxy-s24", mobilePreview);
     return () => root.classList.remove("viewport-preview-galaxy-s24");
-  }, [deviceFramePreview]);
+  }, [mobilePreview]);
 
   const viewportClass = [
     viewportPreview === "desktop" ? "viewport-preview-desktop" : "",
-    deviceFramePreview ? "viewport-preview-mobile viewport-preview-galaxy-s24" : "",
+    mobilePreview ? "viewport-preview-mobile viewport-preview-galaxy-s24" : "",
     mobileNav ? "app-shell-mobile-nav" : "",
     online ? "app-shell-online" : "",
   ]
@@ -79,13 +77,14 @@ function GameShell({ session }: { session: OnlineSession }) {
         dispatch={dispatch}
       />
       <div className="app-top-chrome">
-        <ResourceBar state={state} session={session} />
+        <ResourceBar state={state} />
         {online && state.onlineConnectionStatus ? (
           <div
             className={`online-status-banner online-status-${state.onlineConnectionStatus}`}
             role="status"
           >
-            Online · {state.onlineConnectionStatus}
+            {PLAYER_LABELS[session.playerId]} · Online{" "}
+            {state.onlineConnectionStatus}
           </div>
         ) : null}
         {state.won && (
@@ -112,7 +111,7 @@ function GameShell({ session }: { session: OnlineSession }) {
     </div>
   );
 
-  return deviceFramePreview ? (
+  return mobilePreview ? (
     <DevicePreviewFrame>{shell}</DevicePreviewFrame>
   ) : (
     shell

@@ -1,15 +1,20 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { DraggableTabPortraitFrame } from "./DraggableTabPortraitFrame";
 import { useTabPortraitParallax } from "../hooks/useTabPortraitParallax";
-import { isGalaxyS24Preview } from "../game/devicePreview";
-
 export type PortraitSize = "compact" | "large";
+
+function isMobileLayoutPreview(): boolean {
+  return (
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("viewport-preview-galaxy-s24")
+  );
+}
 
 function initialPortraitSize(
   storageKey: string,
   defaultLargeOnDesktop = false,
 ): PortraitSize {
-  if (isGalaxyS24Preview()) return "compact";
+  if (isMobileLayoutPreview()) return "compact";
   try {
     const stored = localStorage.getItem(storageKey);
     if (stored === "compact" || stored === "large") return stored;
@@ -63,7 +68,7 @@ export function useTabPortraitSize(
   );
 
   useEffect(() => {
-    if (isGalaxyS24Preview()) return;
+    if (isMobileLayoutPreview()) return;
     try {
       localStorage.setItem(storageKey, portraitSize);
     } catch {

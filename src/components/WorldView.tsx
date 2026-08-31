@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,42 +10,64 @@ import {
 } from "react";
 import {
   REGION_LABELS,
-  TOWER_HEX_LABELS,
   isAvailableCommercialLot,
+  mainOfficeCoordForState,
+  mapMainOfficeId,
+  officeDisplayName,
   regionAtCoord,
   towerAtCoord,
-  towerById,
+  worldMapAxialToPixel,
+  worldMapHexBounds,
+  worldMapHexPathPixels,
 } from "../game/mapWorld";
+import {
+  branchOfficeIds,
+  hasBranchOffices,
+  isBranchOfficeId,
+} from "../game/branchSites";
+import {
+  clampMapPan,
+  clampMapZoomRel,
+  applyMapWheelZoom,
+  focusViewportOnContentPoint,
+  MAP_HQ_FOCUS_ZOOM_REL,
+  MAP_ZOOM_REL_DEFAULT,
+  MAP_ZOOM_REL_MAX,
+  MAP_ZOOM_REL_MIN,
+  MAP_ZOOM_REL_STEP,
+  measureMapViewport,
+  type MapContentSize,
+  worldMapCoordToContentPixel,
+} from "../game/mapViewport";
+import {
+  readWorldMapViewportCache,
+  writeWorldMapViewportCache,
+} from "../game/worldMapViewportCache";
 import {
   HEX_RADIUS,
   MAP_GOV,
   axialEquals,
   axialKey,
-  axialToPixel,
   generateHexagonMap,
-  hexBounds,
   hexPolygonPoints,
 } from "../game/hexLayout";
 import {
   hexPath,
-  hexPathPixels,
-  officeTowerCoords,
+  jobSiteCoordsForEngagement,
   pointAlongPolyline,
 } from "../game/mapTravel";
 import {
-  getRegionLabelCentroids,
-  type RegionLabelObstacle,
-} from "../game/mapRegionOutlines";
-import { isOnlineMode, officeAtForState } from "../multiplayer/playerHq";
+  jobSiteCoordForPosting,
+} from "../game/mapWorld";
+import { jobDefinitionForPosting } from "../game/jobs";
+import { hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
 import { PLAYER_IDS } from "../multiplayer/types";
 import type {
   AxialCoord,
   GameAction,
   GameState,
   JobEngagement,
-  MapPlayerGround,
   MapRegion,
-  TowerId,
 } from "../game/types";
 import { MapHexDrawer } from "./MapHexDrawer";
 
@@ -69,10 +92,6 @@ type LegendHover =
 
 type LandmarkKind = "gov" | "hq" | "branch" | "tower" | "commercial" | "active";
 
-const MAP_ZOOM_MIN = 0.7;
-const MAP_ZOOM_MAX = 1.8;
-const MAP_ZOOM_STEP = 0.1;
-const MAP_ZOOM_DEFAULT = 1;
 const PLAYER_HIT_RADIUS = HEX_RADIUS * 0.62;
 const PAN_DRAG_THRESHOLD = 3;
 
@@ -91,41 +110,6 @@ const REGION_ORDER: MapRegion[] = [
   "suburban",
   "metropolis",
 ];
-
-const GROUND_OPTIONS: { id: MapPlayerGround; label: string }[] = [
-  { id: "streets", label: "Streets" },
-  { id: "terrain", label: "Terrain" },
-  { id: "hybrid", label: "Hybrid" },
-];
-
-function clampZoom(zoom: number): number {
-  const stepped = Math.round(zoom / MAP_ZOOM_STEP) * MAP_ZOOM_STEP;
-  return Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, Number(stepped.toFixed(1))));
-}
-
-/** Keep enough of the map inside the viewport so drag can't lose it. */
-function clampMapPan(
-  pan: { x: number; y: number },
-  zoom: number,
-  viewportW: number,
-  viewportH: number,
-): { x: number; y: number } {
-  if (viewportW <= 0 || viewportH <= 0) return pan;
-  // Require ~35% of the viewport to still overlap the scaled map.
-  const keep = 0.35;
-  const limitX =
-    zoom >= 1
-      ? (viewportW * (zoom - 1)) / 2 + viewportW * keep
-      : viewportW * keep * Math.max(zoom, 0.5);
-  const limitY =
-    zoom >= 1
-      ? (viewportH * (zoom - 1)) / 2 + viewportH * keep
-      : viewportH * keep * Math.max(zoom, 0.5);
-  return {
-    x: Math.min(limitX, Math.max(-limitX, pan.x)),
-    y: Math.min(limitY, Math.max(-limitY, pan.y)),
-  };
-}
 
 function hash01(seed: number): number {
   const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
@@ -365,7 +349,7 @@ function hexVariant(coord: AxialCoord, state: GameState): HexVariant {
   if (axialEquals(coord, MAP_GOV)) return "gov";
   const officeId = officeAtForState(coord, state);
   if (officeId === "hq") return "hq";
-  if (officeId === "branch") return "branch";
+  if (officeId && isBranchOfficeId(officeId)) return "branch";
   if (towerAtCoord(coord)) return "tower";
   if (isAvailableCommercialLot(coord, state)) return "commercial";
   if (state.jobEngagements.some((e) => e.phase === "working")) {
@@ -381,18 +365,6 @@ function hexVariant(coord: AxialCoord, state: GameState): HexVariant {
 
 function regionClass(coord: AxialCoord): string {
   return `hex-region-${regionAtCoord(coord)}`;
-}
-
-function hexOfficeLabel(
-  officeId: ReturnType<typeof officeAtForState>,
-  towerId: ReturnType<typeof towerAtCoord>,
-): { text: string; kind: "hq" | "branch" | "tower" } | null {
-  if (officeId === "hq") return { text: "HQ", kind: "hq" };
-  if (officeId === "branch") return { text: "Branch", kind: "branch" };
-  if (towerId) {
-    return { text: TOWER_HEX_LABELS[towerId], kind: "tower" };
-  }
-  return null;
 }
 
 function travelProgress(engagement: JobEngagement, now: number): number {
@@ -434,18 +406,21 @@ function LandmarkMarker({
   variant,
   highlighted,
   dimmed,
+  flashing,
 }: {
   x: number;
   y: number;
   variant: LandmarkKind;
   highlighted: boolean;
   dimmed: boolean;
+  flashing?: boolean;
 }) {
   const kind = variant;
   const wrapClass = [
     "map-city-marker-wrap",
     highlighted ? "is-legend-hot" : "",
     dimmed ? "is-legend-dim" : "",
+    flashing ? "is-hq-flash" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -574,38 +549,12 @@ const LANDMARK_LEGEND: {
   { id: "job", label: "Task force", className: "landmark-legend-job" },
 ];
 
-function buildLabelObstacles(
-  cells: AxialCoord[],
-  decorations: MapDecoration[],
-  state: GameState,
-): RegionLabelObstacle[] {
-  const obstacles: RegionLabelObstacle[] = decorations.map((deco) => ({
-    x: deco.x,
-    y: deco.y,
-    radius: HEX_RADIUS * 0.9,
-  }));
-
-  for (const coord of cells) {
-    const { x, y } = axialToPixel(coord.q, coord.r);
-    const isLandmark =
-      axialEquals(coord, MAP_GOV) ||
-      Boolean(towerAtCoord(coord)) ||
-      Boolean(
-        officeAtForState(coord, state),
-      ) ||
-      isAvailableCommercialLot(coord, state);
-    if (isLandmark) {
-      obstacles.push({ x, y, radius: HEX_RADIUS * 1.05 });
-    }
-  }
-
-  return obstacles;
-}
-
 export function WorldView({ state, dispatch }: WorldViewProps) {
+  const savedViewport = readWorldMapViewportCache();
+  const restoreViewport = savedViewport.hasSession;
   const cells = useMemo(() => generateHexagonMap(), []);
-  const bounds = useMemo(() => hexBounds(cells), [cells]);
-  const { watercolorWashes, decorations, regionLabelAnchors } = useMemo(() => {
+  const bounds = useMemo(() => worldMapHexBounds(cells), [cells]);
+  const { watercolorWashes, decorations } = useMemo(() => {
     const washes: WatercolorWash[] = [];
     const cellsByKey = new Map(cells.map((coord) => [axialKey(coord), coord]));
     const freeByRegion: Record<MapRegion, AxialCoord[]> = {
@@ -617,7 +566,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
 
     cells.forEach((coord, index) => {
       const region = regionAtCoord(coord);
-      const { x, y } = axialToPixel(coord.q, coord.r);
+      const { x, y } = worldMapAxialToPixel(coord);
       const cellSeed = coord.q * 31 + coord.r * 17 + 9;
       const coordKey = axialKey(coord);
 
@@ -659,7 +608,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
         if (!cellsByKey.has(neighborKey)) continue;
         if (regionAtCoord(neighborCoord) === region) continue;
 
-        const neighborPixel = axialToPixel(neighborCoord.q, neighborCoord.r);
+        const neighborPixel = worldMapAxialToPixel(neighborCoord);
         const bleedSeed = cellSeed + edge * 137 + index;
         const bleedT = 0.5 + 0.12 * hash01(bleedSeed + 3);
         washes.push({
@@ -692,7 +641,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       );
       const kit = REGION_POCKET_KITS[region];
       anchors.forEach((anchor, pocketIndex) => {
-        const center = axialToPixel(anchor.q, anchor.r);
+        const center = worldMapAxialToPixel(anchor);
         const propCount = 4 + Math.floor(hash01(anchor.q * 13 + anchor.r * 7 + 3) * 3);
         for (let i = 0; i < propCount; i += 1) {
           const seed = anchor.q * 53 + anchor.r * 29 + pocketIndex * 11 + i * 17;
@@ -714,21 +663,38 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     washes.sort(
       (a, b) => REGION_ORDER.indexOf(a.id) - REGION_ORDER.indexOf(b.id),
     );
-    const labelObstacles = buildLabelObstacles(cells, decos, state);
-    const regionLabelAnchors = getRegionLabelCentroids(cells, labelObstacles);
     return {
       watercolorWashes: washes,
       decorations: decos,
-      regionLabelAnchors,
     };
   }, [cells, state]);
-  const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(null);
-  const [legendOpen, setLegendOpen] = useState(true);
+  const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(
+    restoreViewport ? savedViewport.inspectedCoord : null,
+  );
+  const [legendOpen, setLegendOpen] = useState(
+    restoreViewport ? savedViewport.legendOpen : false,
+  );
   const [legendHover, setLegendHover] = useState<LegendHover>(null);
-  const [mapZoom, setMapZoom] = useState(MAP_ZOOM_DEFAULT);
-  const [mapPan, setMapPan] = useState({ x: 0, y: 0 });
+  const [fitZoom, setFitZoom] = useState(1);
+  const [mapZoomRel, setMapZoomRel] = useState(
+    restoreViewport ? savedViewport.mapZoomRel : MAP_ZOOM_REL_DEFAULT,
+  );
+  const [mapContentSize, setMapContentSize] = useState<MapContentSize>({
+    width: 1,
+    height: 1,
+  });
+  const [mapPan, setMapPan] = useState(
+    restoreViewport ? savedViewport.mapPan : { x: 0, y: 0 },
+  );
   const [isPanning, setIsPanning] = useState(false);
+  const [hqFlashSeq, setHqFlashSeq] = useState(0);
+  const [hqFlashActive, setHqFlashActive] = useState(false);
   const mapViewportRef = useRef<HTMLDivElement>(null);
+  const mapSvgRef = useRef<SVGSVGElement>(null);
+  const mapContentSizeRef = useRef(mapContentSize);
+  const mapZoomRelRef = useRef(mapZoomRel);
+  const mapPanRef = useRef(mapPan);
+  const fitZoomRef = useRef(fitZoom);
   const panDragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -739,10 +705,19 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     hitCoord: AxialCoord | null;
   } | null>(null);
   const now = Date.now();
-  const online = isOnlineMode(state);
-  const isDev = !online && state.settings.mapPresentation === "dev";
-  const ground = state.settings.mapPlayerGround ?? "hybrid";
+  const isDev = state.settings.mapPresentation === "dev";
+  const mapZoom = fitZoom * mapZoomRel;
   const legendActive = legendHover !== null;
+  const playerHqCoord = useMemo(() => hqCoordForState(state), [state]);
+  const mainOfficeId = mapMainOfficeId(state);
+  const mainOfficeLocationId =
+    mainOfficeId === "branch"
+      ? (branchOfficeIds(state)[0] ?? "hq")
+      : "hq";
+  const mainOfficeCoord = useMemo(
+    () => mainOfficeCoordForState(state),
+    [state, playerHqCoord, state.branchSites, state.settings.mapMainOffice],
+  );
 
   function viewportSize(): { width: number; height: number } {
     const el = mapViewportRef.current;
@@ -751,9 +726,37 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     return { width: rect.width, height: rect.height };
   }
 
-  function setPanClamped(next: { x: number; y: number }, zoom = mapZoom) {
+  const measureFitZoom = useCallback(() => {
+    requestAnimationFrame(() => {
+      const viewport = mapViewportRef.current;
+      if (!viewport) return;
+      const vpW = viewport.clientWidth;
+      const vpH = viewport.clientHeight;
+      if (vpW < 8 || vpH < 8 || bounds.width <= 0) return;
+
+      const measured = measureMapViewport(vpW, vpH, bounds);
+      mapContentSizeRef.current = measured.content;
+      setMapContentSize(measured.content);
+      setFitZoom(measured.fitZoom);
+      setMapPan((pan) =>
+        clampMapPan(
+          pan,
+          measured.fitZoom * mapZoomRelRef.current,
+          vpW,
+          vpH,
+          measured.content,
+        ),
+      );
+    });
+  }, [bounds.height, bounds.minX, bounds.minY, bounds.width]);
+
+  function setPanClamped(
+    next: { x: number; y: number },
+    zoom = mapZoom,
+    content: MapContentSize = mapContentSizeRef.current,
+  ) {
     const { width, height } = viewportSize();
-    setMapPan(clampMapPan(next, zoom, width, height));
+    setMapPan(clampMapPan(next, zoom, width, height, content));
   }
 
   useEffect(() => {
@@ -761,21 +764,112 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
     if (!el) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const delta = event.deltaY > 0 ? -MAP_ZOOM_STEP : MAP_ZOOM_STEP;
-      setMapZoom((z) => clampZoom(z + delta));
+      const rect = el.getBoundingClientRect();
+      const content = mapContentSizeRef.current;
+      if (content.width <= 1 || content.height <= 1) return;
+
+      const next = applyMapWheelZoom({
+        deltaY: event.deltaY,
+        deltaMode: event.deltaMode,
+        viewportX: event.clientX - rect.left,
+        viewportY: event.clientY - rect.top,
+        viewportW: rect.width,
+        viewportH: rect.height,
+        fitZoom: fitZoomRef.current,
+        zoomRel: mapZoomRelRef.current,
+        pan: mapPanRef.current,
+        content,
+      });
+      setMapZoomRel(next.zoomRel);
+      setMapPan(next.pan);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   useEffect(() => {
+    const viewport = mapViewportRef.current;
+    if (!viewport) return;
+    const ro = new ResizeObserver(() => measureFitZoom());
+    ro.observe(viewport);
+    measureFitZoom();
+    return () => ro.disconnect();
+  }, [measureFitZoom, isDev]);
+
+  useEffect(() => {
+    measureFitZoom();
+  }, [measureFitZoom, bounds.width, bounds.height, cells.length]);
+
+  useEffect(() => {
+    mapContentSizeRef.current = mapContentSize;
+  }, [mapContentSize]);
+
+  useEffect(() => {
+    mapZoomRelRef.current = mapZoomRel;
+  }, [mapZoomRel]);
+
+  useEffect(() => {
+    mapPanRef.current = mapPan;
+  }, [mapPan]);
+
+  useEffect(() => {
+    fitZoomRef.current = fitZoom;
+  }, [fitZoom]);
+
+  useEffect(() => {
+    writeWorldMapViewportCache({
+      mapZoomRel,
+      mapPan,
+      inspectedCoord,
+      legendOpen,
+    });
+  }, [mapZoomRel, mapPan, inspectedCoord, legendOpen]);
+
+  useEffect(() => {
+    if (!hqFlashActive) return;
+    const timer = window.setTimeout(() => setHqFlashActive(false), 2200);
+    return () => window.clearTimeout(timer);
+  }, [hqFlashActive, hqFlashSeq]);
+
+  useEffect(() => {
+    if (mapContentSize.width <= 1 || mapContentSize.height <= 1) return;
     const { width, height } = viewportSize();
-    setMapPan((pan) => clampMapPan(pan, mapZoom, width, height));
-  }, [mapZoom]);
+    if (width <= 0 || height <= 0) return;
+    setMapPan((pan) =>
+      clampMapPan(pan, mapZoom, width, height, mapContentSizeRef.current),
+    );
+  }, [mapZoom, fitZoom, mapZoomRel, mapContentSize.width, mapContentSize.height]);
 
   function resetMapView() {
-    setMapZoom(MAP_ZOOM_DEFAULT);
+    setMapZoomRel(MAP_ZOOM_REL_DEFAULT);
     setMapPan({ x: 0, y: 0 });
+  }
+
+  function focusOnMainOffice() {
+    const { width: vpW, height: vpH } = viewportSize();
+    if (vpW <= 0 || vpH <= 0 || bounds.width <= 0) return;
+
+    const content = mapContentSizeRef.current;
+    if (content.width <= 0 || content.height <= 0) return;
+
+    const officePoint = worldMapCoordToContentPixel(
+      mainOfficeCoord,
+      bounds,
+      content,
+    );
+    const focused = focusViewportOnContentPoint(
+      officePoint,
+      content,
+      vpW,
+      vpH,
+      fitZoom,
+      MAP_HQ_FOCUS_ZOOM_REL,
+    );
+
+    setMapZoomRel(focused.zoomRel);
+    setMapPan(focused.pan);
+    setHqFlashActive(true);
+    setHqFlashSeq((seq) => seq + 1);
   }
 
   function closeDrawer() {
@@ -868,13 +962,24 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       e.phase === "working" ||
       e.phase === "returning",
   );
-  const workingTowerIds = [
-    ...new Set(
-      activeEngagements
-        .filter((e) => e.phase === "working")
-        .map((e) => e.towerId),
-    ),
-  ];
+  const workingSiteCoords = useMemo(() => {
+    const seen = new Set<string>();
+    const coords: AxialCoord[] = [];
+    for (const engagement of activeEngagements) {
+      if (engagement.phase !== "working") continue;
+      const posting = state.jobPostings.find(
+        (entry) => entry.id === engagement.postingId,
+      );
+      if (!posting) continue;
+      const def = jobDefinitionForPosting(posting);
+      const site = jobSiteCoordForPosting(posting, def);
+      const key = axialKey(site);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      coords.push(site);
+    }
+    return coords;
+  }, [activeEngagements, state.jobPostings]);
 
   const peerMarkers = useMemo(() => {
     if (state.onlineSession?.playMode !== "online") return [];
@@ -890,12 +995,14 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
             key: `${presence!.playerId}-hq`,
           },
         ];
-        if (presence!.branchEstablished && presence!.branchCoord) {
-          items.push({
-            coord: presence!.branchCoord,
-            label: presence!.branchName ?? `${presence!.displayName} branch`,
-            key: `${presence!.playerId}-branch`,
-          });
+        if (presence!.branchSites?.length) {
+          for (const [index, branch] of presence!.branchSites.entries()) {
+            items.push({
+              coord: branch.coord,
+              label: branch.name ?? `${presence!.displayName} branch`,
+              key: `${presence!.playerId}-branch-${index}`,
+            });
+          }
         }
         return items;
       });
@@ -903,75 +1010,68 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
 
   return (
     <div
-      className={`world-view map-presentation-${isDev ? "dev" : "player"} map-ground-${ground}${
+      className={`world-view map-presentation-${isDev ? "dev" : "player"} map-ground-hybrid${
         legendActive ? " map-legend-hovering" : ""
       }`}
     >
       <div className="world-header">
-        <h2>Regional map</h2>
-        <p>
-          {isDev
-            ? "Developer hex view — same region map as Player, with hex paths for timing."
-            : "City map — try Streets / Terrain / Hybrid; hover the legend to spotlight."}
-        </p>
-        <div className="world-map-controls" role="group" aria-label="Map view mode">
-          {!online ? (
-            <>
-              <span className="world-map-controls-label">View</span>
-              <button
-                type="button"
-                className={`tab${isDev ? " active" : ""}`}
-                aria-pressed={isDev}
-                onClick={() =>
+        <div className="world-header-top">
+          <h2>World map</h2>
+          <div className="world-map-controls world-map-controls-compact" role="group" aria-label="Map view mode">
+            <label className="world-map-main-office-field">
+              <span className="sr-only">Distance from</span>
+              <select
+                className="world-map-main-office"
+                value={mainOfficeId}
+                aria-label="Distance from office"
+                onChange={(e) =>
                   dispatch({
                     type: "UPDATE_SETTINGS",
-                    settings: { mapPresentation: "dev" },
+                    settings: {
+                      mapMainOffice: e.target.value as "hq" | "branch",
+                    },
                   })
                 }
               >
-                Developer
-              </button>
-              <button
-                type="button"
-                className={`tab${!isDev ? " active" : ""}`}
-                aria-pressed={!isDev}
-                onClick={() =>
-                  dispatch({
-                    type: "UPDATE_SETTINGS",
-                    settings: { mapPresentation: "player" },
-                  })
-                }
-              >
-                Player
-              </button>
-            </>
-          ) : null}
-        </div>
-        {!isDev ? (
-          <div
-            className="world-map-controls"
-            role="group"
-            aria-label="Player ground style"
-          >
-            <span className="world-map-controls-label">Ground</span>
-            {GROUND_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`tab${ground === option.id ? " active" : ""}`}
-                aria-pressed={ground === option.id}
-                onClick={() =>
-                  dispatch({
-                    type: "UPDATE_SETTINGS",
-                    settings: { mapPlayerGround: option.id },
-                  })
-                }
-              >
-                {option.label}
-              </button>
-            ))}
+                <option value="hq">{officeDisplayName(state, "hq")}</option>
+                {hasBranchOffices(state) ? (
+                  <option value="branch">
+                    {officeDisplayName(state, branchOfficeIds(state)[0]!)}
+                  </option>
+                ) : null}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={`tab${!isDev ? " active" : ""}`}
+              aria-pressed={!isDev}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: {
+                    mapPresentation: "player",
+                    mapPlayerGround: "hybrid",
+                  },
+                })
+              }
+            >
+              Player&apos;s view
+            </button>
+            <button
+              type="button"
+              className={`tab${isDev ? " active" : ""}`}
+              aria-pressed={isDev}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_SETTINGS",
+                  settings: { mapPresentation: "dev" },
+                })
+              }
+            >
+              Developer view
+            </button>
           </div>
-        ) : null}
+        </div>
       </div>
 
       <div className="world-map-stage">
@@ -1041,13 +1141,24 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
           ) : null}
         </aside>
 
+        <button
+          type="button"
+          className="map-hq-btn"
+          aria-label={`Center map on ${officeDisplayName(state, mainOfficeLocationId)} at 100% zoom`}
+          onClick={focusOnMainOffice}
+        >
+          {mainOfficeId === "branch"
+            ? officeDisplayName(state, mainOfficeLocationId)
+            : "HQ"}
+        </button>
+
         <div className="map-zoom-controls" role="group" aria-label="Map zoom">
           <button
             type="button"
             className="map-zoom-btn"
             aria-label="Zoom out"
-            disabled={mapZoom <= MAP_ZOOM_MIN}
-            onClick={() => setMapZoom((z) => clampZoom(z - MAP_ZOOM_STEP))}
+            disabled={mapZoomRel <= MAP_ZOOM_REL_MIN}
+            onClick={() => setMapZoomRel((z) => clampMapZoomRel(z - MAP_ZOOM_REL_STEP))}
           >
             −
           </button>
@@ -1057,14 +1168,14 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
             aria-label="Reset zoom and pan"
             onClick={resetMapView}
           >
-            {Math.round(mapZoom * 100)}%
+            {Math.round(mapZoomRel * 100)}%
           </button>
           <button
             type="button"
             className="map-zoom-btn"
             aria-label="Zoom in"
-            disabled={mapZoom >= MAP_ZOOM_MAX}
-            onClick={() => setMapZoom((z) => clampZoom(z + MAP_ZOOM_STEP))}
+            disabled={mapZoomRel >= MAP_ZOOM_REL_MAX}
+            onClick={() => setMapZoomRel((z) => clampMapZoomRel(z + MAP_ZOOM_REL_STEP))}
           >
             +
           </button>
@@ -1079,18 +1190,30 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
           onPointerCancel={onMapPointerUp}
           onDragStart={onMapDragStart}
         >
-          <div
-            className="map-zoom-scaler"
-            style={{
-              transform: `translate(${mapPan.x}px, ${mapPan.y}px) scale(${mapZoom})`,
-            }}
-            draggable={false}
-          >
+          <div className="map-zoom-scaler" draggable={false}>
+            <div
+              className="map-zoom-pan-layer"
+              style={{
+                transform: `translate3d(${mapPan.x}px, ${mapPan.y}px, 0)`,
+              }}
+            >
+              <div
+                className="map-zoom-scale-layer"
+                style={{
+                  transform: `scale(${mapZoom})`,
+                  width: mapContentSize.width,
+                  height: mapContentSize.height,
+                }}
+              >
             <svg
+              ref={mapSvgRef}
               viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
               shapeRendering="geometricPrecision"
               role="img"
-              aria-label="Regional map"
+              aria-label="World map"
             >
               <defs>
                 {/* Light edge softening only — heavy blur/displace on the whole layer rasterizes low-res when zooming. */}
@@ -1247,64 +1370,25 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                       );
                     })}
                   </g>
-                  {!isDev ? (
-                    <g className="map-region-labels" pointerEvents="none">
-                      {regionLabelAnchors.map(({ region, x, y }) => {
-                        const label = REGION_LABELS[region];
-                        const regionHot =
-                          legendHover?.kind === "region" &&
-                          legendHover.id === region;
-                        const textWidth = label.length * 6.4 + 14;
-                        return (
-                          <g
-                            key={`region-label-${region}`}
-                            className={[
-                              "map-region-label",
-                              `map-region-label-${region}`,
-                              regionHot ? "is-legend-hot" : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            transform={`translate(${x},${y})`}
-                          >
-                            <rect
-                              className="map-region-label-bg"
-                              x={-textWidth / 2}
-                              y={-10}
-                              width={textWidth}
-                              height={18}
-                              rx={9}
-                            />
-                            <text
-                              className="map-region-label-text"
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              y={1}
-                            >
-                              {label}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  ) : null}
                 </>
               ) : null}
 
               {cells.map((coord) => {
-                const { x, y } = axialToPixel(coord.q, coord.r);
+                const { x, y } = worldMapAxialToPixel(coord);
                 const variant = hexVariant(coord, state);
                 const isDefault = variant === "default";
-                const towerId = towerAtCoord(coord);
                 const officeId = officeAtForState(coord, state);
                 const isInspected =
                   inspectedCoord !== null && axialEquals(coord, inspectedCoord);
-                const mapLabel = hexOfficeLabel(officeId, towerId);
+                const isPlayerMainOffice =
+                  officeId === mainOfficeId &&
+                  axialEquals(coord, mainOfficeCoord);
+                const hqFlashing = isPlayerMainOffice && hqFlashActive;
                 const landmark = landmarkKindFor(coord, variant);
                 const isLandmark = landmark !== null;
                 const region = regionAtCoord(coord);
-                const isWorkingSite = Boolean(
-                  towerId && workingTowerIds.includes(towerId),
+                const isWorkingSite = workingSiteCoords.some((site) =>
+                  axialEquals(coord, site),
                 );
                 const hot = matchesLegendHover(
                   legendHover,
@@ -1358,6 +1442,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                               ? `map-player-node-${landmark}`
                               : "map-player-node-empty",
                             isInspected ? "map-player-node-inspected" : "",
+                            hqFlashing ? "map-player-node-hq-flash" : "",
                             siteHot ? "is-legend-hot" : "",
                             siteDim ? "is-legend-dim" : "",
                           ]
@@ -1370,8 +1455,19 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                             x={x}
                             y={y}
                             variant={landmark}
-                            highlighted={siteHot}
-                            dimmed={siteDim}
+                            highlighted={siteHot || hqFlashing}
+                            dimmed={siteDim && !hqFlashing}
+                            flashing={hqFlashing}
+                          />
+                        ) : null}
+                        {hqFlashing ? (
+                          <circle
+                            key={`hq-flash-${hqFlashSeq}`}
+                            cx={x}
+                            cy={y}
+                            r={HEX_RADIUS * 0.92}
+                            className="map-hq-focus-ring"
+                            pointerEvents="none"
                           />
                         ) : null}
                         {/* Hit target above marker art so clicks always reach towers. */}
@@ -1388,40 +1484,12 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                         ) : null}
                       </>
                     )}
-                    {mapLabel && (
-                      <text
-                        x={x}
-                        y={y + (isDev ? 0 : 20)}
-                        className={`hex-label hex-label-${mapLabel.kind}${
-                          !isDev ? " hex-label-player" : ""
-                        }${siteHot ? " is-legend-hot" : ""}${
-                          siteDim ? " is-legend-dim" : ""
-                        }`}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        pointerEvents="none"
-                      >
-                        {mapLabel.text}
-                      </text>
-                    )}
-                    {isDev && axialEquals(coord, MAP_GOV) ? (
-                      <text
-                        x={x}
-                        y={y}
-                        className="hex-label hex-label-gov"
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        pointerEvents="none"
-                      >
-                        Gov
-                      </text>
-                    ) : null}
                   </g>
                 );
               })}
 
               {peerMarkers.map((marker) => {
-                const { x, y } = axialToPixel(marker.coord.q, marker.coord.r);
+                const { x, y } = worldMapAxialToPixel(marker.coord);
                 return (
                   <g key={marker.key} className="map-peer-marker">
                     <circle
@@ -1430,33 +1498,22 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                       r={PLAYER_HIT_RADIUS * 0.82}
                       className="map-peer-node"
                     />
-                    <text
-                      x={x}
-                      y={y + 22}
-                      className="hex-label hex-label-player map-peer-label"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      pointerEvents="none"
-                    >
-                      {marker.label}
-                    </text>
                   </g>
                 );
               })}
 
               <g className="map-task-layer" pointerEvents="none">
                 {activeEngagements.map((engagement) => {
-                  const { from, to } = officeTowerCoords(
+                  const { from, to } = jobSiteCoordsForEngagement(
                     state,
-                    engagement.officeId,
-                    engagement.towerId,
+                    engagement,
                   );
                   const origin = engagement.phase === "returning" ? to : from;
                   const dest = engagement.phase === "returning" ? from : to;
                   const pathCoords = isDev
                     ? hexPath(origin, dest)
                     : [origin, dest];
-                  const pixels = hexPathPixels(pathCoords);
+                  const pixels = worldMapHexPathPixels(pathCoords);
                   const pointsAttr = pixels
                     .map((p) => `${p.x},${p.y}`)
                     .join(" ");
@@ -1504,9 +1561,9 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                     </g>
                   );
                 })}
-                {workingTowerIds.map((towerId) => {
-                  const coord = towerById(towerId as TowerId).coord;
-                  const { x, y } = axialToPixel(coord.q, coord.r);
+                {workingSiteCoords.map((siteCoord) => {
+                  const key = axialKey(siteCoord);
+                  const { x, y } = worldMapAxialToPixel(siteCoord);
                   const jobHot =
                     legendHover?.kind === "landmark" && legendHover.id === "job";
                   const jobDim =
@@ -1517,7 +1574,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                     );
                   return (
                     <g
-                      key={towerId}
+                      key={key}
                       className={[
                         jobHot ? "is-legend-hot" : "",
                         jobDim ? "is-legend-dim" : "",
@@ -1531,6 +1588,8 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
                 })}
               </g>
             </svg>
+              </div>
+            </div>
           </div>
         </div>
 

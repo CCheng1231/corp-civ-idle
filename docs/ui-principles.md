@@ -9,21 +9,24 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
 1. **This file** — philosophy, file map, recent state.
 2. **`.cursor/rules/player-view-ui.mdc`** — always-applied rules for `src/components/**` and `src/App.css`.
 3. **`.cursor/rules/cross-platform-layout.mdc`** — Android / iOS / PC scaling, safe areas, 48px touch targets.
-4. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
-5. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
+4. **`.cursor/rules/world-map-viewport.mdc`** — when changing world map layout, bounds, pan/zoom, or Home.
+5. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
+6. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
    - Research → `ResearchView.tsx`
    - Structures → `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
    - Recruitment → `RecruitmentView.tsx`
-6. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
-7. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
+   - Map hex drawer (commercial lots / branches) → `MapHexDrawer.tsx`, `mapHexInfo.ts`, `branchCommercial.ts`
+7. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
+8. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
 
 Optional if touching balance copy or unlocks: `scripts/build-research-data.mjs`, `scripts/build-structure-balance.mjs` (sheet placeholders stay here, not in player copy).
 
 ### Resume prompt (paste into a new chat)
 
 ```
-Continue corp-civ-idle player UI work. Read AGENTS.md and docs/ui-principles.md first.
-Follow existing patterns in progressionUi, StructureCostLine, QueueSection.
+Continue corp-civ-idle. Read AGENTS.md and docs/ui-principles.md first.
+Follow .cursor/rules/player-view-ui.mdc for tab UI; world-map-viewport.mdc for map/layout.
+Follow existing patterns in progressionUi, StructureCostLine, QueueSection, ConfirmDialog.
 Task: [describe the specific tab or tweak]
 ```
 
@@ -86,7 +89,8 @@ Tier is a **badge on the card**, not the section header (recruitment).
 | `ProgressionMaxedCard` | `progressionUi.tsx` | One-line maxed summary + expand |
 | `StructureCostLine` | `StructureCostLine.tsx` | Affordability; `layout="line"` inline, `layout="stack"` for preview blocks |
 | `QueueSection` | `StructureBuildQueueList.tsx` | Queue header with count/max |
-| `ConfirmDialog` | `ConfirmDialog.tsx` | Sell / destructive confirms |
+| `ConfirmDialog` | `ConfirmDialog.tsx` | Sell / destructive confirms; `confirmTone="primary"` for establish branch |
+| `BranchOpeningCostLine` | `MapHexDrawer.tsx` | `Cost:` neutral + green/red resource amount (like StructureCostLine, both label + amount colored) |
 | `formatCompactBonus` | `upgradePreviewFormat.ts` | One-line bonus on collapsed maxed cards |
 | `structureUpgradeBlockerDisplay` | `OfficeStructurePanel.tsx` | Filters power + duplicate cost messages from blockers |
 
@@ -123,6 +127,26 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 
 - Staff count in stats only; duplicate unit list removed from summary.
 
+### World map (`WorldView.tsx`, `mapViewport.ts`, `mapWorld.ts`)
+
+- **Presentation pixels:** `worldMapAxialToPixel` / `worldMapHexBounds` (region radial stretch).
+- **Viewport math:** `mapViewport.ts` only — fit zoom, pan clamp, Home center (`worldMapViewportCache.ts` for persistence).
+- Changing layout → update washes, paths, bounds, zoom, and Home together (see `world-map-viewport.mdc`).
+
+### Map hex drawer — commercial lots (`MapHexDrawer.tsx`)
+
+- **Contracts** — collapsible; tower-style postings, **Send** → Secretary job board (`map-hex-job-send` button).
+- **Branch** — collapsible; locked until Branch Management research; shows regional **site bonus** (structure passives multiplier from `REGION_SITE_RATE_BONUS`, not a timed buff).
+- **Branch pads** — up to 3 per lot (Compact / Standard / Campus); each pad is an independent establish target. Row layout: `Compact · 8 space · to 12` on title line (same font size); second line `Cost: Cash N` + compact **Establish** button (match Send styling).
+- **Establish** — `ConfirmDialog` before open; blocker tooltip floats **left** of button, only when blocked (compact list, not full-width above).
+- Pad costs / catalog: `src/game/branchCommercial.ts` (`BRANCH_PAD_CATALOG`: cash 2000/4000/6000; `officeSpaceRange` / `expansionCapRange` for future per-lot variation; 0–4 pads via `MAX_BRANCH_PADS_PER_LOT`).
+- Multi-branch engine: `branchSites[]`, office id `branch:${commercialLotId}:${slotIndex}` — see `branchSites.ts`, `mapWorld.ts`, `save.ts` migration.
+
+### Top chrome (`ResourceBar.tsx`, `App.tsx`)
+
+- Resource bar brand is **CC · Corp Civ Idle** only (no Online / player badges — more chip room).
+- Online connection line on **second bar**: `{Player} · Online {status}` (e.g. Tim · Online connected).
+
 ---
 
 ## Discover research → structures
@@ -139,6 +163,24 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 
 ## Recent session state (Aug 2026)
 
+### Aug 31 — commercial branch pads + map drawer + top bar
+
+- Commercial lot **Contracts** + **Branch** sections in map drawer; multi-pad branch establish with per-size cash costs (2000/4000/6000).
+- `branchSites[]` multi-branch refactor; save migration from single branch.
+- Map drawer UI polish: Send-sized Establish, confirm dialog, `BranchOpeningCostLine`, left-floating blocker tips.
+- Resource bar decluttered; player + online status on second banner row.
+- World map viewport split (`mapViewport.ts`, `world-map-viewport.mdc`).
+
+**Changelog:** `scripts/append-changelog-aug31-commercial-branch-map.mjs` → **ChangeLog** tab.
+
+**Likely follow-ups:**
+
+- Roll per-lot pad count (0–4) and space ranges from location data (catalog ranges exist in `branchCommercial.ts`).
+- Tune pad costs in sheet / `BRANCH_PAD_CATALOG` when balance is ready.
+- Commercial job postings balance and more lots on the map.
+
+### Earlier UI pass (documented baseline)
+
 Completed in the UI pass leading to this doc:
 
 - Unified progression patterns across research / structures / recruitment.
@@ -149,11 +191,9 @@ Completed in the UI pass leading to this doc:
 - **UI scale default is 100%** (`UI_SCALE_DEFAULT = 1`). Design against 100%; use 125% as the squeeze check.
 - Home: net worth in the bottom panel above structure levels; empty queues show `0/2` only.
 
-**Not committed** unless git history shows otherwise — check `git status` / `git diff` before assuming.
+**Session log (older):** `scripts/append-changelog-aug4-progression-ui.mjs` and related scripts.
 
-**Session log:** **ChangeLog** tab in `20260827 Corp Idle Working.xlsx` (append via `scripts/append-changelog-aug4-progression-ui.mjs`; close Excel if EBUSY).
-
-**Likely follow-ups** (user taste, not blockers):
+**General follow-ups** (user taste, not blockers):
 
 - Further recruitment density (e.g. role in expand-only `<details>` if cards still feel tall).
 - Tune grid min widths if panel still feels wide on target viewport.

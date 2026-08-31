@@ -10,7 +10,6 @@ import {
   UI_SCALE_MAX,
   UI_SCALE_MIN,
 } from "../game/constants";
-import { GALAXY_S24_PORTRAIT } from "../game/devicePreview";
 import { DevTimeSkip } from "./DevTimeSkip";
 import { AudioControls } from "./AudioControls";
 import type { GameAction, GameState } from "../game/types";
@@ -204,8 +203,8 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         </label>
         <p className="muted setting-hint">
           Layout is designed at 100%. Same control as on the phone — 85% min,
-          100% default, 125% max. Match this before comparing the Galaxy S24
-          preview to a screenshot.
+          100% default, 125% max. Match this before comparing Mobile layout
+          preview to your phone.
         </p>
         <label className="setting-row">
           Completion alerts
@@ -301,33 +300,11 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               </button>
             ))}
           </div>
-          <div
-            className="viewport-preview-toggle"
-            role="group"
-            aria-label="Device frame preview"
-          >
-            <button
-              type="button"
-              className={
-                state.settings.viewportPreview === GALAXY_S24_PORTRAIT.id
-                  ? "tab active"
-                  : "tab"
-              }
-              onClick={() =>
-                dispatch({
-                  type: "UPDATE_SETTINGS",
-                  settings: { viewportPreview: GALAXY_S24_PORTRAIT.id },
-                })
-              }
-            >
-              {GALAXY_S24_PORTRAIT.label}
-            </button>
-          </div>
         </div>
         <p className="muted setting-hint">
-          Override layout for UI testing. Mobile forces bottom nav and phone
-          breakpoints. Galaxy S24 is a 360×780 CSS viewport (1080×2340 at 3×)
-          in a device frame — the same size the game uses on that phone.
+          Override layout for UI testing. Mobile locks the UI to a Galaxy S24
+          frame (360×780 CSS · 1080×2340 @3×), bottom nav, and phone
+          breakpoints, scaled to fit your window.
         </p>
       </section>
 

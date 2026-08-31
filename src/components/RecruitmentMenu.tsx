@@ -1,10 +1,10 @@
 import { type Dispatch } from "react";
 import {
-  OFFICE_LABELS,
   canAffordAtOffice,
   espionageDefensePercent,
   formatNumber,
   formatResourceCost,
+  officeSiteLabel,
   powerAvailable,
   recruitBatchCost,
 } from "../game/constants";
@@ -43,7 +43,7 @@ export function RecruitmentMenu({
           <div>
             <h2 id="recruitment-title">Recruitment</h2>
             <p className="muted">
-              Hiring at {OFFICE_LABELS[officeId]} · All tiers available · Power
+              Hiring at {officeSiteLabel(state, officeId)} · All tiers available · Power
               free {formatNumber(powerAvailable(loc))}/{formatNumber(loc.power)}{" "}
               · Defense {defensePct}%
             </p>

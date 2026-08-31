@@ -1,16 +1,22 @@
 import { MAP_GOV, axialEquals } from "../game/hexLayout";
 import { officeAtForState } from "../multiplayer/playerHq";
 import {
+  hexDistanceFromMainOfficeForState,
   REGION_LABELS,
   commercialSiteAt,
-  hexDistanceFromHqForState,
   isAvailableCommercialLot,
   officeDisplayName,
   regionAtCoord,
   towerAtCoord,
   towerById,
 } from "../game/mapWorld";
-import type { AxialCoord, GameState, OfficeLocationId, TowerId } from "../game/types";
+import type {
+  AxialCoord,
+  CommercialLotId,
+  GameState,
+  OfficeLocationId,
+  TowerId,
+} from "../game/types";
 export type MapHexInfo =
   | { kind: "gov"; coord: AxialCoord; region: ReturnType<typeof regionAtCoord> }
   | {
@@ -28,6 +34,7 @@ export type MapHexInfo =
   | {
       kind: "commercial";
       coord: AxialCoord;
+      commercialLotId: CommercialLotId;
       label: string;
       region: ReturnType<typeof regionAtCoord>;
       available: boolean;
@@ -56,6 +63,7 @@ export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
     return {
       kind: "commercial",
       coord,
+      commercialLotId: commercial.id,
       label: commercial.label,
       region: commercial.region,
       available: isAvailableCommercialLot(coord, state),
@@ -100,8 +108,8 @@ export function mapHexKindLabel(info: MapHexInfo): string {
 }
 
 export function mapHexDistanceLabel(state: GameState, coord: AxialCoord): string {
-  const steps = hexDistanceFromHqForState(state, coord);
-  return steps === 0 ? "At HQ tile" : `${steps} hex${steps === 1 ? "" : "es"} from HQ`;
+  const steps = hexDistanceFromMainOfficeForState(state, coord);
+  return `${steps} hex${steps === 1 ? "" : "es"}`;
 }
 
 export function towerEngagementCount(state: GameState, towerId: TowerId): number {

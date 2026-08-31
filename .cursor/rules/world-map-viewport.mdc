@@ -1,0 +1,41 @@
+---
+description: World map layout changes must update viewport pan/zoom/home and related presentation together
+globs: src/components/WorldView.tsx,src/game/mapWorld.ts,src/game/mapViewport.ts,src/game/hexLayout.ts,src/game/mapTravel.ts
+alwaysApply: false
+---
+
+# World map viewport coupling
+
+The world map uses **two coordinate layers**:
+
+1. **Game logic** — axial hex coords, `axialToPixel`, `axialDistance`, `regionAtCoord` (uniform grid).
+2. **Presentation** — `worldMapAxialToPixel`, `worldMapHexBounds`, `worldMapHexPathPixels` (radial region stretch from Gov).
+
+## When changing map layout or bounds
+
+Update **all** presentation consumers in the same change — do not wait for a reminder:
+
+| Area | File(s) |
+|------|---------|
+| SVG viewBox + cell rendering | `WorldView.tsx` |
+| Fit zoom, pan clamp, Home center, reset | `mapViewport.ts`, `WorldView.tsx` |
+| Travel path polylines / task icons | `worldMapHexPathPixels`, `WorldView.tsx` |
+| Watercolor washes / decorations | `WorldView.tsx` (use `worldMapAxialToPixel`) |
+| Hit targets / inspect | Same pixel fn as rendered markers |
+
+**Single source for viewport math:** `src/game/mapViewport.ts` — do not duplicate pan/zoom formulas in components.
+
+**Single source for presentation pixels:** `worldMapAxialToPixel` in `mapWorld.ts`.
+
+## Zoom / Home behavior
+
+- **100%** = fit baseline (`MAP_FIT_BLEED` ≈ 2.65). Zoom range **55%–175%**; wheel zoom is continuous and anchored to the cursor.
+- **HQ** centers the player's HQ at **`MAP_HQ_FOCUS_ZOOM_REL` (100%)** when possible; edge HQs may need slightly more zoom — use `focusViewportOnContentPoint` / `minZoomToCenterContentPoint`. Flashes the HQ marker.
+- Scale layer must use explicit `width` / `height` from `mapContentLayout` so math matches rendered SVG.
+- **`MAP_VIEWBOX_PAD`** (`mapWorld.ts`) expands green undercoat beyond outer hexes.
+- **`MAP_PAN_OVERSCROLL_RATIO`** allows limited grey margin when panning to edge landmarks (e.g. countryside HQ).
+- **`worldMapViewportCache.ts`** — zoom, pan, drawer, and legend state survive tab switches (WorldView unmounts per tab).
+
+## If uncertain
+
+Ask before shipping when a layout change might affect distance rings, multiplayer peer markers, branch placement UI, or engine travel times vs on-map paths.

@@ -18,12 +18,9 @@ import {
   resourceCapForKey,
 } from "../game/structureBalance";
 import type { GameState, ResourceKey } from "../game/types";
-import type { OnlineSession } from "../multiplayer/types";
-import { PLAYER_LABELS, isOnlineSession } from "../multiplayer/types";
 
 interface ResourceBarProps {
   state: GameState;
-  session?: OnlineSession;
 }
 
 function ResourceChip({
@@ -200,7 +197,7 @@ function ResourceChip({
   );
 }
 
-export function ResourceBar({ state, session }: ResourceBarProps) {
+export function ResourceBar({ state }: ResourceBarProps) {
   const resources = normalizeResourceWallet(state.resources);
   const caps = computeResourceCaps(state);
   const gridDragRef = useRef<{
@@ -218,14 +215,6 @@ export function ResourceBar({ state, session }: ResourceBarProps) {
             CC
           </span>
           <strong className="brand-title">Corp Civ Idle</strong>
-          {session && isOnlineSession(session) ? (
-            <span className="brand-online-badge">Online</span>
-          ) : null}
-          {session ? (
-            <span className="brand-player-badge">
-              {PLAYER_LABELS[session.playerId]}
-            </span>
-          ) : null}
         </div>
         <div
           className="resource-grid"

@@ -19,7 +19,7 @@ import {
   JOB_SIZE_LABELS,
   jobDefinitionForPosting,
 } from "../game/jobs";
-import { REGION_LABELS, towerById } from "../game/mapWorld";
+import { REGION_LABELS, jobSiteLabelForPosting, jobSiteRegionForPosting, towerById } from "../game/mapWorld";
 import { formatTimerRemainingCompact } from "../game/timers";
 import type { GameAction, GameState } from "../game/types";
 import { JobPostingCard } from "./JobPostingCard";
@@ -101,6 +101,41 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
       };
     });
   }, [state.selectedTowerId]);
+
+  useEffect(() => {
+    const focusId = state.jobFocusPostingId;
+    if (!focusId) return;
+
+    const posting = state.jobPostings.find((p) => p.id === focusId);
+    if (!posting || posting.status !== "open") {
+      dispatch({ type: "CLEAR_JOB_FOCUS" });
+      return;
+    }
+
+    const def = jobDefinitionForPosting(posting);
+    const region = jobSiteRegionForPosting(posting, def);
+    setFilters({
+      ...DEFAULT_JOB_BOARD_FILTERS,
+      region,
+      towerId: posting.towerId ?? "all",
+    });
+    setSelectedPostingId(focusId);
+
+    const scrollTimer = window.setTimeout(() => {
+      document
+        .querySelector(`[data-job-posting-id="${focusId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+
+    const clearTimer = window.setTimeout(() => {
+      dispatch({ type: "CLEAR_JOB_FOCUS" });
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [state.jobFocusPostingId, state.jobPostings, dispatch]);
 
   const selectedPosting =
     visible.find((posting) => posting.id === selectedPostingId) ?? null;
@@ -429,7 +464,7 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
                     <tr>
                       <th scope="col">Posting</th>
                       <th scope="col" className="job-board-col-tower">
-                        Tower
+                        Site
                       </th>
                       <th scope="col" className="job-board-col-tier">
                         Tier
@@ -445,12 +480,20 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
                   <tbody>
                     {visible.map((posting) => {
                       const def = jobDefinitionForPosting(posting);
-                      const tower = towerById(posting.towerId);
+                      const siteLabel = jobSiteLabelForPosting(posting, def);
+                      const siteRegion = jobSiteRegionForPosting(posting, def);
                       const selected = posting.id === selectedPostingId;
+                      const highlighted = posting.id === state.jobFocusPostingId;
                       return (
                         <tr
                           key={posting.id}
-                          className={selected ? "job-board-row-selected" : undefined}
+                          data-job-posting-id={posting.id}
+                          className={[
+                            selected ? "job-board-row-selected" : "",
+                            highlighted ? "job-board-row-highlight" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ") || undefined}
                         >
                           <td>
                             <button
@@ -470,7 +513,7 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
                                   {formatJobDurationSec(def.durationSec)}
                                 </span>
                                 <span className="job-board-row-meta-mobile">
-                                  {tower.name} · T{def.tier} · $
+                                  {siteLabel} · T{def.tier} · $
                                   {jobPayoutPerHour(posting).toFixed(0)}/hr
                                 </span>
                               </span>
@@ -478,9 +521,9 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
                           </td>
                           <td className="job-board-col-tower">
                             <span className="job-board-cell-stack">
-                              <span>{tower.name}</span>
+                              <span>{siteLabel}</span>
                               <span className="muted">
-                                {REGION_LABELS[tower.region]}
+                                {REGION_LABELS[siteRegion]}
                               </span>
                             </span>
                           </td>

@@ -19,7 +19,7 @@ export type ProductionRates = Record<ResourceKey, number>;
 /** Costs may include `electricity` — spent as power at a specific office. */
 export type ResourceCost = Partial<Resources & { electricity: number }>;
 
-export type OfficeLocationId = "hq" | "branch";
+export type OfficeLocationId = "hq" | `branch:${string}`;
 
 export type OfficeSelectionId = OfficeLocationId | "all";
 
@@ -53,10 +53,7 @@ export type StructureId =
   | "mit_room";
 
 export type StructureLevels = Record<StructureId, number>;
-export type StructureLevelsByLocation = Record<
-  OfficeLocationId,
-  StructureLevels
->;
+export type StructureLevelsByLocation = Record<string, StructureLevels>;
 
 export type StructureCategory =
   | "essentials"
@@ -106,6 +103,49 @@ export type TowerId =
   | "suburban_park"
   | "rural_crossing"
   | "country_estate";
+
+export type CommercialLotId =
+  | "suburban_strip"
+  | "rural_highway"
+  | "countryside_lot";
+
+export type BranchOfficeSlotSize = "compact" | "standard" | "campus";
+
+/** Authoring band for future rolled pad space (not used at runtime yet). */
+export interface BranchPadSpaceRange {
+  min: number;
+  max: number;
+}
+
+export interface CommercialLotBranchSlot {
+  size: BranchOfficeSlotSize;
+  label: string;
+  /** Starting office space when this pad opens. */
+  officeSpace: number;
+  /** Max office space if fully expanded on this pad. */
+  expansionCap: number;
+  openingCost: ResourceCost;
+  /** Future: roll or pick space inside this band per lot. */
+  officeSpaceRange?: BranchPadSpaceRange;
+  /** Future: roll or pick expansion cap inside this band per lot. */
+  expansionCapRange?: BranchPadSpaceRange;
+}
+
+export interface CommercialLotDefinition {
+  id: CommercialLotId;
+  coord: AxialCoord;
+  region: MapRegion;
+  label: string;
+  /** 0–4 branch pads offered at this lot (see MAX_BRANCH_PADS_PER_LOT). */
+  branchSlots: CommercialLotBranchSlot[];
+}
+
+export interface EstablishedBranchSite {
+  commercialLotId: CommercialLotId;
+  slotIndex: number;
+  name: string;
+  officeSpaceBase: number;
+}
 
 export interface AxialCoord {
   q: number;
@@ -170,7 +210,7 @@ export interface ResearchJob {
   spentCost: ResourceCost;
 }
 
-export type ResearchQueuesByLocation = Record<OfficeLocationId, ResearchJob[]>;
+export type ResearchQueuesByLocation = Record<string, ResearchJob[]>;
 
 export type ProjectId = string;
 
@@ -210,7 +250,7 @@ export type UnitRoster = Record<UnitId, number>;
 /** Units assigned to an active tower contract. */
 export type UnitAssignment = Partial<Record<UnitId, number>>;
 
-export type ContractorsByLocation = Record<OfficeLocationId, UnitRoster>;
+export type ContractorsByLocation = Record<string, UnitRoster>;
 
 export interface ContractorTransfer {
   id: string;
@@ -299,7 +339,8 @@ export type CompletionBand =
 
 export interface JobDefinition {
   id: string;
-  towerId: TowerId;
+  towerId?: TowerId;
+  commercialLotId?: CommercialLotId;
   businessType: BusinessType;
   tier: JobTier;
   size: JobSize;
@@ -328,7 +369,8 @@ export interface JobContributor {
 export interface JobPosting {
   id: string;
   definitionId: string;
-  towerId: TowerId;
+  towerId?: TowerId | null;
+  commercialLotId?: CommercialLotId | null;
   spawnedAt: number;
   expiresAt: number;
   unitHoursCompleted: number;
@@ -342,7 +384,8 @@ export interface JobEngagement {
   id: string;
   postingId: string;
   definitionId: string;
-  towerId: TowerId;
+  towerId?: TowerId | null;
+  commercialLotId?: CommercialLotId | null;
   officeId: OfficeLocationId;
   crewAssigned: UnitAssignment;
   phase: JobEngagementPhase;
@@ -377,10 +420,7 @@ export interface StructureBuildJob {
   spentCost: ResourceCost;
 }
 
-export type StructureQueuesByLocation = Record<
-  OfficeLocationId,
-  StructureBuildJob[]
->;
+export type StructureQueuesByLocation = Record<string, StructureBuildJob[]>;
 
 /** One-shot UI payload after offline catch-up (not persisted). */
 export interface OfflineWelcomeSummary {
@@ -396,7 +436,7 @@ export interface GameState {
   resources: Resources;
   rates: ProductionRates;
   netWorth: number;
-  locationStats: Record<OfficeLocationId, LocationSnapshot>;
+  locationStats: Record<string, LocationSnapshot>;
   contractorsByLocation: ContractorsByLocation;
   contractorTransfers: ContractorTransfer[];
   recruitmentJobs: RecruitmentJob[];
@@ -407,10 +447,8 @@ export interface GameState {
   selectedOffice: OfficeSelectionId;
   /** Last HQ/Branch when viewing all offices. */
   lastSelectedOffice: OfficeLocationId;
-  branchEstablished: boolean;
-  branchCoord: AxialCoord | null;
-  /** Player-renameable; default e.g. "Branch 1 @ Suburban". */
-  branchName: string | null;
+  /** Open branch offices (one per established commercial-lot pad). */
+  branchSites: EstablishedBranchSite[];
   selectedTowerId: TowerId | null;
   selectedCommercialHex: AxialCoord | null;
   won: boolean;
@@ -438,6 +476,8 @@ export interface GameState {
   recruitFocusUnitId?: UnitId | null;
   /** Scroll/highlight target on Notes & logbook; stripped from saves. */
   logbookHighlightEntryId?: string | null;
+  /** Scroll/highlight target on Sec job board; stripped from saves. */
+  jobFocusPostingId?: string | null;
   /** Active Tim/Chris session — not persisted in offline blob. */
   onlineSession?: OnlineSession | null;
   /** Other companies on the shared map (Online). */
@@ -458,7 +498,7 @@ export interface CompletionAlert {
   detail?: string;
 }
 
-export type ViewportPreview = "auto" | "desktop" | "mobile" | "galaxy-s24";
+export type ViewportPreview = "auto" | "desktop" | "mobile";
 export type MapPresentation = "dev" | "player";
 /** Player map ground look (Google Maps–like variants in game palette). */
 export type MapPlayerGround = "streets" | "terrain" | "hybrid";
@@ -480,16 +520,15 @@ export interface GameSettings {
   /** Dev: allow purchases and bids without spending resources or power. */
   ignoreCosts: boolean;
   /** Office sites: Structure upgrades / Recruitment sections expanded per site. */
-  officeSiteSections: Record<
-    OfficeLocationId,
-    { structuresOpen: boolean }
-  >;
+  officeSiteSections: Record<string, { structuresOpen: boolean }>;
   /** World map: hex developer view vs player soft-region presentation. */
   mapPresentation: MapPresentation;
   /** Player-only map ground style for A/B comparison. */
   mapPlayerGround: MapPlayerGround;
   /** Player map: show soft closed outlines around each region band. */
   mapRegionOutlines: boolean;
+  /** World map: distance rings and focus button anchor to HQ or branch. */
+  mapMainOffice: "hq" | "branch";
 }
 
 export type MainView =
@@ -544,8 +583,8 @@ export type GameAction =
   | { type: "SELECT_OFFICE"; officeId: OfficeSelectionId }
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
-  | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null }
-  | { type: "RENAME_BRANCH"; name: string }
+  | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null; slotIndex?: number }
+  | { type: "RENAME_BRANCH"; name: string; officeId?: OfficeLocationId }
   | { type: "RECRUIT_CONTRACTOR"; unitId: UnitId }
   | {
       type: "START_RECRUITMENT";
@@ -579,7 +618,9 @@ export type GameAction =
       logbookFilter?: string;
       recruitFocusUnitId?: UnitId | null;
       logbookHighlightEntryId?: string | null;
+      jobFocusPostingId?: string | null;
     }
+  | { type: "CLEAR_JOB_FOCUS" }
   | { type: "SET_LOGBOOK_FILTER"; filterId: string }
   | { type: "CLEAR_LOGBOOK_HIGHLIGHT" }
   | { type: "CLEAR_ACTIVITY_LOG" }

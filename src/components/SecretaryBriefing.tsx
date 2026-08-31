@@ -49,6 +49,12 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
     }
   }, [workTab]);
 
+  useEffect(() => {
+    if (state.jobFocusPostingId) {
+      setWorkTab("board");
+    }
+  }, [state.jobFocusPostingId]);
+
   function openJobLogbook(entryId?: string) {
     dispatch({
       type: "SET_VIEW",

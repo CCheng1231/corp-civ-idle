@@ -1,14 +1,38 @@
-import type { AxialCoord } from "./hexLayout";
+import {
+  BRANCH_PAD_CATALOG,
+  branchOpeningCostForPadOnLot,
+  branchPadFromCatalog,
+  branchSlotAtLot,
+  normalizeCommercialLotBranchSlots,
+} from "./branchCommercial";
+import {
+  branchOfficeIdForSite,
+  branchOfficeIds,
+  branchSiteForOfficeId,
+  establishedBranchAtPad,
+  hasBranchOffices,
+  isBranchOfficeId,
+} from "./branchSites";
 import {
   axialDistance,
   axialEquals,
+  axialToPixel,
+  HEX_RADIUS,
   MAP_GOV,
   MAP_HQ,
   MAP_RADIUS,
 } from "./hexLayout";
 import type {
+  AxialCoord,
+  CommercialLotBranchSlot,
+  CommercialLotDefinition,
+  CommercialLotId,
+  EstablishedBranchSite,
   GameState,
+  JobDefinition,
+  JobPosting,
   MapRegion,
+  OfficeLocationId,
   OfficeTowerDefinition,
   ProjectDefinition,
   ResourceCost,
@@ -23,7 +47,7 @@ import {
   splitResourceCost,
   unitAvailableAt,
 } from "./constants";
-import { CHRIS_HQ, hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
+import { CHRIS_HQ, hqCoordForState } from "../multiplayer/playerHq";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
   metropolis: "Metropolis",
@@ -33,7 +57,7 @@ export const REGION_LABELS: Record<MapRegion, string> = {
 };
 
 /**
- * Temporary regional site bonus on structure passive rates at that office.
+ * Regional site bonus on structure passive rates at that office.
  * Rank (worst→best): countryside → rural → suburban → metropolis.
  * HQ starts countryside at 0% so branches inland are worth opening.
  */
@@ -116,22 +140,57 @@ export const TOWER_HEX_LABELS: Record<TowerId, string> = {
   country_estate: "Hillside",
 };
 
-export const COMMERCIAL_REAL_ESTATE: {
-  coord: AxialCoord;
-  region: MapRegion;
-  label: string;
-}[] = [
-  { coord: { q: 6, r: -3 }, region: "suburban", label: "Suburban strip parcel" },
-  { coord: { q: -5, r: 4 }, region: "rural", label: "Rural highway frontage" },
-  { coord: { q: -2, r: 6 }, region: "countryside", label: "Countryside lot" },
+export const COMMERCIAL_BRANCH_SLOT_TEMPLATES: CommercialLotBranchSlot[] = [
+  branchPadFromCatalog("compact"),
+  branchPadFromCatalog("standard"),
+  branchPadFromCatalog("campus"),
 ];
 
+export const COMMERCIAL_REAL_ESTATE: CommercialLotDefinition[] = [
+  {
+    id: "suburban_strip",
+    coord: { q: 6, r: -3 },
+    region: "suburban",
+    label: "Suburban strip parcel",
+    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
+  },
+  {
+    id: "rural_highway",
+    coord: { q: -5, r: 4 },
+    region: "rural",
+    label: "Rural highway frontage",
+    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
+  },
+  {
+    id: "countryside_lot",
+    coord: { q: -2, r: 6 },
+    region: "countryside",
+    label: "Countryside lot",
+    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
+  },
+];
+
+/** @deprecated use branchOpeningCostForPad */
 export const BRANCH_OPENING_COST: ResourceCost = {
-  cash: 650,
-  connection: 15,
-  reputation: 8,
-  electricity: 25,
+  ...BRANCH_PAD_CATALOG.standard.openingCost,
 };
+
+export function branchSlotAt(
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+): CommercialLotBranchSlot | undefined {
+  return branchSlotAtLot(commercialLotById(commercialLotId), slotIndex);
+}
+
+export function branchOpeningCostForPad(
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+): ResourceCost {
+  return branchOpeningCostForPadOnLot(
+    commercialLotById(commercialLotId),
+    slotIndex,
+  );
+}
 
 export const TOWER_PROJECTS: ProjectDefinition[] = [
   {
@@ -263,6 +322,86 @@ export function towerAtCoord(coord: AxialCoord): TowerId | null {
   return null;
 }
 
+export function commercialLotById(id: CommercialLotId): CommercialLotDefinition {
+  const lot = COMMERCIAL_REAL_ESTATE.find((entry) => entry.id === id);
+  if (!lot) throw new Error(`Unknown commercial lot ${id}`);
+  return lot;
+}
+
+export function commercialLotAtCoord(coord: AxialCoord): CommercialLotId | null {
+  const site = commercialSiteAt(coord);
+  return site?.id ?? null;
+}
+
+export function jobSiteCoordForDefinition(def: JobDefinition): AxialCoord {
+  if (def.commercialLotId) {
+    return { ...commercialLotById(def.commercialLotId).coord };
+  }
+  if (def.towerId) {
+    return { ...towerById(def.towerId).coord };
+  }
+  throw new Error(`Job ${def.id} has no map site`);
+}
+
+export function jobSiteLabelForDefinition(def: JobDefinition): string {
+  if (def.commercialLotId) {
+    return commercialLotById(def.commercialLotId).label;
+  }
+  if (def.towerId) {
+    return towerById(def.towerId).name;
+  }
+  return "Unknown site";
+}
+
+export function jobSiteCoordForPosting(
+  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  def: JobDefinition,
+): AxialCoord {
+  if (posting.commercialLotId) {
+    return { ...commercialLotById(posting.commercialLotId).coord };
+  }
+  if (posting.towerId) {
+    return { ...towerById(posting.towerId).coord };
+  }
+  return jobSiteCoordForDefinition(def);
+}
+
+export function jobSiteRegionForDefinition(def: JobDefinition): MapRegion {
+  if (def.commercialLotId) {
+    return commercialLotById(def.commercialLotId).region;
+  }
+  if (def.towerId) {
+    return towerById(def.towerId).region;
+  }
+  return "countryside";
+}
+
+export function jobSiteRegionForPosting(
+  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  def: JobDefinition,
+): MapRegion {
+  if (posting.commercialLotId) {
+    return commercialLotById(posting.commercialLotId).region;
+  }
+  if (posting.towerId) {
+    return towerById(posting.towerId).region;
+  }
+  return jobSiteRegionForDefinition(def);
+}
+
+export function jobSiteLabelForPosting(
+  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  def: JobDefinition,
+): string {
+  if (posting.commercialLotId) {
+    return commercialLotById(posting.commercialLotId).label;
+  }
+  if (posting.towerId) {
+    return towerById(posting.towerId).name;
+  }
+  return jobSiteLabelForDefinition(def);
+}
+
 export function commercialSiteAt(coord: AxialCoord) {
   return COMMERCIAL_REAL_ESTATE.find(
     (s) => s.coord.q === coord.q && s.coord.r === coord.r,
@@ -272,10 +411,9 @@ export function commercialSiteAt(coord: AxialCoord) {
 /** Commercial lot not yet leased as an office site. */
 export function isAvailableCommercialLot(
   coord: AxialCoord,
-  state: GameState,
+  _state: GameState,
 ): boolean {
-  if (!commercialSiteAt(coord)) return false;
-  return officeAtForState(coord, state) === null;
+  return Boolean(commercialSiteAt(coord));
 }
 
 export function regionAtCoord(coord: AxialCoord): MapRegion {
@@ -293,6 +431,67 @@ export function regionAtCoord(coord: AxialCoord): MapRegion {
   return "countryside";
 }
 
+/** Radial stretch from Gov for world-map layout (hex logic stays unscaled). */
+export const WORLD_MAP_REGION_LAYOUT_SCALE: Record<MapRegion, number> = {
+  metropolis: 1.25,
+  suburban: 1.5,
+  rural: 2,
+  countryside: 2,
+};
+
+export function worldMapLayoutScale(coord: AxialCoord): number {
+  return WORLD_MAP_REGION_LAYOUT_SCALE[regionAtCoord(coord)];
+}
+
+export function worldMapAxialToPixel(
+  coord: AxialCoord,
+  size: number = HEX_RADIUS,
+): { x: number; y: number } {
+  const scale = worldMapLayoutScale(coord);
+  const base = axialToPixel(coord.q, coord.r, size);
+  const gov = axialToPixel(MAP_GOV.q, MAP_GOV.r, size);
+  return {
+    x: gov.x + (base.x - gov.x) * scale,
+    y: gov.y + (base.y - gov.y) * scale,
+  };
+}
+
+/** Extra viewBox margin (green undercoat) beyond outermost hexes. */
+export const MAP_VIEWBOX_PAD = HEX_RADIUS * 0.95;
+
+export function worldMapHexBounds(
+  cells: AxialCoord[],
+  size: number = HEX_RADIUS,
+) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const coord of cells) {
+    const { x, y } = worldMapAxialToPixel(coord, size);
+    minX = Math.min(minX, x - size);
+    minY = Math.min(minY, y - size);
+    maxX = Math.max(maxX, x + size);
+    maxY = Math.max(maxY, y + size);
+  }
+
+  const pad = MAP_VIEWBOX_PAD;
+  return {
+    minX: minX - pad,
+    minY: minY - pad,
+    width: maxX - minX + pad * 2,
+    height: maxY - minY + pad * 2,
+  };
+}
+
+export function worldMapHexPathPixels(
+  path: AxialCoord[],
+  size: number = HEX_RADIUS,
+): { x: number; y: number }[] {
+  return path.map((coord) => worldMapAxialToPixel(coord, size));
+}
+
 export function siteRateBonusForRegion(region: MapRegion): number {
   return REGION_SITE_RATE_BONUS[region];
 }
@@ -302,17 +501,19 @@ export function siteRateBonusForCoord(coord: AxialCoord): number {
   return siteRateBonusForRegion(region);
 }
 
-export function siteRateBonusesForState(state: {
-  branchEstablished: boolean;
-  branchCoord: AxialCoord | null;
-}): Record<"hq" | "branch", number> {
-  return {
+export function siteRateBonusesForState(
+  state: GameState,
+): Partial<Record<OfficeLocationId, number>> {
+  const bonuses: Partial<Record<OfficeLocationId, number>> = {
     hq: siteRateBonusForRegion(HQ_REGION),
-    branch:
-      state.branchEstablished && state.branchCoord
-        ? siteRateBonusForCoord(state.branchCoord)
-        : 0,
   };
+  for (const site of state.branchSites) {
+    const officeId = branchOfficeIdForSite(site);
+    bonuses[officeId] = siteRateBonusForRegion(
+      commercialLotById(site.commercialLotId).region,
+    );
+  }
+  return bonuses;
 }
 
 export function formatSiteRateBonusPercent(bonus: number): string {
@@ -333,45 +534,65 @@ export function crewPayoutMultiplier(
   return Math.min(1, farmingAssigned / optimalCrew);
 }
 
-export function ownedOfficeIds(state: GameState): ("hq" | "branch")[] {
-  return state.branchEstablished ? ["hq", "branch"] : ["hq"];
-}
+export { ownedOfficeIds } from "./branchSites";
 
-/** Offices listed in Overview dropdown (includes locked sites for future expansion). */
+/** Offices listed in Overview dropdown. */
 export interface OverviewOfficeOption {
-  id: "hq" | "branch";
+  id: OfficeLocationId;
   label: string;
   available: boolean;
   hint?: string;
 }
 
 export function overviewOfficeOptions(state: GameState): OverviewOfficeOption[] {
-  return [
+  const options: OverviewOfficeOption[] = [
     { id: "hq", label: "HQ", available: true },
-    {
-      id: "branch",
-      label: officeDisplayName(state, "branch"),
-      available: state.branchEstablished,
-      hint: state.branchEstablished
-        ? undefined
-        : "Research Branch Management, hire a Branch Manager, then establish on the map",
-    },
   ];
+  for (const site of state.branchSites) {
+    options.push({
+      id: branchOfficeIdForSite(site),
+      label: site.name,
+      available: true,
+    });
+  }
+  return options;
 }
 
 export function officeDisplayName(
   state: GameState,
-  officeId: "hq" | "branch",
+  officeId: OfficeLocationId,
 ): string {
-  if (officeId === "branch" && state.branchEstablished && state.branchName) {
-    return state.branchName;
-  }
-  return OFFICE_LABELS[officeId];
+  if (officeId === "hq") return OFFICE_LABELS.hq;
+  const site = branchSiteForOfficeId(state, officeId);
+  return site?.name ?? "Branch Office";
 }
 
 export function defaultBranchName(coord: AxialCoord, branchIndex = 1): string {
   const region = commercialSiteAt(coord)?.region ?? regionAtCoord(coord);
   return `Branch ${branchIndex} @ ${REGION_LABELS[region]}`;
+}
+
+export function branchSiteCoord(site: EstablishedBranchSite): AxialCoord {
+  return { ...commercialLotById(site.commercialLotId).coord };
+}
+
+export function branchSiteCoordForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): AxialCoord | null {
+  const site = branchSiteForOfficeId(state, officeId);
+  return site ? branchSiteCoord(site) : null;
+}
+
+export function defaultBranchSiteName(
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+  branchIndex: number,
+): string {
+  const lot = commercialLotById(commercialLotId);
+  const slot = lot.branchSlots[slotIndex];
+  const padLabel = slot?.label ?? `Pad ${slotIndex + 1}`;
+  return `Branch ${branchIndex} · ${padLabel} @ ${lot.label}`;
 }
 
 export function branchManagementResearched(state: GameState): boolean {
@@ -389,45 +610,65 @@ export function branchManagerAvailable(state: GameState): number {
   return unitAvailableAt(state, "hq", "branch_manager");
 }
 
+export function canEstablishBranchPad(
+  state: GameState,
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+): boolean {
+  if (establishedBranchAtPad(state, commercialLotId, slotIndex)) return false;
+  if (!branchManagementResearched(state)) return false;
+  if (state.branchSites.length >= maxBranchSlots(state)) return false;
+  if (branchManagerAvailable(state) < 1) return false;
+  return canAffordAtOffice(
+    state,
+    "hq",
+    branchOpeningCostForPad(commercialLotId, slotIndex),
+  );
+}
+
+/** @deprecated use canEstablishBranchPad */
 export function canEstablishBranch(
   state: GameState,
   coord: AxialCoord | null | undefined,
+  slotIndex = 0,
 ): boolean {
-  if (state.branchEstablished) return false;
-  if (!branchManagementResearched(state)) return false;
-  if (branchManagerAvailable(state) < 1) return false;
-  if (!coord || !commercialSiteAt(coord)) return false;
-  return canAffordAtOffice(state, "hq", BRANCH_OPENING_COST);
+  const site = coord ? commercialSiteAt(coord) : undefined;
+  if (!site) return false;
+  return canEstablishBranchPad(state, site.id, slotIndex);
 }
 
-/** Human-readable reasons the player cannot open a branch yet. */
-export function branchEstablishBlockers(
+/** Human-readable reasons the player cannot open a branch pad yet. */
+export function branchEstablishBlockersForPad(
   state: GameState,
-  coord: AxialCoord | null | undefined,
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
 ): string[] {
-  if (state.branchEstablished) return [];
+  if (establishedBranchAtPad(state, commercialLotId, slotIndex)) {
+    return ["Pad already open"];
+  }
   const blockers: string[] = [];
   if (!branchManagementResearched(state)) {
+    blockers.push("Research Branch Management (Research tab)");
+  }
+  if (state.branchSites.length >= maxBranchSlots(state)) {
     blockers.push(
-      "Research Branch Management (Research tab)",
+      `Branch office cap reached (${state.branchSites.length}/${maxBranchSlots(state)})`,
     );
   }
   if (branchManagerAvailable(state) < 1) {
     blockers.push("Hire a Branch Manager at HQ (consumed on establish)");
   }
-  if (!coord || !commercialSiteAt(coord)) {
-    blockers.push("Select a yellow commercial lot on the map");
-    return blockers;
-  }
+  const openingCost = branchOpeningCostForPad(commercialLotId, slotIndex);
   if (
-    canAffordAtOffice(state, "hq", BRANCH_OPENING_COST) &&
+    canAffordAtOffice(state, "hq", openingCost) &&
     branchManagerAvailable(state) >= 1 &&
-    branchManagementResearched(state)
+    branchManagementResearched(state) &&
+    state.branchSites.length < maxBranchSlots(state)
   ) {
     return blockers;
   }
 
-  const { global, power } = splitResourceCost(BRANCH_OPENING_COST);
+  const { global, power } = splitResourceCost(openingCost);
   for (const [key, amount] of Object.entries(global)) {
     const k = key as keyof GameState["resources"];
     const need = amount ?? 0;
@@ -449,6 +690,19 @@ export function branchEstablishBlockers(
   return blockers;
 }
 
+/** @deprecated use branchEstablishBlockersForPad */
+export function branchEstablishBlockers(
+  state: GameState,
+  coord: AxialCoord | null | undefined,
+  slotIndex = 0,
+): string[] {
+  const site = coord ? commercialSiteAt(coord) : undefined;
+  if (!site) {
+    return ["Select a yellow commercial lot on the map"];
+  }
+  return branchEstablishBlockersForPad(state, site.id, slotIndex);
+}
+
 export function commercialHexEquals(
   a: AxialCoord | null | undefined,
   b: AxialCoord,
@@ -465,4 +719,36 @@ export function hexDistanceFromHqForState(
   coord: AxialCoord,
 ): number {
   return axialDistance(hqCoordForState(state), coord);
+}
+
+/** Resolved main office for map distance and focus (falls back to HQ). */
+export function mapMainOfficeId(state: GameState): "hq" | "branch" {
+  if (state.settings.mapMainOffice === "branch" && hasBranchOffices(state)) {
+    return "branch";
+  }
+  return "hq";
+}
+
+export function mapMainOfficeCoord(state: GameState): AxialCoord {
+  if (mapMainOfficeId(state) === "hq") {
+    return hqCoordForState(state);
+  }
+  const preferred = isBranchOfficeId(state.lastSelectedOffice)
+    ? state.lastSelectedOffice
+    : branchOfficeIds(state)[0];
+  return (
+    (preferred && branchSiteCoordForOffice(state, preferred)) ??
+    hqCoordForState(state)
+  );
+}
+
+export function mainOfficeCoordForState(state: GameState): AxialCoord {
+  return mapMainOfficeCoord(state);
+}
+
+export function hexDistanceFromMainOfficeForState(
+  state: GameState,
+  coord: AxialCoord,
+): number {
+  return axialDistance(mainOfficeCoordForState(state), coord);
 }

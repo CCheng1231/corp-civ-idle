@@ -1,9 +1,6 @@
 import { type Dispatch } from "react";
-import {
-  MAX_STRUCTURE_QUEUE,
-  OFFICE_IDS,
-  OFFICE_LABELS,
-} from "../game/constants";
+import { MAX_STRUCTURE_QUEUE, officeSiteLabel } from "../game/constants";
+import { ownedOfficeIds } from "../game/mapWorld";
 import type { GameAction, GameState } from "../game/types";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 
@@ -26,12 +23,12 @@ export function LocationStructureQueues({
         {MAX_STRUCTURE_QUEUE} queued per site.
       </p>
       <div className="location-queue-grid">
-        {OFFICE_IDS.map((officeId) => {
+        {ownedOfficeIds(state).map((officeId) => {
           const jobs = state.structureQueues[officeId];
           return (
             <div key={officeId} className="location-queue-card">
               <div className="location-queue-head">
-                <strong>{OFFICE_LABELS[officeId]}</strong>
+                <strong>{officeSiteLabel(state, officeId)}</strong>
                 <span className="muted">
                   {jobs.length}/{MAX_STRUCTURE_QUEUE}
                 </span>

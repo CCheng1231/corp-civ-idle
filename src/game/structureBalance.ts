@@ -1,9 +1,9 @@
 import type {
   GameState,
-  ResourceKey,
   OfficeLocationId,
   ProductionRates,
   ResourceCost,
+  ResourceKey,
   StructureId,
   StructureLevels,
 } from "./types";
@@ -14,7 +14,11 @@ import {
 } from "./structureBalanceData";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 
-const OFFICE_IDS: OfficeLocationId[] = ["hq", "branch"];
+function structureOfficeIds(
+  structureLevelsByLocation: GameState["structureLevelsByLocation"],
+): OfficeLocationId[] {
+  return Object.keys(structureLevelsByLocation) as OfficeLocationId[];
+}
 
 export { STRUCTURE_BALANCE_TABLES, STRUCTURE_EFFECT_KIND };
 
@@ -310,7 +314,7 @@ export function recomputeProductionRates(state: {
     reputation: 0,
     govReputation: 0,
   };
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const siteRates: ProductionRates = {
       cash: 0,
       supply: 0,
@@ -341,7 +345,7 @@ export function computeResourceCaps(state: {
   let cashCap = 0;
   let supplyCap = 0;
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const levels = state.structureLevelsByLocation[officeId];
     const bankLevel = levels.bank_account;
     if (bankLevel > 0) {
@@ -455,7 +459,7 @@ export function reconcileStructureBuildTimers(
 ): GameState {
   const next = structuredClone(state);
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const queue = next.structureQueues[officeId];
     if (queue.length === 0) continue;
 

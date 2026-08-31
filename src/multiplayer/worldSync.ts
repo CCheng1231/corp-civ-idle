@@ -10,7 +10,7 @@ import {
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
-import { MAP_REGION_SEED } from "../game/mapWorld";
+import { MAP_REGION_SEED, branchSiteCoord } from "../game/mapWorld";
 import {
   createPostingFromDefinition,
   initializeJobPostings,
@@ -65,9 +65,10 @@ export function presenceFromState(
     playerId: session.playerId,
     displayName: PLAYER_LABELS[session.playerId],
     hqCoord: playerHqCoord(session.playerId),
-    branchEstablished: state.branchEstablished,
-    branchCoord: state.branchCoord,
-    branchName: state.branchName,
+    branchSites: state.branchSites.map((site) => ({
+      coord: branchSiteCoord(site),
+      name: site.name,
+    })),
     lastSeenAt: Date.now(),
   };
 }

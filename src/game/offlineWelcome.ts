@@ -1,17 +1,16 @@
 import {
-  OFFICE_IDS,
-  OFFICE_LABELS,
   RESEARCH,
   RESOURCE_LABELS,
   STRUCTURES,
   formatNumber,
+  officeSiteLabel,
 } from "./constants";
+import { ownedOfficeIds } from "./branchSites";
 import { formatQueueTimeMs } from "./timers";
 import { unitDefinition } from "./unitEffects";
 import type {
   GameState,
   OfflineWelcomeSummary,
-  OfficeLocationId,
   ResourceCost,
   Resources,
   UnitId,
@@ -36,12 +35,12 @@ function structureCompletionLines(
   after: GameState,
 ): string[] {
   const lines: string[] = [];
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(after)) {
     for (const def of STRUCTURES) {
       const from = before.structureLevelsByLocation[officeId][def.id] ?? 0;
       const to = after.structureLevelsByLocation[officeId][def.id] ?? 0;
       if (to > from) {
-        const site = OFFICE_LABELS[officeId as OfficeLocationId];
+        const site = officeSiteLabel(before, officeId);
         lines.push(
           to - from === 1
             ? `${def.name} → Lv ${to} (${site})`
@@ -74,7 +73,7 @@ function researchCompletionLines(
 
 function hireCompletionLines(before: GameState, after: GameState): string[] {
   const lines: string[] = [];
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(after)) {
     const beforeRoster = before.contractorsByLocation[officeId];
     const afterRoster = after.contractorsByLocation[officeId];
     for (const unitId of Object.keys(afterRoster) as UnitId[]) {
@@ -83,7 +82,7 @@ function hireCompletionLines(before: GameState, after: GameState): string[] {
       const gained = to - from;
       if (gained > 0) {
         const name = unitDefinition(unitId).name;
-        const site = OFFICE_LABELS[officeId as OfficeLocationId];
+        const site = officeSiteLabel(before, officeId);
         lines.push(
           gained === 1
             ? `${name} arrived (${site})`

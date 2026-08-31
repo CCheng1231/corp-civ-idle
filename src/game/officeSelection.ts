@@ -16,7 +16,7 @@ export function isAllOfficesSelected(
 }
 
 export function allOfficesOptionAvailable(state: GameState): boolean {
-  return state.branchEstablished;
+  return state.branchSites.length > 0;
 }
 
 /** Last specific HQ/Branch — used for read-only catalogs and engine fallbacks. */

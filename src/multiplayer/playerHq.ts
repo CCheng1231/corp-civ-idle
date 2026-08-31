@@ -56,8 +56,7 @@ export function activePlayerId(state: GameState): string {
 
 export function branchContext(state: GameState) {
   return {
-    established: state.branchEstablished,
-    coord: state.branchCoord,
+    branchSites: state.branchSites,
   };
 }
 

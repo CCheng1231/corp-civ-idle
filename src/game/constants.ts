@@ -25,8 +25,11 @@ import type {
   UnitRoster,
 } from "./types";
 import {
-  officeSeparationHexes,
-} from "./hexLayout";
+  branchOfficeIdForSite,
+  branchSiteCoordForOffice,
+  ownedOfficeIds,
+} from "./branchSites";
+import { axialDistance } from "./hexLayout";
 import { hqCoordForState } from "../multiplayer/playerHq";
 import { travelDurationMs } from "./mapTravel";
 import {
@@ -105,30 +108,39 @@ export const MAX_RECRUIT_BATCH = 100;
 export function defaultOfficeSiteSections(): GameState["settings"]["officeSiteSections"] {
   return {
     hq: { structuresOpen: false },
-    branch: { structuresOpen: false },
   };
 }
 
-export const OFFICE_IDS: OfficeLocationId[] = ["hq", "branch"];
+export const OFFICE_IDS: OfficeLocationId[] = ["hq"];
 
-export const OFFICE_LABELS: Record<OfficeLocationId, string> = {
+export const OFFICE_LABELS: Record<"hq", string> = {
   hq: "HQ",
-  branch: "Branch Office",
 };
 
+export function officeSiteLabel(
+  state: GameState,
+  officeId: OfficeLocationId,
+): string {
+  if (officeId === "hq") return OFFICE_LABELS.hq;
+  const site = state.branchSites.find(
+    (entry) => branchOfficeIdForSite(entry) === officeId,
+  );
+  return site?.name ?? "Branch Office";
+}
+
 export function emptyStructureQueues(): StructureQueuesByLocation {
-  return { hq: [], branch: [] };
+  return { hq: [] };
 }
 
 export function emptyResearchQueues(): ResearchQueuesByLocation {
-  return { hq: [], branch: [] };
+  return { hq: [] };
 }
 
 export function projectedResearchLevels(
   state: GameState,
 ): GameState["researchLevels"] {
   const levels = { ...state.researchLevels };
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     for (const job of state.researchQueues[officeId] ?? []) {
       levels[job.researchId] += 1;
     }
@@ -147,7 +159,7 @@ export function isResearchQueued(
   state: GameState,
   researchId: ResearchId,
 ): boolean {
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     if (
       state.researchQueues[officeId]?.some(
         (job) => job.researchId === researchId,
@@ -250,9 +262,13 @@ export function contractorTransferHexDistance(
   from: OfficeLocationId,
   to: OfficeLocationId,
 ): number {
-  if (from === "branch" && !state.branchEstablished) return 0;
-  if (to === "branch" && !state.branchEstablished) return 0;
-  return officeSeparationHexes(from, to, state.branchCoord, hqCoordForState(state));
+  if (from === to) return 0;
+  const hq = hqCoordForState(state);
+  const coordFor = (officeId: OfficeLocationId) => {
+    if (officeId === "hq") return hq;
+    return branchSiteCoordForOffice(state, officeId) ?? hq;
+  };
+  return axialDistance(coordFor(from), coordFor(to));
 }
 
 export function contractorTransferDurationMs(
@@ -267,8 +283,15 @@ export function contractorTransferDurationMs(
   return travelDurationMs(hexes);
 }
 
-export function otherOffice(officeId: OfficeLocationId): OfficeLocationId {
-  return officeId === "hq" ? "branch" : "hq";
+export function otherOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): OfficeLocationId {
+  const offices = ownedOfficeIds(state);
+  if (offices.length <= 1) return "hq";
+  const index = offices.indexOf(officeId);
+  if (index < 0) return offices[1] ?? "hq";
+  return offices[(index + 1) % offices.length];
 }
 
 export function emptyUnitRoster(
@@ -580,22 +603,27 @@ export const PHASE_LABELS: Record<GameState["phase"], string> = {
   3: "Phase 3 — Companies & megaprojects",
 };
 
+export function officeIdsInStructureState(
+  structureLevelsByLocation: GameState["structureLevelsByLocation"],
+): OfficeLocationId[] {
+  return Object.keys(structureLevelsByLocation) as OfficeLocationId[];
+}
+
 export function createInitialState(now = Date.now()): GameState {
   const structureLevelsByLocation = {
     hq: hqStartStructureLevels(),
-    branch: branchStartStructureLevels(),
   };
   const researchLevels = Object.fromEntries(
     RESEARCH.map((r) => [r.id, 0]),
   ) as GameState["researchLevels"];
   const contractorsByLocation: ContractorsByLocation = {
     hq: emptyUnitRoster({ fresh_graduate: 2 }),
-    branch: emptyUnitRoster(),
   };
   const locationStats = computeLocationStats({
     structureLevelsByLocation,
     contractorsByLocation,
     previous: undefined,
+    branchSites: [],
   });
   const derived = recomputeDerivedStats({
     structureLevelsByLocation,
@@ -617,9 +645,7 @@ export function createInitialState(now = Date.now()): GameState {
     researchLevels,
     selectedOffice: "hq",
     lastSelectedOffice: "hq",
-    branchEstablished: false,
-    branchCoord: null,
-    branchName: null,
+    branchSites: [],
     selectedTowerId: null,
     selectedCommercialHex: null,
     won: false,
@@ -637,6 +663,7 @@ export function createInitialState(now = Date.now()): GameState {
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,
     logbookHighlightEntryId: null,
+    jobFocusPostingId: null,
     settings: {
       masterVolume: 0.1,
       musicMuted: false,
@@ -651,6 +678,7 @@ export function createInitialState(now = Date.now()): GameState {
       mapPresentation: "dev",
       mapPlayerGround: "hybrid",
       mapRegionOutlines: true,
+      mapMainOffice: "hq",
     },
   };
 
@@ -663,7 +691,6 @@ export function emptyContractorsByLocation(
 ): ContractorsByLocation {
   return {
     hq: emptyUnitRoster(),
-    branch: emptyUnitRoster(),
     ...overrides,
   };
 }
@@ -672,21 +699,29 @@ export function computeLocationStats(input: {
   structureLevelsByLocation: GameState["structureLevelsByLocation"];
   contractorsByLocation: ContractorsByLocation;
   previous?: GameState["locationStats"];
+  branchSites?: GameState["branchSites"];
 }): Record<OfficeLocationId, LocationSnapshot> {
   const stats = {} as Record<OfficeLocationId, LocationSnapshot>;
+  const officeIds: OfficeLocationId[] = [
+    "hq",
+    ...(input.branchSites ?? []).map(branchOfficeIdForSite),
+  ];
 
-  for (const officeId of OFFICE_IDS) {
-    let power = BASE_LOCATION_POWER + powerBonusFromLevels(
-      input.structureLevelsByLocation[officeId],
+  for (const officeId of officeIds) {
+    const levels =
+      input.structureLevelsByLocation[officeId] ?? hqStartStructureLevels();
+    let power = BASE_LOCATION_POWER + powerBonusFromLevels(levels);
+    const spaceBonus = officeSpaceBonusFromLevels(levels);
+    const site = input.branchSites?.find(
+      (entry) => branchOfficeIdForSite(entry) === officeId,
     );
     let officeSpace =
-      BASE_OFFICE_SPACE +
-      officeSpaceBonusFromLevels(input.structureLevelsByLocation[officeId]);
+      site != null
+        ? site.officeSpaceBase + spaceBonus
+        : BASE_OFFICE_SPACE + spaceBonus;
     let officeSpaceUsed = 0;
 
-    officeSpaceUsed = officeSpaceUsedForLevels(
-      input.structureLevelsByLocation[officeId],
-    );
+    officeSpaceUsed = officeSpaceUsedForLevels(levels);
 
     const prevUsed = input.previous?.[officeId]?.powerUsed ?? 0;
     stats[officeId] = {
@@ -711,7 +746,6 @@ export function recomputeDerivedStats(state: {
     ...state,
     siteRateBonusByOffice: state.siteRateBonusByOffice ?? {
       hq: 0,
-      branch: 0,
     },
   });
 
@@ -734,7 +768,9 @@ export function recomputeDerivedStats(state: {
     }
   }
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of Object.keys(
+    state.contractorsByLocation,
+  ) as OfficeLocationId[]) {
     const passive = officePassiveRatesForLocation(
       state.contractorsByLocation[officeId],
     );
@@ -750,8 +786,10 @@ export function recomputeDerivedStats(state: {
 /** Highest built Department of R&D level across all sites. */
 export function deptRndLevel(state: GameState): number {
   return Math.max(
-    state.structureLevelsByLocation.hq.dept_rnd,
-    state.structureLevelsByLocation.branch.dept_rnd,
+    0,
+    ...officeIdsInStructureState(state.structureLevelsByLocation).map(
+      (officeId) => state.structureLevelsByLocation[officeId]?.dept_rnd ?? 0,
+    ),
   );
 }
 
@@ -759,9 +797,9 @@ export function totalStructureLevel(
   state: GameState,
   structureId: StructureId,
 ): number {
-  return OFFICE_IDS.reduce(
+  return officeIdsInStructureState(state.structureLevelsByLocation).reduce(
     (sum, officeId) =>
-      sum + state.structureLevelsByLocation[officeId][structureId],
+      sum + (state.structureLevelsByLocation[officeId]?.[structureId] ?? 0),
     0,
   );
 }
@@ -780,7 +818,7 @@ export function aggregateCategoryRoster(
     support: 0,
     special: 0,
   };
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of Object.keys(byLocation) as OfficeLocationId[]) {
     for (const category of Object.keys(total) as ContractorCategoryId[]) {
       total[category] += countInCategory(byLocation[officeId], category);
     }
@@ -1085,8 +1123,8 @@ export function computeNetWorth(
   resources: Resources,
   locationStats: GameState["locationStats"],
 ): number {
-  const totalPower = OFFICE_IDS.reduce(
-    (sum, id) => sum + locationStats[id].power,
+  const totalPower = Object.values(locationStats).reduce(
+    (sum, snapshot) => sum + snapshot.power,
     0,
   );
   return (

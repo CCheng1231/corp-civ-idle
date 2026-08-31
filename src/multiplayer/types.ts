@@ -14,9 +14,10 @@ export interface CompanyPresence {
   playerId: PlayerId;
   displayName: string;
   hqCoord: AxialCoord;
-  branchEstablished: boolean;
-  branchCoord: AxialCoord | null;
-  branchName: string | null;
+  branchSites: Array<{
+    coord: AxialCoord;
+    name: string;
+  }>;
   lastSeenAt: number;
 }
 

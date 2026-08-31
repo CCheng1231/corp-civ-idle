@@ -1,4 +1,5 @@
-import { OFFICE_IDS, RESEARCH, formatResourceShort } from "./constants";
+import { RESEARCH, formatResourceShort } from "./constants";
+import { ownedOfficeIds } from "./branchSites";
 import {
   formatSiteRateBonusPercent,
   officeDisplayName,
@@ -34,9 +35,7 @@ export function resourceRateBreakdown(
   const lines: ResourceRateBreakdownLine[] = [];
   let running = 0;
 
-  for (const officeId of OFFICE_IDS) {
-    if (officeId === "branch" && !state.branchEstablished) continue;
-
+  for (const officeId of ownedOfficeIds(state)) {
     const siteRates = emptyRates();
     applyRatesForStructureLevels(
       state.structureLevelsByLocation[officeId],
@@ -76,7 +75,7 @@ export function resourceRateBreakdown(
     }
   }
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     const passive = officePassiveRatesForLocation(
       state.contractorsByLocation[officeId],
     );

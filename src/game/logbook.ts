@@ -1,4 +1,5 @@
-import { formatNumber, OFFICE_LABELS, resourceCostParts } from "./constants";
+import { formatNumber, OFFICE_LABELS, officeSiteLabel, resourceCostParts } from "./constants";
+import { isBranchOfficeId } from "./branchSites";
 import type {
   GameState,
   LogCategory,
@@ -223,7 +224,13 @@ export function formatLogTimeCell(at: number): string {
   return `${date} ${time}`;
 }
 
-export function officeLabel(officeId: OfficeLocationId | undefined): string {
+export function officeLabel(
+  officeId: OfficeLocationId | undefined,
+  state?: GameState,
+): string {
   if (!officeId) return "";
-  return OFFICE_LABELS[officeId];
+  if (state) return officeSiteLabel(state, officeId);
+  if (officeId === "hq") return OFFICE_LABELS.hq;
+  if (isBranchOfficeId(officeId)) return "Branch Office";
+  return officeId;
 }

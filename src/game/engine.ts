@@ -1,7 +1,6 @@
 import {
   STRUCTURES,
   RESEARCH,
-  OFFICE_IDS,
   createInitialState,
   addResources,
   computeNetWorth,
@@ -27,7 +26,7 @@ import {
   MAX_RECRUIT_QUEUE,
   unitAvailableAt,
   contractorTransferDurationMs,
-  OFFICE_LABELS,
+  officeSiteLabel,
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
   OFFICE_EXPANSION_STRUCTURE_ID,
@@ -35,6 +34,7 @@ import {
   recruitmentOrderDurationMs,
   recruitmentOrderBuildTimeHours,
   clampUiScale,
+  emptyUnitRoster,
 } from "./constants";
 import { resolveOfficeLocation } from "./officeSelection";
 import { buildOfflineWelcomeSummary } from "./offlineWelcome";
@@ -54,19 +54,29 @@ import {
   isOnlineMode,
 } from "../multiplayer/playerHq";
 import {
-  BRANCH_OPENING_COST,
+  branchSlotAt,
+  branchOpeningCostForPad,
   branchManagementResearched,
   branchManagerAvailable,
+  canEstablishBranchPad,
   commercialSiteAt,
-  defaultBranchName,
+  defaultBranchSiteName,
   siteRateBonusesForState,
 } from "./mapWorld";
+import { normalizeCommercialLotBranchSlots } from "./branchCommercial";
+import {
+  branchOfficeIdForSite,
+  branchSiteForOfficeId,
+  hasBranchOffices,
+  isBranchOfficeId,
+  ownedOfficeIds,
+} from "./branchSites";
 import {
   formatAssignmentSummary,
   unitDefinition,
 } from "./unitEffects";
 import { appendActivityLogs, cloneResourceCost, queueCancelLogFields } from "./logbook";
-import { normalizeResourceCost } from "./phaseA";
+import { normalizeResourceCost, branchStartStructureLevels } from "./phaseA";
 import {
   buildTimeMsForQueueJob,
   clampResourcesToCaps,
@@ -90,6 +100,7 @@ import type {
   ResourceCost,
   StructureId,
   OfficeLocationId,
+  EstablishedBranchSite,
 } from "./types";
 
 type LeveledDef = {
@@ -206,6 +217,20 @@ export function computeProjectBonuses(state: GameState) {
   return { durationMult, payoutMult };
 }
 
+function appendBranchOffice(
+  state: GameState,
+  site: EstablishedBranchSite,
+): GameState {
+  const officeId = branchOfficeIdForSite(site);
+  const next = structuredClone(state);
+  next.branchSites = [...next.branchSites, site];
+  next.structureLevelsByLocation[officeId] = branchStartStructureLevels();
+  next.contractorsByLocation[officeId] = emptyUnitRoster();
+  next.structureQueues[officeId] = [];
+  next.researchQueues[officeId] = [];
+  return next;
+}
+
 function withDerivedStats(state: GameState): GameState {
   const derived = recomputeDerivedStats({
     ...state,
@@ -215,6 +240,7 @@ function withDerivedStats(state: GameState): GameState {
     structureLevelsByLocation: state.structureLevelsByLocation,
     contractorsByLocation: state.contractorsByLocation,
     previous: state.locationStats,
+    branchSites: state.branchSites,
   });
   const caps = computeResourceCaps(state);
   const resources = clampResourcesToCaps(state.resources, caps);
@@ -258,7 +284,7 @@ function processStructureQueues(
 ): GameState {
   let next = state;
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     let queue = [...next.structureQueues[officeId]];
     let queueClock = now;
 
@@ -293,11 +319,11 @@ function processStructureQueues(
         [
           {
             category: "structure_complete",
-            summary: `${def.name} built at ${OFFICE_LABELS[officeId]}`,
+            summary: `${def.name} built at ${officeSiteLabel(next, officeId)}`,
             officeId,
             spent: buildSpent,
             impacts: [
-              `Level ${newLevel} at ${OFFICE_LABELS[officeId]}`,
+              `Level ${newLevel} at ${officeSiteLabel(next, officeId)}`,
               `Rates and site stats updated`,
             ],
           },
@@ -314,13 +340,13 @@ function processStructureQueues(
           next.structureLevelsByLocation[officeId][upcoming.structureId] + 1;
         detail = `Now building: ${upcomingDef.name} → Lv ${target}`;
       } else {
-        detail = `Build queue empty at ${OFFICE_LABELS[officeId]}`;
+        detail = `Build queue empty at ${officeSiteLabel(next, officeId)}`;
       }
       next = pushCompletionAlert(
         next,
         {
           kind: "structure",
-          title: `${def.name} complete (Lv ${newLevel}) · ${OFFICE_LABELS[officeId]}`,
+          title: `${def.name} complete (Lv ${newLevel}) · ${officeSiteLabel(next, officeId)}`,
           detail,
         },
         notify,
@@ -361,10 +387,10 @@ function processContractorTransfers(state: GameState, now: number): GameState {
         const unit = unitDefinition(transfer.unitId);
         return {
           category: "transfer_arrival" as const,
-          summary: `${transfer.count}× ${unit.name} arrived at ${OFFICE_LABELS[transfer.to]}`,
+          summary: `${transfer.count}× ${unit.name} arrived at ${officeSiteLabel(next, transfer.to)}`,
           officeId: transfer.to,
           impacts: [
-            `From ${OFFICE_LABELS[transfer.from]}`,
+            `From ${officeSiteLabel(next, transfer.from)}`,
             `${next.contractorsByLocation[transfer.to][transfer.unitId]} ${unit.name} now at site`,
           ],
         };
@@ -382,7 +408,7 @@ function processResearchQueues(
 ): GameState {
   let next = state;
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     let queue = [...(next.researchQueues[officeId] ?? [])];
     let queueClock = now;
 
@@ -432,7 +458,7 @@ function processResearchQueues(
         const upcomingDef = getResearchDef(upcoming.researchId);
         detail = `Now researching: ${upcomingDef.name} → Lv ${upcoming.targetLevel}`;
       } else {
-        detail = `Research queue empty at ${OFFICE_LABELS[officeId]}`;
+        detail = `Research queue empty at ${officeSiteLabel(next, officeId)}`;
       }
       next = pushCompletionAlert(
         next,
@@ -493,7 +519,7 @@ function processRecruitmentJobs(
   let next = structuredClone(state);
   const completed: import("./types").RecruitmentJob[] = [];
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     let jobs = recruitmentJobsForOffice(next, officeId);
     if (jobs.length === 0) continue;
 
@@ -529,13 +555,13 @@ function processRecruitmentJobs(
         const upcomingCount = upcoming.count ?? 1;
         detail = `Now hiring: ${upcomingCount}× ${upcomingUnit.name}`;
       } else {
-        detail = `Hiring queue empty at ${OFFICE_LABELS[officeId]}`;
+        detail = `Hiring queue empty at ${officeSiteLabel(next, officeId)}`;
       }
       next = pushCompletionAlert(
         next,
         {
           kind: "recruitment",
-          title: `${hireCount}× ${unit.name} arrived · ${OFFICE_LABELS[officeId]}`,
+          title: `${hireCount}× ${unit.name} arrived · ${officeSiteLabel(next, officeId)}`,
           detail,
         },
         notify,
@@ -552,7 +578,7 @@ function processRecruitmentJobs(
       const hireCount = job.count ?? 1;
       return {
         category: "recruit" as const,
-        summary: `${hireCount}× ${unit.name} joined ${OFFICE_LABELS[job.officeId]}`,
+        summary: `${hireCount}× ${unit.name} joined ${officeSiteLabel(next, job.officeId)}`,
         officeId: job.officeId,
         impacts: [
           `${next.contractorsByLocation[job.officeId][job.unitId]} ${unit.name} at site`,
@@ -576,6 +602,7 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
       pendingCompletionAlerts: [],
       recruitFocusUnitId: null,
       logbookHighlightEntryId: null,
+      jobFocusPostingId: null,
     },
     now,
   );
@@ -688,7 +715,7 @@ function shiftSimulatedClock(state: GameState, shiftMs: number): GameState {
     return at - shiftMs;
   };
 
-  for (const officeId of OFFICE_IDS) {
+  for (const officeId of ownedOfficeIds(state)) {
     next.structureQueues[officeId] = next.structureQueues[officeId].map(
       (job) => ({
         ...job,
@@ -778,7 +805,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           action.view === "logbook"
             ? (action.logbookHighlightEntryId ?? null)
             : null,
+        jobFocusPostingId:
+          action.view === "office"
+            ? (action.jobFocusPostingId ?? null)
+            : null,
       };
+
+    case "CLEAR_JOB_FOCUS":
+      return { ...state, jobFocusPostingId: null };
 
     case "SET_LOGBOOK_FILTER":
       return { ...state, logbookFilterId: action.filterId };
@@ -838,13 +872,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "SELECT_OFFICE": {
-      if (action.officeId === "branch" && !state.branchEstablished) {
+      if (action.officeId === "all" && !hasBranchOffices(state)) {
         return state;
       }
-      if (action.officeId === "all" && !state.branchEstablished) {
+      if (
+        action.officeId !== "all" &&
+        action.officeId !== "hq" &&
+        isBranchOfficeId(action.officeId) &&
+        !branchSiteForOfficeId(state, action.officeId)
+      ) {
         return state;
       }
-      if (action.officeId === "hq" || action.officeId === "branch") {
+      if (
+        action.officeId === "hq" ||
+        (action.officeId !== "all" && isBranchOfficeId(action.officeId))
+      ) {
         return {
           ...state,
           selectedOffice: action.officeId,
@@ -861,15 +903,36 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, selectedCommercialHex: action.coord };
 
     case "ESTABLISH_BRANCH": {
-      if (state.branchEstablished) return state;
       if (!branchManagementResearched(state)) return state;
       if (branchManagerAvailable(state) < 1) return state;
       const pick = action.coord ?? state.selectedCommercialHex;
       const site = pick ? commercialSiteAt(pick) : undefined;
       if (!site) return state;
-      if (!canAffordAtOffice(state, "hq", BRANCH_OPENING_COST)) return state;
 
-      const next = applyOfficeCost(state, "hq", BRANCH_OPENING_COST);
+      const slotIndex = Math.min(
+        normalizeCommercialLotBranchSlots(site.branchSlots).length - 1,
+        Math.max(0, action.slotIndex ?? 0),
+      );
+      if (!canEstablishBranchPad(state, site.id, slotIndex)) return state;
+
+      const slot = branchSlotAt(site.id, slotIndex);
+      if (!slot) return state;
+
+      const openingCost = branchOpeningCostForPad(site.id, slotIndex);
+
+      const branchSite: EstablishedBranchSite = {
+        commercialLotId: site.id,
+        slotIndex,
+        name: defaultBranchSiteName(
+          site.id,
+          slotIndex,
+          state.branchSites.length + 1,
+        ),
+        officeSpaceBase: slot.officeSpace,
+      };
+      const officeId = branchOfficeIdForSite(branchSite);
+
+      let next = applyOfficeCost(state, "hq", openingCost);
       next.contractorsByLocation = {
         ...next.contractorsByLocation,
         hq: {
@@ -880,20 +943,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ),
         },
       };
-      next.branchEstablished = true;
-      next.branchCoord = { ...site.coord };
-      next.branchName = defaultBranchName(site.coord, 1);
+      next = appendBranchOffice(next, branchSite);
       next.selectedCommercialHex = null;
       next.selectedOffice = "all";
-      next.lastSelectedOffice = "branch";
-      return appendActivityLogs(next, [
+      next.lastSelectedOffice = officeId;
+      return appendActivityLogs(withDerivedStats(next), [
         {
           category: "research",
-          summary: `Opened ${next.branchName} at ${site.label}`,
-          officeId: "branch",
-          spent: BRANCH_OPENING_COST,
+          summary: `Opened ${branchSite.name} at ${site.label}`,
+          officeId,
+          spent: openingCost,
           impacts: [
             "Consumed 1 Branch Manager",
+            `${slot.label} pad · ${slot.officeSpace} office space (expands to ${slot.expansionCap})`,
             "Branch office now on the regional map",
             "Manage structures and staff at the new site",
           ],
@@ -902,10 +964,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "RENAME_BRANCH": {
-      if (!state.branchEstablished) return state;
+      const officeId =
+        action.officeId ??
+        (isBranchOfficeId(state.lastSelectedOffice)
+          ? state.lastSelectedOffice
+          : null);
+      if (!officeId || !isBranchOfficeId(officeId)) return state;
       const name = action.name.trim().slice(0, 48);
       if (!name) return state;
-      return { ...state, branchName: name };
+      return {
+        ...state,
+        branchSites: state.branchSites.map((site) =>
+          branchOfficeIdForSite(site) === officeId ? { ...site, name } : site,
+        ),
+      };
     }
 
     case "UPDATE_SETTINGS": {
@@ -913,11 +985,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ? (() => {
             const { ignoreCosts: _c, ignoreTimers: _t, ...rest } =
               action.settings;
-            const settings = { ...rest };
-            if (settings.mapPresentation === "dev") {
-              settings.mapPresentation = "player";
-            }
-            return settings;
+            return { ...rest };
           })()
         : action.settings;
       const settings = { ...state.settings, ...patch };
@@ -1000,8 +1068,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         {
           category: "structure_upgrade",
           summary: isExpansion
-            ? `Queued ${def.name} at ${OFFICE_LABELS[action.locationId]}`
-            : `Queued ${def.name} at ${OFFICE_LABELS[action.locationId]}`,
+            ? `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`
+            : `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`,
           officeId: action.locationId,
           spent: spentSnapshot,
           impacts: [
@@ -1038,7 +1106,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(withDerivedStats(next), [
         {
           category: "structure_cancel",
-          summary: `Cancelled ${def.name} at ${OFFICE_LABELS[action.locationId]}`,
+          summary: `Cancelled ${def.name} at ${officeSiteLabel(next, action.locationId)}`,
           officeId: action.locationId,
           ...queueCancelLogFields(spent, refund),
         },
@@ -1079,7 +1147,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(updated, [
         {
           category: "structure_sell",
-          summary: `Sold ${def.name} level at ${OFFICE_LABELS[action.locationId]}`,
+          summary: `Sold ${def.name} level at ${officeSiteLabel(next, action.locationId)}`,
           officeId: action.locationId,
           gained,
           impacts: [
@@ -1125,7 +1193,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(next, [
         {
           category: "research",
-          summary: `Queued ${def.name} at ${OFFICE_LABELS[officeId]}`,
+          summary: `Queued ${def.name} at ${officeSiteLabel(next, officeId)}`,
           officeId,
           spent: spentSnapshot,
           impacts: [
@@ -1154,7 +1222,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(next, [
         {
           category: "research_cancel",
-          summary: `Cancelled ${def.name} at ${OFFICE_LABELS[action.officeId]}`,
+          summary: `Cancelled ${def.name} at ${officeSiteLabel(next, action.officeId)}`,
           officeId: action.officeId,
           ...queueCancelLogFields(spent, refund),
         },
@@ -1209,7 +1277,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(merged, [
         {
           category: "recruit",
-          summary: `Queued order: ${count}× ${unit.name} at ${OFFICE_LABELS[officeId]}`,
+          summary: `Queued order: ${count}× ${unit.name} at ${officeSiteLabel(merged, officeId)}`,
           officeId,
           spent: spentSnapshot,
           impacts: [
@@ -1237,7 +1305,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(next, [
         {
           category: "recruit_cancel",
-          summary: `Cancelled hire: ${job.count ?? 1}× ${unit.name} at ${OFFICE_LABELS[job.officeId]}`,
+          summary: `Cancelled hire: ${job.count ?? 1}× ${unit.name} at ${officeSiteLabel(next, job.officeId)}`,
           officeId: job.officeId,
           ...queueCancelLogFields(spent, refund),
         },
@@ -1248,10 +1316,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const { from, to, unitId } = action;
       const count = action.count ?? 1;
       if (from === to || count < 1) return state;
-      if (
-        (from === "branch" || to === "branch") &&
-        !state.branchEstablished
-      ) {
+      if (isBranchOfficeId(from) && !branchSiteForOfficeId(state, from)) {
+        return state;
+      }
+      if (isBranchOfficeId(to) && !branchSiteForOfficeId(state, to)) {
         return state;
       }
       if (unitAvailableAt(state, from, unitId) < count) {
@@ -1279,10 +1347,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return appendActivityLogs(next, [
         {
           category: "transfer",
-          summary: `Relocated ${count}× ${unit.name} toward ${OFFICE_LABELS[to]}`,
+          summary: `Relocated ${count}× ${unit.name} toward ${officeSiteLabel(next, to)}`,
           officeId: from,
           impacts: [
-            `Left ${OFFICE_LABELS[from]}`,
+            `Left ${officeSiteLabel(next, from)}`,
             `Arrives in ${travelSec}s`,
           ],
         },

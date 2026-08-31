@@ -24,15 +24,27 @@ import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { MAP_BRANCH } from "./hexLayout";
-import { defaultBranchName, siteRateBonusesForState } from "./mapWorld";
+import {
+  commercialSiteAt,
+  defaultBranchSiteName,
+  siteRateBonusesForState,
+} from "./mapWorld";
+import {
+  branchOfficeIdForSite,
+  branchSiteForOfficeId,
+  hasBranchOffices,
+  isBranchOfficeId,
+} from "./branchSites";
 import {
   migrateLegacyResources,
   hqStartStructureLevels,
   branchStartStructureLevels,
 } from "./phaseA";
 import type {
+  AxialCoord,
   GameState,
   StructureId,
+  EstablishedBranchSite,
   OfficeLocationId,
   ContractorRoster,
   ContractorsByLocation,
@@ -139,12 +151,24 @@ function migrateRecruitmentJobs(parsed: LegacySave): GameState["recruitmentJobs"
   });
 }
 
-type LegacySave = Partial<GameState> & {
+type LegacySave = Omit<
+  Partial<GameState>,
+  "selectedOffice" | "lastSelectedOffice"
+> & {
   upgradeLevels?: Record<StructureId, number>;
   structureLevels?: Record<StructureId, number>;
   contractors?: number | ContractorRoster;
   maxContractors?: number;
+  branchEstablished?: boolean;
+  branchCoord?: AxialCoord | null;
+  branchName?: string | null;
+  branchSlotIndex?: number | null;
+  branchOfficeSpaceBase?: number | null;
+  selectedOffice?: GameState["selectedOffice"] | "branch";
+  lastSelectedOffice?: GameState["lastSelectedOffice"] | "branch";
 };
+
+const LEGACY_OFFICE_KEYS = ["hq", "branch"] as const;
 
 const LEGACY_STRUCTURE_IDS = [
   "office_power",
@@ -160,7 +184,7 @@ function isLegacyStructureSave(parsed: LegacySave): boolean {
   if (parsed.structureLevels && check(parsed.structureLevels)) return true;
   if (parsed.upgradeLevels && check(parsed.upgradeLevels)) return true;
   if (parsed.structureLevelsByLocation) {
-    for (const officeId of ["hq", "branch"] as OfficeLocationId[]) {
+    for (const officeId of LEGACY_OFFICE_KEYS) {
       if (check(parsed.structureLevelsByLocation[officeId])) return true;
     }
   }
@@ -205,7 +229,7 @@ function migrateStructureLevels(parsed: LegacySave): GameState["structureLevelsB
   };
 
   if (parsed.structureLevelsByLocation) {
-    for (const officeId of ["hq", "branch"] as OfficeLocationId[]) {
+    for (const officeId of LEGACY_OFFICE_KEYS) {
       const incoming = parsed.structureLevelsByLocation[officeId] ?? {};
       base[officeId] = { ...base[officeId], ...incoming };
     }
@@ -325,42 +349,73 @@ function migrateJobFields(
 function migrateBranchFields(
   parsed: LegacySave,
   merged: GameState,
-): Pick<
-  GameState,
-  | "branchEstablished"
-  | "branchCoord"
-  | "branchName"
-  | "selectedTowerId"
-  | "selectedCommercialHex"
-> {
+): Pick<GameState, "branchSites" | "selectedTowerId" | "selectedCommercialHex"> {
+  if (Array.isArray(parsed.branchSites) && parsed.branchSites.length > 0) {
+    return {
+      branchSites: parsed.branchSites as EstablishedBranchSite[],
+      selectedTowerId: null,
+      selectedCommercialHex: parsed.selectedCommercialHex ?? null,
+    };
+  }
+
   let branchEstablished = parsed.branchEstablished;
   if (branchEstablished === undefined) {
-    const branchBuilt = Object.values(
-      merged.structureLevelsByLocation.branch,
-    ).some((level) => level > 0);
+    const legacyBranch = merged.structureLevelsByLocation.branch;
     branchEstablished =
-      branchBuilt ||
-      staffAtLocation(merged, "branch") > 0 ||
+      Boolean(legacyBranch) ||
+      staffAtLocation(merged, "branch" as OfficeLocationId) > 0 ||
       parsed.selectedOffice === "branch";
   }
 
-  const branchCoord =
-    parsed.branchCoord ??
-    (branchEstablished ? { ...MAP_BRANCH } : null);
+  if (!branchEstablished) {
+    return {
+      branchSites: [],
+      selectedTowerId: null,
+      selectedCommercialHex: parsed.selectedCommercialHex ?? null,
+    };
+  }
 
-  let branchName =
-    typeof parsed.branchName === "string" && parsed.branchName.trim()
-      ? parsed.branchName.trim().slice(0, 48)
-      : null;
-  if (branchEstablished && !branchName && branchCoord) {
-    branchName = defaultBranchName(branchCoord, 1);
+  const branchCoord = parsed.branchCoord ?? MAP_BRANCH;
+  const commercial = commercialSiteAt(branchCoord);
+  const commercialLotId =
+    commercial?.id ??
+    ("suburban_strip" as EstablishedBranchSite["commercialLotId"]);
+  const slotIndex =
+    typeof parsed.branchSlotIndex === "number" ? parsed.branchSlotIndex : 1;
+  const site: EstablishedBranchSite = {
+    commercialLotId,
+    slotIndex,
+    name:
+      typeof parsed.branchName === "string" && parsed.branchName.trim()
+        ? parsed.branchName.trim().slice(0, 48)
+        : defaultBranchSiteName(commercialLotId, slotIndex, 1),
+    officeSpaceBase:
+      typeof parsed.branchOfficeSpaceBase === "number"
+        ? parsed.branchOfficeSpaceBase
+        : commercial?.branchSlots[slotIndex]?.officeSpace ?? 12,
+  };
+  const officeId = branchOfficeIdForSite(site);
+
+  if (merged.structureLevelsByLocation.branch) {
+    merged.structureLevelsByLocation[officeId] =
+      merged.structureLevelsByLocation.branch;
+    delete merged.structureLevelsByLocation.branch;
+  }
+  if (merged.contractorsByLocation.branch) {
+    merged.contractorsByLocation[officeId] = merged.contractorsByLocation.branch;
+    delete merged.contractorsByLocation.branch;
+  }
+  if (merged.structureQueues.branch) {
+    merged.structureQueues[officeId] = merged.structureQueues.branch;
+    delete merged.structureQueues.branch;
+  }
+  if (merged.researchQueues.branch) {
+    merged.researchQueues[officeId] = merged.researchQueues.branch;
+    delete merged.researchQueues.branch;
   }
 
   return {
-    branchEstablished,
-    branchCoord,
-    branchName: branchEstablished ? branchName : null,
-    // Map/job-board tower focus is session UI — don't restore a stale filter.
+    branchSites: [site],
     selectedTowerId: null,
     selectedCommercialHex: parsed.selectedCommercialHex ?? null,
   };
@@ -369,6 +424,8 @@ function migrateBranchFields(
 function normalizeSave(parsed: LegacySave): GameState {
   const base = createInitialState();
   const now = Date.now();
+  const rawSelectedOffice = parsed.selectedOffice;
+  const rawLastSelectedOffice = parsed.lastSelectedOffice;
   const structureLevelsByLocation = migrateStructureLevels(parsed);
   const researchLevels = migrateResearchLevels(parsed, base);
   const contractorsByLocation = migrateContractors(parsed);
@@ -400,19 +457,15 @@ function normalizeSave(parsed: LegacySave): GameState {
       viewportPreview:
         parsed.settings?.viewportPreview === "mobile" ||
         parsed.settings?.viewportPreview === "desktop" ||
-        parsed.settings?.viewportPreview === "auto" ||
-        parsed.settings?.viewportPreview === "galaxy-s24"
+        parsed.settings?.viewportPreview === "auto"
           ? parsed.settings.viewportPreview
-          : "auto",
+          : parsed.settings?.viewportPreview === "galaxy-s24"
+            ? "mobile"
+            : "auto",
       officeSiteSections: {
         hq: {
           structuresOpen:
             parsed.settings?.officeSiteSections?.hq?.structuresOpen ?? false,
-        },
-        branch: {
-          structuresOpen:
-            parsed.settings?.officeSiteSections?.branch?.structuresOpen ??
-            false,
         },
       },
       mapPresentation:
@@ -427,6 +480,11 @@ function normalizeSave(parsed: LegacySave): GameState {
           ? parsed.settings.mapPlayerGround
           : "hybrid",
       mapRegionOutlines: parsed.settings?.mapRegionOutlines ?? true,
+      mapMainOffice:
+        parsed.settings?.mapMainOffice === "branch" &&
+        (parsed.branchEstablished ?? (parsed.branchSites?.length ?? 0) > 0)
+          ? "branch"
+          : "hq",
     },
     structureLevelsByLocation,
     structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),
@@ -443,18 +501,28 @@ function normalizeSave(parsed: LegacySave): GameState {
     }),
     recruitmentJobs: migrateRecruitmentJobs(parsed),
     selectedOffice:
-      parsed.selectedOffice === "all" ||
-      parsed.selectedOffice === "hq" ||
-      parsed.selectedOffice === "branch"
-        ? parsed.selectedOffice
-        : "hq",
+      rawSelectedOffice === "all" || rawSelectedOffice === "hq"
+        ? rawSelectedOffice
+        : rawSelectedOffice === "branch"
+          ? "hq"
+          : typeof rawSelectedOffice === "string" &&
+              rawSelectedOffice.startsWith("branch:")
+            ? (rawSelectedOffice as OfficeLocationId)
+            : "hq",
     lastSelectedOffice:
-      parsed.lastSelectedOffice === "branch" ||
-      parsed.lastSelectedOffice === "hq"
-        ? parsed.lastSelectedOffice
-        : parsed.selectedOffice === "branch" || parsed.selectedOffice === "hq"
-          ? parsed.selectedOffice
-          : "hq",
+      rawLastSelectedOffice === "hq"
+        ? "hq"
+        : rawLastSelectedOffice === "branch"
+          ? "hq"
+          : typeof rawLastSelectedOffice === "string" &&
+              rawLastSelectedOffice.startsWith("branch:")
+            ? (rawLastSelectedOffice as OfficeLocationId)
+            : rawSelectedOffice === "hq"
+              ? "hq"
+              : typeof rawSelectedOffice === "string" &&
+                  rawSelectedOffice.startsWith("branch:")
+                ? (rawSelectedOffice as OfficeLocationId)
+                : "hq",
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
     dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
@@ -472,20 +540,64 @@ function normalizeSave(parsed: LegacySave): GameState {
   Object.assign(merged, migrateBranchFields(parsed, merged));
   Object.assign(merged, migrateJobFields(parsed, now));
 
-  if (merged.selectedOffice === "branch" && !merged.branchEstablished) {
+  const legacyOfficeSections = parsed.settings?.officeSiteSections as
+    | Record<string, { structuresOpen?: boolean }>
+    | undefined;
+  const legacyBranchSectionsOpen =
+    legacyOfficeSections?.branch?.structuresOpen ?? false;
+  merged.settings.officeSiteSections = {
+    hq: {
+      structuresOpen: legacyOfficeSections?.hq?.structuresOpen ?? false,
+    },
+  };
+  for (const site of merged.branchSites) {
+    const officeId = branchOfficeIdForSite(site);
+    merged.settings.officeSiteSections[officeId] = {
+      structuresOpen:
+        legacyOfficeSections?.[officeId]?.structuresOpen ??
+        (merged.branchSites.length === 1 ? legacyBranchSectionsOpen : false),
+    };
+  }
+
+  if (rawSelectedOffice === "branch") {
+    merged.selectedOffice =
+      merged.branchSites.length > 0
+        ? branchOfficeIdForSite(merged.branchSites[0])
+        : "hq";
+  }
+  if (rawLastSelectedOffice === "branch") {
+    merged.lastSelectedOffice =
+      merged.branchSites.length > 0
+        ? branchOfficeIdForSite(merged.branchSites[0])
+        : "hq";
+  }
+  if (merged.selectedOffice === "all" && !hasBranchOffices(merged)) {
     merged.selectedOffice = "hq";
   }
-  if (merged.selectedOffice === "all" && !merged.branchEstablished) {
-    merged.selectedOffice = "hq";
+  if (
+    merged.lastSelectedOffice !== "hq" &&
+    isBranchOfficeId(merged.lastSelectedOffice) &&
+    !branchSiteForOfficeId(merged, merged.lastSelectedOffice)
+  ) {
+    merged.lastSelectedOffice =
+      merged.branchSites.length > 0
+        ? branchOfficeIdForSite(merged.branchSites[0])
+        : "hq";
   }
-  if (merged.lastSelectedOffice === "branch" && !merged.branchEstablished) {
-    merged.lastSelectedOffice = "hq";
+  if (
+    merged.selectedOffice !== "all" &&
+    merged.selectedOffice !== "hq" &&
+    isBranchOfficeId(merged.selectedOffice) &&
+    !branchSiteForOfficeId(merged, merged.selectedOffice)
+  ) {
+    merged.selectedOffice = "hq";
   }
 
   merged.locationStats = computeLocationStats({
     structureLevelsByLocation: merged.structureLevelsByLocation,
     contractorsByLocation: merged.contractorsByLocation,
     previous: parsed.locationStats,
+    branchSites: merged.branchSites,
   });
 
   const derived = recomputeDerivedStats({
@@ -582,6 +694,7 @@ export function saveGameState(state: GameState): void {
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
     logbookHighlightEntryId: _logHighlight,
+    jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
     onlineConnectionStatus: _conn,
     onlineSession: _session,
@@ -607,10 +720,6 @@ export function resetGameState(
         hq: {
           ...fresh.settings.officeSiteSections.hq,
           ...preserveSettings.officeSiteSections?.hq,
-        },
-        branch: {
-          ...fresh.settings.officeSiteSections.branch,
-          ...preserveSettings.officeSiteSections?.branch,
         },
       },
     };
