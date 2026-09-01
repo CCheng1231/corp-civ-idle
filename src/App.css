@@ -438,11 +438,11 @@
 }
 
 .mission-crew-picker {
-  margin: 0.65rem 0;
-  padding: 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  background: rgba(0, 0, 0, 0.12);
+  margin: 0.45rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .mission-crew-group + .mission-crew-group {
@@ -459,43 +459,98 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.25rem;
 }
 
 .mission-crew-unit-row {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
   align-items: center;
-  padding: 0.35rem 0;
+  padding: 0;
 }
 
 .mission-crew-unit-row + .mission-crew-unit-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 0;
 }
 
 .mission-crew-unit-link {
   padding: 0;
   min-height: 0;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 650;
   text-align: left;
 }
 
-.mission-crew-unit-row.is-empty .mission-crew-unit-input {
-  opacity: 0.75;
+.mission-crew-unit-row.is-empty .mission-crew-unit-controls {
+  opacity: 0.55;
 }
 
-.mission-crew-unit-input {
+.mission-crew-unit-controls {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  color: var(--muted);
+  gap: 0.14rem;
+  flex-shrink: 0;
 }
 
-.mission-crew-unit-input input {
-  width: 3.5rem;
+.mission-crew-step-btn,
+.mission-crew-max-btn {
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0.08rem 0.28rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: #243041;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.mission-crew-step-btn {
+  padding: 0.08rem 0.3rem;
+  font-weight: 650;
+}
+
+.mission-crew-max-btn {
+  padding: 0.08rem 0.32rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.mission-crew-step-btn:hover:not(:disabled),
+.mission-crew-max-btn:hover:not(:disabled) {
+  background: rgba(86, 180, 233, 0.16);
+}
+
+.mission-crew-step-btn:disabled,
+.mission-crew-max-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mission-crew-unit-count {
+  width: 2rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0.08rem 0.12rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--panel, #1e222a);
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.mission-crew-available {
+  font-size: 0.64rem;
+  white-space: nowrap;
 }
 
 .job-posting-card .job-posting-facts {
@@ -1510,77 +1565,105 @@
 
 .secretary-task-forces-beside {
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
   min-width: 0;
 }
 
-.secretary-task-forces-beside-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.35rem;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.secretary-task-forces-beside-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 2.15rem;
+  padding: 0.1rem 0.26rem;
   gap: 0.28rem;
-  max-height: min(10rem, 28vh);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
 }
 
-.secretary-task-forces-beside-item {
+.secretary-task-force-icon {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.35rem;
-  padding: 0.28rem 0.32rem;
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  background: rgba(0, 0, 0, 0.12);
-  font-size: 0.62rem;
-  line-height: 1.3;
-}
-
-.secretary-task-forces-beside-item-main {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.secretary-task-forces-beside-item strong {
-  font-size: 0.64rem;
-  font-weight: 650;
-}
-
-.secretary-task-forces-cancel {
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  font-size: 0.58rem;
-  padding: 0.12rem 0.32rem;
-  min-height: 0;
+  width: 1.35rem;
+  height: 2rem;
+  align-self: stretch;
 }
 
-.secretary-task-forces-label {
-  color: var(--muted);
-  font-size: 0.58rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.secretary-task-force-icon-svg {
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
-.secretary-task-forces-value {
-  font-size: 0.64rem;
+.secretary-task-force-icon-disc {
+  fill: rgba(23, 30, 39, 0.92);
+  stroke: rgba(86, 180, 233, 0.75);
+  stroke-width: 1.5;
+}
+
+.secretary-task-force-icon.is-onsite .secretary-task-force-icon-disc {
+  stroke: rgba(0, 158, 115, 0.85);
+}
+
+.secretary-task-force-icon.is-traveling {
+  color: #8ecae6;
+}
+
+.secretary-task-force-icon.is-onsite {
+  color: #6ee7b7;
+}
+
+.secretary-task-force-icon-figure {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.secretary-task-force-icon-spark {
+  stroke: currentColor;
+}
+
+.secretary-task-force-icon.is-traveling .secretary-task-force-icon-svg {
+  animation: secretary-task-force-travel 0.85s ease-in-out infinite;
+}
+
+@keyframes secretary-task-force-travel {
+  0%,
+  100% {
+    transform: translateX(-8%);
+  }
+  50% {
+    transform: translateX(8%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .secretary-task-force-icon.is-traveling .secretary-task-force-icon-svg {
+    animation: none;
+  }
+}
+
+.secretary-task-force-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.04rem;
+  min-width: 0;
+}
+
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row .queue-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.58rem;
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row .queue-status {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.54rem;
   color: var(--muted);
+  line-height: 1.15;
 }
 
 .secretary-stats-banner-item {
@@ -2524,6 +2607,14 @@
   margin-top: 0;
 }
 
+.secretary-view .job-board-embedded .job-board-layout.filters-expanded {
+  grid-template-columns: 1fr;
+}
+
+.secretary-view .job-board-embedded .job-board-filters {
+  padding: 0.65rem 0.7rem;
+}
+
 .secretary-view .job-board-embedded .job-board-filters-head h3 {
   font-size: 0.68rem;
 }
@@ -2533,6 +2624,11 @@
 .secretary-view .job-board-embedded .job-board-results-toolbar,
 .secretary-view .job-board-embedded .job-board-row-btn strong {
   font-size: 0.68rem;
+}
+
+.secretary-view .job-board-embedded .job-board-filter select {
+  min-height: 1.75rem;
+  padding: 0.22rem 0.35rem;
 }
 
 .secretary-view .job-board-embedded .job-board-row-btn .muted {
@@ -2582,40 +2678,54 @@
 /* Office right column: keep Space/Power visible when the build queue is full */
 .operations-view .tab-hero-main .tab-queue-heading,
 .recruitment-view .tab-hero-main .tab-queue-heading,
-.research-view .tab-hero-main .tab-queue-heading {
+.research-view .tab-hero-main .tab-queue-heading,
+.secretary-view .tab-hero-main .tab-queue-heading {
   margin-bottom: 0.06rem;
   gap: 0.2rem;
 }
 
 .operations-view .tab-hero-main .tab-queue-heading h3,
 .recruitment-view .tab-hero-main .tab-queue-heading h3,
-.research-view .tab-hero-main .tab-queue-heading h3 {
+.research-view .tab-hero-main .tab-queue-heading h3,
+.secretary-view .tab-hero-main .tab-queue-heading h3 {
   font-size: 0.62rem;
 }
 
 .operations-view .tab-hero-main .tab-queue-count,
 .recruitment-view .tab-hero-main .tab-queue-count,
-.research-view .tab-hero-main .tab-queue-count {
+.research-view .tab-hero-main .tab-queue-count,
+.secretary-view .tab-hero-main .tab-queue-count {
   font-size: 0.58rem;
 }
 
 .operations-view .tab-hero-main .tab-queue-filter,
 .recruitment-view .tab-hero-main .tab-queue-filter,
-.research-view .tab-hero-main .tab-queue-filter {
+.research-view .tab-hero-main .tab-queue-filter,
+.secretary-view .tab-hero-main .tab-queue-filter {
   font-size: 0.56rem;
   gap: 0.18rem;
 }
 
 .operations-view .tab-hero-main .tab-compact-queue .build-queue-slot,
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue-slot,
-.research-view .tab-hero-main .tab-compact-queue .build-queue-slot {
+.research-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot {
   --queue-row-height: 1.12rem;
   --queue-row-gap: 0.08rem;
 }
 
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot {
+  min-height: 0;
+  max-height: min(7.5rem, 26vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
 .operations-view .tab-hero-main .tab-compact-queue .build-queue li,
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue li,
-.research-view .tab-hero-main .tab-compact-queue .build-queue li {
+.research-view .tab-hero-main .tab-compact-queue .build-queue li,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue li:not(.secretary-task-force-row) {
   padding: 0.04rem 0.26rem;
   font-size: 0.58rem;
   gap: 0.22rem;
@@ -2625,7 +2735,8 @@
 
 .operations-view .tab-hero-main .tab-compact-queue .queue-name,
 .recruitment-view .tab-hero-main .tab-compact-queue .queue-name,
-.research-view .tab-hero-main .tab-compact-queue .queue-name {
+.research-view .tab-hero-main .tab-compact-queue .queue-name,
+.secretary-view .tab-hero-main .tab-compact-queue .queue-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2634,14 +2745,16 @@
 
 .operations-view .tab-hero-main .tab-compact-queue .queue-status,
 .recruitment-view .tab-hero-main .tab-compact-queue .queue-status,
-.research-view .tab-hero-main .tab-compact-queue .queue-status {
+.research-view .tab-hero-main .tab-compact-queue .queue-status,
+.secretary-view .tab-hero-main .tab-compact-queue .queue-status {
   font-size: 0.56rem;
   white-space: nowrap;
 }
 
 .operations-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
-.research-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
+.research-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
   min-width: 0;
 }
 
@@ -2653,7 +2766,10 @@
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue,
 .research-view .tab-hero-main .tab-compact-queue,
 .research-view .tab-hero-main .tab-compact-queue .build-queue-slot,
-.research-view .tab-hero-main .tab-compact-queue .build-queue {
+.research-view .tab-hero-main .tab-compact-queue .build-queue,
+.secretary-view .tab-hero-main .tab-compact-queue,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue {
   overflow: visible;
 }
 
@@ -8198,6 +8314,7 @@ body.logbook-col-resizing {
 .job-board-list-stage {
   position: relative;
   min-height: 14rem;
+  overflow: visible;
 }
 
 /* Let the tall drawer paint past the table without stretching the stage. */
@@ -8208,9 +8325,14 @@ body.logbook-col-resizing {
 
 .job-board-detail-drawer {
   position: absolute;
-  inset: 0 0 0 auto;
-  width: 65%;
-  max-width: 24rem;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  left: auto;
+  width: 58%;
+  max-width: 20rem;
+  height: fit-content;
+  max-height: 100%;
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -8220,6 +8342,7 @@ body.logbook-col-resizing {
   transform: translateX(100%);
   transition: transform 0.24s ease;
   pointer-events: none;
+  overflow: visible;
 }
 
 .job-board-detail-drawer.is-open {
@@ -8234,11 +8357,21 @@ body.logbook-col-resizing {
   bottom: auto;
   height: auto;
   max-height: min(90vh, calc(100dvh - 5rem));
-  overflow: hidden;
+  overflow: visible;
+  width: 62%;
+  max-width: 21rem;
 }
 
 .job-board-detail-drawer.is-large .job-board-detail-drawer-body {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: visible;
+  overflow-y: auto;
+  max-height: calc(min(90vh, calc(100dvh - 5rem)) - 1.75rem);
+}
+
+.job-board-detail-drawer:not(.is-large) .job-board-detail-drawer-body {
+  flex: 0 0 auto;
 }
 
 .job-board-detail-drawer-head {
@@ -8247,7 +8380,7 @@ body.logbook-col-resizing {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  padding: 0.35rem 0.45rem 0;
+  padding: 0.22rem 0.35rem 0;
 }
 
 .job-board-detail-resize {
@@ -8274,14 +8407,189 @@ body.logbook-col-resizing {
 }
 
 .job-board-detail-drawer-body {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow-y: auto;
-  padding: 0 0.65rem 0.75rem;
+  overflow: visible;
+  padding: 0 0.4rem 0.28rem;
 }
 
 .job-board-detail-drawer-body .job-posting-card {
   margin: 0;
+  padding: 0.35rem 0.4rem 0.15rem;
+  border: 0;
+  background: transparent;
+}
+
+.job-board-detail-drawer-body .job-posting-card header {
+  gap: 0.08rem;
+  margin-bottom: 0.28rem;
+}
+
+.job-board-detail-drawer-body .job-posting-card header strong {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.job-board-detail-drawer-body .job-posting-card header span {
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.job-board-detail-drawer-body .job-posting-card .structure-desc {
+  margin: 0 0 0.28rem;
+  font-size: 0.66rem;
+  line-height: 1.3;
+}
+
+.job-board-detail-drawer-body .job-posting-facts {
+  gap: 0.14rem;
+  margin: 0.35rem 0;
+  font-size: 0.66rem;
+}
+
+.job-board-detail-drawer-body .job-posting-facts li {
+  grid-template-columns: 4.25rem minmax(0, 1fr);
+  gap: 0.3rem;
+}
+
+.job-board-detail-drawer-body .job-info-tip-value {
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.job-board-detail-drawer .job-info-tip-panel {
+  top: auto;
+  bottom: calc(100% + 0.22rem);
+  left: 0;
+  z-index: 40;
+  min-width: 6.75rem;
+  padding: 0.24rem 0.32rem;
+  gap: 0.08rem;
+  pointer-events: none;
+}
+
+.job-board-detail-drawer .job-info-tip-row {
+  font-size: 0.6rem;
+  gap: 0.18rem;
+}
+
+.job-board-detail-drawer .job-info-tip-mark {
+  width: 0.5rem;
+  font-size: 0.52rem;
+}
+
+.job-board-detail-drawer-body .mission-crew-picker {
+  margin: 0.18rem 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.job-board-detail-drawer-body .mission-crew-unit-list {
+  gap: 0;
+}
+
+.job-board-detail-drawer-body .mission-crew-unit-row {
+  gap: 0.22rem;
+  padding: 0;
+}
+
+.job-board-detail-drawer-body .mission-crew-unit-link {
+  font-size: 0.64rem;
+  line-height: 1.15;
+}
+
+.job-board-detail-drawer-body .mission-crew-unit-controls {
+  gap: 0.1rem;
+}
+
+.job-board-detail-drawer-body .mission-crew-step-btn,
+.job-board-detail-drawer-body .mission-crew-max-btn {
+  padding: 0.04rem 0.22rem;
+  font-size: 0.58rem;
+}
+
+.job-board-detail-drawer-body .mission-crew-unit-count {
+  width: 1.65rem;
+  padding: 0.04rem 0.08rem;
+  font-size: 0.6rem;
+}
+
+.job-board-detail-drawer-body .mission-crew-available {
+  font-size: 0.58rem;
+}
+
+.job-board-detail-drawer-body .job-posting-engage {
+  gap: 0.14rem;
+  margin-top: 0.22rem;
+  margin-bottom: 0;
+}
+
+.job-board-detail-drawer-body .job-posting-engage-btn {
+  width: auto;
+  align-self: flex-start;
+  min-height: 0;
+  height: auto;
+  padding: 0.04rem 0.32rem;
+  font-size: 0.54rem;
+  line-height: 1;
+  border-radius: 0.3rem;
+}
+
+.job-board-detail-drawer-body .job-posting-engage-note {
+  font-size: 0.62rem;
+  line-height: 1.25;
+}
+
+/* Larger = slightly bigger type inside the posting drawer (not taller chrome). */
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-card header strong {
+  font-size: 0.88rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-card header span {
+  font-size: 0.74rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-card .structure-desc {
+  font-size: 0.76rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-facts {
+  font-size: 0.76rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-info-tip-value {
+  font-size: 0.74rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .mission-crew-unit-link {
+  font-size: 0.74rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .mission-crew-step-btn,
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .mission-crew-max-btn {
+  font-size: 0.66rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .mission-crew-unit-count {
+  font-size: 0.68rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .mission-crew-available {
+  font-size: 0.64rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-engage-btn {
+  padding: 0.06rem 0.38rem;
+  font-size: 0.62rem;
+}
+
+.job-board-detail-drawer.is-large .job-board-detail-drawer-body .job-posting-engage-note {
+  font-size: 0.68rem;
+}
+
+.job-board-detail-drawer.is-large .job-info-tip-row {
+  font-size: 0.68rem;
 }
 
 .job-info-tip {
@@ -8508,9 +8816,10 @@ body.logbook-col-resizing {
 }
 
 .job-board-filters-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.55rem;
+  align-items: start;
 }
 
 .job-board-filters-head h3 {
@@ -8558,8 +8867,9 @@ body.logbook-col-resizing {
 }
 
 .job-board-map-support {
-  margin-top: 0.5rem;
-  padding-top: 0.75rem;
+  grid-column: 1 / -1;
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
   border-top: 1px solid var(--border);
 }
 

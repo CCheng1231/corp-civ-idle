@@ -9,7 +9,7 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 
 **Balance / sheet numbers:** [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc) — use `google-sheets` MCP; engine data via `scripts/build-structure-balance.mjs` and `scripts/build-research-data.mjs`.
 
-**Session changelog:** **ChangeLog** tab in the balance workbook (`20260827 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-tab-ui-home-hub.mjs`; close Excel first if EBUSY).
+**Session changelog:** **ChangeLog** tab in the balance workbook (`20260827 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-secretary-job-board.mjs`; close Excel first if EBUSY).
 
 **Resume prompt:**
 
@@ -19,6 +19,6 @@ Follow .cursor/rules/player-view-ui.mdc for tab UI; world-map-viewport.mdc for m
 Task: [specific tab or change]
 ```
 
-**Recent UI state (Aug 31):** Bottom nav is **World · Home · Secretary · Log · Set**. **Home** flyout → Build / Recruit / R&D. Build, Recruit, Research, Secretary tabs share portrait + queue header pattern; catalog below portrait with category scene banners. Secretary: task forces under Office picker; Reports in below-portrait banner.
+**Recent UI state (Aug 31, evening):** Secretary **task forces** — two-line rows (name + status), `TaskForceStatusIcon` (traveling / on-site), units/earnings in tooltip only. **Job board** (embedded): 2-column filters; compact posting drawer with −/+ / **Max** crew steppers, fit-content height, **Larger** toggles text scale; engage blocker → **Not enough units**. Queue times use `5m` / `30s` abbreviations.
 
 Before large UI reads, check `git status` / `git diff` — this repo often has in-progress work on `main`.

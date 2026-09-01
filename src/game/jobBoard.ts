@@ -210,7 +210,7 @@ export function jobBoardFilterOptions() {
 
 export function formatJobDurationSec(sec: number): string {
   if (sec >= 3600) return `${(sec / 3600).toFixed(1)}hr`;
-  if (sec >= 60) return `${Math.round(sec / 60)}min`;
+  if (sec >= 60) return `${Math.round(sec / 60)}m`;
   return `${sec}s`;
 }
 

@@ -52,6 +52,11 @@ export function MissionCrewPicker({
     onChange(next);
   }
 
+  function adjustUnitCount(unitId: UnitId, delta: number) {
+    const current = assignment[unitId] ?? 0;
+    setUnitCount(unitId, current + delta);
+  }
+
   function openRecruitment(unitId: UnitId) {
     dispatch({
       type: "SET_VIEW",
@@ -66,6 +71,7 @@ export function MissionCrewPicker({
         {units.map((unit) => {
           const available = roster[unit.id] ?? 0;
           const value = assignment[unit.id] ?? 0;
+          const controlsDisabled = disabled || available <= 0;
           return (
             <li
               key={unit.id}
@@ -80,20 +86,52 @@ export function MissionCrewPicker({
               >
                 {unit.name}
               </button>
-              <label className="mission-crew-unit-input">
+              <div
+                className="mission-crew-unit-controls"
+                role="group"
+                aria-label={`Assign ${unit.name}`}
+              >
+                <button
+                  type="button"
+                  className="mission-crew-step-btn"
+                  aria-label={`Decrease ${unit.name}`}
+                  disabled={controlsDisabled || value <= 0}
+                  onClick={() => adjustUnitCount(unit.id, -1)}
+                >
+                  −
+                </button>
                 <input
                   type="number"
+                  className="mission-crew-unit-count"
                   min={0}
                   max={available}
                   value={value}
-                  disabled={disabled || available <= 0}
-                  aria-label={`Assign ${unit.name}`}
+                  disabled={controlsDisabled}
+                  aria-label={`Assigned ${unit.name}`}
                   onChange={(e) =>
                     setUnitCount(unit.id, Number(e.target.value))
                   }
                 />
-                <span className="muted">/ {available}</span>
-              </label>
+                <button
+                  type="button"
+                  className="mission-crew-step-btn"
+                  aria-label={`Increase ${unit.name}`}
+                  disabled={controlsDisabled || value >= available}
+                  onClick={() => adjustUnitCount(unit.id, 1)}
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className="mission-crew-max-btn"
+                  aria-label={`Assign all available ${unit.name}`}
+                  disabled={controlsDisabled || value >= available}
+                  onClick={() => setUnitCount(unit.id, available)}
+                >
+                  Max
+                </button>
+                <span className="muted mission-crew-available">/ {available}</span>
+              </div>
             </li>
           );
         })}

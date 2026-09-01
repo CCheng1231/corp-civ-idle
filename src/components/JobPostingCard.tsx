@@ -45,7 +45,7 @@ function MetaTip<T extends string>({
   classFor,
 }: {
   tipId: string;
-  title: string;
+  title?: string;
   current: T;
   options: readonly T[];
   labelFor: (value: T) => string;
@@ -61,7 +61,7 @@ function MetaTip<T extends string>({
         {labelFor(current)}
       </span>
       <span id={tipId} className="job-info-tip-panel" role="tooltip">
-        <span className="job-info-tip-title">{title}</span>
+        {title ? <span className="job-info-tip-title">{title}</span> : null}
         {options.map((option) => (
           <span
             key={option}
@@ -104,7 +104,6 @@ export function JobPostingCard({
     assignment,
   );
   const disabled = engageLocked || Boolean(blockReason);
-  const online = state.onlineSession?.playMode === "online";
   const expiresIn = formatTimerRemaining(
     state,
     posting.expiresAt,
@@ -121,7 +120,6 @@ export function JobPostingCard({
     <article className="project-card job-posting-card">
       <header>
         <strong>{def.title}</strong>
-        {online ? <span className="job-shared-badge">Shared world</span> : null}
         <span>{BUSINESS_TYPE_LABELS[def.businessType]}</span>
         {showTower && (
           <span className="job-posting-tower muted">
@@ -139,7 +137,6 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Size</span>
           <MetaTip<JobSize>
             tipId={`job-size-tip-${posting.id}`}
-            title="Job size"
             current={def.size}
             options={JOB_SIZES}
             labelFor={(size) => JOB_SIZE_LABELS[size]}
@@ -158,7 +155,6 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Completion</span>
           <MetaTip<CompletionBand>
             tipId={`job-completion-tip-${posting.id}`}
-            title="Completion (shared job progress)"
             current={band}
             options={COMPLETION_BANDS}
             labelFor={completionBandLabel}
@@ -191,7 +187,7 @@ export function JobPostingCard({
       <div className="job-posting-engage">
         <button
           type="button"
-          className="btn primary"
+          className="btn primary job-posting-engage-btn"
           disabled={disabled}
           onClick={() =>
             dispatch({

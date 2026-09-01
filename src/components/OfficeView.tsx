@@ -15,6 +15,7 @@ import secretaryPortrait from "../assets/secretary.jpg";
 import { SecretaryBriefing } from "./SecretaryBriefing";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
+import { TaskForceStatusIcon } from "./TaskForceStatusIcon";
 
 const SECRETARY_PORTRAIT_SIZE_KEY = "corp-civ-idle-secretary-portrait-size";
 
@@ -33,51 +34,56 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
     <>
       <TabSiteHeader title="Secretary" state={state} dispatch={dispatch} />
       <section
-        className="secretary-task-forces-beside"
+        className="secretary-task-forces-beside tab-queue-section tab-compact-queue"
         aria-label={`Task forces ${active} of ${cap}`}
       >
-        <p className="secretary-task-forces-beside-row">
-          <span className="secretary-task-forces-label">Task forces</span>
-          <strong className="secretary-task-forces-value">
+        <div className="tab-queue-heading">
+          <h3>Task forces</h3>
+          <span className="tab-queue-count muted">
             {active}/{cap}
-          </strong>
-        </p>
+          </span>
+        </div>
         {state.jobEngagements.length > 0 ? (
-          <ul className="secretary-task-forces-beside-list">
-            {state.jobEngagements.map((engagement) => {
-              const def = jobDefinitionById(engagement.definitionId);
-              return (
-                <li
-                  key={engagement.id}
-                  className="secretary-task-forces-beside-item"
-                >
-                  <div className="secretary-task-forces-beside-item-main">
-                    <strong>{def.title}</strong>
-                    <span className="muted">
-                      {" "}
-                      · {totalAssigned(engagement.crewAssigned)} units
-                      {engagement.phase === "working"
-                        ? ` · $${formatNumber(engagement.earnedSoFar)}`
-                        : ""}{" "}
-                      · {engagementStatusLabel(state, engagement, now)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-compact secretary-task-forces-cancel"
-                    onClick={() =>
-                      dispatch({
-                        type: "CANCEL_JOB_ENGAGEMENT",
-                        engagementId: engagement.id,
-                      })
-                    }
+          <div className="build-queue-slot" data-max-slots={cap}>
+            <ul className="build-queue">
+              {state.jobEngagements.map((engagement) => {
+                const def = jobDefinitionById(engagement.definitionId);
+                const units = totalAssigned(engagement.crewAssigned);
+                const earned =
+                  engagement.phase === "working"
+                    ? ` · $${formatNumber(engagement.earnedSoFar)}`
+                    : "";
+                const status = engagementStatusLabel(state, engagement, now);
+                const tip = `${def.title} · ${units} unit${units === 1 ? "" : "s"}${earned} · ${status}`;
+                return (
+                  <li
+                    key={engagement.id}
+                    className="build-queue-row-with-cancel secretary-task-force-row"
+                    data-tip={tip}
+                    aria-label={tip}
                   >
-                    Cancel
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                    <TaskForceStatusIcon phase={engagement.phase} />
+                    <div className="secretary-task-force-row-body">
+                      <span className="queue-name">{def.title}</span>
+                      <span className="queue-status">{status}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="map-hex-job-send queue-cancel-btn"
+                      onClick={() =>
+                        dispatch({
+                          type: "CANCEL_JOB_ENGAGEMENT",
+                          engagementId: engagement.id,
+                        })
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ) : null}
       </section>
     </>

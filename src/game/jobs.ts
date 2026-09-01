@@ -891,14 +891,14 @@ export function validateEngagementAssignment(
   if (!posting || posting.status !== "open") return "Posting unavailable";
   const def = jobDefinitionById(posting.definitionId);
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) {
-    return `Requires ${def.requiredCategory} units tier ${def.minUnitTier}+`;
+    return "Not enough units";
   }
   if (state.selectedOffice === "all") {
     return "Pick an office";
   }
   const roster = state.contractorsByLocation[state.selectedOffice];
   if (!canAssignFromRoster(roster, crewAssigned)) {
-    return "Not enough units at selected office";
+    return "Not enough units";
   }
   return null;
 }

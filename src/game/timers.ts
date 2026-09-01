@@ -64,7 +64,7 @@ export function scheduleQueueJobTimer(
 /** Compact preview for structure cards (no seconds). */
 export function formatBuildTimeHours(hours: number): string {
   if (hours <= 0) return "—";
-  if (hours < 1) return `${Math.round(hours * 60)} min`;
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
   return `${formatNumber(Math.round(hours * 10) / 10)} hr`;
 }
 
@@ -74,7 +74,7 @@ export function formatQueueTimeMs(ms: number): string {
   const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
 
   if (totalSeconds < 60) {
-    return `${totalSeconds} sec`;
+    return `${totalSeconds}s`;
   }
 
   const hours = Math.floor(totalSeconds / 3600);
@@ -83,8 +83,8 @@ export function formatQueueTimeMs(ms: number): string {
   const parts: string[] = [];
 
   if (hours > 0) parts.push(`${hours} hr`);
-  if (minutes > 0) parts.push(`${minutes} min`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds} sec`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
 
   return parts.join(" ");
 }
@@ -95,12 +95,12 @@ export function formatQueueTimeCompactMs(ms: number): string {
   const totalMinutes = Math.max(1, Math.ceil(ms / 60000));
 
   if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
+    return `${totalMinutes}m`;
   }
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (minutes > 0) return `${hours} hr ${minutes} min`;
+  if (minutes > 0) return `${hours} hr ${minutes}m`;
   return `${hours} hr`;
 }
 

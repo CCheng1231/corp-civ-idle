@@ -16,7 +16,7 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
    - **Build** → `OperationsView.tsx`, `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
    - **Recruit** → `RecruitmentView.tsx`
    - **Research** → `ResearchView.tsx`
-   - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx` (embedded)
+   - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `JobPostingCard.tsx`, `MissionCrewPicker.tsx`, `TaskForceStatusIcon.tsx` (embedded job board)
    - Map hex drawer (commercial lots / branches) → `MapHexDrawer.tsx`, `mapHexInfo.ts`, `branchCommercial.ts`
 7. **Category open state** — `src/game/officeCategoryOpen.ts` (Build, Recruit, Research section collapse persists per office).
 8. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
@@ -97,9 +97,10 @@ Tier is a **badge on the card**, not the section header (recruitment).
 | `formatCompactBonus` | `upgradePreviewFormat.ts` | One-line bonus on collapsed maxed cards |
 | `structureUpgradeBlockerDisplay` | `OfficeStructurePanel.tsx` | Filters power + duplicate cost messages from blockers |
 | `SceneBanner` | `SceneBanner.tsx` | Category scene strip (Build, Recruit, Research) |
+| `TaskForceStatusIcon` | `TaskForceStatusIcon.tsx` | Traveling / on-site glyph for Secretary task-force rows |
 | Category open persist | `officeCategoryOpen.ts` | Per-office collapse for Build / Recruit / Research sections |
 
-Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `shortcut-home-hub`, `secretary-task-forces-beside`, `office-site-summary-banner`.
+Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `shortcut-home-hub`, `secretary-task-forces-beside`, `secretary-task-force-icon`, `job-board-detail-drawer`, `mission-crew-unit-controls`, `office-site-summary-banner`.
 
 Panel width: `.main-view-panel { max-width: 960px; }`.
 
@@ -139,10 +140,20 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 ### Secretary (`OfficeView.tsx`, `SecretaryBriefing.tsx`)
 
 - Nav and title **Secretary** (not Sec).
-- **Task forces** `active/cap` + compact active deployment list **below Office picker** (beside portrait).
+- **Task forces** `active/cap` + compact deployment list **below Office picker** (beside portrait).
+  - Two lines per row: job name · status (`engagementStatusLabel`); units/earnings in `data-tip` only.
+  - Left icon: `TaskForceStatusIcon` — traveling (animated) vs on-site (static); matches world-map task glyphs.
+  - Cancel uses shared `queue-cancel-btn` pattern.
 - **Reports** count in banner below portrait.
 - Job reports / Job board: compact tab pills; job board **Filters** is link text (`Filters` / `Hide filters`), not a pill button.
 - Embedded job board: no top border (`.job-board.job-board-embedded`); duplicate Task forces panel removed from Job reports tab.
+- **Filters (expanded):** 2-column grid; full width above list in Secretary (not a narrow side column).
+- **Posting drawer** (`JobBoard.tsx` → `JobPostingCard`): fit-content height (no dead space below Engage); compact type; **Larger** / **Smaller** bumps in-drawer font scale.
+  - Crew row: `MissionCrewPicker` with **−** / **+** / **Max** steppers (no heavy bordered box).
+  - Completion/size tooltips: no “shared job progress” title; pop **upward**; `overflow: visible` so drawer does not scroll for tips.
+  - Engage disabled copy: **Not enough units** (generic — not category-specific). Button stays short/compact.
+  - No “Shared world” badge on posting card.
+- Queue/countdown copy in drawer uses `5m` / `30s` (`formatQueueTimeMs`, `formatJobDurationSec`).
 
 ### Office map summary (`OfficeSiteSummary.tsx`)
 
@@ -184,6 +195,20 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 ---
 
 ## Recent session state (Aug 2026)
+
+### Aug 31 (evening) — Secretary task forces + job posting drawer
+
+- **Task forces:** Two-line compact rows; `TaskForceStatusIcon`; tooltip holds units/earnings; abbreviated queue times (`m` / `s`).
+- **Job board filters:** 2-column grid when expanded; Secretary uses full-width filter panel.
+- **Posting drawer:** Dense layout, crew −/+ / Max, fit-content popup, Larger text toggle, generic **Not enough units** engage blocker, upward tooltips.
+
+**Changelog:** `scripts/append-changelog-aug31-secretary-job-board.mjs` → **ChangeLog** tab.
+
+**Likely follow-ups:**
+
+- Playtest posting drawer on S24: Larger scale, tooltip position near bottom facts rows.
+- Task-force icon motion (`prefers-reduced-motion` already respected) — tune if too subtle.
+- Optional: click **Reports** count → Job reports tab.
 
 ### Aug 31 — Home hub nav + Build / Recruit / Research / Secretary tab UI
 
