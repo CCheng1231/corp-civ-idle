@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
@@ -12,13 +12,21 @@ import { WIN_NET_WORTH, formatNumber } from "./game/constants";
 import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
 import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
+import { useOnlineBrowserLease } from "./hooks/useOnlineBrowserLease";
 import { useOnlineWorld } from "./hooks/useOnlineWorld";
-import { readSession, writeSession } from "./multiplayer/session";
+import { ONLINE_KICKED_MESSAGE } from "./multiplayer/browserLease";
+import { clearSession, readSession, writeSession } from "./multiplayer/session";
 import type { OnlineSession } from "./multiplayer/types";
 import { PLAYER_LABELS, isOnlineSession } from "./multiplayer/types";
 import "./App.css";
 
-function GameShell({ session }: { session: OnlineSession }) {
+function GameShell({
+  session,
+  onKicked,
+}: {
+  session: OnlineSession;
+  onKicked: () => void;
+}) {
   const [state, dispatch] = useReducer(
     gameReducer,
     session,
@@ -29,6 +37,12 @@ function GameShell({ session }: { session: OnlineSession }) {
   const mobilePreview = viewportPreview === "mobile";
   const mobileNav = useMobileNavLayout(viewportPreview);
   const online = isOnlineSession(session);
+
+  useOnlineBrowserLease({
+    session,
+    enabled: online,
+    onKicked,
+  });
 
   useOnlineWorld({
     session,
@@ -123,6 +137,12 @@ function App() {
     readSession(),
   );
 
+  const handleKicked = useCallback(() => {
+    window.alert(ONLINE_KICKED_MESSAGE);
+    clearSession();
+    setSession(null);
+  }, []);
+
   function handleStart(next: OnlineSession) {
     writeSession(next);
     setSession(next);
@@ -132,7 +152,7 @@ function App() {
     return <AccountGate onStart={handleStart} />;
   }
 
-  return <GameShell session={session} />;
+  return <GameShell session={session} onKicked={handleKicked} />;
 }
 
 export default App;

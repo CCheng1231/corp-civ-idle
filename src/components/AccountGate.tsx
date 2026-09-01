@@ -71,7 +71,7 @@ export function AccountGate({ onStart }: AccountGateProps) {
           <p className="muted account-gate-hint">
             {playMode === "offline"
               ? "Single-player save on this device — separate from Online progress."
-              : "Shared job board and map with the other dev. Your company economy stays private."}
+              : "Shared job board and map with the other dev. Your company economy stays private. Only one browser tab per online account."}
           </p>
           {!firebaseReady ? (
             <p className="account-gate-warning" role="alert">
