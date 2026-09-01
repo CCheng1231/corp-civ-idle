@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode, type SyntheticEvent } from "react";
 
 interface ProgressionCategorySectionProps {
   title: string;
@@ -25,19 +25,22 @@ export function ProgressionCategorySection({
 }: ProgressionCategorySectionProps) {
   const allMaxed = totalCount > 0 && maxedCount === totalCount;
   const controlled = open !== undefined;
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const resolvedOpen = controlled ? open : internalOpen;
+
+  function handleToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    const nextOpen = event.currentTarget.open;
+    if (!controlled) {
+      setInternalOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  }
 
   return (
     <details
       className="progression-category-section research-type-section"
-      open={controlled ? open : undefined}
-      defaultOpen={controlled ? undefined : defaultOpen}
-      onToggle={
-        onOpenChange
-          ? (event) => {
-              onOpenChange(event.currentTarget.open);
-            }
-          : undefined
-      }
+      open={resolvedOpen}
+      onToggle={handleToggle}
     >
       <summary className="progression-category-summary research-type-heading">
         {title}
@@ -53,12 +56,10 @@ export function ProgressionCategorySection({
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
-          if (onOpenChange) {
-            onOpenChange(false);
-            return;
+          if (!controlled) {
+            setInternalOpen(false);
           }
-          const section = event.currentTarget.closest("details");
-          if (section) section.open = false;
+          onOpenChange?.(false);
         }}
       >
         {"<< Collapse"}
