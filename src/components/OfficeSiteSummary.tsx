@@ -22,8 +22,8 @@ interface OfficeSiteSummaryProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
-  /** inline = space/power; expansion = expand only; beside = capacity + expand for portrait column */
-  variant?: "full" | "inline" | "expansion" | "beside";
+  /** inline = space/power; expansion = expand only; beside = capacity + expand; banner = below portrait like Home net worth */
+  variant?: "full" | "inline" | "expansion" | "beside" | "banner";
 }
 
 export function OfficeSiteSummary({
@@ -79,20 +79,24 @@ export function OfficeSiteSummary({
     <div className="office-site-capacity-row">
       <div className="office-site-capacity-stat">
         <span className="office-site-capacity-label">Space</span>
-        <strong>
-          {formatNumber(loc.officeSpaceUsed)}/{formatNumber(loc.officeSpace)}
-        </strong>
-        <span className="office-site-capacity-free">
-          {formatNumber(freeSpace)} free
+        <span className="office-site-capacity-values">
+          <strong>
+            {formatNumber(loc.officeSpaceUsed)}/{formatNumber(loc.officeSpace)}
+          </strong>
+          <span className="office-site-capacity-free">
+            {formatNumber(freeSpace)} free
+          </span>
         </span>
       </div>
       <div className="office-site-capacity-stat">
         <span className="office-site-capacity-label">Power</span>
-        <strong>
-          {formatNumber(loc.powerUsed)}/{formatNumber(loc.power)}
-        </strong>
-        <span className="office-site-capacity-free">
-          {formatNumber(powerAvailable(loc))} free
+        <span className="office-site-capacity-values">
+          <strong>
+            {formatNumber(loc.powerUsed)}/{formatNumber(loc.power)}
+          </strong>
+          <span className="office-site-capacity-free">
+            {formatNumber(powerAvailable(loc))} free
+          </span>
         </span>
       </div>
     </div>
@@ -101,7 +105,7 @@ export function OfficeSiteSummary({
   const expansionBesideRow = (
     <div className="office-site-expand-beside">
       <div className="office-expand-meta">
-        <span className="office-expand-meta-label">Expand</span>
+        <span className="office-expand-meta-label">Office expand</span>
         {expansionMaxed ? (
           <span className="muted">Maxed</span>
         ) : (
@@ -120,7 +124,7 @@ export function OfficeSiteSummary({
       {!expansionMaxed && (
         <button
           type="button"
-          className="btn btn-compact office-expand-btn-mini"
+          className="map-hex-job-send office-expand-btn-mini"
           disabled={!canExpand}
           title={expansionBlockerMessage ?? undefined}
           onClick={() =>
@@ -152,11 +156,13 @@ export function OfficeSiteSummary({
               ))}
             </span>
           ) : (
-            "Expand"
+            "Office expand"
           )}
         </button>
       )}
-      {expansionBlockerMessage && !expansionMaxed && (
+      {expansionBlockerMessage &&
+        !expansionMaxed &&
+        variant !== "banner" && (
         <span className="muted office-site-expand-blocker">
           {expansionBlockerMessage}
         </span>
@@ -227,6 +233,18 @@ export function OfficeSiteSummary({
   if (variant === "beside") {
     return (
       <div className="office-site-summary office-site-summary-beside">
+        {capacityRow}
+        {expansionBesideRow}
+      </div>
+    );
+  }
+
+  if (variant === "banner") {
+    return (
+      <div
+        className="office-site-summary office-site-summary-banner"
+        aria-label="Office space, power, and expansion"
+      >
         {capacityRow}
         {expansionBesideRow}
       </div>

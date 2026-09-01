@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import {
   RESEARCH,
   RESEARCH_CATEGORY_LABELS,
@@ -30,7 +30,15 @@ import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
 import researchPortrait from "../assets/Research.webp";
+import researchResourceArt from "../assets/Research_ResourceEfficiency.jpg";
+import researchPayoutsArt from "../assets/Research_ProjectPayouts.jpg";
+import researchDiscoverArt from "../assets/Research_DiscoverStructures.jpg";
+import researchOperationsArt from "../assets/Research_Operations.webp";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
+import {
+  getResearchCategoryOpen,
+  setResearchCategoryOpen,
+} from "../game/officeCategoryOpen";
 import {
   isAllOfficesSelected,
   resolveOfficeLocation,
@@ -42,11 +50,13 @@ import {
   ProgressionMaxedCard,
   ProgressionNameButton,
 } from "./progressionUi";
+import { SceneBanner } from "./SceneBanner";
 import { ResearchQueueList } from "./StructureBuildQueueList";
 import type {
   GameAction,
   GameState,
   OfficeLocationId,
+  ResearchCategory,
   ResearchDefinition,
 } from "../game/types";
 
@@ -54,6 +64,28 @@ interface ResearchViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
 }
+
+const RESEARCH_CATEGORY_SCENE: Record<
+  ResearchCategory,
+  { src: string; storageKey: string }
+> = {
+  resources: {
+    src: researchResourceArt,
+    storageKey: "corp-civ-idle-research-resources-art-pan",
+  },
+  mult: {
+    src: researchPayoutsArt,
+    storageKey: "corp-civ-idle-research-mult-art-pan",
+  },
+  discover: {
+    src: researchDiscoverArt,
+    storageKey: "corp-civ-idle-research-discover-art-pan",
+  },
+  unlock: {
+    src: researchOperationsArt,
+    storageKey: "corp-civ-idle-research-unlock-art-pan",
+  },
+};
 
 function isResearchCompleted(
   state: GameState,
@@ -74,11 +106,31 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   const [detailResearch, setDetailResearch] = useState<ResearchDefinition | null>(
     null,
   );
+  const [categoryOpen, setCategoryOpen] = useState<
+    Partial<Record<ResearchCategory, boolean>>
+  >(() => {
+    const seeded: Partial<Record<ResearchCategory, boolean>> = {};
+    for (const category of RESEARCH_CATEGORY_ORDER) {
+      const remembered = getResearchCategoryOpen(office, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    return seeded;
+  });
   const portraitStorageKey = "corp-civ-idle-research-portrait-size";
   const researchCompletedCount = RESEARCH.filter((research) =>
     isResearchCompleted(state, research),
   ).length;
   const researchTotalCount = RESEARCH.length;
+  const progressLabel = `${researchCompletedCount}/${researchTotalCount} completed`;
+
+  useEffect(() => {
+    const seeded: Partial<Record<ResearchCategory, boolean>> = {};
+    for (const category of RESEARCH_CATEGORY_ORDER) {
+      const remembered = getResearchCategoryOpen(office, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    setCategoryOpen(seeded);
+  }, [office]);
 
   function openResearchDetail(research: ResearchDefinition) {
     setDetailResearch(research);
@@ -252,7 +304,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
 
   const researchBesidePortrait = (
     <>
-      <TabSiteHeader title="R&D" state={state} dispatch={dispatch} />
+      <TabSiteHeader title="Research" state={state} dispatch={dispatch} />
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = researchJobsAtOffice(state, siteId);
@@ -277,7 +329,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
                 dispatch={dispatch}
                 now={now}
                 compact
-                emptyLabel="No research queued."
+                emptyLabel=""
               />
             </section>
           );
@@ -310,25 +362,22 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             dispatch={dispatch}
             now={now}
             compact
-            emptyLabel="No research queued."
+            emptyLabel=""
           />
         </section>
       )}
-      <p
-        className="research-progress-beside"
-        aria-label={`${researchCompletedCount} of ${researchTotalCount} research completed`}
-      >
-        <span className="research-progress-beside-label">Firm-wide</span>
-        <strong className="research-progress-beside-count">
-          {researchCompletedCount}/{researchTotalCount}
-        </strong>
-        <span className="research-progress-beside-suffix">completed</span>
-      </p>
     </>
   );
 
   const researchBelowPortrait = (
     <>
+      <div
+        className="research-progress-banner"
+        aria-label={`Firm-wide ${progressLabel}`}
+      >
+        <span className="research-progress-label">Firm-wide</span>
+        <span className="research-progress-value">{progressLabel}</span>
+      </div>
       {RESEARCH_CATEGORY_ORDER.map((category) => {
         const items = RESEARCH.filter(
           (research) => research.category === category,
@@ -341,19 +390,32 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         const maxedCount = items.filter((research) =>
           isResearchCompleted(state, research),
         ).length;
-        const defaultOpen = items.some(
+        const fallbackOpen = items.some(
           (research) =>
             !isResearchCompleted(state, research) ||
             isResearchQueued(state, research.id),
         );
+        const open = categoryOpen[category] ?? fallbackOpen;
 
         return (
           <ProgressionCategorySection
             key={category}
             title={RESEARCH_CATEGORY_LABELS[category]}
-            defaultOpen={defaultOpen}
+            defaultOpen={fallbackOpen}
+            open={open}
+            onOpenChange={(next) => {
+              if (next === open) return;
+              setResearchCategoryOpen(office, category, next);
+              setCategoryOpen((prev) => ({ ...prev, [category]: next }));
+            }}
             maxedCount={maxedCount}
             totalCount={items.length}
+            banner={
+              <SceneBanner
+                src={RESEARCH_CATEGORY_SCENE[category].src}
+                storageKey={RESEARCH_CATEGORY_SCENE[category].storageKey}
+              />
+            }
           >
             <ul className="structure-list progression-grid">
               {items.map(renderResearchCard)}

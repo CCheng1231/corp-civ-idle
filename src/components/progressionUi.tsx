@@ -4,6 +4,9 @@ interface ProgressionCategorySectionProps {
   title: string;
   /** Open when any item still needs attention. */
   defaultOpen: boolean;
+  /** When set, the section is controlled (survives remount via parent state). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   maxedCount: number;
   totalCount: number;
   banner?: ReactNode;
@@ -13,17 +16,28 @@ interface ProgressionCategorySectionProps {
 export function ProgressionCategorySection({
   title,
   defaultOpen,
+  open,
+  onOpenChange,
   maxedCount,
   totalCount,
   banner,
   children,
 }: ProgressionCategorySectionProps) {
   const allMaxed = totalCount > 0 && maxedCount === totalCount;
+  const controlled = open !== undefined;
 
   return (
     <details
       className="progression-category-section research-type-section"
-      open={defaultOpen}
+      open={controlled ? open : undefined}
+      defaultOpen={controlled ? undefined : defaultOpen}
+      onToggle={
+        onOpenChange
+          ? (event) => {
+              onOpenChange(event.currentTarget.open);
+            }
+          : undefined
+      }
     >
       <summary className="progression-category-summary research-type-heading">
         {title}
@@ -33,6 +47,22 @@ export function ProgressionCategorySection({
       </summary>
       {banner}
       {children}
+      <button
+        type="button"
+        className="office-collapse-all"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (onOpenChange) {
+            onOpenChange(false);
+            return;
+          }
+          const section = event.currentTarget.closest("details");
+          if (section) section.open = false;
+        }}
+      >
+        {"<< Collapse"}
+      </button>
     </details>
   );
 }

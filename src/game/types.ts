@@ -65,7 +65,7 @@ export interface StructureDefinition {
   id: StructureId;
   name: string;
   description: string;
-  /** Office tab section — grouped by role, not research gate. */
+  /** Build tab section — grouped by role, not research gate. */
   category: StructureCategory;
   maxLevel: number;
   baseCost: ResourceCost;
@@ -476,7 +476,7 @@ export interface GameState {
   recruitFocusUnitId?: UnitId | null;
   /** Scroll/highlight target on Notes & logbook; stripped from saves. */
   logbookHighlightEntryId?: string | null;
-  /** Scroll/highlight target on Sec job board; stripped from saves. */
+  /** Scroll/highlight target on Secretary job board; stripped from saves. */
   jobFocusPostingId?: string | null;
   /** Active Tim/Chris session — not persisted in offline blob. */
   onlineSession?: OnlineSession | null;

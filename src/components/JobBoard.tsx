@@ -391,13 +391,13 @@ export function JobBoard({ state, dispatch, embedded = false }: JobBoardProps) {
             <div className="job-board-toolbar-start">
               <button
                 type="button"
-                className={`tab job-board-filters-toggle${filtersExpanded ? " active" : ""}`}
+                className={`btn linkish job-board-filters-toggle${filtersExpanded ? " job-board-filters-toggle-open" : ""}`}
                 aria-expanded={filtersExpanded}
                 aria-controls="job-board-filters-body"
                 onClick={() => setFiltersExpanded((open) => !open)}
               >
-                Filters
-                {activeFilterCount > 0 && filtersExpanded ? (
+                {filtersExpanded ? "Hide filters" : "Filters"}
+                {activeFilterCount > 0 && !filtersExpanded ? (
                   <span className="job-board-filter-badge">{activeFilterCount}</span>
                 ) : null}
               </button>

@@ -1,17 +1,10 @@
 import { useState, useEffect, type Dispatch } from "react";
-import { formatNumber } from "../game/constants";
-import {
-  engagementStatusLabel,
-  jobDefinitionById,
-} from "../game/jobs";
 import {
   jobReportBrief,
   jobReportHeadline,
   pendingJobReports,
   secretaryTips,
-  secretaryJobSummary,
 } from "../game/secretaryBriefing";
-import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
 import { JobBoard } from "./JobBoard";
 
@@ -36,9 +29,7 @@ interface SecretaryBriefingProps {
 
 export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
   const tips = secretaryTips(state);
-  const { active, cap } = secretaryJobSummary(state);
   const jobReports = pendingJobReports(state);
-  const now = Date.now();
   const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialWorkTab);
 
   useEffect(() => {
@@ -173,68 +164,6 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
                 No new reports — completed and withdrawn jobs will show here.
               </p>
             )}
-          </section>
-
-          <section className="secretary-panel secretary-jobs-panel">
-            <header className="secretary-panel-head">
-              <h3>Task forces</h3>
-              <span className="secretary-jobs-cap">
-                {active}/{cap}
-              </span>
-            </header>
-            <div className="secretary-panel-body">
-              {active === 0 ? (
-                <p className="muted secretary-panel-lead">
-                  No task forces deployed — pick a posting on the job board tab.
-                </p>
-              ) : (
-                <p className="muted secretary-panel-lead">
-                  {active} task force{active === 1 ? "" : "s"} in the field.
-                </p>
-              )}
-              <div
-                className="secretary-panel-extra"
-                aria-label="Active task forces"
-              >
-                {state.jobEngagements.length > 0 ? (
-                  <ul className="secretary-active-jobs">
-                    {state.jobEngagements.map((engagement) => {
-                      const def = jobDefinitionById(engagement.definitionId);
-                      return (
-                        <li
-                          key={engagement.id}
-                          className="secretary-active-job-row"
-                        >
-                          <div>
-                            <strong>{def.title}</strong>
-                            <span className="muted">
-                              {" "}
-                              · {totalAssigned(engagement.crewAssigned)} units
-                              {engagement.phase === "working"
-                                ? ` · $${formatNumber(engagement.earnedSoFar)}`
-                                : ""}{" "}
-                              · {engagementStatusLabel(state, engagement, now)}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-compact"
-                            onClick={() =>
-                              dispatch({
-                                type: "CANCEL_JOB_ENGAGEMENT",
-                                engagementId: engagement.id,
-                              })
-                            }
-                          >
-                            Cancel
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : null}
-              </div>
-            </div>
           </section>
 
           <section className="secretary-panel secretary-tips-panel">

@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type ReactNode } from "react";
+import { useEffect, useState, type Dispatch, type ReactNode } from "react";
 import {
   structurePanelStructures,
   STRUCTURE_CATEGORY_LABELS,
@@ -38,6 +38,10 @@ import {
 import { SceneBanner } from "./SceneBanner";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
+import {
+  getOfficeCategoryOpen,
+  setOfficeCategoryOpen,
+} from "../game/officeCategoryOpen";
 import {
   formatPreviewDelta,
   formatPreviewText,
@@ -245,6 +249,25 @@ export function OfficeStructurePanel({
   } | null>(null);
   const [detailStructure, setDetailStructure] =
     useState<StructureDefinition | null>(null);
+  const [categoryOpen, setCategoryOpen] = useState<
+    Partial<Record<StructureCategory, boolean>>
+  >(() => {
+    const seeded: Partial<Record<StructureCategory, boolean>> = {};
+    for (const category of STRUCTURE_CATEGORY_ORDER) {
+      const remembered = getOfficeCategoryOpen(officeId, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    return seeded;
+  });
+
+  useEffect(() => {
+    const seeded: Partial<Record<StructureCategory, boolean>> = {};
+    for (const category of STRUCTURE_CATEGORY_ORDER) {
+      const remembered = getOfficeCategoryOpen(officeId, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    setCategoryOpen(seeded);
+  }, [officeId]);
 
   function openStructureDetail(structure: StructureDefinition) {
     setDetailStructure(structure);
@@ -507,17 +530,25 @@ export function OfficeStructurePanel({
         const maxedCount = items.filter((structure) =>
           isStructureCompletedAtSite(state, officeId, structure),
         ).length;
-        const defaultOpen = items.some(
+        const fallbackOpen = items.some(
           (structure) =>
             !isStructureCompletedAtSite(state, officeId, structure) ||
             isStructureQueuedAt(state, officeId, structure.id),
         );
+        const remembered = categoryOpen[category];
+        const open = remembered ?? fallbackOpen;
 
         return (
           <ProgressionCategorySection
             key={category}
             title={STRUCTURE_CATEGORY_LABELS[category]}
-            defaultOpen={defaultOpen}
+            defaultOpen={fallbackOpen}
+            open={open}
+            onOpenChange={(next) => {
+              if (next === open) return;
+              setOfficeCategoryOpen(officeId, category, next);
+              setCategoryOpen((prev) => ({ ...prev, [category]: next }));
+            }}
             maxedCount={maxedCount}
             totalCount={items.length}
             banner={

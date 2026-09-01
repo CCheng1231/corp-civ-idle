@@ -115,6 +115,7 @@ function QueueRow({
   onCancel,
   compact = false,
 }: QueueRowProps) {
+  const fullName = siteLabel ? `${siteLabel} · ${name}` : name;
   return (
     <li
       className={
@@ -126,6 +127,8 @@ function QueueRow({
             ? "build-queue-row-compact"
             : undefined
       }
+      data-tip={compact ? fullName : undefined}
+      aria-label={compact ? fullName : undefined}
     >
       {!compact && <span className="queue-role">{role}</span>}
       <span className="queue-name">
@@ -146,7 +149,9 @@ function QueueRow({
       {onCancel && (
         <button
           type="button"
-          className="btn btn-compact queue-cancel-btn"
+          className={
+            compact ? "map-hex-job-send queue-cancel-btn" : "btn btn-compact queue-cancel-btn"
+          }
           onClick={onCancel}
         >
           Cancel

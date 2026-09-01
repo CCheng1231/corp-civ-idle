@@ -271,7 +271,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "discover_video_studio",
     "name": "Discover: Video production studio",
-    "description": "Scout a site plan for a video studio — adds the build to your Office tab.",
+    "description": "Scout a site plan for a video studio — unlocks it on the Build tab.",
     "category": "discover",
     "maxLevel": 1,
     "rndLevelRequired": 1,
@@ -294,7 +294,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "discover_press_room",
     "name": "Discover: Press Room",
-    "description": "Scout a site plan for a press room — adds the build to your Office tab.",
+    "description": "Scout a site plan for a press room — unlocks it on the Build tab.",
     "category": "discover",
     "maxLevel": 1,
     "rndLevelRequired": 1,
@@ -317,7 +317,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "discover_company_statue",
     "name": "Discover: Company Statue",
-    "description": "Scout a site plan for a company statue — adds the build to your Office tab.",
+    "description": "Scout a site plan for a company statue — unlocks it on the Build tab.",
     "category": "discover",
     "maxLevel": 1,
     "rndLevelRequired": 1,
@@ -340,7 +340,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "discover_electricity_generator",
     "name": "Discover: Electricity Generator",
-    "description": "Scout a site plan for a an electricity generator — adds the build to your Office tab.",
+    "description": "Scout a site plan for an electricity generator — unlocks it on the Build tab.",
     "category": "discover",
     "maxLevel": 1,
     "rndLevelRequired": 2,
@@ -363,7 +363,7 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
   {
     "id": "discover_mit_room",
     "name": "Discover: MIT (Management in training) room",
-    "description": "Scout a site plan for a management training room — adds the build to your Office tab.",
+    "description": "Scout a site plan for a management training room — unlocks it on the Build tab.",
     "category": "discover",
     "maxLevel": 1,
     "rndLevelRequired": 2,

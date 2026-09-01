@@ -112,12 +112,12 @@ interface TabPortraitLayoutProps {
   /** Right column scrolls; portrait stays visible (Home tab). */
   portraitLocked?: boolean;
   /**
-   * Office tab: compact = frozen portrait lock; large = stretch + parallax like Hire.
+   * Build tab: compact = frozen portrait lock; large = stretch + parallax like Hire.
    */
   largePortraitLikeHire?: boolean;
-  /** Office tab: drag to pan portrait; persists offset; default = centered crop. */
+  /** Build tab: drag to pan portrait; persists offset; default = centered crop. */
   portraitPanStorageKey?: string;
-  /** When false, portrait stays fixed size (Home, Office tab shell). */
+  /** When false, portrait stays fixed size (Home, Build tab shell). */
   allowPortraitResize?: boolean;
   children: ReactNode;
 }

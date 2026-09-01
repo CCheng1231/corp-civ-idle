@@ -226,7 +226,8 @@ function playerDescription(id, name, maxLevel, effects) {
     const short =
       structureNames[effects.unlocksStructure] ??
       name.replace(/^Discover:\s*/i, "").toLowerCase();
-    return `Scout a site plan for a ${short} — adds the build to your Office tab.`;
+    const article = /^an?\s/i.test(short) ? "" : "a ";
+    return `Scout a site plan for ${article}${short} — unlocks it on the Build tab.`;
   }
 
   return name;

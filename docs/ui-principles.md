@@ -12,12 +12,15 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
 4. **`.cursor/rules/world-map-viewport.mdc`** — when changing world map layout, bounds, pan/zoom, or Home.
 5. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
 6. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
-   - Research → `ResearchView.tsx`
-   - Structures → `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
-   - Recruitment → `RecruitmentView.tsx`
+   - **Home hub nav** → `ShortcutSidebar.tsx` (`HOME_HUB_ITEMS`, `.shortcut-home-hub-*`)
+   - **Build** → `OperationsView.tsx`, `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
+   - **Recruit** → `RecruitmentView.tsx`
+   - **Research** → `ResearchView.tsx`
+   - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx` (embedded)
    - Map hex drawer (commercial lots / branches) → `MapHexDrawer.tsx`, `mapHexInfo.ts`, `branchCommercial.ts`
-7. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
-8. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
+7. **Category open state** — `src/game/officeCategoryOpen.ts` (Build, Recruit, Research section collapse persists per office).
+8. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
+9. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
 
 Optional if touching balance copy or unlocks: `scripts/build-research-data.mjs`, `scripts/build-structure-balance.mjs` (sheet placeholders stay here, not in player copy).
 
@@ -93,8 +96,10 @@ Tier is a **badge on the card**, not the section header (recruitment).
 | `BranchOpeningCostLine` | `MapHexDrawer.tsx` | `Cost:` neutral + green/red resource amount (like StructureCostLine, both label + amount colored) |
 | `formatCompactBonus` | `upgradePreviewFormat.ts` | One-line bonus on collapsed maxed cards |
 | `structureUpgradeBlockerDisplay` | `OfficeStructurePanel.tsx` | Filters power + duplicate cost messages from blockers |
+| `SceneBanner` | `SceneBanner.tsx` | Category scene strip (Build, Recruit, Research) |
+| Category open persist | `officeCategoryOpen.ts` | Per-office collapse for Build / Recruit / Research sections |
 
-Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`.
+Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `shortcut-home-hub`, `secretary-task-forces-beside`, `office-site-summary-banner`.
 
 Panel width: `.main-view-panel { max-width: 960px; }`.
 
@@ -109,19 +114,35 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 - In queue: show **In progress**, not “Maxed” (use **built** level for maxed check, not projected queue level).
 - “Hide completed” checkbox in queue header.
 
-### Structures (`OfficeStructurePanel.tsx`)
+### Structures / Build tab (`OperationsView.tsx`, `OfficeStructurePanel.tsx`)
 
-- Grouped by `STRUCTURE_CATEGORY_ORDER`.
+- Nav label **Build**; page title **Building**.
+- Grouped by `STRUCTURE_CATEGORY_ORDER` with `SceneBanner` per category; collapse persisted via `officeCategoryOpen.ts`.
+- Space / power / office expand in **banner below portrait** (`OfficeSiteSummary` `variant="banner"`), not beside queue.
 - Discover-gated structures (`isStructureUnlocked`) show locked state; unlock requirement from `structureUnlockRequirementLabel`.
 - Sell uses `ConfirmDialog` (50% refund). `structureUpgradeBlockerDisplay` strips redundant power/cost blockers.
 - “Hide maxed” in queue header. Same in-progress vs maxed fix as research.
 
 ### Recruitment (`RecruitmentView.tsx`)
 
-- Grouped by contractor **category** (farming, defense, intel, support, special).
+- Grouped by contractor **category** (farming, defense, intel, support, special) with scene banners + collapsible sections.
+- **Unit breakdown** below portrait (clickable count → office roster list).
 - Collapsible roster: `Staff at {office} · N units` (`recruitment-roster-details`).
 - Hire row: inline cost, time, qty, queue button — no stacked “Cost” heading block.
 - `branch_manager` locked until Branch Management research ≥ 1.
+
+### Research (`ResearchView.tsx`)
+
+- Grouped by `RESEARCH_CATEGORY_ORDER` with scene banners; firm-wide **completed** count in banner below portrait.
+- Same collapse / maxed / queue patterns as Build.
+
+### Secretary (`OfficeView.tsx`, `SecretaryBriefing.tsx`)
+
+- Nav and title **Secretary** (not Sec).
+- **Task forces** `active/cap` + compact active deployment list **below Office picker** (beside portrait).
+- **Reports** count in banner below portrait.
+- Job reports / Job board: compact tab pills; job board **Filters** is link text (`Filters` / `Hide filters`), not a pill button.
+- Embedded job board: no top border (`.job-board.job-board-embedded`); duplicate Task forces panel removed from Job reports tab.
 
 ### Office map summary (`OfficeSiteSummary.tsx`)
 
@@ -142,10 +163,11 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 - Pad costs / catalog: `src/game/branchCommercial.ts` (`BRANCH_PAD_CATALOG`: cash 2000/4000/6000; `officeSpaceRange` / `expansionCapRange` for future per-lot variation; 0–4 pads via `MAX_BRANCH_PADS_PER_LOT`).
 - Multi-branch engine: `branchSites[]`, office id `branch:${commercialLotId}:${slotIndex}` — see `branchSites.ts`, `mapWorld.ts`, `save.ts` migration.
 
-### Top chrome (`ResourceBar.tsx`, `App.tsx`)
+### Top chrome (`ResourceBar.tsx`, `App.tsx`, `ShortcutSidebar.tsx`)
 
 - Resource bar brand is **CC · Corp Civ Idle** only (no Online / player badges — more chip room).
 - Online connection line on **second bar**: `{Player} · Online {status}` (e.g. Tim · Online connected).
+- **Bottom nav (mobile):** World · **Home** · Secretary · Log · Set. **Home** single-tap opens flyout: Build, Recruit, R&D; tap Home again → HQ overview. CSS: `.shortcut-home-hub-*`, overflow visible when open.
 
 ---
 
@@ -162,6 +184,22 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 ---
 
 ## Recent session state (Aug 2026)
+
+### Aug 31 — Home hub nav + Build / Recruit / Research / Secretary tab UI
+
+- **Home hub:** Build, Recruit, R&D removed from bottom nav; accessed via **Home** flyout (`ShortcutSidebar.tsx`). Touch/overflow fixes for mobile.
+- **Build:** Page title **Building**; space/power/expand banner below portrait; category scene banners + persisted collapse.
+- **Recruit:** Unit count banner (clickable roster); category banners (`Recruit_*.png/jpg/webp`); compact hire queue.
+- **Research:** Firm-wide progress banner; category banners including `Research_Operations.webp`.
+- **Secretary:** Renamed from Sec; task forces under Office picker with live deployment list; Reports below portrait; compact job tabs; Filters as link text.
+
+**Changelog:** `scripts/append-changelog-aug31-tab-ui-home-hub.mjs` → **ChangeLog** tab.
+
+**Likely follow-ups:**
+
+- Home flyout: optional **Overview** row at top of menu; verify long nav label **Secretary** on narrow devices.
+- Secretary: make Reports count clickable (open Job reports tab?) if desired.
+- Tune category banner heights / font sizes on S24 after playtesting all four tabs.
 
 ### Aug 31 — commercial branch pads + map drawer + top bar
 

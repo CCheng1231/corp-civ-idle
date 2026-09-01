@@ -21,7 +21,7 @@ interface OperationsViewProps {
   dispatch: Dispatch<GameAction>;
 }
 
-/** Nav: Office — structure upgrades per HQ/Branch. */
+/** Nav: Build — structure upgrades per HQ/Branch. */
 export function OperationsView({ state, dispatch }: OperationsViewProps) {
   const showAll = isAllOfficesSelected(state.selectedOffice);
   const officeId: OfficeLocationId = resolveOfficeLocation(state);
@@ -32,7 +32,7 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
 
   const officeBesidePortrait = (
     <>
-      <TabSiteHeader title="Office" state={state} dispatch={dispatch} />
+      <TabSiteHeader title="Building" state={state} dispatch={dispatch} />
       {showAll ? (
         <section className="location-view-section tab-queue-section tab-compact-queue">
           <div className="tab-queue-heading">
@@ -49,22 +49,14 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           />
         </section>
       ) : (
-        <>
-          <OfficeBuildQueueSection
-            state={state}
-            dispatch={dispatch}
-            officeId={officeId}
-            compact
-            hideCompleted={hideCompleted}
-            onHideCompletedChange={setHideCompleted}
-          />
-          <OfficeSiteSummary
-            state={state}
-            dispatch={dispatch}
-            officeId={officeId}
-            variant="beside"
-          />
-        </>
+        <OfficeBuildQueueSection
+          state={state}
+          dispatch={dispatch}
+          officeId={officeId}
+          compact
+          hideCompleted={hideCompleted}
+          onHideCompletedChange={setHideCompleted}
+        />
       )}
     </>
   );
@@ -85,6 +77,14 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           {officeBesidePortrait}
         </TabPortraitLayout>
         <div className="tab-below-portrait">
+          {!showAll ? (
+            <OfficeSiteSummary
+              state={state}
+              dispatch={dispatch}
+              officeId={officeId}
+              variant="banner"
+            />
+          ) : null}
           <LocationSitePanel
             state={state}
             dispatch={dispatch}

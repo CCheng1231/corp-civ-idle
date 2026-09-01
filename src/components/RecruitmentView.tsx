@@ -3,8 +3,6 @@ import {
   MAX_RECRUIT_BATCH,
   MAX_RECRUIT_QUEUE,
   canAffordAtOffice,
-  countInCategory,
-  formatNumber,
   isRecruitmentQueueFull,
   recruitBatchCost,
   recruitmentJobsAtOffice,
@@ -17,12 +15,23 @@ import type { RecruitmentUnitDefinition } from "../game/recruitmentData";
 import type { ContractorCategoryId } from "../game/types";
 import { formatQueueTimeHours } from "../game/timers";
 import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
+import {
+  getRecruitCategoryOpen,
+  setRecruitCategoryOpen,
+} from "../game/officeCategoryOpen";
 import { RecruitmentQueueList } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { tabQuote } from "../game/tabQuotes";
+import { SceneBanner } from "./SceneBanner";
+import { ProgressionCategorySection } from "./progressionUi";
 import recruitmentPortrait from "../assets/Recruitment.png";
+import recruitFarmingArt from "../assets/Recruit_resource.png";
+import recruitDefenseArt from "../assets/Recruit_defend.jpg";
+import recruitIntelArt from "../assets/Recruit_Intel.png";
+import recruitSupportArt from "../assets/Recruit_Support.png";
+import recruitSpecialArt from "../assets/Recruit_Special.webp";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
   isAllOfficesSelected,
@@ -52,25 +61,31 @@ const CATEGORY_LABELS: Record<ContractorCategoryId, string> = {
   special: "Special",
 };
 
-const CATEGORY_SHORT: Record<ContractorCategoryId, string> = {
-  farming: "Farm",
-  defense: "Def",
-  intel: "Intel",
-  support: "Sup",
-  special: "Spec",
+const RECRUIT_CATEGORY_SCENE: Record<
+  ContractorCategoryId,
+  { src: string; storageKey: string }
+> = {
+  farming: {
+    src: recruitFarmingArt,
+    storageKey: "corp-civ-idle-recruit-farming-art-pan",
+  },
+  defense: {
+    src: recruitDefenseArt,
+    storageKey: "corp-civ-idle-recruit-defense-art-pan",
+  },
+  intel: {
+    src: recruitIntelArt,
+    storageKey: "corp-civ-idle-recruit-intel-art-pan",
+  },
+  support: {
+    src: recruitSupportArt,
+    storageKey: "corp-civ-idle-recruit-support-art-pan",
+  },
+  special: {
+    src: recruitSpecialArt,
+    storageKey: "corp-civ-idle-recruit-special-art-pan",
+  },
 };
-
-function officeStaffCategorySummary(
-  roster: ReturnType<typeof rosterAt>,
-): string {
-  const parts = RECRUITMENT_CATEGORY_ORDER.filter(
-    (category) => countInCategory(roster, category) > 0,
-  ).map(
-    (category) =>
-      `${CATEGORY_SHORT[category]} ${countInCategory(roster, category)}`,
-  );
-  return parts.length > 0 ? parts.join(" · ") : "No units at this site yet";
-}
 
 function isRecruitmentUnitLocked(
   state: GameState,
@@ -95,18 +110,19 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const [counts, setCounts] = useState<Partial<Record<UnitId, number>>>({});
   const [rosterOpen, setRosterOpen] = useState(false);
   const [hideLocked, setHideLocked] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState<
+    Partial<Record<ContractorCategoryId, boolean>>
+  >(() => {
+    const seeded: Partial<Record<ContractorCategoryId, boolean>> = {};
+    for (const category of RECRUITMENT_CATEGORY_ORDER) {
+      const remembered = getRecruitCategoryOpen(officeId, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    return seeded;
+  });
   const hireQueueCount = showAll
     ? recruitmentJobsForOffices(state).length
     : recruitmentJobsAtOffice(state, officeId).length;
-  const pendingHires = showAll
-    ? recruitmentJobsForOffices(state).reduce(
-        (sum, entry) => sum + (entry.job.count ?? 1),
-        0,
-      )
-    : recruitmentJobsAtOffice(state, officeId).reduce(
-        (sum, job) => sum + (job.count ?? 1),
-        0,
-      );
   const queueFull = actionsLocked
     ? true
     : isRecruitmentQueueFull(state, officeId);
@@ -114,18 +130,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const staffTotal = showAll
     ? totalStaffAcrossOffices(state)
     : totalWorkforce(roster);
-  const staffCategorySummary = showAll
-    ? ownedOfficeIds(state)
-        .map((siteId) => {
-          const siteRoster = rosterAt(state, siteId);
-          const summary = officeStaffCategorySummary(siteRoster);
-          return summary === "No units at this site yet"
-            ? null
-            : `${officeDisplayName(state, siteId)}: ${summary}`;
-        })
-        .filter(Boolean)
-        .join(" · ") || "No units across offices yet"
-    : officeStaffCategorySummary(roster);
+  const unitCount = Math.round(staffTotal);
+  const unitCountLabel = `${unitCount} ${unitCount === 1 ? "unit" : "units"}`;
   const focusUnitId = state.recruitFocusUnitId ?? null;
   const portraitStorageKey = "corp-civ-idle-recruitment-portrait-size";
 
@@ -144,6 +150,15 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     }, 2500);
     return () => window.clearTimeout(clearId);
   }, [focusUnitId, dispatch]);
+
+  useEffect(() => {
+    const seeded: Partial<Record<ContractorCategoryId, boolean>> = {};
+    for (const category of RECRUITMENT_CATEGORY_ORDER) {
+      const remembered = getRecruitCategoryOpen(officeId, category);
+      if (remembered !== undefined) seeded[category] = remembered;
+    }
+    setCategoryOpen(seeded);
+  }, [officeId]);
 
   function hire(unitId: UnitId) {
     const count = Math.max(
@@ -281,80 +296,70 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           dispatch={dispatch}
           now={now}
           compact
-          emptyLabel="No hires queued."
+          emptyLabel=""
         />
-      </section>
-      <section className="recruitment-staff-beside" aria-label="Staff on site">
-        <div className="recruitment-staff-beside-row">
-          <span className="recruitment-staff-beside-label">
-            {showAll ? "Firm-wide" : "On site"}
-          </span>
-          <strong className="recruitment-staff-beside-total">
-            {formatNumber(staffTotal)}
-          </strong>
-          {pendingHires > 0 && (
-            <span className="recruitment-staff-beside-pending">
-              +{formatNumber(pendingHires)} hiring
-            </span>
-          )}
-        </div>
-        <p className="recruitment-staff-beside-summary">{staffCategorySummary}</p>
       </section>
     </>
   );
 
   const recruitBelowPortrait = (
     <>
-      <details
-        className="recruitment-roster-details"
-        open={rosterOpen}
-        onToggle={(event) =>
-          setRosterOpen((event.target as HTMLDetailsElement).open)
-        }
-      >
-        <summary className="recruitment-roster-summary">Unit breakdown</summary>
-        {showAll ? (
-          ownedOfficeIds(state).map((siteId) => {
-            const siteRoster = rosterAt(state, siteId);
-            const siteTotal = totalWorkforce(siteRoster);
-            if (siteTotal <= 0) return null;
-            return (
-              <ul
-                key={siteId}
-                className="office-site-staff-list recruitment-roster-list"
-              >
-                {RECRUITMENT_UNITS.filter(
-                  (unit) => (siteRoster[unit.id] ?? 0) > 0,
-                ).map((unit) => (
-                  <li key={`${siteId}-${unit.id}`}>
-                    <span className="office-site-staff-role">
-                      {officeDisplayName(state, siteId)} · {unit.name}
-                    </span>
+      <div className="recruitment-units-banner">
+        <span className="recruitment-units-label">Unit breakdown</span>
+        <button
+          type="button"
+          className="recruitment-units-count"
+          aria-expanded={rosterOpen}
+          aria-label={`${unitCountLabel}. ${rosterOpen ? "Hide" : "Show"} roster.`}
+          onClick={() => setRosterOpen((open) => !open)}
+        >
+          {unitCountLabel}
+        </button>
+      </div>
+      {rosterOpen ? (
+        <div className="recruitment-roster-panel">
+          {showAll ? (
+            ownedOfficeIds(state).some(
+              (siteId) => totalWorkforce(rosterAt(state, siteId)) > 0,
+            ) ? (
+              <ul className="office-site-staff-list recruitment-roster-list">
+                {ownedOfficeIds(state).flatMap((siteId) => {
+                  const siteRoster = rosterAt(state, siteId);
+                  return RECRUITMENT_UNITS.filter(
+                    (unit) => (siteRoster[unit.id] ?? 0) > 0,
+                  ).map((unit) => (
+                    <li key={`${siteId}-${unit.id}`}>
+                      <span className="office-site-staff-role">
+                        {officeDisplayName(state, siteId)} · {unit.name}
+                      </span>
+                      <span className="office-site-staff-count">
+                        ×{siteRoster[unit.id] ?? 0}
+                      </span>
+                    </li>
+                  ));
+                })}
+              </ul>
+            ) : (
+              <p className="muted recruitment-roster-empty">No units.</p>
+            )
+          ) : staffTotal > 0 ? (
+            <ul className="office-site-staff-list recruitment-roster-list">
+              {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
+                (unit) => (
+                  <li key={unit.id}>
+                    <span className="office-site-staff-role">{unit.name}</span>
                     <span className="office-site-staff-count">
-                      ×{siteRoster[unit.id] ?? 0}
+                      ×{roster[unit.id] ?? 0}
                     </span>
                   </li>
-                ))}
-              </ul>
-            );
-          })
-        ) : staffTotal > 0 ? (
-          <ul className="office-site-staff-list recruitment-roster-list">
-            {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
-              (unit) => (
-                <li key={unit.id}>
-                  <span className="office-site-staff-role">{unit.name}</span>
-                  <span className="office-site-staff-count">
-                    ×{roster[unit.id] ?? 0}
-                  </span>
-                </li>
-              ),
-            )}
-          </ul>
-        ) : (
-          <p className="muted recruitment-roster-empty">No units at this site.</p>
-        )}
-      </details>
+                ),
+              )}
+            </ul>
+          ) : (
+            <p className="muted recruitment-roster-empty">No units at this site.</p>
+          )}
+        </div>
+      ) : null}
       {RECRUITMENT_CATEGORY_ORDER.map((category) => {
         const units = RECRUITMENT_UNITS.filter(
           (unit) => unit.category === category,
@@ -363,13 +368,35 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         );
         if (units.length === 0) return null;
 
+        const fallbackOpen = units.some(
+          (unit) => !isRecruitmentUnitLocked(state, unit),
+        );
+        const open = categoryOpen[category] ?? fallbackOpen;
+
         return (
-          <section key={category} className="research-type-section">
-            <h3 className="research-type-heading">{CATEGORY_LABELS[category]}</h3>
+          <ProgressionCategorySection
+            key={category}
+            title={CATEGORY_LABELS[category]}
+            defaultOpen={fallbackOpen}
+            open={open}
+            onOpenChange={(next) => {
+              if (next === open) return;
+              setRecruitCategoryOpen(officeId, category, next);
+              setCategoryOpen((prev) => ({ ...prev, [category]: next }));
+            }}
+            maxedCount={0}
+            totalCount={units.length}
+            banner={
+              <SceneBanner
+                src={RECRUIT_CATEGORY_SCENE[category].src}
+                storageKey={RECRUIT_CATEGORY_SCENE[category].storageKey}
+              />
+            }
+          >
             <ul className="structure-list recruitment-grid">
               {units.map(renderUnitCard)}
             </ul>
-          </section>
+          </ProgressionCategorySection>
         );
       })}
     </>
