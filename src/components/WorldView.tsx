@@ -11,7 +11,7 @@ import {
 import {
   REGION_LABELS,
   isAvailableCommercialLot,
-  mainOfficeCoordForState,
+  hqMapCoordForFocus,
   mapMainOfficeId,
   officeDisplayName,
   regionAtCoord,
@@ -29,6 +29,7 @@ import {
   clampMapPan,
   clampMapZoomRel,
   applyMapWheelZoom,
+  findMapHexElement,
   focusViewportOnContentPoint,
   MAP_HQ_FOCUS_ZOOM_REL,
   MAP_ZOOM_REL_DEFAULT,
@@ -36,6 +37,7 @@ import {
   MAP_ZOOM_REL_MIN,
   MAP_ZOOM_REL_STEP,
   measureMapViewport,
+  panToCenterViewportRect,
   type MapContentSize,
   worldMapCoordToContentPixel,
 } from "../game/mapViewport";
@@ -60,7 +62,7 @@ import {
   jobSiteCoordForPosting,
 } from "../game/mapWorld";
 import { jobDefinitionForPosting } from "../game/jobs";
-import { hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
+import { officeAtForState, playerHqCoord as hqCoordForPlayer } from "../multiplayer/playerHq";
 import { PLAYER_IDS } from "../multiplayer/types";
 import type {
   AxialCoord,
@@ -71,9 +73,12 @@ import type {
 } from "../game/types";
 import { MapHexDrawer } from "./MapHexDrawer";
 
+import type { OnlineSession } from "../multiplayer/types";
+
 interface WorldViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  session?: OnlineSession;
 }
 
 type HexVariant =
@@ -345,9 +350,13 @@ function MapDecorationMark({
   );
 }
 
-function hexVariant(coord: AxialCoord, state: GameState): HexVariant {
+function hexVariant(
+  coord: AxialCoord,
+  state: GameState,
+  session?: OnlineSession,
+): HexVariant {
   if (axialEquals(coord, MAP_GOV)) return "gov";
-  const officeId = officeAtForState(coord, state);
+  const officeId = officeAtForState(coord, state, session);
   if (officeId === "hq") return "hq";
   if (officeId && isBranchOfficeId(officeId)) return "branch";
   if (towerAtCoord(coord)) return "tower";
@@ -549,7 +558,7 @@ const LANDMARK_LEGEND: {
   { id: "job", label: "Task force", className: "landmark-legend-job" },
 ];
 
-export function WorldView({ state, dispatch }: WorldViewProps) {
+export function WorldView({ state, dispatch, session }: WorldViewProps) {
   const savedViewport = readWorldMapViewportCache();
   const restoreViewport = savedViewport.hasSession;
   const cells = useMemo(() => generateHexagonMap(), []);
@@ -627,7 +636,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       const occupied =
         axialEquals(coord, MAP_GOV) ||
         Boolean(towerAtCoord(coord)) ||
-        Boolean(officeAtForState(coord, state)) ||
+        Boolean(officeAtForState(coord, state, session)) ||
         isAvailableCommercialLot(coord, state);
       if (!occupied) freeByRegion[region].push(coord);
     });
@@ -667,7 +676,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       watercolorWashes: washes,
       decorations: decos,
     };
-  }, [cells, state]);
+  }, [cells, state, session]);
   const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(
     restoreViewport ? savedViewport.inspectedCoord : null,
   );
@@ -708,16 +717,16 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
   const isDev = state.settings.mapPresentation === "dev";
   const mapZoom = fitZoom * mapZoomRel;
   const legendActive = legendHover !== null;
-  const playerHqCoord = useMemo(() => hqCoordForState(state), [state]);
   const mainOfficeId = mapMainOfficeId(state);
   const mainOfficeLocationId =
     mainOfficeId === "branch"
       ? (branchOfficeIds(state)[0] ?? "hq")
       : "hq";
-  const mainOfficeCoord = useMemo(
-    () => mainOfficeCoordForState(state),
-    [state, playerHqCoord, state.branchSites, state.settings.mapMainOffice],
+  const mapFocusCoordValue = useMemo(
+    () => hqMapCoordForFocus(cells, state, session),
+    [cells, state, session],
   );
+  const mainOfficeCoord = mapFocusCoordValue;
 
   function viewportSize(): { width: number; height: number } {
     const el = mapViewportRef.current;
@@ -846,30 +855,72 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
   }
 
   function focusOnMainOffice() {
-    const { width: vpW, height: vpH } = viewportSize();
-    if (vpW <= 0 || vpH <= 0 || bounds.width <= 0) return;
+    const viewport = mapViewportRef.current;
+    if (!viewport || bounds.width <= 0) return;
 
-    const content = mapContentSizeRef.current;
-    if (content.width <= 0 || content.height <= 0) return;
+    const vpW = viewport.clientWidth;
+    const vpH = viewport.clientHeight;
+    if (vpW <= 0 || vpH <= 0) return;
 
-    const officePoint = worldMapCoordToContentPixel(
-      mainOfficeCoord,
-      bounds,
-      content,
-    );
-    const focused = focusViewportOnContentPoint(
-      officePoint,
-      content,
-      vpW,
-      vpH,
-      fitZoom,
-      MAP_HQ_FOCUS_ZOOM_REL,
-    );
+    const measured = measureMapViewport(vpW, vpH, bounds);
+    const content = measured.content;
+    if (content.width <= 1 || content.height <= 1) return;
 
-    setMapZoomRel(focused.zoomRel);
-    setMapPan(focused.pan);
-    setHqFlashActive(true);
-    setHqFlashSeq((seq) => seq + 1);
+    mapContentSizeRef.current = content;
+    fitZoomRef.current = measured.fitZoom;
+    mapZoomRelRef.current = MAP_HQ_FOCUS_ZOOM_REL;
+    setMapContentSize(content);
+    setFitZoom(measured.fitZoom);
+    setMapZoomRel(MAP_HQ_FOCUS_ZOOM_REL);
+
+    const focusCoord = hqMapCoordForFocus(cells, state, session);
+
+    const centerOnHqHex = () => {
+      const vp = mapViewportRef.current;
+      const svgEl = mapSvgRef.current;
+      if (!vp) return;
+
+      const vpRect = vp.getBoundingClientRect();
+      const zoom = fitZoomRef.current * mapZoomRelRef.current;
+      const hexEl = svgEl ? findMapHexElement(svgEl, focusCoord) : null;
+
+      let nextPan = mapPanRef.current;
+      if (hexEl) {
+        nextPan = panToCenterViewportRect(
+          vpRect,
+          hexEl.getBoundingClientRect(),
+          mapPanRef.current,
+        );
+      } else {
+        const officePoint = worldMapCoordToContentPixel(
+          focusCoord,
+          bounds,
+          mapContentSizeRef.current,
+        );
+        nextPan = focusViewportOnContentPoint(
+          officePoint,
+          mapContentSizeRef.current,
+          vpRect.width,
+          vpRect.height,
+          fitZoomRef.current,
+          MAP_HQ_FOCUS_ZOOM_REL,
+        ).pan;
+      }
+
+      const clamped = clampMapPan(
+        nextPan,
+        zoom,
+        vpRect.width,
+        vpRect.height,
+        mapContentSizeRef.current,
+      );
+      mapPanRef.current = clamped;
+      setMapPan(clamped);
+      setHqFlashActive(true);
+      setHqFlashSeq((seq) => seq + 1);
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(centerOnHqHex));
   }
 
   function closeDrawer() {
@@ -881,7 +932,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
   function inspectHex(coord: AxialCoord) {
     setInspectedCoord({ ...coord });
 
-    const officeId = officeAtForState(coord, state);
+    const officeId = officeAtForState(coord, state, session);
     const towerId = towerAtCoord(coord);
 
     if (officeId) {
@@ -990,7 +1041,7 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
       .flatMap((presence) => {
         const items: { coord: AxialCoord; label: string; key: string }[] = [
           {
-            coord: presence!.hqCoord,
+            coord: hqCoordForPlayer(presence!.playerId),
             label: `${presence!.displayName} HQ`,
             key: `${presence!.playerId}-hq`,
           },
@@ -1147,9 +1198,11 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
           aria-label={`Center map on ${officeDisplayName(state, mainOfficeLocationId)} at 100% zoom`}
           onClick={focusOnMainOffice}
         >
-          {mainOfficeId === "branch"
-            ? officeDisplayName(state, mainOfficeLocationId)
-            : "HQ"}
+          {session?.playMode === "online"
+            ? "HQ"
+            : mainOfficeId === "branch"
+              ? officeDisplayName(state, mainOfficeLocationId)
+              : "HQ"}
         </button>
 
         <div className="map-zoom-controls" role="group" aria-label="Map zoom">
@@ -1375,14 +1428,17 @@ export function WorldView({ state, dispatch }: WorldViewProps) {
 
               {cells.map((coord) => {
                 const { x, y } = worldMapAxialToPixel(coord);
-                const variant = hexVariant(coord, state);
+                const variant = hexVariant(coord, state, session);
                 const isDefault = variant === "default";
-                const officeId = officeAtForState(coord, state);
+                const officeId = officeAtForState(coord, state, session);
                 const isInspected =
                   inspectedCoord !== null && axialEquals(coord, inspectedCoord);
                 const isPlayerMainOffice =
-                  officeId === mainOfficeId &&
-                  axialEquals(coord, mainOfficeCoord);
+                  session?.playMode === "online"
+                    ? officeId === "hq" &&
+                      axialEquals(coord, mapFocusCoordValue)
+                    : officeId === mainOfficeId &&
+                      axialEquals(coord, mainOfficeCoord);
                 const hqFlashing = isPlayerMainOffice && hqFlashActive;
                 const landmark = landmarkKindFor(coord, variant);
                 const isLandmark = landmark !== null;

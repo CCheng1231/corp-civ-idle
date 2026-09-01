@@ -29,6 +29,7 @@ Optional if touching balance copy or unlocks: `scripts/build-research-data.mjs`,
 ```
 Continue corp-civ-idle. Read AGENTS.md and docs/ui-principles.md first.
 Follow .cursor/rules/player-view-ui.mdc for tab UI; world-map-viewport.mdc for map/layout.
+Online: useOnlineWorld.ts, worldSync.ts, browserLease.ts — one tab per online account.
 Follow existing patterns in progressionUi, StructureCostLine, QueueSection, ConfirmDialog.
 Task: [describe the specific tab or tweak]
 ```
@@ -195,6 +196,24 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 ---
 
 ## Recent session state (Aug 2026)
+
+### Aug 31 (late evening) — Online save integrity + browser lease + HQ focus
+
+- **Refresh / stale-tab fixes:** Bootstrap no longer races Firestore listeners; online first paint skips localStorage cache; auto-save gated until load completes. Migrations tolerate missing `structureQueues` per office and empty `branchSites`.
+- **Reset / session auth:** World meta `playerResetAt`, `playerSaveSessionId`; save fields `resetGeneration`, `onlineSaveSessionId`, `onlineResetGeneration`. Stale tabs cannot overwrite post-reset progress. Corrupt remote loads repair instead of wipe.
+- **Browser lease:** `src/multiplayer/browserLease.ts` + `useOnlineBrowserLease` — one active browser per Tim/Chris online account; duplicate tab alerts and returns to account gate. `claimGeneration` prevents React StrictMode false kicks; heartbeat reclaims vacant leases.
+- **Settings (online):** Per-player account reset, shared-world reset (job board + task forces only), full world reset, **Pull from Firestore** with timeout UX.
+- **Map / HQ:** Chris HQ at `{-2,-4}`; `focusViewportOnContentPoint` + DOM rect nudge for reliable HQ button centering.
+- **Misc:** Secretary stats banner counts clickable; blank favicon in `index.html`.
+
+**Changelog:** `scripts/append-changelog-aug31-online-save-lease.mjs` → **ChangeLog** tab.
+
+**Likely follow-ups:**
+
+- Playtest Tim online: single tab, wait 10s+, refresh — confirm cash/progress persists after one account reset if needed.
+- Two-browser lease test: second Tim/Chris tab should kick first; first alone should never self-kick.
+- Verify shared job board flush after long offline tab closed.
+- Optional: replace `window.alert` on lease kick with in-app toast/dialog.
 
 ### Aug 31 (evening) — Secretary task forces + job posting drawer
 

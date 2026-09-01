@@ -486,6 +486,10 @@ export interface GameState {
   completedPostingPayouts?: string[];
   /** Online Firestore listener status (UI only). */
   onlineConnectionStatus?: "connecting" | "connected" | "error" | "disconnected";
+  /** Online: last applied account-reset generation (must match before saving). */
+  onlineResetGeneration?: number;
+  /** Online: save session id from last reset/load (must match meta before saving). */
+  onlineSaveSessionId?: string;
 }
 
 export type CompletionAlertKind = "structure" | "research" | "recruitment" | "job";
@@ -645,6 +649,8 @@ export type GameAction =
       type: "SET_ONLINE_CONNECTION_STATUS";
       status: GameState["onlineConnectionStatus"];
     }
+  | { type: "SET_ONLINE_RESET_GENERATION"; generation: number }
+  | { type: "SET_ONLINE_SAVE_SESSION"; sessionId: string | undefined }
   | { type: "ONLINE_HANDLE_COMPLETED_POSTING"; postingId: string; now: number }
   | { type: "MARK_POSTING_PAYOUT_DONE"; postingId: string }
   | { type: "CLEAR_PENDING_SYNC"; engagementId: string; hours: number };

@@ -41,7 +41,9 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
     onlineConnectionStatus: _conn,
+    onlineResetGeneration: _resetGen,
     onlineSession: _session,
+    view: _view,
     ...persistable
   } = state;
   return persistable;
@@ -66,12 +68,14 @@ export function stripUndefinedDeep(value: unknown): unknown {
 export function serializePrivateState(
   state: GameState,
   updatedAt = Date.now(),
+  resetGeneration = 0,
 ): Record<string, unknown> {
   const stripped = stripEphemeral(state) as GameState;
   const { jobPostings: _jobs, ...privateFields } = stripped;
   return stripUndefinedDeep({
     ...privateFields,
     updatedAt,
+    resetGeneration,
   }) as Record<string, unknown>;
 }
 

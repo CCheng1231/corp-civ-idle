@@ -1,4 +1,4 @@
-import type { Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import { formatNumber } from "../game/constants";
 import {
   engagementStatusLabel,
@@ -12,7 +12,11 @@ import {
 import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
 import secretaryPortrait from "../assets/secretary.jpg";
-import { SecretaryBriefing } from "./SecretaryBriefing";
+import {
+  SecretaryBriefing,
+  initialSecretaryWorkTab,
+  type SecretaryWorkTab,
+} from "./SecretaryBriefing";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { TaskForceStatusIcon } from "./TaskForceStatusIcon";
@@ -29,6 +33,13 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
   const { active, cap } = secretaryJobSummary(state);
   const reportCount = pendingJobReports(state).length;
   const now = Date.now();
+  const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialSecretaryWorkTab);
+
+  useEffect(() => {
+    if (state.jobFocusPostingId) {
+      setWorkTab("board");
+    }
+  }, [state.jobFocusPostingId]);
 
   const secretaryBesidePortrait = (
     <>
@@ -91,19 +102,27 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
 
   const secretaryBelowPortrait = (
     <>
-      <div className="secretary-stats-banner" aria-label="Pending reports">
+      <div className="secretary-stats-banner">
         <span className="secretary-stats-banner-label">Reports</span>
-        <span
+        <button
+          type="button"
           className={
             reportCount > 0
-              ? "secretary-stats-banner-highlight"
-              : "secretary-stats-banner-value"
+              ? "secretary-stats-banner-count secretary-stats-banner-highlight"
+              : "secretary-stats-banner-count secretary-stats-banner-value"
           }
+          aria-label={`${reportCount} pending report${reportCount === 1 ? "" : "s"}. Open job reports.`}
+          onClick={() => setWorkTab("reports")}
         >
           {reportCount}
-        </span>
+        </button>
       </div>
-      <SecretaryBriefing state={state} dispatch={dispatch} />
+      <SecretaryBriefing
+        state={state}
+        dispatch={dispatch}
+        workTab={workTab}
+        onWorkTabChange={setWorkTab}
+      />
     </>
   );
 

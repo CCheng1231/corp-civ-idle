@@ -17,9 +17,10 @@ import {
   jobDefinitionById,
 } from "../game/jobs";
 import type { JobPosting } from "../game/types";
+import { createFreshOnlineState, loadOnlineStateFromRemote } from "../game/save";
 import { parseJobPosting, serializePrivateState, clearAllOnlineLocalCaches, clearOnlineLocalCache } from "./companySave";
 import { getDb } from "./firebase";
-import { playerHqCoord } from "./playerHq";
+import { playerHqCoord, canonicalCompanyPresenceMap, canonicalCompanyPresence, presenceHqNeedsRepair } from "./playerHq";
 import type {
   CompanyPresence,
   OnlineSession,
@@ -29,9 +30,301 @@ import type {
 } from "./types";
 import { PLAYER_LABELS } from "./types";
 import { PLAYER_IDS } from "./types";
-import type { GameState } from "../game/types";
+import type { GameState, AxialCoord } from "../game/types";
 
 const WORLD_ID: WorldId = "dev";
+
+export function playerResetTimestamp(
+  meta: WorldMeta | undefined,
+  playerId: PlayerId,
+): number {
+  return meta?.playerResetAt?.[playerId] ?? 0;
+}
+
+export function playerSaveSessionId(
+  meta: WorldMeta | undefined,
+  playerId: PlayerId,
+): string | undefined {
+  const id = meta?.playerSaveSessionId?.[playerId];
+  return typeof id === "string" && id.length > 0 ? id : undefined;
+}
+
+function newSaveSessionId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+const STALE_TAB_CASH_THRESHOLD = 12_000;
+
+function remoteSaveCash(remote: Record<string, unknown>): number {
+  const resources = remote.resources as { cash?: number } | undefined;
+  return Number(resources?.cash ?? 0);
+}
+
+/** Ensure in-memory state can pass save guards after bootstrap/load. */
+export function authorizeOnlineSaveState(
+  state: GameState,
+  resetAt: number,
+  sessionId?: string,
+): GameState {
+  return {
+    ...state,
+    onlineResetGeneration: Math.max(state.onlineResetGeneration ?? 0, resetAt),
+    ...(sessionId ? { onlineSaveSessionId: sessionId } : {}),
+  };
+}
+
+export function isPrivateStateStale(
+  remote: Record<string, unknown> | null,
+  resetAt: number,
+  expectedSessionId?: string,
+): boolean {
+  if (resetAt <= 0) return false;
+  if (!remote) return true;
+
+  const updatedAt = Number(remote.updatedAt ?? 0);
+  const generation = Number(remote.resetGeneration ?? 0);
+
+  // Save entirely predates the last account reset.
+  if (updatedAt < resetAt && generation < resetAt) {
+    return true;
+  }
+
+  // Stale tab re-uploaded old wealth under a superseded session id.
+  if (expectedSessionId) {
+    const remoteSessionId = remote.onlineSaveSessionId;
+    if (
+      typeof remoteSessionId === "string" &&
+      remoteSessionId !== expectedSessionId &&
+      updatedAt >= resetAt &&
+      remoteSaveCash(remote) >= STALE_TAB_CASH_THRESHOLD
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Backfill auth fields on saves written after reset before generation/session was wired. */
+export async function patchRemoteSaveAuthFields(
+  session: OnlineSession,
+  remote: Record<string, unknown>,
+  resetAt: number,
+  expectedSessionId?: string,
+): Promise<Record<string, unknown>> {
+  const updatedAt = Number(remote.updatedAt ?? 0);
+  if (resetAt > 0 && updatedAt < resetAt) return remote;
+
+  const patches: Record<string, unknown> = {};
+  let next = remote;
+
+  if (resetAt > 0 && Number(next.resetGeneration ?? 0) < resetAt) {
+    patches.resetGeneration = resetAt;
+    next = { ...next, resetGeneration: resetAt };
+  }
+
+  if (expectedSessionId) {
+    const remoteSessionId = next.onlineSaveSessionId;
+    const sessionMismatch =
+      typeof remoteSessionId === "string" &&
+      remoteSessionId !== expectedSessionId;
+    if (
+      typeof remoteSessionId !== "string" ||
+      (sessionMismatch && remoteSaveCash(next) < STALE_TAB_CASH_THRESHOLD)
+    ) {
+      patches.onlineSaveSessionId = expectedSessionId;
+      next = { ...next, onlineSaveSessionId: expectedSessionId };
+    }
+  }
+
+  if (Object.keys(patches).length > 0) {
+    await setDoc(
+      privateStateRef(session.playerId, session.worldId),
+      patches,
+      { merge: true },
+    );
+  }
+
+  return next;
+}
+
+/** @deprecated Use patchRemoteSaveAuthFields */
+export async function ensureRemoteSaveSessionId(
+  session: OnlineSession,
+  remote: Record<string, unknown>,
+  resetAt: number,
+  expectedSessionId: string,
+): Promise<Record<string, unknown>> {
+  return patchRemoteSaveAuthFields(
+    session,
+    remote,
+    resetAt,
+    expectedSessionId,
+  );
+}
+
+export class OnlineSaveRejectedError extends Error {
+  readonly requiredGeneration: number;
+
+  constructor(requiredGeneration: number) {
+    super("Online save rejected: account was reset on the server");
+    this.name = "OnlineSaveRejectedError";
+    this.requiredGeneration = requiredGeneration;
+  }
+}
+
+async function assignPlayerSaveSessionId(
+  worldId: WorldId,
+  playerId: PlayerId,
+  saveSessionId = newSaveSessionId(),
+): Promise<string> {
+  await setDoc(
+    metaRef(worldId),
+    { playerSaveSessionId: { [playerId]: saveSessionId } },
+    { merge: true },
+  );
+  return saveSessionId;
+}
+
+async function bumpPlayerResetAt(
+  worldId: WorldId,
+  playerId: PlayerId,
+  resetAt = Date.now(),
+): Promise<{ resetAt: number; saveSessionId: string }> {
+  const saveSessionId = newSaveSessionId();
+  await setDoc(
+    metaRef(worldId),
+    {
+      playerResetAt: { [playerId]: resetAt },
+      playerSaveSessionId: { [playerId]: saveSessionId },
+    },
+    { merge: true },
+  );
+  return { resetAt, saveSessionId };
+}
+
+async function writeFreshPrivateState(
+  session: OnlineSession,
+  playerId: PlayerId,
+  resetAt: number,
+  saveSessionId: string,
+): Promise<void> {
+  const playerSession: OnlineSession = { ...session, playerId };
+  await setDoc(
+    privateStateRef(playerId, session.worldId),
+    serializePrivateState(
+      createFreshOnlineState(playerSession, resetAt, saveSessionId),
+      resetAt,
+      resetAt,
+    ),
+  );
+}
+
+export function remoteResetGeneration(
+  remote: Record<string, unknown>,
+): number {
+  return Number(remote.resetGeneration ?? 0);
+}
+
+/** Load remote save or rewrite Firestore when it predates playerResetAt. */
+export async function repairPrivateStateIfStale(
+  session: OnlineSession,
+  resetAt: number,
+  expectedSessionId?: string,
+): Promise<GameState> {
+  const meta = await loadWorldMeta(session);
+  const sessionId =
+    expectedSessionId ?? playerSaveSessionId(meta, session.playerId);
+  let remote = await loadPrivateState(session);
+  if (!remote) {
+    clearOnlineLocalCache(session.playerId, session.worldId);
+    if (resetAt > 0) {
+      const saveSessionId =
+        sessionId ??
+        (await assignPlayerSaveSessionId(session.worldId, session.playerId));
+      await writeFreshPrivateState(
+        session,
+        session.playerId,
+        resetAt,
+        saveSessionId,
+      );
+      return createFreshOnlineState(session, resetAt, saveSessionId);
+    }
+    return createFreshOnlineState(session, resetAt);
+  }
+
+  if (sessionId) {
+    remote = await patchRemoteSaveAuthFields(
+      session,
+      remote,
+      resetAt,
+      sessionId,
+    );
+  }
+
+  if (isPrivateStateStale(remote, resetAt, sessionId)) {
+    clearOnlineLocalCache(session.playerId, session.worldId);
+    if (resetAt > 0) {
+      const saveSessionId =
+        sessionId ??
+        (await assignPlayerSaveSessionId(session.worldId, session.playerId));
+      await writeFreshPrivateState(
+        session,
+        session.playerId,
+        resetAt,
+        saveSessionId,
+      );
+      return createFreshOnlineState(session, resetAt, saveSessionId);
+    }
+    return createFreshOnlineState(session, resetAt);
+  }
+
+  const generation = Math.max(Number(remote.resetGeneration ?? 0), resetAt);
+  const patches: Record<string, unknown> = {};
+  if (generation > Number(remote.resetGeneration ?? 0)) {
+    patches.resetGeneration = generation;
+    remote.resetGeneration = generation;
+  }
+  if (Object.keys(patches).length > 0) {
+    await setDoc(
+      privateStateRef(session.playerId, session.worldId),
+      patches,
+      { merge: true },
+    );
+  }
+
+  return loadOnlineStateFromRemote(session, remote, resetAt, sessionId);
+}
+
+/** Dev / recovery: pull authoritative save from Firestore (respects playerResetAt). */
+export async function forceResyncPrivateState(
+  session: OnlineSession,
+): Promise<GameState> {
+  const meta = await loadWorldMeta(session);
+  const resetAt = playerResetTimestamp(meta, session.playerId);
+  return repairPrivateStateIfStale(
+    session,
+    resetAt,
+    playerSaveSessionId(meta, session.playerId),
+  );
+}
+
+export async function loadWorldMeta(
+  session: OnlineSession,
+): Promise<WorldMeta> {
+  const snap = await getDoc(metaRef(session.worldId));
+  if (!snap.exists()) {
+    return {
+      mapRegionSeed: MAP_REGION_SEED,
+      jobPostingsInitialized: false,
+      createdAt: Date.now(),
+    };
+  }
+  return snap.data() as WorldMeta;
+}
 
 function worldRoot(worldId: WorldId = WORLD_ID) {
   return doc(getDb(), "worlds", worldId);
@@ -71,6 +364,80 @@ export function presenceFromState(
     })),
     lastSeenAt: Date.now(),
   };
+}
+
+function parseAxialCoord(raw: unknown): AxialCoord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const q = Number(row.q);
+  const r = Number(row.r);
+  if (!Number.isFinite(q) || !Number.isFinite(r)) return null;
+  return { q, r };
+}
+
+export function parseCompanyPresence(
+  docId: string,
+  raw: Record<string, unknown>,
+): CompanyPresence | null {
+  const playerId =
+    raw.playerId === "tim" || raw.playerId === "chris"
+      ? raw.playerId
+      : docId === "tim" || docId === "chris"
+        ? docId
+        : null;
+  if (!playerId) return null;
+
+  const hqCoord = parseAxialCoord(raw.hqCoord) ?? { q: 0, r: 0 };
+  const branchSites = Array.isArray(raw.branchSites)
+    ? raw.branchSites.flatMap((entry) => {
+        const row = entry as Record<string, unknown>;
+        const coord = parseAxialCoord(row.coord);
+        if (!coord) return [];
+        return [
+          {
+            coord,
+            name: typeof row.name === "string" ? row.name : "",
+          },
+        ];
+      })
+    : [];
+
+  return {
+    playerId,
+    displayName:
+      typeof raw.displayName === "string"
+        ? raw.displayName
+        : PLAYER_LABELS[playerId],
+    hqCoord,
+    branchSites,
+    lastSeenAt: Number(raw.lastSeenAt ?? 0),
+  };
+}
+
+export async function repairCompanyPresenceDoc(
+  playerId: PlayerId,
+  worldId: WorldId,
+  presence: CompanyPresence,
+): Promise<void> {
+  if (!presenceHqNeedsRepair(presence)) return;
+  await setDoc(
+    companyRef(playerId, worldId),
+    canonicalCompanyPresence(presence),
+  );
+}
+
+/** Rewrite any stale HQ coords in Firestore (dev world). */
+export async function repairStaleCompanyPresences(
+  worldId: WorldId = WORLD_ID,
+): Promise<void> {
+  const snap = await getDocs(companiesCol(worldId));
+  await Promise.all(
+    snap.docs.map(async (d) => {
+      const parsed = parseCompanyPresence(d.id, d.data() as Record<string, unknown>);
+      if (!parsed) return;
+      await repairCompanyPresenceDoc(parsed.playerId, worldId, parsed);
+    }),
+  );
 }
 
 export async function ensureWorldBootstrapped(
@@ -130,11 +497,53 @@ export async function loadPrivateState(
 export async function savePrivateState(
   session: OnlineSession,
   state: GameState,
-): Promise<void> {
-  await setDoc(
-    privateStateRef(session.playerId, session.worldId),
-    serializePrivateState(state),
-  );
+  updatedAt = Date.now(),
+): Promise<{ updatedAt: number; generation: number }> {
+  const ref = privateStateRef(session.playerId, session.worldId);
+  const metaRefDoc = metaRef(session.worldId);
+
+  return runTransaction(getDb(), async (tx) => {
+    const metaSnap = await tx.get(metaRefDoc);
+    const meta = metaSnap.exists() ? (metaSnap.data() as WorldMeta) : undefined;
+    const requiredGeneration = playerResetTimestamp(meta, session.playerId);
+    const expectedSessionId = playerSaveSessionId(meta, session.playerId);
+    const localGeneration = state.onlineResetGeneration ?? 0;
+    let localSessionId = state.onlineSaveSessionId;
+
+    if (requiredGeneration > 0 && localGeneration < requiredGeneration) {
+      throw new OnlineSaveRejectedError(requiredGeneration);
+    }
+
+    if (expectedSessionId) {
+      if (!localSessionId) {
+        localSessionId = expectedSessionId;
+      } else if (localSessionId !== expectedSessionId) {
+        throw new OnlineSaveRejectedError(requiredGeneration);
+      }
+      const remoteSnap = await tx.get(ref);
+      if (remoteSnap.exists()) {
+        const remote = remoteSnap.data() as Record<string, unknown>;
+        const remoteSessionId = remote.onlineSaveSessionId;
+        if (
+          typeof remoteSessionId === "string" &&
+          remoteSessionId !== expectedSessionId
+        ) {
+          throw new OnlineSaveRejectedError(requiredGeneration);
+        }
+      }
+    }
+
+    const generation = Math.max(localGeneration, requiredGeneration);
+    const payload = serializePrivateState(
+      expectedSessionId && !state.onlineSaveSessionId
+        ? { ...state, onlineSaveSessionId: expectedSessionId }
+        : state,
+      updatedAt,
+      generation,
+    );
+    tx.set(ref, payload);
+    return { updatedAt, generation };
+  });
 }
 
 export async function upsertCompanyPresence(
@@ -144,7 +553,6 @@ export async function upsertCompanyPresence(
   await setDoc(
     companyRef(session.playerId, session.worldId),
     presenceFromState(session, state),
-    { merge: true },
   );
 }
 
@@ -175,12 +583,23 @@ export function subscribeCompanies(
     (snap) => {
       const map = {} as Record<PlayerId, CompanyPresence>;
       for (const d of snap.docs) {
-        const data = d.data() as CompanyPresence;
-        if (data.playerId === "tim" || data.playerId === "chris") {
-          map[data.playerId] = data;
+        const parsed = parseCompanyPresence(
+          d.id,
+          d.data() as Record<string, unknown>,
+        );
+        if (!parsed) continue;
+        map[parsed.playerId] = parsed;
+        if (presenceHqNeedsRepair(parsed)) {
+          void repairCompanyPresenceDoc(
+            parsed.playerId,
+            session.worldId,
+            parsed,
+          ).catch((err) =>
+            console.error("Repair company presence failed", err),
+          );
         }
       }
-      onChange(map);
+      onChange(canonicalCompanyPresenceMap(map));
     },
     (err) => onError(err),
   );
@@ -256,11 +675,15 @@ export async function resetSharedWorld(
 ): Promise<void> {
   const col = jobPostingsCol(session.worldId);
   const existing = await getDocs(col);
-  const batch = writeBatch(getDb());
-  for (const d of existing.docs) {
-    batch.delete(d.ref);
+  const refs = existing.docs.map((d) => d.ref);
+  const BATCH_LIMIT = 450;
+  for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(getDb());
+    for (const ref of refs.slice(i, i + BATCH_LIMIT)) {
+      batch.delete(ref);
+    }
+    await batch.commit();
   }
-  await batch.commit();
 
   await setDoc(
     metaRef(session.worldId),
@@ -310,28 +733,23 @@ export async function deletePrivateStateDoc(
   await deleteDoc(privateStateRef(playerId, worldId));
 }
 
-async function deleteCompanyDoc(
-  playerId: PlayerId,
-  worldId: WorldId,
-): Promise<void> {
-  try {
-    await deletePrivateStateDoc(playerId, worldId);
-  } catch {
-    /* doc may not exist */
-  }
-  try {
-    await deleteDoc(companyRef(playerId, worldId));
-  } catch {
-    /* doc may not exist */
-  }
-}
-
 /** Dev: wipe one player's private save, presence, and local online cache. */
 export async function resetOnlinePlayerAccount(
   session: OnlineSession,
   playerId: PlayerId,
 ): Promise<void> {
-  await deleteCompanyDoc(playerId, session.worldId);
+  const { resetAt, saveSessionId } = await bumpPlayerResetAt(
+    session.worldId,
+    playerId,
+  );
+  await writeFreshPrivateState(session, playerId, resetAt, saveSessionId);
+  await setDoc(companyRef(playerId, session.worldId), {
+    playerId,
+    displayName: PLAYER_LABELS[playerId],
+    hqCoord: playerHqCoord(playerId),
+    branchSites: [],
+    lastSeenAt: Date.now(),
+  });
   clearOnlineLocalCache(playerId, session.worldId);
 }
 
@@ -360,9 +778,38 @@ export async function resetOnlineSharedWorldPreserveAccounts(
 export async function resetOnlineDatabase(
   session: OnlineSession,
 ): Promise<void> {
+  clearAllOnlineLocalCaches(session.worldId);
+  const resetAt = Date.now();
+  const saveSessionIds = Object.fromEntries(
+    PLAYER_IDS.map((playerId) => [playerId, newSaveSessionId()]),
+  ) as Record<PlayerId, string>;
+  await setDoc(
+    metaRef(session.worldId),
+    {
+      playerResetAt: {
+        tim: resetAt,
+        chris: resetAt,
+      },
+      playerSaveSessionId: saveSessionIds,
+    },
+    { merge: true },
+  );
   await Promise.all(
-    PLAYER_IDS.map((playerId) => deleteCompanyDoc(playerId, session.worldId)),
+    PLAYER_IDS.map(async (playerId) => {
+      await writeFreshPrivateState(
+        session,
+        playerId,
+        resetAt,
+        saveSessionIds[playerId],
+      );
+      await setDoc(companyRef(playerId, session.worldId), {
+        playerId,
+        displayName: PLAYER_LABELS[playerId],
+        hqCoord: playerHqCoord(playerId),
+        branchSites: [],
+        lastSeenAt: Date.now(),
+      });
+    }),
   );
   await resetSharedWorld(session);
-  clearAllOnlineLocalCaches(session.worldId);
 }

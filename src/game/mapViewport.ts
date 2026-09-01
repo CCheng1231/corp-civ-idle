@@ -331,3 +331,29 @@ export function measureMapViewport(
     fitZoom: computeFitZoom(viewportW, viewportH, bounds),
   };
 }
+
+/** Hit target for a map hex (shared data-map-q / data-map-r attrs). */
+export function findMapHexElement(
+  svg: SVGSVGElement,
+  coord: AxialCoord,
+): Element | null {
+  return svg.querySelector(
+    `[data-map-q="${coord.q}"][data-map-r="${coord.r}"]`,
+  );
+}
+
+/** Nudge pan so a DOM rect's center aligns with the viewport center. */
+export function panToCenterViewportRect(
+  viewportRect: DOMRect,
+  targetRect: DOMRect,
+  currentPan: { x: number; y: number },
+): { x: number; y: number } {
+  const targetCenterX =
+    targetRect.left + targetRect.width / 2 - viewportRect.left;
+  const targetCenterY =
+    targetRect.top + targetRect.height / 2 - viewportRect.top;
+  return {
+    x: currentPan.x + (viewportRect.width / 2 - targetCenterX),
+    y: currentPan.y + (viewportRect.height / 2 - targetCenterY),
+  };
+}

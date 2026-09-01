@@ -14,6 +14,12 @@ const COMMERCIAL_LOT_COORDS: Record<CommercialLotId, AxialCoord> = {
   countryside_lot: { q: -2, r: 6 },
 };
 
+export function isEstablishedBranchSiteOnMap(
+  site: EstablishedBranchSite,
+): boolean {
+  return site.commercialLotId in COMMERCIAL_LOT_COORDS;
+}
+
 
 export function branchSiteKey(
   commercialLotId: CommercialLotId,

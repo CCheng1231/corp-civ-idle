@@ -18,6 +18,7 @@ import {
   axialEquals,
   axialToPixel,
   HEX_RADIUS,
+  isCoordOnMapGrid,
   MAP_GOV,
   MAP_HQ,
   MAP_RADIUS,
@@ -47,7 +48,14 @@ import {
   splitResourceCost,
   unitAvailableAt,
 } from "./constants";
-import { CHRIS_HQ, hqCoordForState } from "../multiplayer/playerHq";
+import {
+  CHRIS_HQ,
+  hqCoordForState,
+  officeAtForState,
+  playerHqCoord,
+  resolveOnlineSession,
+} from "../multiplayer/playerHq";
+import type { OnlineSession } from "../multiplayer/types";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
   metropolis: "Metropolis",
@@ -729,26 +737,65 @@ export function mapMainOfficeId(state: GameState): "hq" | "branch" {
   return "hq";
 }
 
-export function mapMainOfficeCoord(state: GameState): AxialCoord {
+export function mapMainOfficeCoord(
+  state: GameState,
+  session?: OnlineSession | null,
+): AxialCoord {
+  const hq = hqCoordForState(state, session);
   if (mapMainOfficeId(state) === "hq") {
-    return hqCoordForState(state);
+    return hq;
   }
   const preferred = isBranchOfficeId(state.lastSelectedOffice)
     ? state.lastSelectedOffice
     : branchOfficeIds(state)[0];
-  return (
-    (preferred && branchSiteCoordForOffice(state, preferred)) ??
-    hqCoordForState(state)
-  );
+  const coord =
+    (preferred && branchSiteCoordForOffice(state, preferred)) ?? hq;
+  return isCoordOnMapGrid(coord) ? coord : hq;
 }
 
-export function mainOfficeCoordForState(state: GameState): AxialCoord {
-  return mapMainOfficeCoord(state);
+/** Map home/focus target — online always uses authored HQ hexes, not stale save anchors. */
+export function mapFocusCoord(
+  state: GameState,
+  session?: OnlineSession | null,
+): AxialCoord {
+  const onlineSession = resolveOnlineSession(state, session);
+  if (onlineSession) {
+    return playerHqCoord(onlineSession.playerId);
+  }
+  return mapMainOfficeCoord(state, session);
+}
+
+/** Focus the HQ hex actually rendered on the map (matches landmark + HQ button). */
+export function hqMapCoordForFocus(
+  cells: AxialCoord[],
+  state: GameState,
+  session?: OnlineSession | null,
+): AxialCoord {
+  for (const coord of cells) {
+    if (officeAtForState(coord, state, session) === "hq") {
+      return coord;
+    }
+  }
+
+  const canonical = mapFocusCoord(state, session);
+  if (isCoordOnMapGrid(canonical)) {
+    return canonical;
+  }
+
+  return mapMainOfficeCoord(state, session);
+}
+
+export function mainOfficeCoordForState(
+  state: GameState,
+  session?: OnlineSession | null,
+): AxialCoord {
+  return mapMainOfficeCoord(state, session);
 }
 
 export function hexDistanceFromMainOfficeForState(
   state: GameState,
   coord: AxialCoord,
+  session?: OnlineSession | null,
 ): number {
-  return axialDistance(mainOfficeCoordForState(state), coord);
+  return axialDistance(mainOfficeCoordForState(state, session), coord);
 }

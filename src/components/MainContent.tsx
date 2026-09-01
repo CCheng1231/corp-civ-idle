@@ -21,7 +21,8 @@ export function MainContent({ state, dispatch, session }: MainContentProps) {
     case "overview":
       return <OverviewView state={state} dispatch={dispatch} />;
     case "world":
-      return <WorldView state={state} dispatch={dispatch} />;    case "operations":
+      return <WorldView state={state} dispatch={dispatch} session={session} />;
+    case "operations":
       return <OperationsView state={state} dispatch={dispatch} />;
     case "recruitment":
       return <RecruitmentView state={state} dispatch={dispatch} />;

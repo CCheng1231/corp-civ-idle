@@ -65,6 +65,17 @@ export function generateHexagonMap(radius: number = MAP_RADIUS): AxialCoord[] {
   return cells;
 }
 
+/** True when coord is rendered on the world hex patch (cube distance from origin). */
+export function isCoordOnMapGrid(
+  coord: AxialCoord,
+  radius: number = MAP_RADIUS,
+): boolean {
+  const s = -coord.q - coord.r;
+  return (
+    Math.max(Math.abs(coord.q), Math.abs(coord.r), Math.abs(s)) <= radius
+  );
+}
+
 export function hexBounds(cells: AxialCoord[], size: number = HEX_RADIUS) {
   let minX = Infinity;
   let minY = Infinity;

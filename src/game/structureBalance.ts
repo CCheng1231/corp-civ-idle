@@ -461,7 +461,12 @@ export function reconcileStructureBuildTimers(
 
   for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const queue = next.structureQueues[officeId];
-    if (queue.length === 0) continue;
+    if (!queue?.length) {
+      if (!next.structureQueues[officeId]) {
+        next.structureQueues[officeId] = [];
+      }
+      continue;
+    }
 
     const built = { ...next.structureLevelsByLocation[officeId] };
     next.structureQueues[officeId] = queue.map((job) => {

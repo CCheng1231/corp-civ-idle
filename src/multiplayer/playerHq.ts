@@ -1,9 +1,19 @@
 import { MAP_HQ, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
-import type { PlayerId } from "./types";
+import type { CompanyPresence, OnlineSession, PlayerId } from "./types";
+import { PLAYER_IDS } from "./types";
+
+export function resolveOnlineSession(
+  state: GameState,
+  session?: OnlineSession | null,
+): OnlineSession | null {
+  if (session?.playMode === "online") return session;
+  if (state.onlineSession?.playMode === "online") return state.onlineSession;
+  return null;
+}
 
 /** Chris HQ — fixed countryside-adjacent hex, distinct from Tim (must fit MAP_RADIUS). */
-export const CHRIS_HQ: AxialCoord = { q: -3, r: -4 };
+export const CHRIS_HQ: AxialCoord = { q: -2, r: -4 };
 
 const HQ_BY_PLAYER: Record<PlayerId, AxialCoord> = {
   tim: MAP_HQ,
@@ -14,12 +24,43 @@ export function playerHqCoord(playerId: PlayerId): AxialCoord {
   return HQ_BY_PLAYER[playerId];
 }
 
-export function hqCoordForState(state: GameState): AxialCoord {
-  if (
-    state.onlineSession?.playMode === "online" &&
-    state.onlineSession.playerId
-  ) {
-    return playerHqCoord(state.onlineSession.playerId);
+export function presenceHqNeedsRepair(presence: CompanyPresence): boolean {
+  const canonical = playerHqCoord(presence.playerId);
+  return (
+    presence.hqCoord.q !== canonical.q || presence.hqCoord.r !== canonical.r
+  );
+}
+
+/** Firestore presence may carry stale HQ coords from older builds — code wins. */
+export function canonicalCompanyPresence(
+  presence: CompanyPresence,
+): CompanyPresence {
+  const hqCoord = playerHqCoord(presence.playerId);
+  if (presence.hqCoord.q === hqCoord.q && presence.hqCoord.r === hqCoord.r) {
+    return presence;
+  }
+  return { ...presence, hqCoord };
+}
+
+export function canonicalCompanyPresenceMap(
+  map: Record<PlayerId, CompanyPresence>,
+): Record<PlayerId, CompanyPresence> {
+  const next = { ...map };
+  for (const playerId of PLAYER_IDS) {
+    if (next[playerId]) {
+      next[playerId] = canonicalCompanyPresence(next[playerId]);
+    }
+  }
+  return next;
+}
+
+export function hqCoordForState(
+  state: GameState,
+  session?: OnlineSession | null,
+): AxialCoord {
+  const onlineSession = resolveOnlineSession(state, session);
+  if (onlineSession) {
+    return playerHqCoord(onlineSession.playerId);
   }
   return MAP_HQ;
 }
@@ -63,6 +104,11 @@ export function branchContext(state: GameState) {
 export function officeAtForState(
   coord: AxialCoord,
   state: GameState,
+  session?: OnlineSession | null,
 ): OfficeLocationId | null {
-  return officeAtCoord(coord, branchContext(state), hqCoordForState(state));
+  return officeAtCoord(
+    coord,
+    branchContext(state),
+    hqCoordForState(state, session),
+  );
 }

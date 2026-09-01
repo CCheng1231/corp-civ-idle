@@ -643,6 +643,75 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
   return next;
 }
 
+/** Online Firestore load — resolve queues but skip offline production catch-up. */
+export function finalizeOnlineSyncState(state: GameState, now: number): GameState {
+  const normalized = reconcileStructureBuildTimers(
+    {
+      ...state,
+      resources: normalizeResourceWallet(state.resources),
+      dismissedJobReportIds: state.dismissedJobReportIds ?? [],
+      logbookFilterId: state.logbookFilterId ?? "all",
+      pendingOfflineSummary: null,
+      pendingCompletionAlerts: [],
+      recruitFocusUnitId: null,
+      logbookHighlightEntryId: null,
+      jobFocusPostingId: null,
+    },
+    now,
+  );
+  const afterQueues = withDerivedStats(
+    runJobSimulation(
+      processRecruitmentJobs(
+        processContractorTransfers(
+          processResearchQueues(
+            processStructureQueues(normalized, now, false),
+            now,
+            false,
+          ),
+          now,
+        ),
+        now,
+        false,
+      ),
+      now,
+      false,
+    ),
+  );
+  return {
+    ...afterQueues,
+    lastTickAt: now,
+    pendingOfflineSummary: null,
+    onlineResetGeneration: afterQueues.onlineResetGeneration,
+    onlineSaveSessionId: afterQueues.onlineSaveSessionId,
+  };
+}
+
+/** Keep local UI + shared sync fields when applying a remote online save. */
+function mergeOnlineRemoteState(
+  current: GameState,
+  incoming: GameState,
+): GameState {
+  return {
+    ...incoming,
+    view: current.view,
+    jobPostings: current.jobPostings,
+    companyPresence: current.companyPresence,
+    recruitFocusUnitId: current.recruitFocusUnitId,
+    logbookHighlightEntryId: current.logbookHighlightEntryId,
+    jobFocusPostingId: current.jobFocusPostingId,
+    pendingCompletionAlerts: current.pendingCompletionAlerts,
+    pendingOfflineSummary: current.pendingOfflineSummary,
+    onlineConnectionStatus: current.onlineConnectionStatus,
+    onlineSession: current.onlineSession ?? incoming.onlineSession,
+    onlineResetGeneration:
+      incoming.onlineResetGeneration ??
+      current.onlineResetGeneration ??
+      0,
+    onlineSaveSessionId:
+      incoming.onlineSaveSessionId ?? current.onlineSaveSessionId,
+  };
+}
+
 function tickProduction(state: GameState, deltaSec: number): GameState {
   const next = structuredClone(state);
   const hourFraction = deltaSec / 3600;
@@ -788,6 +857,12 @@ export function devSkipTime(state: GameState, minutes: number): GameState {
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "LOAD":
+      if (isOnlineMode(action.state) || isOnlineMode(state)) {
+        return finalizeOnlineSyncState(
+          mergeOnlineRemoteState(state, action.state),
+          Date.now(),
+        );
+      }
       return finalizeLoadedState(action.state, Date.now());
 
     case "SET_VIEW":
@@ -1414,6 +1489,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         onlineConnectionStatus: action.status,
+      };
+
+    case "SET_ONLINE_RESET_GENERATION":
+      return {
+        ...state,
+        onlineResetGeneration: action.generation,
+      };
+
+    case "SET_ONLINE_SAVE_SESSION":
+      return {
+        ...state,
+        onlineSaveSessionId: action.sessionId,
       };
 
     case "ONLINE_HANDLE_COMPLETED_POSTING":

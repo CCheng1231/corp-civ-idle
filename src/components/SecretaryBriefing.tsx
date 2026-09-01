@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch } from "react";
+import { useEffect, type Dispatch } from "react";
 import {
   jobReportBrief,
   jobReportHeadline,
@@ -10,9 +10,9 @@ import { JobBoard } from "./JobBoard";
 
 const SECRETARY_WORK_TAB_KEY = "corp-civ-idle-secretary-work-tab";
 
-type SecretaryWorkTab = "reports" | "board";
+export type SecretaryWorkTab = "reports" | "board";
 
-function initialWorkTab(): SecretaryWorkTab {
+export function initialSecretaryWorkTab(): SecretaryWorkTab {
   try {
     const stored = localStorage.getItem(SECRETARY_WORK_TAB_KEY);
     if (stored === "reports" || stored === "board") return stored;
@@ -25,12 +25,18 @@ function initialWorkTab(): SecretaryWorkTab {
 interface SecretaryBriefingProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  workTab: SecretaryWorkTab;
+  onWorkTabChange: (tab: SecretaryWorkTab) => void;
 }
 
-export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
+export function SecretaryBriefing({
+  state,
+  dispatch,
+  workTab,
+  onWorkTabChange,
+}: SecretaryBriefingProps) {
   const tips = secretaryTips(state);
   const jobReports = pendingJobReports(state);
-  const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialWorkTab);
 
   useEffect(() => {
     try {
@@ -39,12 +45,6 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
       /* ignore */
     }
   }, [workTab]);
-
-  useEffect(() => {
-    if (state.jobFocusPostingId) {
-      setWorkTab("board");
-    }
-  }, [state.jobFocusPostingId]);
 
   function openJobLogbook(entryId?: string) {
     dispatch({
@@ -69,7 +69,7 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
           aria-selected={workTab === "reports"}
           aria-controls="secretary-panel-reports"
           className={workTab === "reports" ? "tab active" : "tab"}
-          onClick={() => setWorkTab("reports")}
+          onClick={() => onWorkTabChange("reports")}
         >
           Job reports
         </button>
@@ -80,7 +80,7 @@ export function SecretaryBriefing({ state, dispatch }: SecretaryBriefingProps) {
           aria-selected={workTab === "board"}
           aria-controls="secretary-panel-board"
           className={workTab === "board" ? "tab active" : "tab"}
-          onClick={() => setWorkTab("board")}
+          onClick={() => onWorkTabChange("board")}
         >
           Job board
         </button>

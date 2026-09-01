@@ -804,7 +804,8 @@ export function totalStructureLevel(
   );
 }
 
-export function totalWorkforce(roster: UnitRoster): number {
+export function totalWorkforce(roster: UnitRoster | null | undefined): number {
+  if (!roster) return 0;
   return UNIT_IDS.reduce((sum, id) => sum + (roster[id] ?? 0), 0);
 }
 
@@ -837,7 +838,7 @@ export function rosterAt(
   state: GameState,
   officeId: OfficeLocationId,
 ): UnitRoster {
-  return state.contractorsByLocation[officeId];
+  return state.contractorsByLocation[officeId] ?? emptyUnitRoster();
 }
 
 export function staffAtLocation(state: GameState, officeId: OfficeLocationId) {

@@ -4,7 +4,6 @@ import {
   emptyStructureLevels,
   emptyStructureQueues,
   emptyResearchQueues,
-  OFFICE_IDS,
   recruitBatchCost,
   emptyUnitRoster,
   emptyContractorsByLocation,
@@ -18,12 +17,13 @@ import {
   clampUiScale,
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
-import { finalizeLoadedState } from "./engine";
+import { finalizeLoadedState, finalizeOnlineSyncState } from "./engine";
 import { trimSecretaryJobReports } from "./logbook";
 import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
-import { MAP_BRANCH } from "./hexLayout";
+import { branchSiteCoord, isEstablishedBranchSiteOnMap } from "./branchSites";
+import { isCoordOnMapGrid, MAP_BRANCH } from "./hexLayout";
 import {
   commercialSiteAt,
   defaultBranchSiteName,
@@ -103,8 +103,13 @@ function migrateStructureQueues(
     ...emptyStructureQueues(),
     ...parsed.structureQueues,
   };
-  for (const officeId of OFFICE_IDS) {
-    const built = { ...structureLevelsByLocation[officeId] };
+  for (const officeId of Object.keys(
+    structureLevelsByLocation,
+  ) as OfficeLocationId[]) {
+    const built = {
+      ...branchStartStructureLevels(),
+      ...structureLevelsByLocation[officeId],
+    };
     queues[officeId] = (queues[officeId] ?? []).map((job, index) => {
       let targetLevel = job.targetLevel;
       if (targetLevel == null) {
@@ -229,11 +234,22 @@ function migrateStructureLevels(parsed: LegacySave): GameState["structureLevelsB
   };
 
   if (parsed.structureLevelsByLocation) {
-    for (const officeId of LEGACY_OFFICE_KEYS) {
-      const incoming = parsed.structureLevelsByLocation[officeId] ?? {};
-      base[officeId] = { ...base[officeId], ...incoming };
+    const result: GameState["structureLevelsByLocation"] = {
+      hq: {
+        ...branchStartStructureLevels(),
+        ...(parsed.structureLevelsByLocation.hq ?? {}),
+      },
+    };
+    for (const [officeId, levels] of Object.entries(
+      parsed.structureLevelsByLocation,
+    )) {
+      if (officeId === "hq") continue;
+      result[officeId as OfficeLocationId] = {
+        ...branchStartStructureLevels(),
+        ...(levels as GameState["structureLevelsByLocation"][OfficeLocationId]),
+      };
     }
-    return base;
+    return result;
   }
 
   const legacy =
@@ -254,10 +270,19 @@ function normalizeUnitRoster(raw: unknown): UnitRoster {
 
 function migrateContractors(parsed: LegacySave): ContractorsByLocation {
   if (parsed.contractorsByLocation) {
-    return {
+    const result: ContractorsByLocation = {
       hq: normalizeUnitRoster(parsed.contractorsByLocation.hq),
-      branch: normalizeUnitRoster(parsed.contractorsByLocation.branch),
     };
+    for (const [officeId, roster] of Object.entries(
+      parsed.contractorsByLocation,
+    )) {
+      if (officeId === "hq") continue;
+      result[officeId as OfficeLocationId] = normalizeUnitRoster(roster);
+    }
+    if (!result.hq) {
+      result.hq = emptyUnitRoster({ fresh_graduate: 2 });
+    }
+    return result;
   }
   if (
     parsed.contractors &&
@@ -350,7 +375,8 @@ function migrateBranchFields(
   parsed: LegacySave,
   merged: GameState,
 ): Pick<GameState, "branchSites" | "selectedTowerId" | "selectedCommercialHex"> {
-  if (Array.isArray(parsed.branchSites) && parsed.branchSites.length > 0) {
+  // Modern saves (including online) always persist branchSites — skip legacy inference.
+  if (Array.isArray(parsed.branchSites)) {
     return {
       branchSites: parsed.branchSites as EstablishedBranchSite[],
       selectedTowerId: null,
@@ -421,7 +447,10 @@ function migrateBranchFields(
   };
 }
 
-function normalizeSave(parsed: LegacySave): GameState {
+function normalizeSave(
+  parsed: LegacySave,
+  options?: { skipFinalize?: boolean },
+): GameState {
   const base = createInitialState();
   const now = Date.now();
   const rawSelectedOffice = parsed.selectedOffice;
@@ -612,44 +641,114 @@ function normalizeSave(parsed: LegacySave): GameState {
     merged.won = true;
   }
 
+  for (const officeId of Object.keys(
+    merged.structureLevelsByLocation,
+  ) as OfficeLocationId[]) {
+    if (!merged.structureQueues[officeId]) {
+      merged.structureQueues[officeId] = [];
+    }
+    if (!merged.researchQueues[officeId]) {
+      merged.researchQueues[officeId] = [];
+    }
+    if (!merged.contractorsByLocation[officeId]) {
+      merged.contractorsByLocation[officeId] = emptyUnitRoster();
+    }
+  }
+
+  const legacyBranchLevels = merged.structureLevelsByLocation.branch;
+  if (legacyBranchLevels && merged.branchSites.length === 0) {
+    delete merged.structureLevelsByLocation.branch;
+    delete merged.structureQueues.branch;
+    delete merged.researchQueues.branch;
+    delete merged.contractorsByLocation.branch;
+  }
+
   const trimmed = trimSecretaryJobReports(merged);
+  if (options?.skipFinalize) return trimmed;
   return finalizeLoadedState(trimmed, Date.now());
 }
 
 export function loadOnlineStateFromRemote(
   session: OnlineSession,
   remote: Record<string, unknown>,
+  _knownResetAt?: number,
+  expectedSessionId?: string,
 ): GameState {
-  const merged = normalizeSave({
-    ...createInitialState(),
-    ...deserializePrivateState(remote, session),
-  } as LegacySave);
+  const merged = normalizeSave(
+    {
+      ...createInitialState(),
+      ...deserializePrivateState(remote, session),
+    } as LegacySave,
+    { skipFinalize: true },
+  );
   merged.onlineSession = session;
-  return applyOnlineDevRestrictions(finalizeLoadedState(merged, Date.now()));
+  merged.onlineResetGeneration = Math.max(
+    Number(remote.resetGeneration ?? 0),
+    _knownResetAt ?? 0,
+  );
+  const remoteSessionId = remote.onlineSaveSessionId;
+  merged.onlineSaveSessionId =
+    typeof remoteSessionId === "string" ? remoteSessionId : expectedSessionId;
+  const sanitized = sanitizeOnlineMapAnchors(merged);
+  return applyOnlineDevRestrictions(finalizeOnlineSyncState(sanitized, Date.now()));
+}
+
+/** Drop off-grid branch anchors and force HQ focus when saves predate HQ coord fixes. */
+function sanitizeOnlineMapAnchors(state: GameState): GameState {
+  const onGridBranches = state.branchSites.filter(
+    (site) =>
+      isEstablishedBranchSiteOnMap(site) &&
+      isCoordOnMapGrid(branchSiteCoord(site)),
+  );
+  const hadOffGridBranch = onGridBranches.length !== state.branchSites.length;
+  const mapMainOffice =
+    state.settings.mapMainOffice === "branch" &&
+    onGridBranches.length === 0
+      ? "hq"
+      : state.settings.mapMainOffice;
+  const selectedCommercialHex =
+    state.selectedCommercialHex &&
+    !isCoordOnMapGrid(state.selectedCommercialHex)
+      ? null
+      : state.selectedCommercialHex;
+  if (
+    !hadOffGridBranch &&
+    mapMainOffice === state.settings.mapMainOffice &&
+    selectedCommercialHex === state.selectedCommercialHex
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    branchSites: onGridBranches,
+    selectedCommercialHex,
+    settings: {
+      ...state.settings,
+      mapMainOffice,
+    },
+  };
+}
+
+/** Blank online save before Firestore bootstrap (Firestore is source of truth). */
+export function createFreshOnlineState(
+  session: OnlineSession,
+  resetGeneration = 0,
+  saveSessionId?: string,
+): GameState {
+  const fresh = createInitialState();
+  fresh.onlineSession = session;
+  fresh.jobPostings = [];
+  fresh.companyPresence = {};
+  fresh.completedPostingPayouts = [];
+  fresh.onlineResetGeneration = resetGeneration;
+  fresh.onlineSaveSessionId = saveSessionId;
+  return applyOnlineDevRestrictions(fresh);
 }
 
 export function loadGameState(session?: OnlineSession | null): GameState {
   if (session?.playMode === "online") {
-    try {
-      const cached = localStorage.getItem(onlineCacheKey(session));
-      if (cached) {
-        const parsed = JSON.parse(cached) as LegacySave;
-        return applyOnlineDevRestrictions(
-          normalizeSave({
-            ...parsed,
-            ...deserializePrivateState(parsed as Record<string, unknown>, session),
-          }),
-        );
-      }
-    } catch {
-      /* fall through */
-    }
-    const fresh = createInitialState();
-    fresh.onlineSession = session;
-    fresh.jobPostings = [];
-    fresh.companyPresence = {};
-    fresh.completedPostingPayouts = [];
-    return applyOnlineDevRestrictions(fresh);
+    // Firestore bootstrap is authoritative — avoid stale browser cache on first paint.
+    return createFreshOnlineState(session);
   }
 
   const key = session?.playerId
@@ -679,7 +778,13 @@ export function saveGameState(state: GameState): void {
   if (session?.playMode === "online") {
     localStorage.setItem(
       onlineCacheKey(session),
-      JSON.stringify(serializePrivateState(state)),
+      JSON.stringify(
+        serializePrivateState(
+          state,
+          Date.now(),
+          state.onlineResetGeneration ?? 0,
+        ),
+      ),
     );
     return;
   }

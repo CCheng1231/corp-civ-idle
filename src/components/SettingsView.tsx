@@ -18,12 +18,32 @@ import { PLAYER_IDS, PLAYER_LABELS, isOnlineSession } from "../multiplayer/types
 import { isFirebaseConfigured } from "../multiplayer/firebase";
 import { clearSession, writeSession, createSession } from "../multiplayer/session";
 import {
+  forceResyncPrivateState,
   savePrivateState,
   resetOnlineDatabase,
   resetOnlinePlayerAccount,
   resetOnlineSharedWorldPreserveAccounts,
 } from "../multiplayer/worldSync";
 import { saveGameState } from "../game/save";
+import { clearAllOnlineLocalCaches, clearOnlineLocalCache } from "../multiplayer/companySave";
+
+const ONLINE_RESET_TIMEOUT_MS = 30_000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error(`${label} timed out after ${ms / 1000}s`)),
+        ms,
+      );
+    }),
+  ]);
+}
 interface SettingsViewProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -37,6 +57,26 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
   const [resettingOnline, setResettingOnline] = useState<OnlineResetTarget | null>(
     null,
   );
+  const [pullingServerSave, setPullingServerSave] = useState(false);
+
+  async function pullServerSave() {
+    if (!session || !isOnlineSession(session)) return;
+    if (!isFirebaseConfigured()) {
+      window.alert("Firebase is not configured.");
+      return;
+    }
+    setPullingServerSave(true);
+    try {
+      const loaded = await forceResyncPrivateState(session);
+      dispatch({ type: "LOAD", state: loaded });
+      window.alert("Loaded the latest save from Firestore.");
+    } catch (err) {
+      console.error("Force resync failed", err);
+      window.alert("Could not load the server save. Check the console.");
+    } finally {
+      setPullingServerSave(false);
+    }
+  }
 
   async function switchAccount() {
     if (
@@ -99,12 +139,21 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     setResettingOnline(target);
     try {
       if (target === "world") {
-        await resetOnlineDatabase(session);
+        clearAllOnlineLocalCaches(session.worldId);
       } else if (target === "shared-world") {
-        await resetOnlineSharedWorldPreserveAccounts(session);
+        clearAllOnlineLocalCaches(session.worldId);
       } else {
-        await resetOnlinePlayerAccount(session, target);
+        clearOnlineLocalCache(target, session.worldId);
       }
+
+      const resetPromise =
+        target === "world"
+          ? resetOnlineDatabase(session)
+          : target === "shared-world"
+            ? resetOnlineSharedWorldPreserveAccounts(session)
+            : resetOnlinePlayerAccount(session, target);
+
+      await withTimeout(resetPromise, ONLINE_RESET_TIMEOUT_MS, "Online reset");
 
       if (
         target === "world" ||
@@ -115,7 +164,9 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         return;
       }
 
-      window.alert(`${PLAYER_LABELS[target]} online account reset.`);
+      window.alert(
+        `${PLAYER_LABELS[target]} online account reset. Close any open ${PLAYER_LABELS[target]} tabs, then switch to that account to verify.`,
+      );
       setResettingOnline(null);
     } catch (err) {
       console.error("Online reset failed", err);
@@ -370,6 +421,24 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             Dev resets for Firestore world <code>{session.worldId}</code>.
             Account resets clear one player&apos;s save. Shared-world reset
             reseeds the job board only. Full world reset wipes everything.
+          </p>
+          <div className="settings-account-actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={
+                pullingServerSave ||
+                onlineResetBusy ||
+                state.onlineConnectionStatus === "connecting"
+              }
+              onClick={() => void pullServerSave()}
+            >
+              {pullingServerSave ? "Pulling…" : "Pull server save"}
+            </button>
+          </div>
+          <p className="muted setting-hint">
+            Overwrites this tab with Firestore (respects account resets). Use if
+            another tab or reset left this session on stale progress.
           </p>
           <div className="settings-online-reset-group">
             <span className="settings-online-reset-label">Reset account</span>
