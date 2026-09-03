@@ -24,8 +24,13 @@ import type {
 /** Shared map travel rate (staff transfers + job task forces). */
 export const TRAVEL_SEC_PER_HEX = 30;
 
+/** Floor for all map travel legs (task forces, staff transfers). */
+export const MIN_TRAVEL_MS = 10_000;
+
 export function travelDurationMs(hexes: number): number {
-  return Math.max(0, Math.floor(hexes)) * TRAVEL_SEC_PER_HEX * 1000;
+  const distanceMs =
+    Math.max(0, Math.floor(hexes)) * TRAVEL_SEC_PER_HEX * 1000;
+  return Math.max(MIN_TRAVEL_MS, distanceMs);
 }
 
 /** Cube-lerp hex line from a to b (inclusive). */

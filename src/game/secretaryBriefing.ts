@@ -52,7 +52,7 @@ export function secretaryTips(state: GameState): string[] {
 
   if (activeJobs < jobCap) {
     tips.push(
-      `${jobCap - activeJobs} task force slot${jobCap - activeJobs === 1 ? "" : "s"} open — browse the board below and deploy before postings expire.`,
+      `${jobCap - activeJobs} task force slot${jobCap - activeJobs === 1 ? "" : "s"} open — open the Job board tab and deploy before postings expire.`,
     );
   } else {
     tips.push(

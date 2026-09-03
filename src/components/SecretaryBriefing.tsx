@@ -56,34 +56,41 @@ export function SecretaryBriefing({
   }
 
   return (
-    <div className="secretary-work-panel">
-      <div
-        className="secretary-work-tabs logbook-filters"
-        role="tablist"
-        aria-label="Secretary work panels"
-      >
-        <button
-          type="button"
-          role="tab"
-          id="secretary-tab-reports"
-          aria-selected={workTab === "reports"}
-          aria-controls="secretary-panel-reports"
-          className={workTab === "reports" ? "tab active" : "tab"}
-          onClick={() => onWorkTabChange("reports")}
+    <div className={`secretary-work-panel secretary-work-panel--${workTab}`}>
+      <div className="secretary-work-tabs-row">
+        <div
+          className="secretary-work-tabs logbook-filters"
+          role="tablist"
+          aria-label="Secretary work panels"
         >
-          Job reports
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="secretary-tab-board"
-          aria-selected={workTab === "board"}
-          aria-controls="secretary-panel-board"
-          className={workTab === "board" ? "tab active" : "tab"}
-          onClick={() => onWorkTabChange("board")}
-        >
-          Job board
-        </button>
+          <button
+            type="button"
+            role="tab"
+            id="secretary-tab-reports"
+            aria-selected={workTab === "reports"}
+            aria-controls="secretary-panel-reports"
+            className={workTab === "reports" ? "tab active" : "tab"}
+            onClick={() => onWorkTabChange("reports")}
+          >
+            Job reports
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="secretary-tab-board"
+            aria-selected={workTab === "board"}
+            aria-controls="secretary-panel-board"
+            className={workTab === "board" ? "tab active" : "tab"}
+            onClick={() => onWorkTabChange("board")}
+          >
+            Job board
+          </button>
+        </div>
+        <div
+          id="secretary-job-board-toolbar-slot"
+          className="secretary-work-tabs-toolbar"
+          hidden={workTab !== "board"}
+        />
       </div>
 
       <div className="secretary-work-tabpanels">
@@ -133,19 +140,12 @@ export function SecretaryBriefing({
                         {jobReportHeadline(entry)}
                       </p>
                       <p className="secretary-job-report-line2 muted">
-                        {jobReportBrief(entry, state.activityLog)}{" "}
-                        <button
-                          type="button"
-                          className="btn linkish secretary-job-report-detail-link"
-                          onClick={() => openJobLogbook(entry.id)}
-                        >
-                          Full details in logbook
-                        </button>
+                        {jobReportBrief(entry, state.activityLog)}
                       </p>
                     </div>
                     <button
                       type="button"
-                      className="tab secretary-job-report-dismiss"
+                      className="secretary-job-report-dismiss"
                       aria-label="Dismiss report"
                       onClick={() =>
                         dispatch({
@@ -188,7 +188,12 @@ export function SecretaryBriefing({
           }`}
           {...(workTab !== "board" ? { inert: true as const } : {})}
         >
-          <JobBoard state={state} dispatch={dispatch} embedded />
+          <JobBoard
+            state={state}
+            dispatch={dispatch}
+            embedded
+            embeddedActive={workTab === "board"}
+          />
         </div>
       </div>
     </div>

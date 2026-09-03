@@ -33,6 +33,7 @@ interface JobPostingCardProps {
   posting: JobPosting;
   assignment: UnitAssignment;
   onAssignmentChange: (next: UnitAssignment) => void;
+  onEngageSuccess?: () => void;
   showTower?: boolean;
 }
 
@@ -86,6 +87,7 @@ export function JobPostingCard({
   posting,
   assignment,
   onAssignmentChange,
+  onEngageSuccess,
   showTower = false,
 }: JobPostingCardProps) {
   const officeId = resolveOfficeLocation(state);
@@ -189,13 +191,15 @@ export function JobPostingCard({
           type="button"
           className="btn primary job-posting-engage-btn"
           disabled={disabled}
-          onClick={() =>
+          onClick={() => {
+            if (disabled) return;
             dispatch({
               type: "ENGAGE_JOB",
               postingId: posting.id,
               crewAssigned: assignment,
-            })
-          }
+            });
+            onEngageSuccess?.();
+          }}
         >
           {blockReason ??
             (unitCount > 0

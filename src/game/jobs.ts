@@ -817,7 +817,9 @@ export function cancelJobEngagement(
   engagementId: string,
   now: number,
 ): GameState {
-  if (!state.jobEngagements.some((e) => e.id === engagementId)) return state;
+  const existing = state.jobEngagements.find((e) => e.id === engagementId);
+  if (!existing) return state;
+  if (existing.phase === "returning") return state;
   return settleCancelledEngagement(state, engagementId, now);
 }
 

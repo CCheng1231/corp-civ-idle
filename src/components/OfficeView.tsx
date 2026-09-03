@@ -5,18 +5,19 @@ import {
   jobDefinitionById,
 } from "../game/jobs";
 import {
-  pendingJobReports,
   secretaryJobSummary,
   secretaryQuote,
 } from "../game/secretaryBriefing";
 import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
 import secretaryPortrait from "../assets/secretary.jpg";
+import secretaryReportArt from "../assets/Secretary_Report.jpg";
 import {
   SecretaryBriefing,
   initialSecretaryWorkTab,
   type SecretaryWorkTab,
 } from "./SecretaryBriefing";
+import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { TaskForceStatusIcon } from "./TaskForceStatusIcon";
@@ -31,7 +32,6 @@ interface OfficeViewProps {
 /** Nav: Secretary — briefing, job reports, and job board. */
 export function OfficeView({ state, dispatch }: OfficeViewProps) {
   const { active, cap } = secretaryJobSummary(state);
-  const reportCount = pendingJobReports(state).length;
   const now = Date.now();
   const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialSecretaryWorkTab);
 
@@ -78,18 +78,21 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
                       <span className="queue-name">{def.title}</span>
                       <span className="queue-status">{status}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="map-hex-job-send queue-cancel-btn"
-                      onClick={() =>
-                        dispatch({
-                          type: "CANCEL_JOB_ENGAGEMENT",
-                          engagementId: engagement.id,
-                        })
-                      }
-                    >
-                      Cancel
-                    </button>
+                    {engagement.phase === "outbound" ||
+                    engagement.phase === "working" ? (
+                      <button
+                        type="button"
+                        className="map-hex-job-send queue-cancel-btn"
+                        onClick={() =>
+                          dispatch({
+                            type: "CANCEL_JOB_ENGAGEMENT",
+                            engagementId: engagement.id,
+                          })
+                        }
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}
@@ -102,21 +105,10 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
 
   const secretaryBelowPortrait = (
     <>
-      <div className="secretary-stats-banner">
-        <span className="secretary-stats-banner-label">Reports</span>
-        <button
-          type="button"
-          className={
-            reportCount > 0
-              ? "secretary-stats-banner-count secretary-stats-banner-highlight"
-              : "secretary-stats-banner-count secretary-stats-banner-value"
-          }
-          aria-label={`${reportCount} pending report${reportCount === 1 ? "" : "s"}. Open job reports.`}
-          onClick={() => setWorkTab("reports")}
-        >
-          {reportCount}
-        </button>
-      </div>
+      <SceneBanner
+        src={secretaryReportArt}
+        storageKey="corp-civ-idle-secretary-report-art-pan"
+      />
       <SecretaryBriefing
         state={state}
         dispatch={dispatch}
