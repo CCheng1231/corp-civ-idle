@@ -25,11 +25,12 @@ import {
   formatPreviewText,
   formatCompactBonus,
 } from "./upgradePreviewFormat";
+import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureCostLine } from "./StructureCostLine";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
-import { tabQuote } from "../game/tabQuotes";
-import researchPortrait from "../assets/Research.webp";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import researchResourceArt from "../assets/Research_ResourceEfficiency.jpg";
 import researchPayoutsArt from "../assets/Research_ProjectPayouts.jpg";
 import researchDiscoverArt from "../assets/Research_DiscoverStructures.jpg";
@@ -116,7 +117,6 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     }
     return seeded;
   });
-  const portraitStorageKey = "corp-civ-idle-research-portrait-size";
   const researchCompletedCount = RESEARCH.filter((research) =>
     isResearchCompleted(state, research),
   ).length;
@@ -304,7 +304,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
 
   const researchBesidePortrait = (
     <>
-      <TabSiteHeader title="Research" state={state} dispatch={dispatch} />
+      <TabSiteHeader homeHubTab="research" state={state} dispatch={dispatch} />
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = researchJobsAtOffice(state, siteId);
@@ -336,25 +336,14 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         })
       ) : (
         <section className="location-view-section tab-queue-section tab-compact-queue">
-          <div className="tab-queue-heading">
-            <h3>Research in progress</h3>
-            <div className="tab-queue-heading-actions">
-              <span
-                className="tab-queue-count muted"
-                aria-label={`Research queue ${researchQueue.length} of ${MAX_RESEARCH_QUEUE}`}
-              >
-                {researchQueue.length}/{MAX_RESEARCH_QUEUE}
-              </span>
-              <label className="progression-hide-completed-check tab-queue-filter">
-                <input
-                  type="checkbox"
-                  checked={hideCompleted}
-                  onChange={(event) => setHideCompleted(event.target.checked)}
-                />
-                Hide completed
-              </label>
-            </div>
-          </div>
+          <CompactQueueHeading
+            title="Research in progress"
+            count={`${researchQueue.length}/${MAX_RESEARCH_QUEUE}`}
+            countAriaLabel={`Research queue ${researchQueue.length} of ${MAX_RESEARCH_QUEUE}`}
+            hideLabel="Hide completed"
+            hideChecked={hideCompleted}
+            onHideChange={setHideCompleted}
+          />
           <ResearchQueueList
             state={state}
             jobs={researchQueue}
@@ -427,12 +416,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel research-view">
-      <div className="location-view-body">
+    <div className="main-view-panel location-view-panel research-view hub-synced-tab-view">
+      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={researchPortrait}
-          storageKey={portraitStorageKey}
-          quote={tabQuote(state, "research")}
+          storageKey="corp-civ-idle-research-portrait-size"
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -442,7 +431,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           {researchBesidePortrait}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{researchBelowPortrait}</div>
-      </div>
+      </HubSyncedTabScrollBody>
       {detailResearch && (
         <ProgressionDetailDialog
           {...buildResearchDetailModel(state, detailResearch)}

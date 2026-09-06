@@ -91,8 +91,7 @@ export function TabPortraitQuote({ quote }: { quote: string }) {
   );
 }
 
-interface TabPortraitLayoutProps {
-  src: string;
+interface TabPortraitLayoutBaseProps {
   storageKey: string;
   defaultLargeOnDesktop?: boolean;
   portraitSize?: PortraitSize;
@@ -119,8 +118,21 @@ interface TabPortraitLayoutProps {
   portraitPanStorageKey?: string;
   /** When false, portrait stays fixed size (Home, Build tab shell). */
   allowPortraitResize?: boolean;
+  /** Hub spacer preview image (portraitSpacer tabs only). */
+  spacerSrc?: string;
   children: ReactNode;
 }
+
+type TabPortraitLayoutProps =
+  | (TabPortraitLayoutBaseProps & {
+      src: string;
+      portraitSpacer?: false;
+    })
+  /** Hub-synced tabs: invisible column reserved for future left-side content. */
+  | (TabPortraitLayoutBaseProps & {
+      portraitSpacer: true;
+      src?: never;
+    });
 
 /**
  * Portrait column beside tab content.
@@ -142,6 +154,8 @@ export function TabPortraitLayout({
   largePortraitLikeHire = false,
   portraitPanStorageKey,
   allowPortraitResize = true,
+  portraitSpacer = false,
+  spacerSrc,
   children,
 }: TabPortraitLayoutProps) {
   const [internalSize, setInternalSize] = useState<PortraitSize>(() =>
@@ -207,11 +221,34 @@ export function TabPortraitLayout({
   const portraitColumnBody = (
     <>
       <div className={portraitWrapClass}>
-        <DraggableTabPortraitFrame
-          src={src}
-          panStorageKey={effectivePanStorageKey}
-          onPortraitToggle={togglePortraitSize}
-        />
+        {portraitSpacer ? (
+          <div
+            className={[
+              "secretary-portrait-frame",
+              "tab-portrait-column-spacer",
+              spacerSrc ? "tab-portrait-column-spacer-visible" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-hidden="true"
+          >
+            {spacerSrc ? (
+              <img
+                src={spacerSrc}
+                alt=""
+                className="tab-portrait-column-spacer-img"
+                draggable={false}
+                aria-hidden
+              />
+            ) : null}
+          </div>
+        ) : (
+          <DraggableTabPortraitFrame
+            src={src!}
+            panStorageKey={effectivePanStorageKey}
+            onPortraitToggle={togglePortraitSize}
+          />
+        )}
         {quoteOverlay ? (
           <div className="tab-portrait-quote-foot">
             <TabPortraitQuote quote={quote!} />

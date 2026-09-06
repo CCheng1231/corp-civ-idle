@@ -1,7 +1,10 @@
 import { type Dispatch } from "react";
+import { HomeLandingView } from "./HomeLandingView";
 import { OverviewView } from "./OverviewView";
 import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
+import { SecretaryLandingView } from "./SecretaryLandingView";
+import { SecretaryRosterView } from "./SecretaryRosterView";
 import { LogbookView } from "./LogbookView";
 import { OperationsView } from "./OperationsView";
 import { RecruitmentView } from "./RecruitmentView";
@@ -19,7 +22,11 @@ interface MainContentProps {
 export function MainContent({ state, dispatch, session }: MainContentProps) {
   switch (state.view) {
     case "overview":
-      return <OverviewView state={state} dispatch={dispatch} />;
+      return state.homePanel === "overview" ? (
+        <OverviewView state={state} dispatch={dispatch} />
+      ) : (
+        <HomeLandingView state={state} dispatch={dispatch} />
+      );
     case "world":
       return <WorldView state={state} dispatch={dispatch} session={session} />;
     case "operations":
@@ -28,6 +35,14 @@ export function MainContent({ state, dispatch, session }: MainContentProps) {
       return <RecruitmentView state={state} dispatch={dispatch} />;
     case "research":
       return <ResearchView state={state} dispatch={dispatch} />;
+    case "secretary":
+      if (state.secretaryPanel === "roaster") {
+        return <SecretaryRosterView state={state} dispatch={dispatch} />;
+      }
+      if (state.secretaryPanel === "log") {
+        return <LogbookView state={state} dispatch={dispatch} />;
+      }
+      return <SecretaryLandingView state={state} dispatch={dispatch} />;
     case "office":
       return <OfficeView state={state} dispatch={dispatch} />;
     case "logbook":

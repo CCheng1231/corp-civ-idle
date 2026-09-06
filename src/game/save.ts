@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState, finalizeOnlineSyncState } from "./engine";
+import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS } from "./secretaryData";
 import { trimSecretaryJobReports } from "./logbook";
 import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
@@ -50,6 +51,8 @@ import type {
   ContractorsByLocation,
   MainView,
   ResearchId,
+  HomePanel,
+  SecretaryPanel,
   UnitId,
   UnitRoster,
   ContractorCategoryId,
@@ -82,6 +85,7 @@ const VALID_VIEWS = new Set<MainView>([
   "operations",
   "recruitment",
   "research",
+  "secretary",
   "office",
   "logbook",
   "settings",
@@ -93,6 +97,26 @@ function normalizeView(view: unknown): MainView {
     return view as MainView;
   }
   return "operations";
+}
+
+function normalizeChiefOfStaffId(id: unknown): GameState["chiefOfStaffId"] {
+  if (
+    typeof id === "string" &&
+    SECRETARY_IDS.includes(id as GameState["chiefOfStaffId"])
+  ) {
+    return id as GameState["chiefOfStaffId"];
+  }
+  return DEFAULT_CHIEF_OF_STAFF_ID;
+}
+
+function normalizeSecretaryPanel(panel: unknown): SecretaryPanel {
+  if (panel === "roaster") return "roaster";
+  if (panel === "log") return "log";
+  return "landing";
+}
+
+function normalizeHomePanel(panel: unknown): HomePanel {
+  return panel === "overview" ? "overview" : "landing";
 }
 
 function migrateStructureQueues(
@@ -555,9 +579,18 @@ function normalizeSave(
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
     dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
+    chiefOfStaffId: normalizeChiefOfStaffId(parsed.chiefOfStaffId),
+    secretaryPanel:
+      normalizeView(parsed.view) === "logbook"
+        ? "log"
+        : normalizeSecretaryPanel(parsed.secretaryPanel),
+    homePanel: normalizeHomePanel(parsed.homePanel),
     logbookFilterId:
       typeof parsed.logbookFilterId === "string" ? parsed.logbookFilterId : "all",
-    view: normalizeView(parsed.view),
+    view:
+      normalizeView(parsed.view) === "logbook"
+        ? "secretary"
+        : normalizeView(parsed.view),
     won: parsed.won ?? false,
     // Keep wall-clock last tick so reopen can catch up offline production.
     lastTickAt:

@@ -12,13 +12,13 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
 4. **`.cursor/rules/world-map-viewport.mdc`** — when changing world map layout, bounds, pan/zoom, or Home.
 5. **Shared UI** — `src/components/progressionUi.tsx`, `src/components/upgradePreviewFormat.ts` (`formatCompactBonus`).
 6. **The tab you are editing** — one view + its CSS blocks in `src/App.css`:
-   - **Home hub nav** → `ShortcutSidebar.tsx` (`HOME_HUB_ITEMS`, `.shortcut-home-hub-*`)
-   - **Build** → `OperationsView.tsx`, `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
+   - **Home hub** → `HomeLandingView.tsx`, `SecretaryLandingView.tsx`, `ShortcutSidebar.tsx`, `TabSiteHeader.tsx` (`HOME_HUB_TABS`, `.tab-hero-header-hub`)
+   - **Structure** → `OperationsView.tsx`, `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
    - **Recruit** → `RecruitmentView.tsx`
    - **Research** → `ResearchView.tsx`
    - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `JobPostingCard.tsx`, `MissionCrewPicker.tsx`, `TaskForceStatusIcon.tsx` (embedded job board)
    - Map hex drawer (commercial lots / branches) → `MapHexDrawer.tsx`, `mapHexInfo.ts`, `branchCommercial.ts`
-7. **Category open state** — `src/game/officeCategoryOpen.ts` (Build, Recruit, Research section collapse persists per office).
+7. **Category open state** — `src/game/officeCategoryOpen.ts` (Structure, Recruit, Research section collapse persists per office).
 8. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
 9. **Discover / structure gates** — `isStructureUnlocked`, `researchUnlockForStructure` in `constants.ts`; discover rows in `src/game/researchData.ts` (`unlocksStructure`).
 
@@ -99,11 +99,37 @@ Tier is a **badge on the card**, not the section header (recruitment).
 | `structureUpgradeBlockerDisplay` | `OfficeStructurePanel.tsx` | Filters power + duplicate cost messages from blockers |
 | `SceneBanner` | `SceneBanner.tsx` | Category scene strip (Build, Recruit, Research) |
 | `TaskForceStatusIcon` | `TaskForceStatusIcon.tsx` | Traveling / on-site glyph for Secretary task-force rows |
-| Category open persist | `officeCategoryOpen.ts` | Per-office collapse for Build / Recruit / Research sections |
+| `CompactQueueHeading` | `CompactQueueHeading.tsx` | Stacked queue title (row 1) + count / hide filter (row 2) beside portrait |
+| `TabSiteHeader` | `TabSiteHeader.tsx` | Office picker; home-hub tabs use **Section** dropdown (`HOME_HUB_TABS`) aligned with Office row |
+| Category open persist | `officeCategoryOpen.ts` | Per-office collapse for Structure / Recruit / Research sections |
 
-Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `shortcut-home-hub`, `secretary-task-forces-beside`, `secretary-task-force-icon`, `job-board-detail-drawer`, `mission-crew-unit-controls`, `office-site-summary-banner`.
+Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `hub-landing-*`, `tab-hero-header-hub`, `--tab-hero-portrait-`, `tab-queue-heading-stacked`, `secretary-task-forces-beside`, `secretary-task-force-icon`, `job-board-detail-drawer`, `mission-crew-unit-controls`, `office-site-summary-banner`.
 
 Panel width: `.main-view-panel { max-width: 960px; }`.
+
+### Home hub landings & tab hero portraits
+
+**Landings (full-bleed, bottom-pinned nav):**
+
+- `HomeLandingView.tsx` / `SecretaryLandingView.tsx` — portrait left, copy + actions right.
+- Layout: `.hub-landing-copy` (scrollable body) + `.hub-landing-actions` (`margin-top: auto` pins buttons above bottom nav).
+- Full-bleed: `.main-panel:has(.home-landing-view)` / `.secretary-landing-view` — `padding: 0` + `padding-bottom: var(--mobile-bottom-nav-space)`.
+
+**Tab hero portrait size (Overview, Structure, Recruit, Research, Logbook, Job):**
+
+- **Hub-synced tabs (Overview / Structure / Recruit / Research):** left column uses `TabPortraitLayout` `portraitSpacer` — invisible reserved column (same width as portrait frame); synced full-bleed background behind content. **Do not re-add side hero images without checking with Chris** — this slot is reserved for future UI.
+
+- Tune **one place**: `:root` CSS variables in `App.css`:
+  - `--tab-hero-portrait-col-min` / `--tab-hero-portrait-col-max` — grid column beside portrait
+  - `--tab-hero-portrait-frame-min-h` / `--tab-hero-portrait-frame-h` / `--tab-hero-portrait-frame-max-h` — frame height
+  - `--tab-hero-portrait-col-min-narrow` / `--tab-hero-portrait-col-max-narrow` — mobile / Galaxy preview
+- Applied via `.tab-portrait-fit` rules + `.tab-portrait-fit.tab-portrait-stretch > .tab-sticky-hero-row` (overrides stretch flex so frame height is fixed).
+- UI scale (`settings.uiScale`) still multiplies `rem`; design at **100%**, verify at 125%.
+
+**Home hub section picker (beside portrait):**
+
+- `TabSiteHeader` with `homeHubTab` → `.tab-hero-header-hub` grid: **Section** + **Office** labels in column 1, matching `.location-office-select` dropdowns in column 2.
+- Options: `HOME_HUB_TABS` in `TabSiteHeader.tsx` (Overview · Structure · Recruit · Research). Overview selection also sets `homePanel: "overview"`.
 
 ---
 
@@ -116,9 +142,9 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 - In queue: show **In progress**, not “Maxed” (use **built** level for maxed check, not projected queue level).
 - “Hide completed” checkbox in queue header.
 
-### Structures / Build tab (`OperationsView.tsx`, `OfficeStructurePanel.tsx`)
+### Structures / Structure tab (`OperationsView.tsx`, `OfficeStructurePanel.tsx`)
 
-- Nav label **Build**; page title **Building**.
+- Nav and section dropdown label **Structure**; queue heading **Structure in progress**.
 - Grouped by `STRUCTURE_CATEGORY_ORDER` with `SceneBanner` per category; collapse persisted via `officeCategoryOpen.ts`.
 - Space / power / office expand in **banner below portrait** (`OfficeSiteSummary` `variant="banner"`), not beside queue.
 - Discover-gated structures (`isStructureUnlocked`) show locked state; unlock requirement from `structureUnlockRequirementLabel`.
@@ -196,6 +222,20 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 ---
 
 ## Recent session state (Aug 2026)
+
+### Sep 5 — Home / Secretary landings + tab hero UI
+
+- **Home landing** (`HomeLandingView`): COS portrait, Overview / Structure / Recruit / Research buttons pinned bottom; Overview dashboard via `homePanel`.
+- **Secretary landing** (`SecretaryLandingView`): same layout; Roaster + Job buttons; no Chief of Staff role line.
+- **Tab hero portraits:** shared `--tab-hero-portrait-*` variables; Job tab uses same scale as other tab-portrait-fit views.
+- **Section dropdown:** `TabSiteHeader` `HOME_HUB_TABS` replaces static h2 on Overview / Structure / Recruit / Research; aligned with Office picker (`.tab-hero-header-hub`).
+- **Compact queue headers:** `CompactQueueHeading` on Structure / Research / Recruit — title row 1, count + hide filter row 2.
+- **Copy:** player-facing **Structure** (not Build); queue **Structure in progress** everywhere.
+
+**Likely follow-ups:**
+
+- Playtest portrait size at 100% UI scale on S24 + desktop; nudge `--tab-hero-portrait-*` if needed.
+- Optional: Section dropdown on Job tab or Secretary hub parity.
 
 ### Aug 31 (late evening) — Online save integrity + browser lease + HQ focus
 

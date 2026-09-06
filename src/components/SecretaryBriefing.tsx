@@ -3,7 +3,6 @@ import {
   jobReportBrief,
   jobReportHeadline,
   pendingJobReports,
-  secretaryTips,
 } from "../game/secretaryBriefing";
 import type { GameAction, GameState } from "../game/types";
 import { JobBoard } from "./JobBoard";
@@ -35,7 +34,6 @@ export function SecretaryBriefing({
   workTab,
   onWorkTabChange,
 }: SecretaryBriefingProps) {
-  const tips = secretaryTips(state);
   const jobReports = pendingJobReports(state);
 
   useEffect(() => {
@@ -46,20 +44,23 @@ export function SecretaryBriefing({
     }
   }, [workTab]);
 
-  function openJobLogbook(entryId?: string) {
+  function openJobLogbook() {
     dispatch({
-      type: "SET_VIEW",
-      view: "logbook",
+      type: "SET_SECRETARY_PANEL",
+      panel: "log",
       logbookFilter: "jobs",
-      logbookHighlightEntryId: entryId ?? null,
+      logbookHighlightEntryId: null,
     });
   }
 
   return (
-    <div className={`secretary-work-panel secretary-work-panel--${workTab}`}>
-      <div className="secretary-work-tabs-row">
+    <section
+      className={`secretary-job-work secretary-job-work--${workTab}`}
+      aria-label="Secretary job desk"
+    >
+      <header className="secretary-job-work-toolbar">
         <div
-          className="secretary-work-tabs logbook-filters"
+          className="secretary-job-work-tabs logbook-filters"
           role="tablist"
           aria-label="Secretary work panels"
         >
@@ -86,116 +87,91 @@ export function SecretaryBriefing({
             Job board
           </button>
         </div>
-        <div
-          id="secretary-job-board-toolbar-slot"
-          className="secretary-work-tabs-toolbar"
-          hidden={workTab !== "board"}
-        />
-      </div>
+        {workTab === "reports" ? (
+          <div className="secretary-job-reports-actions">
+            <button
+              type="button"
+              className="btn linkish secretary-job-reports-log-link"
+              onClick={() => openJobLogbook()}
+            >
+              Open job log
+            </button>
+            <button
+              type="button"
+              className="btn linkish secretary-job-reports-clear-link"
+              disabled={jobReports.length === 0}
+              onClick={() => dispatch({ type: "CLEAR_ALL_JOB_REPORTS" })}
+            >
+              Clear all
+            </button>
+          </div>
+        ) : (
+          <div
+            id="secretary-job-board-toolbar-slot"
+            className="secretary-job-work-toolbar-slot"
+          />
+        )}
+      </header>
 
-      <div className="secretary-work-tabpanels">
+      {workTab === "reports" ? (
         <div
           id="secretary-panel-reports"
           role="tabpanel"
           aria-labelledby="secretary-tab-reports"
-          aria-hidden={workTab !== "reports"}
-          className={`secretary-work-reports-tab${
-            workTab !== "reports" ? " secretary-work-tab-inert" : ""
-          }`}
-          {...(workTab !== "reports" ? { inert: true as const } : {})}
+          className="secretary-job-reports"
         >
-          <section
-            className="secretary-panel secretary-job-reports-panel"
-            aria-label="Job reports"
-          >
-            <header className="secretary-panel-head">
-              <h3>Job reports</h3>
-              <div className="secretary-job-reports-actions">
-                <button
-                  type="button"
-                  className="btn linkish secretary-job-reports-log-link"
-                  onClick={() => openJobLogbook()}
+          {jobReports.length > 0 ? (
+            <ul className="secretary-job-reports-list">
+              {jobReports.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={`secretary-job-report secretary-job-report-${entry.category}`}
                 >
-                  Open job log
-                </button>
-                <button
-                  type="button"
-                  className="btn linkish secretary-job-reports-clear-link"
-                  disabled={jobReports.length === 0}
-                  onClick={() => dispatch({ type: "CLEAR_ALL_JOB_REPORTS" })}
-                >
-                  Clear all
-                </button>
-              </div>
-            </header>
-            {jobReports.length > 0 ? (
-              <ul className="secretary-job-reports-list">
-                {jobReports.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className={`secretary-job-report secretary-job-report-${entry.category}`}
+                  <div className="secretary-job-report-body">
+                    <span className="secretary-job-report-line1">
+                      {jobReportHeadline(entry)}
+                    </span>
+                    <span className="secretary-job-report-line2 muted">
+                      {jobReportBrief(entry, state.activityLog)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="secretary-job-report-dismiss"
+                    aria-label="Dismiss report"
+                    onClick={() =>
+                      dispatch({
+                        type: "DISMISS_JOB_REPORT",
+                        logEntryId: entry.id,
+                      })
+                    }
                   >
-                    <div className="secretary-job-report-body">
-                      <p className="secretary-job-report-line1">
-                        {jobReportHeadline(entry)}
-                      </p>
-                      <p className="secretary-job-report-line2 muted">
-                        {jobReportBrief(entry, state.activityLog)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="secretary-job-report-dismiss"
-                      aria-label="Dismiss report"
-                      onClick={() =>
-                        dispatch({
-                          type: "DISMISS_JOB_REPORT",
-                          logEntryId: entry.id,
-                        })
-                      }
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted secretary-job-reports-empty">
-                No new reports — completed and withdrawn jobs will show here.
-              </p>
-            )}
-          </section>
-
-          <section className="secretary-panel secretary-tips-panel">
-            <header className="secretary-panel-head">
-              <h3>Focus for now</h3>
-            </header>
-            <ul className="secretary-tips-list">
-              {tips.map((tip) => (
-                <li key={tip}>{tip}</li>
+                    ×
+                  </button>
+                </li>
               ))}
             </ul>
-          </section>
+          ) : (
+            <p className="muted secretary-job-reports-empty">
+              No new reports — completed and withdrawn jobs will show here.
+            </p>
+          )}
         </div>
-
+      ) : (
         <div
           id="secretary-panel-board"
           role="tabpanel"
           aria-labelledby="secretary-tab-board"
-          aria-hidden={workTab !== "board"}
-          className={`secretary-work-board-tab${
-            workTab !== "board" ? " secretary-work-tab-inert" : ""
-          }`}
-          {...(workTab !== "board" ? { inert: true as const } : {})}
+          className="secretary-job-board"
         >
           <JobBoard
             state={state}
             dispatch={dispatch}
             embedded
-            embeddedActive={workTab === "board"}
+            embeddedActive
           />
         </div>
-      </div>
-    </div>
+      )}
+    </section>
   );
 }

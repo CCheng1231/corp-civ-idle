@@ -18,7 +18,9 @@ Target platforms: **Android, iOS, and PC**. Treat UI as a responsive game shell,
 
 4. **Safe areas** — Respect **`env(safe-area-inset-*)`** at top and bottom (and sides when needed) for notches, punch holes, and home indicators (Samsung S24, iPhone 15/16, etc.). Combine with `--mobile-bottom-nav-space`; do not place critical UI under system gestures.
 
-5. **Touch targets** — Interactive controls (buttons, tabs, nav, toggles) need **≥ 48×48 logical units** minimum hit area on touch platforms (`min-height` / `min-width` + padding).
+5. **Full-bleed tab content** — When a view should fill the main panel (e.g. map, Secretary landing), set **`.main-panel:has(.your-view) { padding: 0; padding-bottom: var(--mobile-bottom-nav-space, 0px); }`** and override **both** `.layout-mobile-nav .main-panel` and `.app-shell.viewport-preview-mobile .main-panel` (those rules set side padding later in `App.css`). Never overlap the bottom nav; only reserve space at the bottom.
+
+6. **Touch targets** — Interactive controls (buttons, tabs, nav, toggles) need **≥ 48×48 logical units** minimum hit area on touch platforms (`min-height` / `min-width` + padding).
 
 ## PC
 

@@ -25,9 +25,9 @@ export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
   transfer_arrival: "Staff relocation",
   bid_start: "Bids",
   bid_complete: "Bids",
-  job_engage: "Jobs",
-  job_cancel: "Jobs",
-  job_complete: "Jobs",
+  job_engage: "Job",
+  job_cancel: "Job",
+  job_complete: "Job",
   phase: "Milestones",
 };
 
@@ -49,7 +49,7 @@ export const LOG_FILTER_GROUPS: { id: string; label: string; categories: LogCate
   { id: "bids", label: "Bids", categories: ["bid_start", "bid_complete"] },
   {
     id: "jobs",
-    label: "Jobs",
+    label: "Job",
     categories: ["job_engage", "job_cancel", "job_complete"],
   },
   { id: "milestones", label: "Milestones", categories: ["phase"] },
@@ -208,20 +208,104 @@ export function formatLogTimestamp(at: number): string {
   });
 }
 
-/** Compact time column for spreadsheet rows. */
-export function formatLogTimeCell(at: number): string {
+/** Compact time column for spreadsheet rows (date + time, no seconds). */
+export function formatLogTimeCellParts(at: number): { date: string; time: string } {
   const d = new Date(at);
-  const date = d.toLocaleDateString(undefined, {
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const time = d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  return `${date} ${time}`;
+  return {
+    date: d.toLocaleDateString(undefined, {
+      month: "2-digit",
+      day: "2-digit",
+    }),
+    time: d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+  };
+}
+
+/** Compact player-facing headline for log list rows. */
+export function logEntryHeadline(entry: LogEntry): string {
+  if (/^Crew returned from /i.test(entry.summary)) {
+    return "Crew returned: Job complete";
+  }
+  if (/^Recalled from /i.test(entry.summary)) {
+    return "Crew recalled";
+  }
+  if (/^Withdrawn from /i.test(entry.summary)) {
+    return "Crew withdrawn";
+  }
+  if (/^Job completed: /i.test(entry.summary)) {
+    return "Job complete";
+  }
+  if (/^Shift complete: /i.test(entry.summary)) {
+    return "Shift complete";
+  }
+  const engaged = entry.summary.match(/^Engaged: (.+)$/i);
+  if (engaged) {
+    return `Deployed: ${engaged[1]}`;
+  }
+  const beforeAt = entry.summary.split(" at ")[0]?.trim();
+  if (beforeAt && beforeAt.length < entry.summary.length && beforeAt.length <= 44) {
+    return beforeAt;
+  }
+  if (entry.summary.length <= 44) return entry.summary;
+  const colon = entry.summary.indexOf(":");
+  if (colon > 0 && colon < 36) {
+    return entry.summary.slice(0, colon + 1).trim();
+  }
+  return `${entry.summary.slice(0, 42).trim()}…`;
+}
+
+function jobTitleFromReturnLog(summary: string): string | null {
+  const match = summary.match(/^Crew returned from (.+)$/i);
+  return match?.[1] ?? null;
+}
+
+function jobTitleFromPayoutLog(summary: string): string | null {
+  let match = summary.match(/^Shift complete: (.+)$/i);
+  if (match) return match[1];
+  match = summary.match(/^Job completed: (.+)$/i);
+  if (match) return match[1];
+  match = summary.match(/^Withdrawn from (.+?) \((early|posting expired)\)$/i);
+  if (match) return match[1];
+  return null;
+}
+
+function relatedJobPayoutLog(
+  activityLog: LogEntry[],
+  returnEntry: LogEntry,
+): LogEntry | null {
+  const title = jobTitleFromReturnLog(returnEntry.summary);
+  if (!title) return null;
+
+  let best: LogEntry | null = null;
+  for (const entry of activityLog) {
+    if (!isPreReturnJobLog(entry)) continue;
+    if (jobTitleFromPayoutLog(entry.summary) !== title) continue;
+    if (entry.at > returnEntry.at) continue;
+    if (!best || entry.at > best.at) best = entry;
+  }
+  return best;
+}
+
+/** Cash pill label for log rows, e.g. "Cash: 80". */
+export function logEntryCashTag(
+  entry: LogEntry,
+  activityLog?: LogEntry[],
+): string | null {
+  const sources = [entry];
+  if (activityLog) {
+    const payoutLog = relatedJobPayoutLog(activityLog, entry);
+    if (payoutLog) sources.push(payoutLog);
+  }
+  for (const source of sources) {
+    const cash = source.gained?.cash;
+    if (cash != null && cash > 0) {
+      return `Cash: ${formatNumber(cash)}`;
+    }
+  }
+  return null;
 }
 
 export function officeLabel(

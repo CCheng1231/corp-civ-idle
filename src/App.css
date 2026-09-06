@@ -202,7 +202,7 @@
 }
 
 .resource-chip-tip {
-  position: absolute;
+  position: fixed;
   left: 0;
   top: 0;
   z-index: 400;
@@ -223,6 +223,7 @@
 
 .resource-chip-tip.resource-chip-tip-visible {
   display: flex;
+  pointer-events: auto;
 }
 
 .resource-chip-tip-title {
@@ -806,8 +807,8 @@
 
 .shortcut-sidebar-mobile .shortcut-link {
   box-sizing: border-box;
-  flex: 0 0 20%;
-  width: 20%;
+  flex: 0 0 var(--shortcut-slot-size, 20%);
+  width: var(--shortcut-slot-size, 20%);
   min-width: 0;
   max-width: none;
   min-height: 48px;
@@ -1008,6 +1009,1679 @@
   right: auto;
   transform: translateX(-50%);
   min-width: 4.5rem;
+}
+
+.shortcut-secretary-hub-wrap {
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.shortcut-secretary-hub-wrap-open {
+  z-index: 2;
+}
+
+.shortcut-secretary-hub-menu {
+  position: absolute;
+  bottom: calc(100% + 0.28rem);
+  left: 50%;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 5.75rem;
+  padding: 0.28rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(23, 30, 39, 0.98);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.38);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.shortcut-secretary-hub-menu-armed {
+  pointer-events: auto;
+}
+
+.shortcut-secretary-hub-item {
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.32rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shortcut-secretary-hub-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.shortcut-secretary-hub-item.active {
+  border-color: rgba(120, 190, 255, 0.45);
+  background: rgba(80, 150, 220, 0.14);
+}
+
+.shortcut-sidebar-mobile .shortcut-secretary-hub-wrap {
+  flex: 0 0 20%;
+  width: 20%;
+  min-width: 0;
+  max-width: none;
+  touch-action: manipulation;
+}
+
+.shortcut-sidebar-mobile .shortcut-secretary-hub-trigger {
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+}
+
+.shortcut-sidebar-mobile .shortcut-secretary-hub-menu {
+  bottom: calc(100% + 0.18rem);
+  min-width: 4.75rem;
+  padding: 0.22rem;
+  z-index: 330;
+}
+
+.shortcut-sidebar-mobile .shortcut-secretary-hub-item {
+  min-height: 2rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.68rem;
+}
+
+.shortcut-sidebar:not(.shortcut-sidebar-mobile) .shortcut-secretary-hub-menu {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.shortcut-sidebar-collapsed .shortcut-secretary-hub-menu {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  min-width: 4.5rem;
+}
+
+.shortcut-sidebar-mobile.shortcut-sidebar-secretary-hub-open {
+  overflow: visible;
+  z-index: 320;
+}
+
+.shortcut-sidebar-mobile.shortcut-sidebar-secretary-hub-open .shortcut-nav {
+  overflow: visible;
+  touch-action: pan-x;
+}
+
+.shortcut-sidebar-mobile.shortcut-sidebar-secretary-hub-open .shortcut-nav-track-mobile {
+  overflow: visible;
+}
+
+.shortcut-sidebar-secretary-hub-open {
+  overflow: visible;
+  z-index: 320;
+}
+
+.shortcut-sidebar-secretary-hub-open .shortcut-nav {
+  overflow: visible;
+}
+
+.main-panel:has(.secretary-roster-view:not(.hub-synced-tab-view)) {
+  overflow: auto;
+  padding-bottom: 0.75rem;
+}
+
+.main-panel:has(.hub-landing-view),
+.main-panel:has(.hub-synced-tab-view) {
+  overflow: hidden;
+  padding: 0;
+  padding-bottom: 0;
+}
+
+.hub-landing-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  background: #0a0f14;
+}
+
+.hub-landing-view > .hub-landing-portrait-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  touch-action: none;
+  background-color: #0a0f14;
+}
+
+.hub-landing-overlay {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.55rem;
+  padding-bottom: var(--mobile-bottom-nav-space, 0.35rem);
+  pointer-events: none;
+}
+
+.hub-landing-overlay > * {
+  pointer-events: auto;
+}
+
+.hub-landing-spacer {
+  pointer-events: none;
+}
+
+.hub-landing-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 0.65rem;
+  align-items: end;
+  align-self: end;
+  width: 100%;
+}
+
+.hub-landing-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.32rem;
+}
+
+.hub-landing-nav-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.6rem;
+  min-width: 4.6rem;
+  max-width: 4.6rem;
+  height: 1.15rem;
+  min-height: 1.15rem;
+  padding: 0.06rem 0.25rem;
+  font-size: 0.5rem;
+  line-height: 1.1;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+}
+
+.hub-landing-copy-block {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+  align-self: end;
+  padding: 0.2rem 0.45rem 0.28rem 0;
+}
+
+.hub-landing-copy-block::before {
+  content: "";
+  position: absolute;
+  inset: -0.15rem -0.5rem -0.2rem -0.55rem;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 0.4rem;
+  background: linear-gradient(
+    128deg,
+    rgba(8, 12, 18, 0.88) 0%,
+    rgba(8, 12, 18, 0.52) 52%,
+    rgba(8, 12, 18, 0) 100%
+  );
+}
+
+.hub-landing-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2rem;
+  min-height: 1.2rem;
+  flex-shrink: 0;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 14px rgba(0, 0, 0, 0.65);
+}
+
+.hub-landing-chat {
+  margin: 0;
+  min-width: 0;
+  max-width: calc(100% - 0.25rem);
+  font-size: 0.56rem;
+  line-height: 1.4;
+  text-align: left;
+  color: rgba(236, 241, 248, 0.96);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(0, 0, 0, 0.72);
+}
+
+.hub-landing-portrait-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 20, 25, 0.05) 0%,
+    rgba(15, 20, 25, 0.18) 42%,
+    rgba(15, 20, 25, 0.82) 100%
+  );
+}
+
+.secretary-landing-view .hub-landing-overlay {
+  position: relative;
+}
+
+.secretary-focus-rail {
+  position: absolute;
+  top: max(0.45rem, env(safe-area-inset-top, 0px));
+  left: max(0.45rem, env(safe-area-inset-left, 0px));
+  z-index: 6;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  max-width: min(19rem, 78vw);
+  pointer-events: none;
+}
+
+.secretary-focus-rail > * {
+  pointer-events: auto;
+}
+
+.secretary-focus-rail-toggle {
+  flex: 0 0 auto;
+  width: 1.65rem;
+  min-width: 1.65rem;
+  max-width: 1.65rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.4rem;
+  background: rgba(8, 12, 18, 0.78);
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.secretary-focus-rail-toggle:hover {
+  background: rgba(8, 12, 18, 0.9);
+}
+
+.secretary-focus-rail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+  max-width: min(16rem, 70vw);
+  max-height: min(14rem, 42vh);
+  margin-left: 0.28rem;
+  padding: 0.38rem 0.45rem;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.4rem;
+  background: rgba(8, 12, 18, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+  scrollbar-width: none;
+}
+
+.secretary-focus-rail-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.secretary-focus-rail-panel[hidden] {
+  display: none;
+}
+
+.secretary-focus-rail-title {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.secretary-focus-rail .secretary-tips-list {
+  margin: 0;
+  padding: 0 0 0 0.95rem;
+  gap: 0.18rem;
+  font-size: 0.64rem;
+  line-height: 1.28;
+}
+
+.secretary-landing-view > .hub-landing-portrait-bg::after {
+  display: none;
+}
+
+.layout-mobile-nav .main-panel:has(.hub-landing-view),
+.layout-mobile-nav .main-panel:has(.hub-synced-tab-view) {
+  padding: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.hub-synced-tab-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #0a0f14;
+}
+
+.hub-synced-tab-view > .hub-synced-tab-portrait-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #0a0f14;
+}
+
+.hub-synced-tab-view > .hub-synced-tab-portrait-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 14, 20, 0.28) 0%,
+    rgba(10, 14, 20, 0.48) 42%,
+    rgba(10, 14, 20, 0.72) 100%
+  );
+}
+
+.hub-synced-tab-view .location-view-body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  padding: 0.45rem 0.55rem;
+  padding-bottom: var(--mobile-bottom-nav-space, 0.35rem);
+  box-sizing: border-box;
+}
+
+.hub-synced-tab-view .location-view-body::-webkit-scrollbar {
+  display: none;
+}
+
+.hub-synced-tab-scroll-body {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hub-synced-tab-scroll-body {
+    cursor: grab;
+  }
+
+  .hub-synced-tab-scroll-body.hub-synced-tab-scroll-dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
+}
+
+/* Hub tabs: readable controls on portrait bg */
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-select {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-label {
+  color: rgba(232, 238, 245, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-hint {
+  color: rgba(200, 212, 228, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-select {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-label {
+  color: rgba(232, 238, 245, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-hint {
+  color: rgba(200, 212, 228, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .location-view-section + .location-view-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-queue-heading h3 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-compact-queue .build-queue li {
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(8, 12, 18, 0.38);
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+) {
+  position: relative;
+  isolation: isolate;
+  padding: 0.38rem 0.5rem;
+  border-radius: 0.4rem;
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    128deg,
+    rgba(8, 12, 18, 0.88) 0%,
+    rgba(8, 12, 18, 0.58) 55%,
+    rgba(8, 12, 18, 0.38) 100%
+  );
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+) :where(
+  .overview-panel-title,
+  .tab-net-worth-label,
+  .tab-net-worth-value,
+  .tab-net-worth-goal,
+  .office-site-capacity-label,
+  .office-site-capacity-values,
+  .office-site-capacity-stat strong,
+  .office-site-capacity-free,
+  .office-expand-meta,
+  .recruitment-units-label,
+  .recruitment-units-count,
+  .recruitment-units-banner .office-site-staff-role,
+  .recruitment-units-banner .office-site-staff-count,
+  .recruitment-units-banner .recruitment-roster-empty,
+  .research-progress-label,
+  .research-progress-value,
+  .secretary-roster-title,
+  .secretary-roster-stat-line,
+  .secretary-roster-toolbar-title,
+  .secretary-roster-view-toggle,
+  .secretary-roster-hide-used,
+  .secretary-roster-empty,
+  .secretary-roster-grid-name,
+  .secretary-roster-row-name,
+  .secretary-roster-row-role,
+  .secretary-roster-row-bonus-label,
+  .secretary-roster-row-bonus-text,
+  .tab-queue-heading h3,
+  .tab-queue-count,
+  .secretary-panel-head h3,
+  .secretary-job-reports-log-link,
+  .secretary-job-reports-clear-link,
+  .secretary-job-reports-empty,
+  .secretary-job-report-line1,
+  .secretary-job-report-line2,
+  .secretary-tips-list li,
+  .secretary-job-work-tabs .tab,
+  .job-board-filters-head h3,
+  .job-board-filter span,
+  .job-board-results-toolbar,
+  .job-board-row-btn strong,
+  .job-board-row-btn .muted,
+  .job-board-empty,
+  .job-board-count,
+  .job-board-filters-toggle,
+  .job-board-active-filter-chip,
+  .job-board-sort-compact span
+) {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.tab-portrait-column-spacer {
+  visibility: hidden;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.hub-landing-copy-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.hub-landing-copy-body::-webkit-scrollbar {
+  display: none;
+}
+
+.hub-landing-actions {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+
+.hub-landing-dest-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  width: 100%;
+  margin-bottom: 0.35rem;
+  padding: 0.32rem 0.38rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(124, 156, 255, 0.04);
+}
+
+.hub-landing-dest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.04rem;
+  font-size: 0.58rem;
+  line-height: 1.32;
+}
+
+.hub-landing-dest-item strong {
+  font-size: 0.6rem;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.hub-landing-dest-item span {
+  color: var(--muted);
+}
+
+.hub-landing-dest-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.overview-dashboard-view .overview-dashboard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.overview-dashboard-view .overview-dashboard-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  gap: 0;
+}
+
+.secretary-roster-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.hub-synced-tab-view .hub-synced-tab-portrait-reveal {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: clamp(2rem, 24dvh, 6.5rem);
+  pointer-events: none;
+}
+
+.secretary-roster-view.hub-synced-tab-view .tab-below-portrait {
+  gap: 0.28rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner {
+  width: 100%;
+  text-align: center;
+  margin: 0;
+  padding: 0.18rem 0.5rem 0.28rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-title,
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-stat-line {
+  text-align: center;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-stat-line {
+  margin: 0.1rem 0 0;
+  font-size: 0.58rem;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.secretary-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-reports,
+.secretary-view.hub-synced-tab-view.secretary-view--work-board {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-reports .location-view-body {
+  flex: 0 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .location-view-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.secretary-view.hub-synced-tab-view .tab-below-portrait {
+  flex: 0 0 auto;
+  min-height: 0;
+  gap: 0.22rem;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .tab-below-portrait {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-task-forces-beside {
+  padding: 0.22rem 0.38rem;
+}
+
+.secretary-view.hub-synced-tab-view
+  .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-column-spacer {
+  min-height: 0;
+  height: 0;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+.logbook-view.hub-synced-tab-view
+  .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-column-spacer {
+  min-height: 0;
+  height: 0;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .secretary-job-work {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-task-forces-beside .build-queue li {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 18, 0.28);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.28rem;
+  flex-wrap: nowrap;
+  padding: 0;
+  margin: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.2rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-tabs .tab {
+  padding: 0.1rem 0.32rem;
+  line-height: 1.1;
+  min-height: 0;
+  font-size: 0.6rem;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-actions,
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar-slot {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-empty {
+  margin: 0;
+  padding: 0.12rem 0;
+  font-size: 0.64rem;
+  line-height: 1.3;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.12rem 0.3rem;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.35rem;
+  background: rgba(8, 12, 18, 0.32);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-job_cancel {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-body {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line1,
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2::before {
+  content: "·";
+  margin-right: 0.25rem;
+  color: var(--muted);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-dismiss {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.85rem;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-board {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  padding: 0;
+  margin: 0;
+  --job-board-scroll-chrome-bottom: 0px;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-board-tab-toolbar {
+  flex-wrap: nowrap;
+  gap: 0.22rem;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .job-board-filter select,
+.secretary-view.hub-synced-tab-view .job-board-sort-compact select {
+  font-size: 0.66rem;
+  min-height: 1.45rem;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list {
+  background: transparent;
+}
+
+.secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list th,
+.secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list tbody tr:nth-child(even) td {
+  background: rgba(8, 12, 18, 0.22);
+}
+
+.secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list tbody tr:hover td {
+  background: rgba(8, 12, 18, 0.34);
+}
+
+.secretary-roster-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-hero {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-portrait-wrap {
+  flex: 0 0 auto;
+  max-height: none;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-portrait-spacer {
+  display: block;
+  width: 100%;
+  min-height: min(40vh, 18rem);
+  max-height: min(52vh, 22rem);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-hero-copy {
+  text-align: center;
+  width: 100%;
+  background: none;
+  margin-top: 0.28rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-panel {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 0.38rem 0.5rem;
+  gap: 0.28rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-panel .secretary-roster-list,
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-panel .secretary-roster-grid {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: visible;
+  padding-bottom: 0;
+}
+
+.secretary-roster-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  gap: 0.35rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.secretary-roster-hero {
+  flex: 1 1 58%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.28rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.secretary-roster-portrait-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: min(40vh, 18rem);
+  max-height: min(52vh, 22rem);
+  overflow: hidden;
+  border-radius: 0.65rem;
+}
+
+.secretary-roster-portrait-display {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.secretary-roster-portrait-frame,
+.secretary-roster-portrait-frame.tab-portrait-frame-pannable {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  max-height: none;
+  aspect-ratio: unset;
+  border-radius: 0.65rem;
+  overflow: hidden;
+  border: 0;
+}
+
+.secretary-roster-portrait-frame .tab-portrait-pan-surface,
+.secretary-roster-portrait-frame .tab-portrait-pan-surface-ready {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.secretary-roster-portrait-frame .tab-portrait-pannable-ready {
+  display: block;
+  min-height: 0;
+  max-width: none;
+}
+
+.secretary-roster-hero-copy {
+  text-align: center;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 0 0.2rem 0.1rem;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(15, 20, 25, 0.72) 28%,
+    rgba(15, 20, 25, 0.92) 100%
+  );
+}
+
+.secretary-roster-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.secretary-roster-title span {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.secretary-roster-hero-copy .secretary-roster-stat-line {
+  margin: 0.14rem 0 0;
+  font-size: 0.56rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.secretary-roster-report-line {
+  margin: 0.24rem 0 0;
+  padding: 0.32rem 0.45rem;
+  border-left: 2px solid rgba(124, 156, 255, 0.4);
+  font-size: 0.6rem;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text);
+  background: rgba(124, 156, 255, 0.05);
+  border-radius: 0 0.3rem 0.3rem 0;
+}
+
+.secretary-roster-picker {
+  flex: 0 1 42%;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.secretary-roster-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-height: 2rem;
+}
+
+.secretary-roster-toolbar-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.secretary-roster-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.secretary-roster-view-toggle {
+  font-size: 0.68rem;
+  padding: 0;
+  min-height: 2rem;
+}
+
+.secretary-roster-hide-used {
+  margin: 0;
+}
+
+.secretary-roster-empty {
+  margin: 0.35rem 0 0;
+  font-size: 0.64rem;
+  text-align: center;
+}
+
+.secretary-roster-list,
+.secretary-roster-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 calc(var(--mobile-bottom-nav-space, 0px) + 0.35rem);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+
+.secretary-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.secretary-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.38rem;
+}
+
+.secretary-roster-list::-webkit-scrollbar,
+.secretary-roster-grid::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.secretary-roster-grid-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0.24rem 0.34rem;
+  border: 0;
+  border-radius: 0.42rem;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.secretary-roster-grid-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  min-height: 4.75rem;
+  border-radius: 0.34rem;
+  overflow: hidden;
+  background: var(--panel-2);
+}
+
+.secretary-roster-grid-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
+}
+
+.secretary-roster-grid-name {
+  width: 100%;
+  font-size: 0.58rem;
+  line-height: 1.15;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secretary-roster-row {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  min-height: 5.35rem;
+  padding: 0.22rem 0.28rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.secretary-roster-row-portrait-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.secretary-roster-row-portrait-btn:focus-visible {
+  outline: 2px solid rgba(120, 190, 255, 0.65);
+  outline-offset: 2px;
+  border-radius: 0.32rem;
+}
+
+.secretary-roster-row-portrait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.secretary-roster-row-thumb {
+  width: 3.5rem;
+  height: 4.25rem;
+  flex-shrink: 0;
+  border-radius: 0.32rem;
+  overflow: hidden;
+  background: var(--panel-2);
+}
+
+.secretary-roster-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
+}
+
+.secretary-roster-row-name {
+  font-size: 0.54rem;
+  line-height: 1.1;
+  text-align: center;
+  font-weight: 600;
+}
+
+.secretary-roster-row-detail {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.28rem;
+  min-width: 0;
+  padding-right: 0.15rem;
+}
+
+.secretary-roster-row-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.secretary-roster-row-role {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.secretary-roster-row-role-emphasis {
+  color: var(--accent);
+}
+
+.secretary-roster-row-role-muted {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.secretary-roster-row-bonus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.secretary-roster-row-bonus-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+  min-width: 0;
+}
+
+.secretary-roster-row-bonus-label {
+  font-size: 0.52rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.secretary-roster-row-bonus-text {
+  font-size: 0.62rem;
+  line-height: 1.25;
+}
+
+.secretary-detail-backdrop {
+  padding: max(0.2rem, env(safe-area-inset-top))
+    env(safe-area-inset-right, 0px)
+    max(0.2rem, env(safe-area-inset-bottom))
+    env(safe-area-inset-left, 0px);
+}
+
+.secretary-detail-dialog {
+  width: 100%;
+  max-width: 100%;
+  height: min(96vh, 800px);
+  max-height: min(96vh, 800px);
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  border-radius: 0.85rem;
+}
+
+.secretary-detail-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  z-index: 2;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.secretary-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.secretary-detail-portrait-pane {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  align-self: stretch;
+  overflow: hidden;
+  background: #0a0f14;
+  border-right: 1px solid var(--border);
+  border-radius: 0.85rem 0 0 0.85rem;
+}
+
+.secretary-detail-portrait-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  border-radius: 0;
+  overflow: hidden;
+  border: 0;
+  aspect-ratio: unset;
+}
+
+.secretary-detail-portrait-frame.tab-portrait-frame-pannable,
+.secretary-detail-portrait-frame.secretary-portrait-frame {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  aspect-ratio: unset;
+}
+
+.secretary-detail-portrait-frame .tab-portrait-pan-surface,
+.secretary-detail-portrait-frame .tab-portrait-pan-surface-ready {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.secretary-detail-portrait-frame .tab-portrait-pannable-ready {
+  display: block;
+  min-height: 0;
+  max-width: none;
+}
+
+.secretary-detail-copy-pane {
+  min-height: 0;
+  height: 100%;
+  padding: 0.95rem 0.75rem 1rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+}
+
+.secretary-detail-copy-pane::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.secretary-detail-actions {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.secretary-detail-assign-btn {
+  width: auto;
+  min-height: 2.35rem;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.72rem;
+}
+
+.secretary-detail-header h2 {
+  margin: 0;
+}
+
+.secretary-detail-role {
+  margin: 0.2rem 0 0.65rem;
+  font-size: 0.78rem;
+}
+
+.secretary-detail-flavour p {
+  margin: 0 0 0.35rem;
+  font-size: 0.64rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.secretary-detail-stats {
+  margin: 0.65rem 0 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.secretary-detail-stats dt {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.secretary-detail-stats dd {
+  margin: 0.12rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.secretary-cos-open-copy {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  justify-content: flex-start;
+}
+
+.secretary-cos-open-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.secretary-cos-open-role {
+  margin: 0.18rem 0 0;
+  font-size: 0.72rem;
+}
+
+.secretary-cos-open-report-line {
+  flex: 0 0 auto;
+  margin: 0.38rem 0 0;
+  padding: 0.35rem 0.45rem;
+  border-left: 2px solid rgba(124, 156, 255, 0.4);
+  font-size: 0.6rem;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--text);
+  background: rgba(124, 156, 255, 0.05);
+  border-radius: 0 0.3rem 0.3rem 0;
+}
+
+.secretary-cos-open-actions {
+  flex-shrink: 0;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border);
+}
+
+.secretary-cos-open-roster-btn {
+  width: auto;
+  min-height: 2.35rem;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.72rem;
+}
+
+.secretary-cos-open-copy.secretary-detail-copy-pane {
+  overflow-y: visible;
+}
+
+.layout-mobile-nav .secretary-cos-open-dialog,
+.app-shell.viewport-preview-mobile .secretary-cos-open-dialog {
+  box-sizing: border-box;
+  padding-bottom: calc(var(--mobile-bottom-nav-space, 52px) + 0.35rem);
+}
+
+@media (max-width: 720px) {
+  .modal.secretary-detail-dialog,
+  .secretary-detail-dialog {
+    height: min(98vh, 800px);
+    max-height: min(98vh, 800px);
+    border-radius: 0.35rem;
+  }
+
+  .secretary-detail-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 0;
+    height: 100%;
+  }
+
+  .secretary-detail-portrait-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0.85rem 0.85rem 0 0;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .secretary-cos-open-dialog .secretary-detail-layout {
+    grid-template-rows: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+
+  .secretary-cos-open-copy.secretary-detail-copy-pane {
+    padding-bottom: 0.5rem;
+  }
+
+  .hub-landing-view > .hub-landing-portrait-bg::after {
+    background: linear-gradient(
+      180deg,
+      rgba(15, 20, 25, 0.05) 0%,
+      rgba(15, 20, 25, 0.18) 42%,
+      rgba(15, 20, 25, 0.82) 100%
+    );
+  }
+}
+
+.layout-mobile-nav .main-panel:has(.secretary-roster-view),
+.app-shell.viewport-preview-mobile .main-panel:has(.secretary-roster-view) {
+  padding-bottom: calc(var(--mobile-bottom-nav-space, 52px) + 1.25rem);
+}
+
+.layout-mobile-nav .secretary-roster-view,
+.app-shell.viewport-preview-mobile .secretary-roster-view {
+  padding-bottom: 0.5rem;
 }
 
 .main-view-panel {
@@ -1766,12 +3440,20 @@
 
 .recruitment-units-banner {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.3rem 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.22rem;
   margin: 0;
   padding: 0.15rem 0;
   line-height: 1.15;
+}
+
+.recruitment-units-banner-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.5rem;
+  min-width: 0;
 }
 
 .recruitment-units-label {
@@ -1807,7 +3489,9 @@
 }
 
 .recruitment-roster-panel {
-  margin: 0 0 0.1rem;
+  margin: 0;
+  padding-top: 0.12rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .recruitment-view .recruitment-roster-list {
@@ -2234,6 +3918,17 @@
   gap: 0.85rem;
 }
 
+/* Tab hero portrait column — default ~1.5× prior 100% compact tab heroes */
+:root {
+  --tab-hero-portrait-col-min: 9.35rem;
+  --tab-hero-portrait-col-max: 15.85rem;
+  --tab-hero-portrait-frame-min-h: 12.5rem;
+  --tab-hero-portrait-frame-h: 15.85rem;
+  --tab-hero-portrait-frame-max-h: 18.75rem;
+  --tab-hero-portrait-col-min-narrow: 7.9rem;
+  --tab-hero-portrait-col-max-narrow: 11.15rem;
+}
+
 /* Tab portrait fit: compact header + portrait beside content (Home, Office, …) */
 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
   .tab-sticky-hero-row,
@@ -2247,10 +3942,13 @@
   .tab-sticky-hero-row,
 .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
   .tab-sticky-hero-row,
+.secretary-roster-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
 .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
   .tab-sticky-hero-row {
   align-items: start;
-  grid-template-columns: minmax(8.5rem, 14.5rem) minmax(0, 1fr);
+  grid-template-columns: minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
 }
 
 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
@@ -2265,6 +3963,8 @@
   .tab-portrait-column-sticky,
 .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
   .tab-portrait-column-sticky,
+.secretary-roster-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
 .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
   .tab-portrait-column-sticky {
   align-self: start;
@@ -2277,6 +3977,7 @@
 .research-view .tab-portrait-fit .tab-hero-main,
 .secretary-view .tab-portrait-fit .tab-hero-main,
 .logbook-view .tab-portrait-fit .tab-hero-main,
+.secretary-roster-view .tab-portrait-fit .tab-hero-main,
 .overview-view .overview-portrait-fit .tab-hero-main {
   gap: 0.55rem;
 }
@@ -2296,15 +3997,53 @@
 }
 
 .secretary-view .tab-below-portrait {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
   display: flex;
   flex-direction: column;
 }
 
-.secretary-view .tab-below-portrait > .secretary-work-panel {
+.secretary-view--work-board .tab-below-portrait,
+.secretary-view:has(.secretary-job-work--board) .tab-below-portrait {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.secretary-view--work-reports .tab-below-portrait,
+.secretary-view:has(.secretary-job-work--reports) .tab-below-portrait {
+  flex: 0 0 auto;
+  min-height: auto;
+}
+
+.secretary-view .tab-below-portrait > .secretary-job-work {
+  flex: 0 0 auto;
+  min-height: auto;
+  align-self: stretch;
+}
+
+.secretary-view .tab-below-portrait > .secretary-job-work--reports,
+.secretary-view--work-reports .tab-below-portrait > .secretary-job-work {
+  flex: 0 0 auto;
+  min-height: auto;
+  align-self: stretch;
+}
+
+.secretary-view--work-board .tab-below-portrait > .secretary-job-work {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.layout-mobile-nav .secretary-view .tab-below-portrait > .scene-banner,
+.app-shell.viewport-preview-mobile .secretary-view .tab-below-portrait > .scene-banner,
+html.viewport-preview-galaxy-s24 .secretary-view .tab-below-portrait > .scene-banner {
+  display: none;
+}
+
+.layout-mobile-nav .secretary-view--work-reports .secretary-job-reports-list,
+.app-shell.viewport-preview-mobile .secretary-view--work-reports .secretary-job-reports-list,
+html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-reports-list {
+  overflow-y: visible;
+  max-height: none;
 }
 
 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
@@ -2391,17 +4130,22 @@
   .secretary-portrait-frame {
   flex: none;
   width: 100%;
-  min-height: 11.5rem;
-  height: 14.5rem;
-  max-height: 17.5rem;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
   aspect-ratio: unset;
+}
+
+.secretary-view.hub-synced-tab-view .tab-below-portrait > .secretary-job-work {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .tab-below-portrait > .location-view-section:first-child,
 .overview-below-portrait > .location-view-section:first-child,
 .tab-below-portrait > .location-site-block:first-child,
 .operations-view .tab-below-portrait > .office-sites-panel:first-child,
-.secretary-view .tab-below-portrait > .scene-banner:first-child,
+.secretary-view .tab-below-portrait > .scene-banner,
 .logbook-view .tab-below-portrait > .logbook-activity-panel:first-child {
   padding-top: 0.25rem;
   border-top: 1px solid var(--border);
@@ -2413,6 +4157,7 @@
 .research-view .tab-portrait-fit .tab-hero-main .location-view-header,
 .secretary-view .tab-portrait-fit .tab-hero-main .location-view-header,
 .logbook-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.secretary-roster-view .tab-portrait-fit .tab-hero-main .location-view-header,
 .overview-view .overview-portrait-fit .tab-hero-main .location-view-header {
   margin-bottom: 0;
 }
@@ -2423,6 +4168,31 @@
   flex-direction: column;
   gap: 0.3rem;
   margin-bottom: 0;
+}
+
+.tab-hero-header-hub {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.45rem;
+  row-gap: 0.28rem;
+  align-items: center;
+}
+
+.tab-hero-header-hub .tab-hub-picker-label {
+  margin: 0;
+  line-height: 1;
+  font-size: 0.62rem;
+}
+
+.tab-hero-header-hub .tab-hub-picker-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.tab-hero-header-hub .tab-hub-picker-hint {
+  grid-column: 1 / -1;
+  margin: 0.12rem 0 0;
+  font-size: 0.62rem;
 }
 
 .tab-hero-header-row,
@@ -2523,6 +4293,29 @@
   flex-shrink: 0;
 }
 
+.tab-queue-heading-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.12rem;
+}
+
+.tab-queue-heading-stacked h3 {
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.tab-queue-heading-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.tab-queue-heading-meta .tab-queue-filter {
+  margin-left: auto;
+}
+
 .tab-queue-filter {
   font-size: 0.68rem;
   gap: 0.28rem;
@@ -2587,13 +4380,33 @@
 }
 
 /* Home: net worth sits in the bottom panel, above structure levels */
+.overview-summary-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.overview-panel-title {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.overview-view .tab-below-portrait .overview-panel-title,
+.hub-synced-tab-view .overview-panel-title {
+  font-size: 0.58rem;
+  margin: 0;
+}
+
 .overview-net-worth-banner {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.3rem 0.5rem;
   margin: 0;
-  padding: 0.15rem 0;
+  padding: 0;
   line-height: 1.15;
 }
 
@@ -2620,7 +4433,7 @@
   font-size: 0.58rem;
 }
 
-.overview-view .tab-below-portrait > .overview-net-worth-banner + .location-view-section {
+.overview-view .tab-below-portrait > .overview-summary-block + .location-view-section {
   padding-top: 0.35rem;
   border-top: 1px solid var(--border);
 }
@@ -2630,8 +4443,7 @@
   border-top: 1px solid var(--border);
 }
 
-.recruitment-view .tab-below-portrait > .recruitment-units-banner + .progression-category-section,
-.recruitment-view .tab-below-portrait > .recruitment-roster-panel + .progression-category-section {
+.recruitment-view .tab-below-portrait > .recruitment-units-banner + .progression-category-section {
   padding-top: 0.35rem;
   border-top: 1px solid var(--border);
 }
@@ -2707,7 +4519,7 @@
   padding: 0.1rem 0.26rem;
   gap: 0.2rem;
   border-radius: 0.35rem;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .secretary-view .secretary-job-report-body {
@@ -3226,7 +5038,8 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
     .tab-sticky-hero-row,
   .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
     .tab-sticky-hero-row {
-    grid-template-columns: minmax(7.5rem, 10.5rem) minmax(0, 1fr);
+    grid-template-columns: minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
+      minmax(0, 1fr);
     gap: 0.5rem;
   }
 }
@@ -3904,6 +5717,23 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
+.modal-backdrop.secretary-detail-backdrop {
+  padding: max(0.2rem, env(safe-area-inset-top))
+    env(safe-area-inset-right, 0px)
+    max(0.2rem, env(safe-area-inset-bottom))
+    env(safe-area-inset-left, 0px);
+}
+
+.modal.secretary-detail-dialog {
+  width: 100%;
+  max-width: 100%;
+  height: min(96vh, 800px);
+  max-height: min(96vh, 800px);
+  padding: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -4073,7 +5903,7 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   padding-bottom: 0.75rem;
 }
 
-.main-panel:has(.secretary-view) {
+.main-panel:has(.secretary-view:not(.hub-synced-tab-view)) {
   overflow: auto;
   padding-bottom: 0.75rem;
 }
@@ -4083,9 +5913,20 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   padding-bottom: max(0.75rem, var(--mobile-bottom-nav-space, 0px));
 }
 
-.layout-mobile-nav .main-panel:has(.secretary-view),
-.app-shell.viewport-preview-mobile .main-panel:has(.secretary-view) {
-  padding-bottom: max(0.75rem, var(--mobile-bottom-nav-space, 0px));
+.layout-mobile-nav .main-panel:has(.secretary-view:not(.hub-synced-tab-view)),
+.app-shell.viewport-preview-mobile .main-panel:has(.secretary-view:not(.hub-synced-tab-view)) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: var(--mobile-bottom-nav-space, 0px);
+}
+
+.layout-mobile-nav .main-panel:has(.secretary-view.hub-synced-tab-view),
+.app-shell.viewport-preview-mobile .main-panel:has(.secretary-view.hub-synced-tab-view) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 .world-view {
@@ -4433,6 +6274,30 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   flex-shrink: 0;
 }
 
+.logbook-view.hub-synced-tab-view .logbook-activity-panel {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.logbook-view.hub-synced-tab-view .logbook-activity-panel .logbook-sheet-wrap-hub {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-x pinch-zoom;
+  cursor: grab;
+}
+
+.logbook-view.hub-synced-tab-view .logbook-activity-panel .logbook-sheet-wrap-hub:active,
+.logbook-view.hub-synced-tab-view
+  .logbook-activity-panel
+  .logbook-sheet-wrap-hub.logbook-sheet-wrap-dragging {
+  cursor: grabbing;
+}
+
 .logbook-activity-panel .logbook-sheet-wrap {
   flex: 1 1 auto;
   min-height: 0;
@@ -4516,6 +6381,63 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   line-height: 1.35;
 }
 
+.logbook-entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.logbook-entry-card {
+  padding: 0.42rem 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.logbook-entry-headline {
+  margin: 0 0 0.24rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.logbook-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.logbook-entry-time {
+  margin-right: 0.08rem;
+  font-size: 0.58rem;
+  line-height: 1.2;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.logbook-tag-compact {
+  min-width: 1.45rem;
+  min-height: 1.45rem;
+  padding: 0.06rem 0.28rem;
+  font-size: 0.52rem;
+  line-height: 1.1;
+}
+
+.logbook-tag-cash {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.logbook-entry-list .logbook-row-highlight {
+  background: rgba(110, 231, 183, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(110, 231, 183, 0.45);
+}
+
+.logbook-entry-list .logbook-row-highlight:hover {
+  background: rgba(110, 231, 183, 0.22);
+}
+
 .logbook-sheet thead {
   position: sticky;
   top: 0;
@@ -4573,17 +6495,57 @@ body.logbook-col-resizing {
 }
 
 .logbook-sheet .col-time {
-  white-space: nowrap;
+  white-space: normal;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
 
+.logbook-time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  line-height: 1.2;
+}
+
+.logbook-time-date,
+.logbook-time-clock {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
 .logbook-sheet .col-category {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.logbook-category-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.logbook-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 12, 18, 0.52);
+  color: var(--text);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
   white-space: nowrap;
 }
 
-.logbook-sheet .col-site {
-  white-space: nowrap;
+.logbook-tag-site {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .logbook-sheet .col-spent,
@@ -6974,6 +8936,38 @@ body.logbook-col-resizing {
   max-height: none;
 }
 
+/* Compact tab heroes (Overview, Build, Recruit, Research, Logbook) */
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row {
+  grid-template-columns: minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
+}
+
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-frame-pannable {
+  flex: none;
+  width: 100%;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
+  aspect-ratio: unset;
+}
+
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-wrap,
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-stack {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
 .tab-portrait-scene.tab-portrait-stretch.secretary-portrait-large
   .secretary-portrait-frame {
   min-height: 24rem;
@@ -7196,8 +9190,8 @@ body.logbook-col-resizing {
   flex-direction: column;
 }
 
-.tab-portrait-scene .tab-portrait-stack .secretary-portrait-frame,
-.tab-portrait-scene .tab-portrait-stack .tab-portrait-frame-pannable,
+.tab-portrait-scene:not(.tab-portrait-fit) .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-scene:not(.tab-portrait-fit) .tab-portrait-stack .tab-portrait-frame-pannable,
 .tab-portrait-scene.tab-portrait-locked .tab-portrait-stack .secretary-portrait-frame,
 .tab-portrait-scene.tab-portrait-tall .tab-portrait-stack .secretary-portrait-frame {
   flex: 1 1 auto;
@@ -7211,7 +9205,7 @@ body.logbook-col-resizing {
   flex-shrink: 1;
 }
 
-/* Shared tab image size — Research (R&D) 14.5rem frame */
+/* Shared tab image size — Overview, Build, Recruit, Research, Logbook */
 .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
 .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap {
   flex: 0 0 auto;
@@ -7222,9 +9216,9 @@ body.logbook-col-resizing {
 .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack .tab-portrait-frame-pannable {
   flex: none;
   width: 100%;
-  min-height: 11.5rem;
-  height: 14.5rem;
-  max-height: 17.5rem;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
   aspect-ratio: unset;
 }
 
@@ -7557,75 +9551,66 @@ body.logbook-col-resizing {
   box-sizing: border-box;
 }
 
-.secretary-work-panel {
+/* Secretary job desk — reports + board */
+.secretary-job-work {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.28rem;
   min-width: 0;
   width: 100%;
+}
+
+.secretary-job-work--reports {
+  flex: 0 0 auto;
+  min-height: auto;
+}
+
+.secretary-job-work--board {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.secretary-work-tabs {
-  margin-bottom: 0;
-  flex-shrink: 0;
-  gap: 0.28rem;
+.secretary-job-work-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-.secretary-view .secretary-work-tabs .tab {
+.secretary-job-work-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.28rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.secretary-view .secretary-job-work-tabs .tab {
   padding: 0.16rem 0.38rem;
   font-size: 0.6rem;
   min-height: 0;
   line-height: 1.15;
 }
 
-.secretary-work-tabpanels {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
+.secretary-job-reports {
   display: flex;
   flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
 }
 
-.secretary-work-tabpanels > .secretary-work-reports-tab:not(.secretary-work-tab-inert),
-.secretary-work-tabpanels > .secretary-work-board-tab:not(.secretary-work-tab-inert) {
-  min-height: 0;
-  min-width: 0;
+.secretary-job-reports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.12rem;
 }
 
-.secretary-work-tabpanels > .secretary-work-reports-tab:not(.secretary-work-tab-inert) {
-  flex: 0 1 auto;
-}
-
-.secretary-work-tabpanels > .secretary-work-board-tab:not(.secretary-work-tab-inert) {
-  flex: 1 1 auto;
-}
-
-.secretary-work-tabpanels > .secretary-work-reports-tab,
-.secretary-work-tabpanels > .secretary-work-board-tab {
-  min-width: 0;
-}
-
-.secretary-work-tab-inert {
-  position: absolute;
-  inset: 0;
-  visibility: hidden;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.secretary-work-reports-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-.secretary-work-board-tab {
+.secretary-job-board {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -7634,40 +9619,12 @@ body.logbook-col-resizing {
   --job-board-scroll-chrome-bottom: 0px;
 }
 
-.layout-mobile-nav .secretary-work-board-tab,
-.app-shell.viewport-preview-mobile .secretary-work-board-tab {
+.layout-mobile-nav .secretary-job-board,
+.app-shell.viewport-preview-mobile .secretary-job-board {
   --job-board-scroll-chrome-bottom: var(--mobile-bottom-nav-space, 0px);
 }
 
-.secretary-work-reports-tab .secretary-job-reports-panel {
-  flex: 0 0 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.secretary-work-reports-tab .secretary-job-reports-list {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: none;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-
-.secretary-work-reports-tab .secretary-tips-panel {
-  flex: 0 0 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.secretary-work-reports-tab .secretary-tips-list {
-  flex: 0 0 auto;
-  overflow: visible;
-}
-
-.secretary-work-board-tab .job-board-embedded {
+.secretary-job-board .job-board-embedded {
   margin: 0;
   flex: 1 1 auto;
   min-height: 0;
@@ -7677,7 +9634,7 @@ body.logbook-col-resizing {
   flex-direction: column;
 }
 
-.secretary-work-board-tab .job-board-layout {
+.secretary-job-board .job-board-layout {
   margin-top: 0;
   flex: 1 1 auto;
   min-height: 0;
@@ -7688,11 +9645,11 @@ body.logbook-col-resizing {
   align-content: stretch;
 }
 
-.secretary-work-board-tab .job-board-layout-embedded {
+.secretary-job-board .job-board-layout-embedded {
   grid-template-columns: 1fr;
 }
 
-.secretary-work-board-tab .job-board-list-pane {
+.secretary-job-board .job-board-list-pane {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
@@ -7701,7 +9658,7 @@ body.logbook-col-resizing {
   flex-direction: column;
 }
 
-.secretary-work-board-tab .job-board-list-stage {
+.secretary-job-board .job-board-list-stage {
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
@@ -7712,25 +9669,25 @@ body.logbook-col-resizing {
   flex-direction: column;
 }
 
-.secretary-work-board-tab .job-board-list-wrap {
+.secretary-job-board .job-board-list-wrap {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.secretary-work-board-tab .job-board-list-tail-spacer {
+.secretary-job-board .job-board-list-tail-spacer {
   block-size: calc(0.85rem + var(--job-board-scroll-chrome-bottom, 0px));
   flex-shrink: 0;
   pointer-events: none;
 }
 
-.secretary-work-board-tab .job-board-list-stage-embedded {
+.secretary-job-board .job-board-list-stage-embedded {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.secretary-work-board-tab .job-board-list-wrap-empty .job-board-empty {
+.secretary-job-board .job-board-list-wrap-empty .job-board-empty {
   padding: 0.85rem 0.65rem 0.35rem;
 }
 
@@ -7779,19 +9736,7 @@ body.logbook-col-resizing {
   align-self: stretch;
 }
 
-.secretary-tab-scene .secretary-work-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.secretary-tab-scene .secretary-work-tabpanels {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.secretary-tab-scene .secretary-work-reports-tab {
+.secretary-tab-scene .tab-below-portrait > .secretary-job-work--board {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -8330,6 +10275,33 @@ body.logbook-col-resizing {
   overflow: hidden;
   background: var(--panel-2);
   flex-shrink: 0;
+}
+
+/* Full-bleed pan frames: parent sets height; do not apply default 4:5 crop box */
+.secretary-detail-portrait-frame.secretary-portrait-frame,
+.secretary-roster-portrait-frame.secretary-portrait-frame {
+  aspect-ratio: unset;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
+.secretary-detail-portrait-frame.secretary-portrait-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+
+.secretary-roster-portrait-frame.secretary-portrait-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: min(40vh, 18rem);
+  max-height: none;
+  border-radius: 0.65rem;
 }
 
 .tab-portrait-frame-pannable {
@@ -9668,6 +11640,13 @@ body.logbook-col-resizing {
   padding: 0.75rem 0.85rem var(--mobile-bottom-nav-space);
 }
 
+.app-shell.viewport-preview-mobile .main-panel:has(.hub-landing-view),
+.app-shell.viewport-preview-mobile .main-panel:has(.hub-synced-tab-view) {
+  padding: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
 .app-shell.viewport-preview-mobile .job-board-list th.job-board-col-tower,
 .app-shell.viewport-preview-mobile .job-board-list td.job-board-col-tower,
 .app-shell.viewport-preview-mobile .job-board-list th.job-board-col-tier,
@@ -9785,6 +11764,12 @@ html.viewport-preview-galaxy-s24 #root {
   --mobile-bottom-nav-space: 52px;
 }
 
+.device-preview-webview .main-panel:has(.hub-synced-tab-view) {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
 .device-preview-webview .portrait-lock-page,
 .device-preview-webview .portrait-lock-tab.tab-portrait-scene {
   --portrait-lock-viewport: calc(
@@ -9865,14 +11850,15 @@ html.viewport-preview-galaxy-s24 .hex-map svg {
 html.viewport-preview-galaxy-s24 .secretary-hero-row,
 html.viewport-preview-galaxy-s24 .office-scene.tab-portrait-hire-stretch .secretary-hero-row,
 html.viewport-preview-galaxy-s24 .office-scene.office-portrait-hire-stretch .secretary-hero-row,
-html.viewport-preview-galaxy-s24 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row,
-html.viewport-preview-galaxy-s24 .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row {
-  grid-template-columns: minmax(7.25rem, 32%) minmax(0, 1fr);
+html.viewport-preview-galaxy-s24 .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row,
+html.viewport-preview-galaxy-s24 .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch > .tab-sticky-hero-row {
+  grid-template-columns: minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
+    minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -9890,15 +11876,24 @@ html.viewport-preview-galaxy-s24 .tab-portrait-scene.tab-portrait-tall:not(.secr
   flex: 0 0 auto;
 }
 
+html.viewport-preview-galaxy-s24 .secretary-detail-portrait-frame.secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .secretary-roster-portrait-frame.secretary-portrait-frame {
+  aspect-ratio: unset;
+  height: 100%;
+  min-height: min(40vh, 18rem);
+  max-height: none;
+  flex: none;
+}
+
 html.viewport-preview-galaxy-s24 .tab-portrait-fit .secretary-portrait-frame,
 html.viewport-preview-galaxy-s24 .tab-portrait-fit .tab-portrait-frame-pannable {
   width: 100%;
-  min-height: 11.5rem !important;
-  height: 14.5rem !important;
-  max-height: 17.5rem !important;
+  min-height: var(--tab-hero-portrait-frame-min-h) !important;
+  height: var(--tab-hero-portrait-frame-h) !important;
+  max-height: var(--tab-hero-portrait-frame-max-h) !important;
   max-width: none;
   aspect-ratio: unset;
-  flex: none;
+  flex: none !important;
 }
 
 html.viewport-preview-galaxy-s24 .tab-portrait-column-sticky,
@@ -10029,6 +12024,46 @@ html.viewport-preview-galaxy-s24 .shortcut-sidebar-mobile {
     flex: 1;
     order: 1;
     padding: 0.75rem 0.85rem var(--mobile-bottom-nav-space);
+  }
+
+  .main-panel:has(.hub-landing-view),
+  .main-panel:has(.hub-synced-tab-view) {
+    padding: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  .layout-mobile-nav .main-panel:has(.hub-landing-view),
+  .layout-mobile-nav .main-panel:has(.hub-synced-tab-view) {
+    padding: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  .layout-mobile-nav .main-panel:has(.secretary-view:not(.hub-synced-tab-view)),
+  .app-shell.viewport-preview-mobile .main-panel:has(.secretary-view:not(.hub-synced-tab-view)) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: var(--mobile-bottom-nav-space);
+  }
+
+  .layout-mobile-nav .main-panel:has(.secretary-view.hub-synced-tab-view),
+  .app-shell.viewport-preview-mobile .main-panel:has(.secretary-view.hub-synced-tab-view) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .layout-mobile-nav .secretary-view .tab-below-portrait > .scene-banner,
+  .app-shell.viewport-preview-mobile .secretary-view .tab-below-portrait > .scene-banner,
+  html.viewport-preview-galaxy-s24 .secretary-view .tab-below-portrait > .scene-banner {
+    display: none;
+  }
+
+  .secretary-job-board {
+    --job-board-scroll-chrome-bottom: var(--mobile-bottom-nav-space, 0px);
   }
 
   .btn,

@@ -459,6 +459,12 @@ export interface GameState {
   completedProjects: number;
   phase: 1 | 2 | 3;
   view: MainView;
+  /** Home hub: COS landing vs HQ overview dashboard. */
+  homePanel: HomePanel;
+  /** Secretary hub: Chief of Staff landing vs full roaster list. */
+  secretaryPanel: SecretaryPanel;
+  /** Active Chief of Staff (Secretary roster). */
+  chiefOfStaffId: SecretaryId;
   /** Free-form notes saved with the game. */
   playerNotes: string;
   activityLog: LogEntry[];
@@ -541,9 +547,22 @@ export type MainView =
   | "operations"
   | "recruitment"
   | "research"
+  | "secretary"
   | "office"
   | "logbook"
   | "settings";
+
+/** Playable secretary roster id (sheet code Secretary_XX). */
+export type SecretaryId =
+  | "secretary_01"
+  | "secretary_02"
+  | "secretary_03"
+  | "secretary_04"
+  | "secretary_05";
+
+export type SecretaryPanel = "landing" | "roaster" | "log";
+
+export type HomePanel = "landing" | "overview";
 
 export type LogCategory =
   | "structure_upgrade"
@@ -630,6 +649,9 @@ export type GameAction =
   | { type: "CLEAR_ACTIVITY_LOG" }
   | { type: "DISMISS_JOB_REPORT"; logEntryId: string }
   | { type: "CLEAR_ALL_JOB_REPORTS" }
+  | { type: "SELECT_CHIEF_OF_STAFF"; secretaryId: SecretaryId }
+  | { type: "SET_SECRETARY_PANEL"; panel: SecretaryPanel; logbookFilter?: string; logbookHighlightEntryId?: string | null }
+  | { type: "SET_HOME_PANEL"; panel: HomePanel }
   | { type: "DISMISS_OFFLINE_SUMMARY" }
   | { type: "DISMISS_COMPLETION_ALERT"; alertId: string }
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }

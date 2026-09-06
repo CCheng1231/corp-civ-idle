@@ -8,6 +8,8 @@ interface TabPortraitFrameProps {
   className?: string;
   /** Default crop bias (0 = top, 100 = bottom). Portraits use 12. */
   focalYPercent?: number;
+  /** Extra scale beyond cover for pan headroom (default 1.45). */
+  panZoomFactor?: number;
 }
 
 const DOUBLE_TAP_MS = 320;
@@ -116,6 +118,7 @@ function PannableTabPortraitFrame({
   onPortraitToggle,
   className,
   focalYPercent,
+  panZoomFactor,
 }: TabPortraitFrameProps & { panStorageKey: string }) {
   const {
     pan,
@@ -129,7 +132,7 @@ function PannableTabPortraitFrame({
     onPointerUp,
     onPointerCancel,
     surfaceTransform,
-  } = usePortraitPan(panStorageKey, { focalYPercent });
+  } = usePortraitPan(panStorageKey, { focalYPercent, panZoomFactor });
 
   const { frameTitle, doubleTapClass, onDoubleClick, pointerHandlers } =
     usePortraitDoubleTap(onPortraitToggle);

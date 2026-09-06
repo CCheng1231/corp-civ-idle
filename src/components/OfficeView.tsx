@@ -6,20 +6,18 @@ import {
 } from "../game/jobs";
 import {
   secretaryJobSummary,
-  secretaryQuote,
 } from "../game/secretaryBriefing";
 import { totalAssigned } from "../game/unitEffects";
 import type { GameAction, GameState } from "../game/types";
-import secretaryPortrait from "../assets/secretary.jpg";
-import secretaryReportArt from "../assets/Secretary_Report.jpg";
 import {
   SecretaryBriefing,
   initialSecretaryWorkTab,
   type SecretaryWorkTab,
 } from "./SecretaryBriefing";
-import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { TaskForceStatusIcon } from "./TaskForceStatusIcon";
 
 const SECRETARY_PORTRAIT_SIZE_KEY = "corp-civ-idle-secretary-portrait-size";
@@ -42,12 +40,18 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
   }, [state.jobFocusPostingId]);
 
   const secretaryBesidePortrait = (
-    <>
-      <TabSiteHeader title="Secretary" state={state} dispatch={dispatch} />
-      <section
-        className="secretary-task-forces-beside tab-queue-section tab-compact-queue"
-        aria-label={`Task forces ${active} of ${cap}`}
-      >
+    <TabSiteHeader
+      secretaryHubTab="job"
+      state={state}
+      dispatch={dispatch}
+    />
+  );
+
+  const secretaryTaskForces = (
+    <section
+      className="secretary-task-forces-beside tab-queue-section tab-compact-queue"
+      aria-label={`Task forces ${active} of ${cap}`}
+    >
         <div className="tab-queue-heading">
           <h3>Task forces</h3>
           <span className="tab-queue-count muted">
@@ -99,32 +103,21 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
             </ul>
           </div>
         ) : null}
-      </section>
-    </>
-  );
-
-  const secretaryBelowPortrait = (
-    <>
-      <SceneBanner
-        src={secretaryReportArt}
-        storageKey="corp-civ-idle-secretary-report-art-pan"
-      />
-      <SecretaryBriefing
-        state={state}
-        dispatch={dispatch}
-        workTab={workTab}
-        onWorkTabChange={setWorkTab}
-      />
-    </>
+    </section>
   );
 
   return (
-    <div className="main-view-panel location-view-panel secretary-view">
-      <div className="location-view-body">
+    <div
+      className={`main-view-panel location-view-panel secretary-view secretary-view--work-${workTab} hub-synced-tab-view`}
+    >
+      <HubSyncedTabBackground
+        chiefId={state.chiefOfStaffId}
+        portraitSource="secretary"
+      />
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={secretaryPortrait}
           storageKey={SECRETARY_PORTRAIT_SIZE_KEY}
-          quote={secretaryQuote(state)}
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -133,8 +126,17 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
         >
           {secretaryBesidePortrait}
         </TabPortraitLayout>
-        <div className="tab-below-portrait">{secretaryBelowPortrait}</div>
-      </div>
+        <div className="hub-synced-tab-portrait-reveal" aria-hidden />
+        <div className="tab-below-portrait">
+          {secretaryTaskForces}
+          <SecretaryBriefing
+            state={state}
+            dispatch={dispatch}
+            workTab={workTab}
+            onWorkTabChange={setWorkTab}
+          />
+        </div>
+      </HubSyncedTabScrollBody>
     </div>
   );
 }

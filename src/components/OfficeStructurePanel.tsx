@@ -36,6 +36,7 @@ import {
   ProgressionNameButton,
 } from "./progressionUi";
 import { SceneBanner } from "./SceneBanner";
+import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import {
@@ -169,25 +170,14 @@ export function OfficeBuildQueueSection({
   if (compact) {
     return (
       <section className="location-view-section tab-queue-section tab-compact-queue">
-        <div className="tab-queue-heading">
-          <h3>Building in progress</h3>
-          <div className="tab-queue-heading-actions">
-            <span
-              className="tab-queue-count muted"
-              aria-label={`Build queue ${buildQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
-            >
-              {buildQueue.length}/{MAX_STRUCTURE_QUEUE}
-            </span>
-            <label className="progression-hide-completed-check tab-queue-filter">
-              <input
-                type="checkbox"
-                checked={hideCompleted}
-                onChange={(event) => onHideCompletedChange(event.target.checked)}
-              />
-              Hide maxed
-            </label>
-          </div>
-        </div>
+        <CompactQueueHeading
+          title="Structure in progress"
+          count={`${buildQueue.length}/${MAX_STRUCTURE_QUEUE}`}
+          countAriaLabel={`Structure queue ${buildQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
+          hideLabel="Hide maxed"
+          hideChecked={hideCompleted}
+          onHideChange={onHideCompletedChange}
+        />
         <StructureBuildQueueList
           state={state}
           jobs={buildQueue}

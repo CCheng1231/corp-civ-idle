@@ -44,26 +44,19 @@ function ResourceChip({
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [shell, setShell] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setShell(
-      (wrapRef.current?.closest(".app-shell") as HTMLElement | null) ?? null,
-    );
-  }, []);
+  const [hovering, setHovering] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovering || pinned;
 
   const positionTip = useCallback(() => {
     const wrap = wrapRef.current;
     const tip = tipRef.current;
     if (!wrap || !tip) return;
 
-    const origin = (wrap.closest(".app-shell") as HTMLElement | null) ?? document.documentElement;
     const wrapRect = wrap.getBoundingClientRect();
-    const originRect = origin.getBoundingClientRect();
     const margin = 8;
-    let left = wrapRect.left - originRect.left;
-    let top = wrapRect.bottom - originRect.top + 4;
+    let left = wrapRect.left;
+    let top = wrapRect.bottom + 4;
 
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
@@ -71,11 +64,11 @@ function ResourceChip({
     tip.style.bottom = "auto";
 
     const tipRect = tip.getBoundingClientRect();
-    if (left + tipRect.width > originRect.width - margin) {
-      left = originRect.width - tipRect.width - margin;
+    if (left + tipRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - tipRect.width - margin;
     }
-    if (top + tipRect.height > originRect.height - margin) {
-      top = wrapRect.top - originRect.top - tipRect.height - 4;
+    if (top + tipRect.height > window.innerHeight - margin) {
+      top = wrapRect.top - tipRect.height - 4;
     }
     left = Math.max(margin, left);
     top = Math.max(margin, top);
@@ -106,27 +99,34 @@ function ResourceChip({
   }, [open, positionTip]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!pinned) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (wrapRef.current?.contains(target) || tipRef.current?.contains(target)) {
         return;
       }
-      setOpen(false);
+      setPinned(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  }, [pinned]);
+
+  const rateLabel = `${rate >= 0 ? "+" : ""}${formatResourceShort(rate)}${RATE_UNIT_LABEL}`;
 
   return (
-    <div ref={wrapRef} className="resource-chip-wrap">
+    <div
+      ref={wrapRef}
+      className="resource-chip-wrap"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
       <button
         type="button"
         className="resource-chip"
         aria-expanded={open}
-        aria-label={`${label} ${formatResourceShort(amount)}`}
+        aria-label={`${label} ${formatResourceShort(amount)}, ${rateLabel}`}
         aria-describedby={open ? tipId : undefined}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setPinned((prev) => !prev)}
       >
         <div className="resource-chip-main">
           <span className="resource-label">{barLabel}</span>
@@ -157,13 +157,15 @@ function ResourceChip({
           )}
         </div>
       </button>
-      {open && shell
+      {open
         ? createPortal(
             <div
               ref={tipRef}
               id={tipId}
               className="resource-chip-tip resource-chip-tip-visible"
               role="tooltip"
+              onMouseEnter={() => setHovering(true)}
+              onMouseLeave={() => setHovering(false)}
             >
               <div className="resource-chip-tip-title">{label}</div>
               <div className="resource-chip-tip-cap">
@@ -190,7 +192,7 @@ function ResourceChip({
                 </p>
               )}
             </div>,
-            shell,
+            document.body,
           )
         : null}
     </div>

@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type Dispatch,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -10,17 +11,12 @@ import type { GameAction, GameState, MainView } from "../game/types";
 
 const HOME_HUB_VIEWS: MainView[] = ["operations", "recruitment", "research"];
 
-const HOME_HUB_ITEMS: { view: MainView; short: string }[] = [
-  { view: "operations", short: "Build" },
-  { view: "recruitment", short: "Recruit" },
-  { view: "research", short: "R&D" },
-];
+const SECRETARY_HUB_VIEWS: MainView[] = ["secretary", "office"];
 
 const PRIMARY_SHORTCUTS: { view: MainView; label: string; short: string }[] = [
   { view: "world", label: "World map", short: "World" },
   { view: "overview", label: "Overview", short: "Home" },
-  { view: "office", label: "Secretary", short: "Secretary" },
-  { view: "logbook", label: "Notes & logbook", short: "Log" },
+  { view: "secretary", label: "Secretary", short: "Secretary" },
   { view: "settings", label: "Settings", short: "Set" },
 ];
 
@@ -41,6 +37,10 @@ function clamp(n: number, min: number, max: number) {
 
 function isHomeHubView(view: MainView): boolean {
   return HOME_HUB_VIEWS.includes(view);
+}
+
+function isSecretaryHubView(view: MainView): boolean {
+  return SECRETARY_HUB_VIEWS.includes(view);
 }
 
 function MobileMoreChevron({ dir }: { dir: "left" | "right" }) {
@@ -81,10 +81,14 @@ export function ShortcutSidebar({
   mobileNav,
 }: ShortcutSidebarProps) {
   const maxShift = Math.max(0, PRIMARY_SHORTCUTS.length - MOBILE_VISIBLE);
+  const visibleSlots =
+    PRIMARY_SHORTCUTS.length <= MOBILE_VISIBLE
+      ? PRIMARY_SHORTCUTS.length
+      : MOBILE_VISIBLE;
+  const slotPercent = 100 / visibleSlots;
   const [shiftIndex, setShiftIndex] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [homeHubOpen, setHomeHubOpen] = useState(false);
   const pointerRef = useRef<{
     id: number;
     startX: number;
@@ -92,16 +96,9 @@ export function ShortcutSidebar({
     dragging: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
-  const homeHubWrapRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
-  function goHome() {
-    setHomeHubOpen(false);
-    dispatch({ type: "SET_VIEW", view: "overview" });
-  }
-
   function navigate(view: MainView) {
-    setHomeHubOpen(false);
     dispatch({ type: "SET_VIEW", view });
   }
 
@@ -109,46 +106,43 @@ export function ShortcutSidebar({
     event.stopPropagation();
     if (suppressClickRef.current) return;
 
-    if (homeHubOpen) {
-      goHome();
+    if (isHomeHubView(state.view)) {
+      dispatch({ type: "SET_VIEW", view: "overview" });
       return;
     }
 
-    setHomeHubOpen(true);
+    if (state.view === "overview") {
+      if (state.homePanel !== "landing") {
+        dispatch({ type: "SET_HOME_PANEL", panel: "landing" });
+      }
+      return;
+    }
+
+    dispatch({ type: "SET_VIEW", view: "overview" });
   }
 
-  useEffect(() => {
-    if (!homeHubOpen) return;
+  function handleSecretaryClick(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (suppressClickRef.current) return;
 
-    let removeListener: (() => void) | undefined;
-    const attachId = window.setTimeout(() => {
-      function handlePointerDown(event: PointerEvent) {
-        const target = event.target;
-        if (!(target instanceof Node)) return;
-        if (homeHubWrapRef.current?.contains(target)) return;
-        setHomeHubOpen(false);
+    if (state.view === "secretary") {
+      if (state.secretaryPanel !== "landing") {
+        dispatch({ type: "SET_SECRETARY_PANEL", panel: "landing" });
       }
+      return;
+    }
 
-      document.addEventListener("pointerdown", handlePointerDown);
-      removeListener = () =>
-        document.removeEventListener("pointerdown", handlePointerDown);
-    }, 0);
-
-    return () => {
-      window.clearTimeout(attachId);
-      removeListener?.();
-    };
-  }, [homeHubOpen]);
+    dispatch({ type: "SET_VIEW", view: "secretary" });
+  }
 
   useEffect(() => {
     if (!mobileNav) return;
     const i = PRIMARY_SHORTCUTS.findIndex((item) => {
       if (item.view === "overview") {
-        return (
-          state.view === "overview" ||
-          isHomeHubView(state.view) ||
-          homeHubOpen
-        );
+        return state.view === "overview" || isHomeHubView(state.view);
+      }
+      if (item.view === "secretary") {
+        return state.view === "secretary" || state.view === "office";
       }
       return item.view === state.view;
     });
@@ -158,7 +152,7 @@ export function ShortcutSidebar({
       if (i >= current + MOBILE_VISIBLE) return i - MOBILE_VISIBLE + 1;
       return current;
     });
-  }, [mobileNav, state.view, homeHubOpen]);
+  }, [mobileNav, state.view]);
 
   const finishDrag = (clientX: number) => {
     const pointer = pointerRef.current;
@@ -171,7 +165,7 @@ export function ShortcutSidebar({
     }
     suppressClickRef.current = true;
     const width = navRef.current?.clientWidth ?? 1;
-    const slot = width / MOBILE_VISIBLE;
+    const slot = width / visibleSlots;
     const dx = clientX - pointer.startX;
     const deltaSlots = Math.round(-dx / slot);
     setShiftIndex((current) => clamp(current + deltaSlots, 0, maxShift));
@@ -181,10 +175,6 @@ export function ShortcutSidebar({
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (!mobileNav || event.button !== 0) return;
-    const target = event.target;
-    if (target instanceof Node && homeHubWrapRef.current?.contains(target)) {
-      return;
-    }
     pointerRef.current = {
       id: event.pointerId,
       startX: event.clientX,
@@ -205,7 +195,7 @@ export function ShortcutSidebar({
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     const width = navRef.current?.clientWidth ?? 1;
-    const slot = width / MOBILE_VISIBLE;
+    const slot = width / visibleSlots;
     const min = -(maxShift - shiftIndex) * slot;
     const max = shiftIndex * slot;
     const rubber = 0.35;
@@ -229,11 +219,6 @@ export function ShortcutSidebar({
 
   const onNavClickCapture = (event: ReactMouseEvent<HTMLElement>) => {
     if (!suppressClickRef.current) return;
-    const target = event.target;
-    if (target instanceof Node && homeHubWrapRef.current?.contains(target)) {
-      suppressClickRef.current = false;
-      return;
-    }
     event.preventDefault();
     event.stopPropagation();
     suppressClickRef.current = false;
@@ -244,70 +229,62 @@ export function ShortcutSidebar({
   };
 
   const atEnd = shiftIndex >= maxShift;
-  const slotPercent = 100 / MOBILE_VISIBLE;
   const homeActive =
-    state.view === "overview" ||
-    homeHubOpen ||
-    isHomeHubView(state.view);
+    state.view === "overview" || isHomeHubView(state.view);
+  const secretaryActive =
+    state.view === "secretary" || isSecretaryHubView(state.view);
 
-  function renderHomeHub() {
+  function renderHomeShortcut() {
     return (
-      <div
+      <button
         key="overview"
-        ref={homeHubWrapRef}
-        className={`shortcut-home-hub-wrap${homeHubOpen ? " shortcut-home-hub-wrap-open" : ""}`}
-        onPointerDown={(event) => event.stopPropagation()}
+        type="button"
+        className={
+          homeActive
+            ? "shortcut-link active shortcut-home-hub-trigger"
+            : "shortcut-link shortcut-home-hub-trigger"
+        }
+        title="Home — Chief of Staff HQ"
+        onClick={handleHomeClick}
       >
-        {homeHubOpen ? (
-          <div className="shortcut-home-hub-menu" role="menu" aria-label="Home tabs">
-            {HOME_HUB_ITEMS.map((item) => (
-              <button
-                key={item.view}
-                type="button"
-                role="menuitem"
-                className={
-                  state.view === item.view
-                    ? "shortcut-home-hub-item active"
-                    : "shortcut-home-hub-item"
-                }
-                onClick={() => navigate(item.view)}
-              >
-                {item.short}
-              </button>
-            ))}
-          </div>
+        <span className="shortcut-link-short">Home</span>
+        {!mobileNav && !collapsed ? (
+          <span className="shortcut-link-label">Overview</span>
         ) : null}
-        <button
-          type="button"
-          className={
-            homeActive
-              ? "shortcut-link active shortcut-home-hub-trigger"
-              : "shortcut-link shortcut-home-hub-trigger"
-          }
-          title="Home — opens Build, Recruit, and R&D"
-          aria-expanded={homeHubOpen}
-          aria-haspopup="menu"
-          onClick={handleHomeClick}
-        >
-          <span className="shortcut-link-short">Home</span>
-          {!mobileNav && !collapsed ? (
-            <span className="shortcut-link-label">Overview</span>
-          ) : null}
-        </button>
-      </div>
+      </button>
+    );
+  }
+
+  function renderSecretaryShortcut() {
+    return (
+      <button
+        key="secretary"
+        type="button"
+        className={
+          secretaryActive
+            ? "shortcut-link active shortcut-secretary-hub-trigger"
+            : "shortcut-link shortcut-secretary-hub-trigger"
+        }
+        title="Secretary — Chief of Staff"
+        onClick={handleSecretaryClick}
+      >
+        <span className="shortcut-link-short">Secretary</span>
+        {!mobileNav && !collapsed ? (
+          <span className="shortcut-link-label">Secretary</span>
+        ) : null}
+      </button>
     );
   }
 
   function renderShortcut(item: (typeof PRIMARY_SHORTCUTS)[number]) {
-    if (item.view === "overview") return renderHomeHub();
+    if (item.view === "overview") return renderHomeShortcut();
+    if (item.view === "secretary") return renderSecretaryShortcut();
 
     return (
       <button
         key={item.view}
         type="button"
-        className={
-          state.view === item.view ? "shortcut-link active" : "shortcut-link"
-        }
+        className={state.view === item.view ? "shortcut-link active" : "shortcut-link"}
         title={item.label}
         onClick={() => navigate(item.view)}
       >
@@ -321,8 +298,13 @@ export function ShortcutSidebar({
 
   return (
     <aside
-      className={`shortcut-sidebar${collapsed && !mobileNav ? " shortcut-sidebar-collapsed" : ""}${mobileNav ? " shortcut-sidebar-mobile" : ""}${homeHubOpen ? " shortcut-sidebar-home-hub-open" : ""}`}
+      className={`shortcut-sidebar${collapsed && !mobileNav ? " shortcut-sidebar-collapsed" : ""}${mobileNav ? " shortcut-sidebar-mobile" : ""}`}
       aria-label="Shortcuts"
+      style={
+        mobileNav
+          ? ({ "--shortcut-slot-size": `${slotPercent}%` } as CSSProperties)
+          : undefined
+      }
     >
       {!mobileNav && (
         <button
@@ -377,10 +359,11 @@ export function ShortcutSidebar({
 export const MAIN_VIEW_TITLES: Record<MainView, string> = {
   overview: "HQ overview",
   world: "World map",
-  operations: "Build — structures",
+  operations: "Structure — structures",
   recruitment: "Recruit contractors",
   research: "R&D — firm-wide tech",
-  office: "Secretary — jobs & reports",
+  secretary: "Secretary — Chief of Staff",
+  office: "Job — task forces & board",
   logbook: "Notes & logbook",
   settings: "Settings",
 };

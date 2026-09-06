@@ -1,69 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch } from "react";
 import {
   LOG_CATEGORY_LABELS,
   LOG_FILTER_GROUPS,
   MAX_ACTIVITY_LOG_ENTRIES,
-  formatLogCostCell,
-  formatLogImpactsCell,
-  formatLogTimeCell,
+  formatLogTimeCellParts,
+  logEntryCashTag,
+  logEntryHeadline,
   officeLabel,
 } from "../game/logbook";
 import type { GameAction, GameState, LogCategory } from "../game/types";
 import { isAllOfficesSelected } from "../game/officeSelection";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
-import { tabQuote } from "../game/tabQuotes";
-import logbookPortrait from "../assets/Logbook.jpg";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { useDragScroll } from "../hooks/useDragScroll";
 
-const LOGBOOK_COL_STORAGE_KEY = "corp-civ-idle-logbook-col-widths";
 const LOGBOOK_PORTRAIT_SIZE_KEY = "corp-civ-idle-logbook-portrait-size";
 const LOGBOOK_PAGE_SIZE = 50;
 
-const LOGBOOK_COLUMNS = [
-  { id: "time", label: "Time" },
-  { id: "category", label: "Category" },
-  { id: "event", label: "Event" },
-  { id: "site", label: "Site" },
-  { id: "spent", label: "Spent" },
-  { id: "gained", label: "Gained" },
-  { id: "effects", label: "Effects" },
-] as const;
-
-type LogbookColumnId = (typeof LOGBOOK_COLUMNS)[number]["id"];
-
-const DEFAULT_COL_WIDTHS: Record<LogbookColumnId, number> = {
-  time: 118,
-  category: 108,
-  event: 240,
-  site: 72,
-  spent: 112,
-  gained: 112,
-  effects: 220,
-};
-
-const MIN_COL_WIDTH = 56;
-
 const FILTERABLE_GROUPS = LOG_FILTER_GROUPS.filter((group) => group.id !== "all");
-
-function loadColumnWidths(): Record<LogbookColumnId, number> {
-  try {
-    const raw = localStorage.getItem(LOGBOOK_COL_STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_COL_WIDTHS };
-    const parsed = JSON.parse(raw) as Partial<Record<LogbookColumnId, number>>;
-    const next = { ...DEFAULT_COL_WIDTHS };
-    for (const col of LOGBOOK_COLUMNS) {
-      const val = parsed[col.id];
-      if (typeof val === "number" && val >= MIN_COL_WIDTH) {
-        next[col.id] = val;
-      }
-    }
-    return next;
-  } catch {
-    return { ...DEFAULT_COL_WIDTHS };
-  }
-}
 
 function initialFilterIds(filterId: string): Set<string> {
   if (filterId === "all") return new Set(["all"]);
@@ -89,7 +47,6 @@ interface LogbookViewProps {
 export function LogbookView({ state, dispatch }: LogbookViewProps) {
   const filterId = state.logbookFilterId;
   const highlightId = state.logbookHighlightEntryId ?? null;
-  const [colWidths, setColWidths] = useState(loadColumnWidths);
   const [page, setPage] = useState(0);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -97,19 +54,13 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     initialFilterIds(filterId),
   );
   const filterPopoverRef = useRef<HTMLDivElement>(null);
-  const resizeRef = useRef<{
-    columnId: LogbookColumnId;
-    startX: number;
-    startWidth: number;
-  } | null>(null);
-  const sheetDragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    scrollLeft: number;
-    scrollTop: number;
-    dragging: boolean;
-  } | null>(null);
+  const {
+    dragging: sheetDragging,
+    onPointerDown: onSheetDragDown,
+    onPointerMove: onSheetDragMove,
+    onPointerUp: onSheetDragUp,
+    onPointerCancel: onSheetDragCancel,
+  } = useDragScroll();
 
   const filtersActive =
     !selectedFilterIds.has("all") && selectedFilterIds.size > 0;
@@ -177,50 +128,6 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, [filterOpen]);
 
-  const persistWidths = useCallback((widths: Record<LogbookColumnId, number>) => {
-    localStorage.setItem(LOGBOOK_COL_STORAGE_KEY, JSON.stringify(widths));
-  }, []);
-
-  const startResize = useCallback(
-    (columnId: LogbookColumnId, clientX: number) => {
-      resizeRef.current = {
-        columnId,
-        startX: clientX,
-        startWidth: colWidths[columnId],
-      };
-      document.body.classList.add("logbook-col-resizing");
-    },
-    [colWidths],
-  );
-
-  useEffect(() => {
-    function onMouseMove(event: MouseEvent) {
-      const active = resizeRef.current;
-      if (!active) return;
-      const delta = event.clientX - active.startX;
-      const nextWidth = Math.max(MIN_COL_WIDTH, active.startWidth + delta);
-      setColWidths((prev) => ({ ...prev, [active.columnId]: nextWidth }));
-    }
-
-    function onMouseUp() {
-      if (!resizeRef.current) return;
-      resizeRef.current = null;
-      document.body.classList.remove("logbook-col-resizing");
-      setColWidths((prev) => {
-        persistWidths(prev);
-        return prev;
-      });
-    }
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      document.body.classList.remove("logbook-col-resizing");
-    };
-  }, [persistWidths]);
-
   useEffect(() => {
     if (!highlightId) return;
     const el = document.getElementById(`logbook-entry-${highlightId}`);
@@ -268,28 +175,30 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
   }
 
   const logbookBesidePortrait = (
-    <>
-      <TabSiteHeader title="Logbook" state={state} dispatch={dispatch} />
-      <section className="logbook-notes-section" aria-label="Player notes">
-        <textarea
-          className="notes-editor logbook-notes-editor"
-          value={state.playerNotes}
-          onChange={(event) =>
-            dispatch({
-              type: "UPDATE_PLAYER_NOTES",
-              notes: event.target.value,
-            })
-          }
-          placeholder="Write your own note"
-          spellCheck
-          aria-label="Player notes"
-        />
-      </section>
-    </>
+    <TabSiteHeader secretaryHubTab="log" state={state} dispatch={dispatch} />
+  );
+
+  const logbookNotes = (
+    <section className="logbook-notes-section" aria-label="Player notes">
+      <textarea
+        className="notes-editor logbook-notes-editor"
+        value={state.playerNotes}
+        onChange={(event) =>
+          dispatch({
+            type: "UPDATE_PLAYER_NOTES",
+            notes: event.target.value,
+          })
+        }
+        placeholder="Write your own note"
+        spellCheck
+        aria-label="Player notes"
+      />
+    </section>
   );
 
   const logbookBelowPortrait = (
     <>
+      {logbookNotes}
       <div className="logbook-activity-panel">
         <div className="logbook-activity-toolbar">
           <div className="logbook-filter-popover-wrap" ref={filterPopoverRef}>
@@ -373,121 +282,76 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
           <p className="muted logbook-empty">No entries in this category yet.</p>
         ) : (
           <div
-            className="logbook-sheet-wrap"
+            className={[
+              "logbook-sheet-wrap",
+              "logbook-sheet-wrap-hub",
+              sheetDragging ? "logbook-sheet-wrap-dragging" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onPointerDown={(event) => {
-              if (event.button !== 0) return;
-              if ((event.target as HTMLElement).closest(".logbook-col-resize")) {
-                return;
-              }
-              const el = event.currentTarget;
-              sheetDragRef.current = {
-                pointerId: event.pointerId,
-                startX: event.clientX,
-                startY: event.clientY,
-                scrollLeft: el.scrollLeft,
-                scrollTop: el.scrollTop,
-                dragging: false,
-              };
+              onSheetDragDown(event);
+              event.stopPropagation();
             }}
             onPointerMove={(event) => {
-              const drag = sheetDragRef.current;
-              if (!drag || drag.pointerId !== event.pointerId) return;
-              const el = event.currentTarget;
-              const dx = event.clientX - drag.startX;
-              const dy = event.clientY - drag.startY;
-              if (!drag.dragging) {
-                if (dx * dx + dy * dy < 16) return;
-                drag.dragging = true;
-                el.setPointerCapture(event.pointerId);
-              }
-              el.scrollLeft = drag.scrollLeft - dx;
-              el.scrollTop = drag.scrollTop - dy;
+              onSheetDragMove(event);
+              event.stopPropagation();
             }}
             onPointerUp={(event) => {
-              const drag = sheetDragRef.current;
-              if (!drag || drag.pointerId !== event.pointerId) return;
-              if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
-                event.currentTarget.releasePointerCapture(event.pointerId);
-              }
-              sheetDragRef.current = null;
+              onSheetDragUp(event);
+              event.stopPropagation();
             }}
             onPointerCancel={(event) => {
-              const drag = sheetDragRef.current;
-              if (!drag || drag.pointerId !== event.pointerId) return;
-              if (drag.dragging && event.currentTarget.hasPointerCapture(event.pointerId)) {
-                event.currentTarget.releasePointerCapture(event.pointerId);
-              }
-              sheetDragRef.current = null;
+              onSheetDragCancel(event);
+              event.stopPropagation();
             }}
           >
-            <table className="logbook-sheet">
-              <colgroup>
-                {LOGBOOK_COLUMNS.map((col) => (
-                  <col
-                    key={col.id}
-                    style={{ width: `${colWidths[col.id]}px` }}
-                  />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {LOGBOOK_COLUMNS.map((col) => (
-                    <th
-                      key={col.id}
-                      scope="col"
-                      className={`col-${col.id}`}
-                      style={{ width: `${colWidths[col.id]}px` }}
-                    >
-                      <span className="logbook-col-label">{col.label}</span>
-                      <span
-                        className="logbook-col-resize"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={`Resize ${col.label} column`}
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                          startResize(col.id, event.clientX);
-                        }}
-                      />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pageRows.map((entry) => (
-                  <tr
+            <ul className="logbook-entry-list" aria-label="Activity log">
+              {pageRows.map((entry) => {
+                const { date, time } = formatLogTimeCellParts(entry.at);
+                const cashTag = logEntryCashTag(entry, state.activityLog);
+                const siteLabel = entry.officeId
+                  ? officeLabel(entry.officeId, state)
+                  : null;
+                return (
+                  <li
                     key={entry.id}
                     id={`logbook-entry-${entry.id}`}
-                    className={
-                      highlightId === entry.id ? "logbook-row-highlight" : undefined
-                    }
+                    className={[
+                      "logbook-entry-card",
+                      highlightId === entry.id ? "logbook-row-highlight" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    <td className="col-time">
-                      <time dateTime={new Date(entry.at).toISOString()}>
-                        {formatLogTimeCell(entry.at)}
+                    <p className="logbook-entry-headline">
+                      {logEntryHeadline(entry)}
+                    </p>
+                    <div className="logbook-entry-meta">
+                      <time
+                        dateTime={new Date(entry.at).toISOString()}
+                        className="logbook-entry-time"
+                      >
+                        {date} {time}
                       </time>
-                    </td>
-                    <td className="col-category">
-                      {LOG_CATEGORY_LABELS[entry.category]}
-                    </td>
-                    <td className="col-event">
-                      <span className="logbook-event-title">{entry.summary}</span>
-                      {entry.detail && (
-                        <span className="logbook-event-detail">{entry.detail}</span>
-                      )}
-                    </td>
-                    <td className="col-site">
-                      {entry.officeId ? officeLabel(entry.officeId) : "—"}
-                    </td>
-                    <td className="col-spent">{formatLogCostCell(entry.spent)}</td>
-                    <td className="col-gained">{formatLogCostCell(entry.gained)}</td>
-                    <td className="col-effects">
-                      {formatLogImpactsCell(entry.impacts)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span className="logbook-tag logbook-tag-compact">
+                        {LOG_CATEGORY_LABELS[entry.category]}
+                      </span>
+                      {siteLabel ? (
+                        <span className="logbook-tag logbook-tag-compact logbook-tag-site">
+                          {siteLabel}
+                        </span>
+                      ) : null}
+                      {cashTag ? (
+                        <span className="logbook-tag logbook-tag-compact logbook-tag-cash">
+                          {cashTag}
+                        </span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
             {totalPages > 1 ? (
               <nav
                 className="logbook-sheet-pagination"
@@ -530,7 +394,11 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel logbook-view">
+    <div className="main-view-panel location-view-panel logbook-view hub-synced-tab-view">
+      <HubSyncedTabBackground
+        chiefId={state.chiefOfStaffId}
+        portraitSource="secretary"
+      />
       {clearConfirmOpen ? (
         <ConfirmDialog
           title="Clear activity log?"
@@ -545,11 +413,10 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
           onCancel={() => setClearConfirmOpen(false)}
         />
       ) : null}
-      <div className="location-view-body">
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={logbookPortrait}
           storageKey={LOGBOOK_PORTRAIT_SIZE_KEY}
-          quote={tabQuote(state, "logbook")}
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -558,8 +425,9 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
         >
           {logbookBesidePortrait}
         </TabPortraitLayout>
+        <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         <div className="tab-below-portrait">{logbookBelowPortrait}</div>
-      </div>
+      </HubSyncedTabScrollBody>
     </div>
   );
 }

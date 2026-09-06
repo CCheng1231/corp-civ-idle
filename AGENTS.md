@@ -9,7 +9,7 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 
 **Balance / sheet numbers:** [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc) — use `google-sheets` MCP; engine data via `scripts/build-structure-balance.mjs` and `scripts/build-research-data.mjs`.
 
-**Session changelog:** **ChangeLog** tab in the balance workbook (`20260827 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-online-save-lease.mjs`; close Excel first if EBUSY).
+**Session changelog:** **ChangeLog** tab in the balance workbook (`20260905 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-online-save-lease.mjs`; close Excel first if EBUSY).
 
 **Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Read `src/hooks/useOnlineWorld.ts`, `src/multiplayer/worldSync.ts`, `src/multiplayer/browserLease.ts` before changing sync. One browser tab per online account (Firestore lease on world meta).
 

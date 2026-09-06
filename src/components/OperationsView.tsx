@@ -6,14 +6,15 @@ import {
   resolveOfficeLocation,
   structureJobsForOffices,
 } from "../game/officeSelection";
+import { CompactQueueHeading } from "./CompactQueueHeading";
 import { LocationSitePanel } from "./LocationSitePanel";
 import { OfficeBuildQueueSection } from "./OfficeStructurePanel";
 import { OfficeSiteSummary } from "./OfficeSiteSummary";
 import { StructureBuildQueueList } from "./StructureBuildQueueList";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
-import { tabQuote } from "../game/tabQuotes";
-import officePortrait from "../assets/office.jpg";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
 
 interface OperationsViewProps {
@@ -26,19 +27,19 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
   const showAll = isAllOfficesSelected(state.selectedOffice);
   const officeId: OfficeLocationId = resolveOfficeLocation(state);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const portraitStorageKey = "corp-civ-idle-operations-portrait-size";
   const buildEntries = structureJobsForOffices(state);
   const officeCount = ownedOfficeIds(state).length;
 
   const officeBesidePortrait = (
     <>
-      <TabSiteHeader title="Building" state={state} dispatch={dispatch} />
+      <TabSiteHeader homeHubTab="operations" state={state} dispatch={dispatch} />
       {showAll ? (
         <section className="location-view-section tab-queue-section tab-compact-queue">
-          <div className="tab-queue-heading">
-            <h3>Building in progress</h3>
-            <span className="tab-queue-count muted">{buildEntries.length}</span>
-          </div>
+          <CompactQueueHeading
+            title="Structure in progress"
+            count={buildEntries.length}
+            countAriaLabel={`Structure queue ${buildEntries.length}`}
+          />
           <StructureBuildQueueList
             state={state}
             entries={buildEntries}
@@ -62,12 +63,12 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel operations-view">
-      <div className="location-view-body">
+    <div className="main-view-panel location-view-panel operations-view hub-synced-tab-view">
+      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={officePortrait}
-          storageKey={portraitStorageKey}
-          quote={tabQuote(state, "office")}
+          storageKey="corp-civ-idle-operations-portrait-size"
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -95,7 +96,7 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
             readOnly={showAll}
           />
         </div>
-      </div>
+      </HubSyncedTabScrollBody>
     </div>
   );
 }

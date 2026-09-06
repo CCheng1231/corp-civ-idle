@@ -24,6 +24,7 @@ import type {
   UnitId,
   UnitRoster,
 } from "./types";
+import { DEFAULT_CHIEF_OF_STAFF_ID } from "./secretaryData";
 import {
   branchOfficeIdForSite,
   branchSiteCoordForOffice,
@@ -654,6 +655,9 @@ export function createInitialState(now = Date.now()): GameState {
     completedProjects: 0,
     phase: 1,
     view: "operations",
+    homePanel: "landing",
+    secretaryPanel: "landing",
+    chiefOfStaffId: DEFAULT_CHIEF_OF_STAFF_ID,
     playerNotes: "",
     activityLog: [],
     dismissedJobReportIds: [],

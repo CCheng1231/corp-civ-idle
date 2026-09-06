@@ -50,6 +50,7 @@ export function computePortraitImageLayout(
   naturalWidth: number,
   naturalHeight: number,
   focalYPercent = DEFAULT_FOCAL_Y_PERCENT,
+  panZoomFactor = PAN_ZOOM_FACTOR,
 ): PortraitImageLayout | null {
   if (
     frameWidth <= 0 ||
@@ -64,7 +65,7 @@ export function computePortraitImageLayout(
     frameWidth / naturalWidth,
     frameHeight / naturalHeight,
   );
-  const scale = coverScale * PAN_ZOOM_FACTOR;
+  const scale = coverScale * panZoomFactor;
   const width = naturalWidth * scale;
   const height = naturalHeight * scale;
   const baseX = (frameWidth - width) / 2;
@@ -96,9 +97,10 @@ function clampPan(
 
 export function usePortraitPan(
   storageKey: string,
-  options?: { focalYPercent?: number },
+  options?: { focalYPercent?: number; panZoomFactor?: number },
 ) {
   const focalYPercent = options?.focalYPercent ?? DEFAULT_FOCAL_Y_PERCENT;
+  const panZoomFactor = options?.panZoomFactor ?? PAN_ZOOM_FACTOR;
   const [pan, setPan] = useState<PortraitPan>(() => readPan(storageKey));
   const [layout, setLayout] = useState<PortraitImageLayout | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -123,6 +125,7 @@ export function usePortraitPan(
       natural.width,
       natural.height,
       focalYPercent,
+      panZoomFactor,
     );
     if (!nextLayout) return;
 
@@ -135,7 +138,7 @@ export function usePortraitPan(
         nextLayout,
       ),
     );
-  }, [focalYPercent]);
+  }, [focalYPercent, panZoomFactor]);
 
   useEffect(() => {
     try {

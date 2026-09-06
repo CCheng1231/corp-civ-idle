@@ -1,41 +1,29 @@
 import { type Dispatch } from "react";
 import {
-  MAX_RESEARCH_QUEUE,
-  MAX_RECRUIT_QUEUE,
-  MAX_STRUCTURE_QUEUE,
   RESEARCH,
   STRUCTURES,
   WIN_NET_WORTH,
   formatNumber,
   formatResourceShort,
   projectedResearchLevels,
-  recruitmentJobsAtOffice,
-  researchJobsAtOffice,
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
   isAllOfficesSelected,
-  recruitmentJobsForOffices,
-  researchJobsForOffices,
   resolveOfficeLocation,
-  structureJobsForOffices,
 } from "../game/officeSelection";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
 import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
-import { tabQuote } from "../game/tabQuotes";
-import homePortrait from "../assets/Home.jpg";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import homeStaffArt from "../assets/Home_Staff.png";
 import homeStructureArt from "../assets/Home_Structure.jpg";
-import {
-  RecruitmentQueueList,
-  ResearchQueueList,
-  StructureBuildQueueList,
-} from "./StructureBuildQueueList";
+import { OverviewQueuePanel } from "./OverviewQueuePanel";
 
 interface OverviewViewProps {
   state: GameState;
@@ -49,16 +37,6 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
   const officeLabel = showAll
     ? "All offices"
     : officeDisplayName(state, officeId);
-  const now = Date.now();
-  const buildQueueCount = showAll
-    ? structureJobsForOffices(state).length
-    : state.structureQueues[officeId].length;
-  const researchQueueCount = showAll
-    ? researchJobsForOffices(state).length
-    : researchJobsAtOffice(state, officeId).length;
-  const hireQueueCount = showAll
-    ? recruitmentJobsForOffices(state).length
-    : recruitmentJobsAtOffice(state, officeId).length;
   const projectedResearch = projectedResearchLevels(state);
   const researchActive = RESEARCH.filter(
     (def) => projectedResearch[def.id] > 0,
@@ -69,116 +47,31 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
         0,
       )
     : totalWorkforce(rosterAt(state, officeId));
-  const portraitStorageKey = "corp-civ-idle-overview-portrait-size";
-  const mergedQueueMax =
-    officeIds.length * MAX_STRUCTURE_QUEUE;
 
   const overviewNetWorth = (
-    <p
-      className="overview-net-worth-banner"
-      aria-label={`Net worth ${formatResourceShort(state.netWorth)} of ${formatResourceShort(WIN_NET_WORTH)} goal`}
-    >
-      <span className="tab-net-worth-label">Net worth</span>
-      <span className="overview-net-worth-amounts">
-        <strong className="tab-net-worth-value">
-          {formatResourceShort(state.netWorth)}
-        </strong>
-        <span className="tab-net-worth-goal">
-          / {formatResourceShort(WIN_NET_WORTH)}
+    <div className="overview-summary-block">
+      <h2 className="overview-panel-title">Overview</h2>
+      <p
+        className="overview-net-worth-banner"
+        aria-label={`Net worth ${formatResourceShort(state.netWorth)} of ${formatResourceShort(WIN_NET_WORTH)} goal`}
+      >
+        <span className="tab-net-worth-label">Net worth</span>
+        <span className="overview-net-worth-amounts">
+          <strong className="tab-net-worth-value">
+            {formatResourceShort(state.netWorth)}
+          </strong>
+          <span className="tab-net-worth-goal">
+            / {formatResourceShort(WIN_NET_WORTH)}
+          </span>
         </span>
-      </span>
-    </p>
+      </p>
+    </div>
   );
 
   const overviewBesidePortrait = (
     <>
-      <TabSiteHeader title="Overview" state={state} dispatch={dispatch} />
-      <div className="tab-hero-queues">
-        <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
-          <div className="tab-queue-heading">
-            <h3>Building in progress</h3>
-            <span
-              className="tab-queue-count muted"
-              aria-label={`Build queue ${buildQueueCount}`}
-            >
-              {buildQueueCount}
-              {showAll ? "" : `/${MAX_STRUCTURE_QUEUE}`}
-            </span>
-          </div>
-          <StructureBuildQueueList
-            state={state}
-            {...(showAll
-              ? {
-                  entries: structureJobsForOffices(state),
-                  maxSlots: mergedQueueMax,
-                }
-              : {
-                  jobs: state.structureQueues[officeId],
-                  locationId: officeId,
-                })}
-            dispatch={dispatch}
-            now={now}
-            compact
-            emptyLabel=""
-          />
-        </section>
-        <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
-          <div className="tab-queue-heading">
-            <h3>Research in progress</h3>
-            <span
-              className="tab-queue-count muted"
-              aria-label={`Research queue ${researchQueueCount}`}
-            >
-              {researchQueueCount}
-              {showAll ? "" : `/${MAX_RESEARCH_QUEUE}`}
-            </span>
-          </div>
-          <ResearchQueueList
-            state={state}
-            {...(showAll
-              ? {
-                  entries: researchJobsForOffices(state),
-                  maxSlots: officeIds.length * MAX_RESEARCH_QUEUE,
-                }
-              : {
-                  jobs: researchJobsAtOffice(state, officeId),
-                  officeId,
-                })}
-            dispatch={dispatch}
-            now={now}
-            compact
-            emptyLabel=""
-          />
-        </section>
-        <section className="overview-section location-view-section tab-queue-section tab-compact-queue">
-          <div className="tab-queue-heading">
-            <h3>Hiring in progress</h3>
-            <span
-              className="tab-queue-count muted"
-              aria-label={`Hiring queue ${hireQueueCount}`}
-            >
-              {hireQueueCount}
-              {showAll ? "" : `/${MAX_RECRUIT_QUEUE}`}
-            </span>
-          </div>
-          <RecruitmentQueueList
-            state={state}
-            {...(showAll
-              ? {
-                  entries: recruitmentJobsForOffices(state),
-                  maxSlots: officeIds.length * MAX_RECRUIT_QUEUE,
-                }
-              : {
-                  jobs: recruitmentJobsAtOffice(state, officeId),
-                  officeId,
-                })}
-            dispatch={dispatch}
-            now={now}
-            compact
-            emptyLabel=""
-          />
-        </section>
-      </div>
+      <TabSiteHeader homeHubTab="overview" state={state} dispatch={dispatch} />
+      <OverviewQueuePanel state={state} dispatch={dispatch} />
     </>
   );
 
@@ -301,12 +194,12 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel overview-view">
-      <div className="location-view-body">
+    <div className="main-view-panel location-view-panel overview-view hub-synced-tab-view">
+      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={homePortrait}
-          storageKey={portraitStorageKey}
-          quote={tabQuote(state, "home")}
+          storageKey="corp-civ-idle-overview-portrait-size"
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -316,7 +209,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
           {overviewBesidePortrait}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{overviewBelowPortrait}</div>
-      </div>
+      </HubSyncedTabScrollBody>
     </div>
   );
 }

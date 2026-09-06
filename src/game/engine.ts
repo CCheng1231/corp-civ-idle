@@ -41,6 +41,7 @@ import { buildOfflineWelcomeSummary } from "./offlineWelcome";
 import { pushCompletionAlert } from "./completionAlerts";
 import { cancelRefundFromSpent } from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
+import { SECRETARY_IDS } from "./secretaryData";
 import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
@@ -865,10 +866,27 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
       return finalizeLoadedState(action.state, Date.now());
 
-    case "SET_VIEW":
+    case "SET_VIEW": {
+      if (action.view === "logbook") {
+        return {
+          ...state,
+          view: "secretary",
+          secretaryPanel: "log",
+          ...(action.logbookFilter !== undefined
+            ? { logbookFilterId: action.logbookFilter }
+            : {}),
+          logbookHighlightEntryId: action.logbookHighlightEntryId ?? null,
+          recruitFocusUnitId: null,
+          jobFocusPostingId: null,
+        };
+      }
+
       return {
         ...state,
         view: action.view,
+        homePanel: action.view === "overview" ? "landing" : state.homePanel,
+        secretaryPanel:
+          action.view === "secretary" ? "landing" : state.secretaryPanel,
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
@@ -876,15 +894,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           action.view === "recruitment"
             ? (action.recruitFocusUnitId ?? null)
             : null,
-        logbookHighlightEntryId:
-          action.view === "logbook"
-            ? (action.logbookHighlightEntryId ?? null)
-            : null,
+        logbookHighlightEntryId: null,
         jobFocusPostingId:
           action.view === "office"
             ? (action.jobFocusPostingId ?? null)
             : null,
       };
+    }
 
     case "CLEAR_JOB_FOCUS":
       return { ...state, jobFocusPostingId: null };
@@ -928,6 +944,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         dismissedJobReportIds: [...dismissed],
       };
     }
+
+    case "SELECT_CHIEF_OF_STAFF": {
+      if (!SECRETARY_IDS.includes(action.secretaryId)) return state;
+      if (state.chiefOfStaffId === action.secretaryId) return state;
+      return { ...state, chiefOfStaffId: action.secretaryId };
+    }
+
+    case "SET_SECRETARY_PANEL":
+      return {
+        ...state,
+        view: "secretary",
+        secretaryPanel: action.panel,
+        ...(action.logbookFilter !== undefined
+          ? { logbookFilterId: action.logbookFilter }
+          : {}),
+        ...(action.logbookHighlightEntryId !== undefined
+          ? { logbookHighlightEntryId: action.logbookHighlightEntryId }
+          : {}),
+      };
+
+    case "SET_HOME_PANEL":
+      return {
+        ...state,
+        view: "overview",
+        homePanel: action.panel,
+      };
 
     case "DISMISS_OFFLINE_SUMMARY":
       if (!state.pendingOfflineSummary) return state;

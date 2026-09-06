@@ -19,14 +19,15 @@ import {
   getRecruitCategoryOpen,
   setRecruitCategoryOpen,
 } from "../game/officeCategoryOpen";
+import { CompactQueueHeading } from "./CompactQueueHeading";
 import { RecruitmentQueueList } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
-import { tabQuote } from "../game/tabQuotes";
+import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
+import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { SceneBanner } from "./SceneBanner";
 import { ProgressionCategorySection } from "./progressionUi";
-import recruitmentPortrait from "../assets/Recruitment.png";
 import recruitFarmingArt from "../assets/Recruit_resource.png";
 import recruitDefenseArt from "../assets/Recruit_defend.jpg";
 import recruitIntelArt from "../assets/Recruit_Intel.png";
@@ -133,7 +134,6 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const unitCount = Math.round(staffTotal);
   const unitCountLabel = `${unitCount} ${unitCount === 1 ? "unit" : "units"}`;
   const focusUnitId = state.recruitFocusUnitId ?? null;
-  const portraitStorageKey = "corp-civ-idle-recruitment-portrait-size";
 
   useEffect(() => {
     if (!focusUnitId) return;
@@ -260,28 +260,21 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
 
   const recruitBesidePortrait = (
     <>
-      <TabSiteHeader title="Recruit" state={state} dispatch={dispatch} />
+      <TabSiteHeader homeHubTab="recruitment" state={state} dispatch={dispatch} />
       <section className="location-view-section tab-queue-section tab-compact-queue">
-        <div className="tab-queue-heading">
-          <h3>Hiring in progress</h3>
-          <div className="tab-queue-heading-actions">
-            <span
-              className="tab-queue-count muted"
-              aria-label={`Hiring queue ${hireQueueCount}${showAll ? "" : ` of ${MAX_RECRUIT_QUEUE}`}`}
-            >
+        <CompactQueueHeading
+          title="Hiring in progress"
+          count={
+            <>
               {hireQueueCount}
               {showAll ? "" : `/${MAX_RECRUIT_QUEUE}`}
-            </span>
-            <label className="progression-hide-completed-check tab-queue-filter">
-              <input
-                type="checkbox"
-                checked={hideLocked}
-                onChange={(event) => setHideLocked(event.target.checked)}
-              />
-              Hide locked
-            </label>
-          </div>
-        </div>
+            </>
+          }
+          countAriaLabel={`Hiring queue ${hireQueueCount}${showAll ? "" : ` of ${MAX_RECRUIT_QUEUE}`}`}
+          hideLabel="Hide locked"
+          hideChecked={hideLocked}
+          onHideChange={setHideLocked}
+        />
         <RecruitmentQueueList
           state={state}
           {...(showAll
@@ -305,61 +298,63 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const recruitBelowPortrait = (
     <>
       <div className="recruitment-units-banner">
-        <span className="recruitment-units-label">Unit breakdown</span>
-        <button
-          type="button"
-          className="recruitment-units-count"
-          aria-expanded={rosterOpen}
-          aria-label={`${unitCountLabel}. ${rosterOpen ? "Hide" : "Show"} roster.`}
-          onClick={() => setRosterOpen((open) => !open)}
-        >
-          {unitCountLabel}
-        </button>
-      </div>
-      {rosterOpen ? (
-        <div className="recruitment-roster-panel">
-          {showAll ? (
-            ownedOfficeIds(state).some(
-              (siteId) => totalWorkforce(rosterAt(state, siteId)) > 0,
-            ) ? (
+        <div className="recruitment-units-banner-row">
+          <span className="recruitment-units-label">Unit breakdown</span>
+          <button
+            type="button"
+            className="recruitment-units-count"
+            aria-expanded={rosterOpen}
+            aria-label={`${unitCountLabel}. ${rosterOpen ? "Hide" : "Show"} roster.`}
+            onClick={() => setRosterOpen((open) => !open)}
+          >
+            {unitCountLabel}
+          </button>
+        </div>
+        {rosterOpen ? (
+          <div className="recruitment-roster-panel">
+            {showAll ? (
+              ownedOfficeIds(state).some(
+                (siteId) => totalWorkforce(rosterAt(state, siteId)) > 0,
+              ) ? (
+                <ul className="office-site-staff-list recruitment-roster-list">
+                  {ownedOfficeIds(state).flatMap((siteId) => {
+                    const siteRoster = rosterAt(state, siteId);
+                    return RECRUITMENT_UNITS.filter(
+                      (unit) => (siteRoster[unit.id] ?? 0) > 0,
+                    ).map((unit) => (
+                      <li key={`${siteId}-${unit.id}`}>
+                        <span className="office-site-staff-role">
+                          {officeDisplayName(state, siteId)} · {unit.name}
+                        </span>
+                        <span className="office-site-staff-count">
+                          ×{siteRoster[unit.id] ?? 0}
+                        </span>
+                      </li>
+                    ));
+                  })}
+                </ul>
+              ) : (
+                <p className="muted recruitment-roster-empty">No units.</p>
+              )
+            ) : staffTotal > 0 ? (
               <ul className="office-site-staff-list recruitment-roster-list">
-                {ownedOfficeIds(state).flatMap((siteId) => {
-                  const siteRoster = rosterAt(state, siteId);
-                  return RECRUITMENT_UNITS.filter(
-                    (unit) => (siteRoster[unit.id] ?? 0) > 0,
-                  ).map((unit) => (
-                    <li key={`${siteId}-${unit.id}`}>
-                      <span className="office-site-staff-role">
-                        {officeDisplayName(state, siteId)} · {unit.name}
-                      </span>
+                {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
+                  (unit) => (
+                    <li key={unit.id}>
+                      <span className="office-site-staff-role">{unit.name}</span>
                       <span className="office-site-staff-count">
-                        ×{siteRoster[unit.id] ?? 0}
+                        ×{roster[unit.id] ?? 0}
                       </span>
                     </li>
-                  ));
-                })}
+                  ),
+                )}
               </ul>
             ) : (
-              <p className="muted recruitment-roster-empty">No units.</p>
-            )
-          ) : staffTotal > 0 ? (
-            <ul className="office-site-staff-list recruitment-roster-list">
-              {RECRUITMENT_UNITS.filter((unit) => (roster[unit.id] ?? 0) > 0).map(
-                (unit) => (
-                  <li key={unit.id}>
-                    <span className="office-site-staff-role">{unit.name}</span>
-                    <span className="office-site-staff-count">
-                      ×{roster[unit.id] ?? 0}
-                    </span>
-                  </li>
-                ),
-              )}
-            </ul>
-          ) : (
-            <p className="muted recruitment-roster-empty">No units at this site.</p>
-          )}
-        </div>
-      ) : null}
+              <p className="muted recruitment-roster-empty">No units at this site.</p>
+            )}
+          </div>
+        ) : null}
+      </div>
       {RECRUITMENT_CATEGORY_ORDER.map((category) => {
         const units = RECRUITMENT_UNITS.filter(
           (unit) => unit.category === category,
@@ -403,12 +398,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel recruitment-view">
-      <div className="location-view-body">
+    <div className="main-view-panel location-view-panel recruitment-view hub-synced-tab-view">
+      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <HubSyncedTabScrollBody>
         <TabPortraitLayout
-          src={recruitmentPortrait}
-          storageKey={portraitStorageKey}
-          quote={tabQuote(state, "recruitment")}
+          storageKey="corp-civ-idle-recruitment-portrait-size"
+          portraitSpacer
           portraitLayout="stretch"
           parallaxScroll={false}
           portraitLocked={false}
@@ -418,7 +413,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           {recruitBesidePortrait}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{recruitBelowPortrait}</div>
-      </div>
+      </HubSyncedTabScrollBody>
     </div>
   );
 }
