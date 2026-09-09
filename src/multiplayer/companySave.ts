@@ -43,7 +43,6 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     onlineConnectionStatus: _conn,
     onlineResetGeneration: _resetGen,
     onlineSession: _session,
-    view: _view,
     ...persistable
   } = state;
   return persistable;

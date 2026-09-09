@@ -1,7 +1,10 @@
 import { JOB_DEFINITIONS } from "./jobHubData";
 import {
   jobTravelDurationMsForDefinition,
+  jobTravelHexesToCoord,
+  roundTripTravelSupplyCost,
 } from "./mapTravel";
+import { jobSiteCoordForDefinition } from "./mapWorld";
 import {
   addAssignmentToRoster,
   canAssignFromRoster,
@@ -12,7 +15,12 @@ import {
 } from "./unitEffects";
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
 import { pushCompletionAlert } from "./completionAlerts";
-import { formatNumber, officeSiteLabel } from "./constants";
+import {
+  applyOfficeCost,
+  canAffordAtOffice,
+  formatNumber,
+  officeSiteLabel,
+} from "./constants";
 import { resolveOfficeLocation } from "./officeSelection";
 import {
   activePlayerId,
@@ -357,6 +365,7 @@ function beginReturnTravel(
     current.officeId,
     def,
   );
+  // Return supply paid upfront when the job was engaged.
   const returnStartedAt =
     current.endsAt > 0 && current.endsAt <= now ? current.endsAt : now;
   next.jobEngagements[idx] = {
@@ -840,11 +849,25 @@ export function engageJobPosting(
   if (!canAssignFromRoster(roster, crewAssigned)) return state;
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) return state;
 
-  const next = structuredClone(state);
+  const travelHexes = jobTravelHexesToCoord(
+    state,
+    officeId,
+    jobSiteCoordForDefinition(def),
+  );
+  const unitCount = totalAssigned(crewAssigned);
+  const tripSupply = roundTripTravelSupplyCost(travelHexes, unitCount);
+  if (!canAffordAtOffice(state, officeId, { supply: tripSupply })) {
+    return state;
+  }
+
+  let next = structuredClone(state);
   next.contractorsByLocation[officeId] = subtractAssignmentFromRoster(
     roster,
     crewAssigned,
   );
+  if (tripSupply > 0) {
+    next = applyOfficeCost(next, officeId, { supply: tripSupply });
+  }
   const travelMs = jobTravelDurationMsForDefinition(next, officeId, def);
   next.jobEngagements.push({
     id: `eng_${postingId}_${now}`,
@@ -902,7 +925,40 @@ export function validateEngagementAssignment(
   if (!canAssignFromRoster(roster, crewAssigned)) {
     return "Not enough units";
   }
+  const travelHexes = jobTravelHexesToCoord(
+    state,
+    state.selectedOffice,
+    jobSiteCoordForDefinition(def),
+  );
+  const outboundSupply = roundTripTravelSupplyCost(
+    travelHexes,
+    totalAssigned(crewAssigned),
+  );
+  if (
+    outboundSupply > 0 &&
+    !canAffordAtOffice(state, state.selectedOffice, { supply: outboundSupply })
+  ) {
+    return `Need ${outboundSupply} supply for round trip`;
+  }
   return null;
+}
+
+/** Round-trip supply for a job engagement (paid upfront on dispatch). */
+export function jobEngagementTravelSupplyCost(
+  state: GameState,
+  postingId: string,
+  crewAssigned: UnitAssignment,
+): number {
+  const posting = postingById(state, postingId);
+  if (!posting) return 0;
+  const def = jobDefinitionById(posting.definitionId);
+  const officeId = resolveOfficeLocation(state);
+  const hexes = jobTravelHexesToCoord(
+    state,
+    officeId,
+    jobSiteCoordForDefinition(def),
+  );
+  return roundTripTravelSupplyCost(hexes, totalAssigned(crewAssigned));
 }
 
 export const BUSINESS_TYPE_LABELS: Record<JobDefinition["businessType"], string> = {

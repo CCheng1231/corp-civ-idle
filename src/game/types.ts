@@ -473,6 +473,8 @@ export interface GameState {
   /** Active filter on Notes & logbook (LOG_FILTER_GROUPS id). */
   logbookFilterId: string;
   lastTickAt: number;
+  /** Monotonic counter — queue/build actions bump this so tick-only saves cannot clobber them. */
+  persistRevision?: number;
   settings: GameSettings;
   /** Shown once after load catch-up; stripped from saves. */
   pendingOfflineSummary?: OfflineWelcomeSummary | null;

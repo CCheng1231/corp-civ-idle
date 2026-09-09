@@ -10,11 +10,18 @@ import {
   jobDefinitionForPosting,
   JOB_SIZE_LABELS,
   JOB_SIZES,
+  jobEngagementTravelSupplyCost,
   returnPerHour,
   validateEngagementAssignment,
 } from "../game/jobs";
 import { formatJobDurationSec } from "../game/jobBoard";
-import { REGION_LABELS, jobSiteLabelForPosting, jobSiteRegionForPosting } from "../game/mapWorld";
+import {
+  REGION_LABELS,
+  jobSiteCoordForDefinition,
+  jobSiteLabelForPosting,
+  jobSiteRegionForPosting,
+} from "../game/mapWorld";
+import { jobTravelHexesToCoord } from "../game/mapTravel";
 import { formatTimerRemaining } from "../game/timers";
 import { totalAssigned } from "../game/unitEffects";
 import type {
@@ -100,6 +107,16 @@ export function JobPostingCard({
   const unitCount = totalAssigned(assignment);
   const expectedPerHour = returnPerHour(def, unitCount);
   const actualPerHour = actualShiftReturnPerHour(def, posting, unitCount);
+  const travelHexes = jobTravelHexesToCoord(
+    state,
+    officeId,
+    jobSiteCoordForDefinition(def),
+  );
+  const tripSupply = jobEngagementTravelSupplyCost(
+    state,
+    posting.id,
+    assignment,
+  );
   const blockReason = validateEngagementAssignment(
     state,
     posting.id,
@@ -164,6 +181,14 @@ export function JobPostingCard({
               `job-completion-band job-completion-band-${option}`
             }
           />
+        </li>
+        <li>
+          <span className="job-posting-fact-label">Travel</span>
+          <span>
+            {unitCount > 0
+              ? `${travelHexes} hex · ${tripSupply} supply round trip`
+              : `${travelHexes} hex · 2 supply/unit round trip`}
+          </span>
         </li>
         <li>
           <span className="job-posting-fact-label">Expires</span>

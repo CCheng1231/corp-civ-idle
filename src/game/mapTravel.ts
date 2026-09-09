@@ -33,6 +33,20 @@ export function travelDurationMs(hexes: number): number {
   return Math.max(MIN_TRAVEL_MS, distanceMs);
 }
 
+/** Supply spent per map leg: 1 supply × hex distance × unit count. */
+export function travelSupplyCost(hexes: number, unitCount: number): number {
+  const distance = Math.max(0, Math.floor(hexes));
+  const units = Math.max(0, Math.floor(unitCount));
+  if (distance <= 0 || units <= 0) return 0;
+  return distance * units;
+}
+
+/** Outbound + return supply for a single job dispatch. */
+export function roundTripTravelSupplyCost(hexes: number, unitCount: number): number {
+  const leg = travelSupplyCost(hexes, unitCount);
+  return leg > 0 ? leg * 2 : 0;
+}
+
 /** Cube-lerp hex line from a to b (inclusive). */
 export function hexPath(a: AxialCoord, b: AxialCoord): AxialCoord[] {
   const n = axialDistance(a, b);

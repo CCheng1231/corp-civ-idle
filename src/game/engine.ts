@@ -26,6 +26,8 @@ import {
   MAX_RECRUIT_QUEUE,
   unitAvailableAt,
   contractorTransferDurationMs,
+  contractorTransferSupplyCost,
+  contractorTransferTravelHexes,
   officeSiteLabel,
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
@@ -74,8 +76,14 @@ import {
 } from "./branchSites";
 import {
   formatAssignmentSummary,
+  totalAssigned,
   unitDefinition,
 } from "./unitEffects";
+import { jobSiteCoordForDefinition } from "./mapWorld";
+import {
+  jobTravelHexesToCoord,
+  roundTripTravelSupplyCost,
+} from "./mapTravel";
 import { appendActivityLogs, cloneResourceCost, queueCancelLogFields } from "./logbook";
 import { normalizeResourceCost, branchStartStructureLevels } from "./phaseA";
 import {
@@ -695,6 +703,14 @@ function mergeOnlineRemoteState(
   return {
     ...incoming,
     view: current.view,
+    homePanel: current.homePanel,
+    secretaryPanel: current.secretaryPanel,
+    settings: {
+      ...incoming.settings,
+      viewportPreview:
+        current.settings.viewportPreview ??
+        incoming.settings.viewportPreview,
+    },
     jobPostings: current.jobPostings,
     companyPresence: current.companyPresence,
     recruitFocusUnitId: current.recruitFocusUnitId,
@@ -856,6 +872,33 @@ export function devSkipTime(state: GameState, minutes: number): GameState {
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
+  const next = reduceGameState(state, action);
+  if (next === state || !shouldBumpPersistRevision(action)) {
+    return next;
+  }
+  const baseRev = Math.max(state.persistRevision ?? 0, next.persistRevision ?? 0);
+  return {
+    ...next,
+    persistRevision: baseRev + 1,
+  };
+}
+
+const PERSIST_NEUTRAL_ACTIONS = new Set<GameAction["type"]>([
+  "TICK",
+  "LOAD",
+  "SET_ONLINE_SESSION",
+  "SET_ONLINE_CONNECTION_STATUS",
+  "SET_ONLINE_RESET_GENERATION",
+  "SET_ONLINE_SAVE_SESSION",
+  "SYNC_SHARED_JOBS",
+  "SYNC_COMPANY_PRESENCE",
+]);
+
+function shouldBumpPersistRevision(action: GameAction): boolean {
+  return !PERSIST_NEUTRAL_ACTIONS.has(action.type);
+}
+
+function reduceGameState(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "LOAD":
       if (isOnlineMode(action.state) || isOnlineMode(state)) {
@@ -864,7 +907,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           Date.now(),
         );
       }
-      return finalizeLoadedState(action.state, Date.now());
+      return finalizeLoadedState(
+        {
+          ...action.state,
+          onlineSession: action.state.onlineSession ?? state.onlineSession,
+        },
+        Date.now(),
+      );
 
     case "SET_VIEW": {
       if (action.view === "logbook") {
@@ -1442,9 +1491,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (unitAvailableAt(state, from, unitId) < count) {
         return state;
       }
+      const travelHexes = contractorTransferTravelHexes(
+        state,
+        from,
+        to,
+        unitId,
+        count,
+      );
+      const supplyCost = contractorTransferSupplyCost(
+        state,
+        from,
+        to,
+        unitId,
+        count,
+      );
+      if (!canAffordAtOffice(state, from, { supply: supplyCost })) {
+        return state;
+      }
 
       const now = Date.now();
-      const next = structuredClone(state);
+      let next = structuredClone(state);
+      if (supplyCost > 0) {
+        next = applyOfficeCost(next, from, { supply: supplyCost });
+      }
       next.contractorsByLocation[from][unitId] -= count;
       next.contractorTransfers.push({
         id: `${now}-${from}-${to}-${unitId}-${Math.random().toString(36).slice(2, 9)}`,
@@ -1468,8 +1537,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           officeId: from,
           impacts: [
             `Left ${officeSiteLabel(next, from)}`,
-            `Arrives in ${travelSec}s`,
-          ],
+            `${travelHexes} hex · ${travelSec}s`,
+            supplyCost > 0 ? `${supplyCost} supply` : null,
+          ].filter((line): line is string => Boolean(line)),
         },
       ]);
     }
@@ -1486,13 +1556,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (next.jobEngagements.length <= before) return state;
       const engagement = next.jobEngagements[next.jobEngagements.length - 1];
       const def = jobDefinitionById(engagement.definitionId);
+      const travelHexes = jobTravelHexesToCoord(
+        state,
+        engagement.officeId,
+        jobSiteCoordForDefinition(def),
+      );
+      const travelSupply = roundTripTravelSupplyCost(
+        travelHexes,
+        totalAssigned(engagement.crewAssigned),
+      );
       return appendActivityLogs(next, [
         {
           category: "job_engage",
           summary: `Engaged: ${def.title}`,
           officeId: engagement.officeId,
+          spent: travelSupply > 0 ? { supply: travelSupply } : undefined,
           impacts: [
             formatAssignmentSummary(engagement.crewAssigned),
+            travelSupply > 0
+              ? `${travelSupply} supply · ${travelHexes} hex round trip`
+              : `${travelHexes} hex round trip`,
             "Crew en route — work starts on arrival",
             `Shift ~${Math.round(def.durationSec / 3600)} hr once on site`,
           ],

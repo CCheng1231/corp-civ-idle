@@ -58,10 +58,10 @@ import {
 import type { OnlineSession } from "../multiplayer/types";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
-  metropolis: "Metropolis",
-  suburban: "Suburban",
-  rural: "Rural",
-  countryside: "Countryside",
+  metropolis: "Core",
+  suburban: "Metro fringe",
+  rural: "County",
+  countryside: "Greenbelt",
 };
 
 /**

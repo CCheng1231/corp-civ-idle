@@ -3,6 +3,7 @@ import {
   CONTRACTOR_TRANSFER_SEC_PER_HEX,
   contractorTransferDurationMs,
   contractorTransferHexDistance,
+  contractorTransferSupplyCost,
   officeSiteLabel,
   otherOffice,
   totalWorkforce,
@@ -36,7 +37,8 @@ function transferLabelSec(
 ): string {
   const hexes = contractorTransferHexDistance(state, from, to);
   const sec = contractorTransferDurationMs(state, from, to, unitId, 1) / 1000;
-  return `${hexes} hex · ${sec}s (${CONTRACTOR_TRANSFER_SEC_PER_HEX}s/hex)`;
+  const supply = contractorTransferSupplyCost(state, from, to, unitId, 1);
+  return `${hexes} hex · ${sec}s · ${supply} supply`;
 }
 
 export function ContractorOfficeRoster({
@@ -72,8 +74,8 @@ export function ContractorOfficeRoster({
         {hasBranchOffices(state) ? (
           <>
             HQ and Branch are {hqBranchHexes} hexes apart on the map.
-            Relocating staff takes {CONTRACTOR_TRANSFER_SEC_PER_HEX}s per hex.
-            Bike Couriers shorten travel by 1 hex each.
+            Relocating staff costs {CONTRACTOR_TRANSFER_SEC_PER_HEX}s and 1
+            supply per hex per unit.
           </>
         ) : (
           <>Open a branch on the regional map to relocate staff between sites.</>

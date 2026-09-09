@@ -87,7 +87,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
       return;
     }
     if (session && isOnlineSession(session)) {
-      saveGameState({ ...state, onlineSession: session });
+      saveGameState({ ...state, onlineSession: session }, session);
       try {
         await savePrivateState(session, { ...state, onlineSession: session });
       } catch (err) {

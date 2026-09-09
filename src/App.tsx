@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
@@ -32,6 +32,8 @@ function GameShell({
     session,
     (s) => loadGameState(s),
   );
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const viewportPreview = state.settings.viewportPreview ?? "auto";
   const mobilePreview = viewportPreview === "mobile";
@@ -54,9 +56,27 @@ function GameShell({
   useGameLoop(dispatch);
   useBgm(state.settings.masterVolume, state.settings.musicMuted);
 
+  const flushSave = useCallback(() => {
+    saveGameState(stateRef.current, session);
+  }, [session]);
+
   useEffect(() => {
-    saveGameState(state);
-  }, [state]);
+    dispatch({ type: "SET_ONLINE_SESSION", session });
+  }, [session, dispatch]);
+
+  useLayoutEffect(() => {
+    saveGameState(state, session);
+  }, [state, session]);
+
+  useEffect(() => {
+    const onPageHide = () => flushSave();
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onPageHide);
+    };
+  }, [flushSave]);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${state.settings.uiScale * 100}%`;

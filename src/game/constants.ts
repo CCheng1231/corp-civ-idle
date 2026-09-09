@@ -32,7 +32,7 @@ import {
 } from "./branchSites";
 import { axialDistance } from "./hexLayout";
 import { hqCoordForState } from "../multiplayer/playerHq";
-import { travelDurationMs } from "./mapTravel";
+import { travelDurationMs, travelSupplyCost } from "./mapTravel";
 import {
   HQ_BASE_OFFICE_SPACE,
   HQ_BASE_POWER,
@@ -272,6 +272,17 @@ export function contractorTransferHexDistance(
   return axialDistance(coordFor(from), coordFor(to));
 }
 
+export function contractorTransferTravelHexes(
+  state: GameState,
+  from: OfficeLocationId,
+  to: OfficeLocationId,
+  unitId: UnitId,
+  count: number,
+): number {
+  let hexes = contractorTransferHexDistance(state, from, to);
+  return Math.max(1, hexes - transferHexBonus(unitId, count));
+}
+
 export function contractorTransferDurationMs(
   state: GameState,
   from: OfficeLocationId,
@@ -279,9 +290,27 @@ export function contractorTransferDurationMs(
   unitId?: UnitId,
   count = 1,
 ): number {
-  let hexes = contractorTransferHexDistance(state, from, to);
-  hexes = Math.max(1, hexes - transferHexBonus(unitId ?? "janitor", count));
+  const hexes = contractorTransferTravelHexes(
+    state,
+    from,
+    to,
+    unitId ?? "janitor",
+    count,
+  );
   return travelDurationMs(hexes);
+}
+
+export function contractorTransferSupplyCost(
+  state: GameState,
+  from: OfficeLocationId,
+  to: OfficeLocationId,
+  unitId: UnitId,
+  count: number,
+): number {
+  return travelSupplyCost(
+    contractorTransferTravelHexes(state, from, to, unitId, count),
+    count,
+  );
 }
 
 export function otherOffice(
@@ -663,6 +692,7 @@ export function createInitialState(now = Date.now()): GameState {
     dismissedJobReportIds: [],
     logbookFilterId: "all",
     lastTickAt: now,
+    persistRevision: 0,
     pendingOfflineSummary: null,
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,

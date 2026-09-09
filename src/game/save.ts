@@ -119,6 +119,70 @@ function normalizeHomePanel(panel: unknown): HomePanel {
   return panel === "overview" ? "overview" : "landing";
 }
 
+function normalizeViewportPreview(
+  value: unknown,
+  fallback: GameState["settings"]["viewportPreview"] = "auto",
+): GameState["settings"]["viewportPreview"] {
+  if (
+    value === "mobile" ||
+    value === "desktop" ||
+    value === "auto"
+  ) {
+    return value;
+  }
+  if (value === "galaxy-s24") return "mobile";
+  return fallback;
+}
+
+/** Restore last tab from browser cache before Firestore bootstrap (online only). */
+function hydrateOnlineNavigationFromCache(
+  state: GameState,
+  session: OnlineSession,
+): GameState {
+  if (typeof localStorage === "undefined") return state;
+  try {
+    const raw = localStorage.getItem(onlineCacheKey(session));
+    if (!raw) return state;
+    const cached = JSON.parse(raw) as Record<string, unknown>;
+    const cachedSettings = cached.settings as
+      | { viewportPreview?: unknown }
+      | undefined;
+    return {
+      ...state,
+      view: normalizeView(cached.view),
+      homePanel: normalizeHomePanel(cached.homePanel),
+      secretaryPanel: normalizeSecretaryPanel(cached.secretaryPanel),
+      settings: {
+        ...state.settings,
+        viewportPreview: normalizeViewportPreview(
+          cachedSettings?.viewportPreview,
+          state.settings.viewportPreview,
+        ),
+      },
+    };
+  } catch {
+    return state;
+  }
+}
+
+function readOfflineSaveRaw(session?: OnlineSession | null): string | null {
+  if (typeof localStorage === "undefined") return null;
+  const playerKey =
+    session?.playerId != null ? offlineSaveKey(session.playerId) : null;
+  if (playerKey) {
+    const playerRaw = localStorage.getItem(playerKey);
+    if (playerRaw) return playerRaw;
+    const legacyRaw = localStorage.getItem(SAVE_KEY);
+    if (legacyRaw) {
+      localStorage.setItem(playerKey, legacyRaw);
+      localStorage.removeItem(SAVE_KEY);
+      return legacyRaw;
+    }
+    return null;
+  }
+  return localStorage.getItem(SAVE_KEY);
+}
+
 function migrateStructureQueues(
   parsed: LegacySave,
   structureLevelsByLocation: GameState["structureLevelsByLocation"],
@@ -507,14 +571,10 @@ function normalizeSave(
       alertAutoDismissSec: clampAlertAutoDismissSec(
         parsed.settings?.alertAutoDismissSec,
       ),
-      viewportPreview:
-        parsed.settings?.viewportPreview === "mobile" ||
-        parsed.settings?.viewportPreview === "desktop" ||
-        parsed.settings?.viewportPreview === "auto"
-          ? parsed.settings.viewportPreview
-          : parsed.settings?.viewportPreview === "galaxy-s24"
-            ? "mobile"
-            : "auto",
+      viewportPreview: normalizeViewportPreview(
+        parsed.settings?.viewportPreview,
+        base.settings.viewportPreview,
+      ),
       officeSiteSections: {
         hq: {
           structuresOpen:
@@ -587,16 +647,28 @@ function normalizeSave(
     homePanel: normalizeHomePanel(parsed.homePanel),
     logbookFilterId:
       typeof parsed.logbookFilterId === "string" ? parsed.logbookFilterId : "all",
+    lastTickAt:
+      typeof parsed.lastTickAt === "number" && Number.isFinite(parsed.lastTickAt)
+        ? parsed.lastTickAt
+        : now,
+    persistRevision:
+      typeof parsed.persistRevision === "number" &&
+      Number.isFinite(parsed.persistRevision)
+        ? parsed.persistRevision
+        : Math.max(
+            0,
+            Math.floor(
+              (typeof parsed.lastTickAt === "number" &&
+              Number.isFinite(parsed.lastTickAt)
+                ? parsed.lastTickAt
+                : now) / 1000,
+            ),
+          ),
     view:
       normalizeView(parsed.view) === "logbook"
         ? "secretary"
         : normalizeView(parsed.view),
     won: parsed.won ?? false,
-    // Keep wall-clock last tick so reopen can catch up offline production.
-    lastTickAt:
-      typeof parsed.lastTickAt === "number" && Number.isFinite(parsed.lastTickAt)
-        ? parsed.lastTickAt
-        : now,
   };
 
   Object.assign(merged, migrateBranchFields(parsed, merged));
@@ -706,11 +778,26 @@ export function loadOnlineStateFromRemote(
   remote: Record<string, unknown>,
   _knownResetAt?: number,
   expectedSessionId?: string,
+  fallbackNavigation?: Pick<
+    GameState,
+    "view" | "homePanel" | "secretaryPanel"
+  >,
 ): GameState {
+  const partial = deserializePrivateState(remote, session);
   const merged = normalizeSave(
     {
       ...createInitialState(),
-      ...deserializePrivateState(remote, session),
+      ...partial,
+      view:
+        remote.view !== undefined ? remote.view : fallbackNavigation?.view,
+      homePanel:
+        remote.homePanel !== undefined
+          ? remote.homePanel
+          : fallbackNavigation?.homePanel,
+      secretaryPanel:
+        remote.secretaryPanel !== undefined
+          ? remote.secretaryPanel
+          : fallbackNavigation?.secretaryPanel,
     } as LegacySave,
     { skipFinalize: true },
   );
@@ -780,16 +867,16 @@ export function createFreshOnlineState(
 
 export function loadGameState(session?: OnlineSession | null): GameState {
   if (session?.playMode === "online") {
-    // Firestore bootstrap is authoritative — avoid stale browser cache on first paint.
-    return createFreshOnlineState(session);
+    // Firestore bootstrap is authoritative — avoid stale economy cache on first paint.
+    // Navigation (view / hub panels) hydrates from local cache until bootstrap completes.
+    return hydrateOnlineNavigationFromCache(
+      createFreshOnlineState(session),
+      session,
+    );
   }
 
-  const key = session?.playerId
-    ? offlineSaveKey(session.playerId)
-    : SAVE_KEY;
-
   try {
-    const raw = localStorage.getItem(key);
+    const raw = readOfflineSaveRaw(session);
     if (!raw) {
       const fresh = createInitialState();
       if (session) fresh.onlineSession = session;
@@ -806,19 +893,48 @@ export function loadGameState(session?: OnlineSession | null): GameState {
   }
 }
 
-export function saveGameState(state: GameState): void {
-  const session = state.onlineSession;
+function shouldOverwriteStoredSave(
+  existingRaw: string | null,
+  next: Record<string, unknown>,
+): boolean {
+  if (!existingRaw) return true;
+  try {
+    const existing = JSON.parse(existingRaw) as {
+      persistRevision?: number;
+      lastTickAt?: number;
+    };
+    const nextRev = Number(next.persistRevision ?? 0);
+    const existingRev = Number(existing.persistRevision ?? 0);
+    if (nextRev > existingRev) return true;
+    if (nextRev < existingRev) return false;
+    const nextTick = Number(next.lastTickAt ?? 0);
+    const existingTick = Number(existing.lastTickAt ?? 0);
+    return nextTick >= existingTick;
+  } catch {
+    return true;
+  }
+}
+
+function writeOfflineSaveBlob(key: string, blob: Record<string, unknown>): void {
+  if (typeof localStorage === "undefined") return;
+  const existingRaw = localStorage.getItem(key);
+  if (!shouldOverwriteStoredSave(existingRaw, blob)) return;
+  localStorage.setItem(key, JSON.stringify(blob));
+}
+
+export function saveGameState(
+  state: GameState,
+  sessionOverride?: OnlineSession | null,
+): void {
+  const session = sessionOverride ?? state.onlineSession;
   if (session?.playMode === "online") {
-    localStorage.setItem(
-      onlineCacheKey(session),
-      JSON.stringify(
-        serializePrivateState(
-          state,
-          Date.now(),
-          state.onlineResetGeneration ?? 0,
-        ),
-      ),
+    const cacheKey = onlineCacheKey(session);
+    const blob = serializePrivateState(
+      state,
+      Date.now(),
+      state.onlineResetGeneration ?? 0,
     );
+    writeOfflineSaveBlob(cacheKey, blob);
     return;
   }
 
@@ -838,7 +954,11 @@ export function saveGameState(state: GameState): void {
     onlineSession: _session,
     ...persistable
   } = state;
-  localStorage.setItem(key, JSON.stringify(persistable));
+  try {
+    writeOfflineSaveBlob(key, persistable as Record<string, unknown>);
+  } catch (err) {
+    console.error("Failed to write offline save", err);
+  }
 }
 
 export function resetGameState(

@@ -57,6 +57,16 @@ function remoteUpdatedAt(remote: Record<string, unknown>): number {
   return Number(remote.updatedAt ?? 0);
 }
 
+function onlineNavigationFallback(
+  state: GameState,
+): Pick<GameState, "view" | "homePanel" | "secretaryPanel"> {
+  return {
+    view: state.view,
+    homePanel: state.homePanel,
+    secretaryPanel: state.secretaryPanel,
+  };
+}
+
 function applyLoadedOnlineState(
   loaded: GameState,
   stateRef: { current: GameState },
@@ -152,6 +162,7 @@ export function useOnlineWorld({
               remote,
               resetAt,
               expectedSessionId,
+              onlineNavigationFallback(stateRef.current),
             );
           } catch (err) {
             console.warn(
@@ -301,6 +312,7 @@ export function useOnlineWorld({
               remote,
               remoteGen,
               expectedSessionId,
+              onlineNavigationFallback(stateRef.current),
             );
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
             applyLoadedOnlineState(loaded, stateRef, dispatch);
@@ -324,6 +336,7 @@ export function useOnlineWorld({
             remote,
             resetAt,
             expectedSessionId,
+            onlineNavigationFallback(stateRef.current),
           );
           lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
           applyLoadedOnlineState(loaded, stateRef, dispatch);
