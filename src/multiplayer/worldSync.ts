@@ -28,7 +28,11 @@ import type {
   WorldId,
   WorldMeta,
 } from "./types";
-import { PLAYER_LABELS } from "./types";
+import {
+  accountDisplayName,
+  isValidOnlineAccountId,
+  PLAYER_LABELS,
+} from "./types";
 import { PLAYER_IDS } from "./types";
 import type { GameState, AxialCoord } from "../game/types";
 
@@ -36,16 +40,16 @@ const WORLD_ID: WorldId = "dev";
 
 export function playerResetTimestamp(
   meta: WorldMeta | undefined,
-  playerId: PlayerId,
+  accountId: string,
 ): number {
-  return meta?.playerResetAt?.[playerId] ?? 0;
+  return meta?.playerResetAt?.[accountId] ?? 0;
 }
 
 export function playerSaveSessionId(
   meta: WorldMeta | undefined,
-  playerId: PlayerId,
+  accountId: string,
 ): string | undefined {
-  const id = meta?.playerSaveSessionId?.[playerId];
+  const id = meta?.playerSaveSessionId?.[accountId];
   return typeof id === "string" && id.length > 0 ? id : undefined;
 }
 
@@ -142,7 +146,7 @@ export async function patchRemoteSaveAuthFields(
 
   if (Object.keys(patches).length > 0) {
     await setDoc(
-      privateStateRef(session.playerId, session.worldId),
+      privateStateRef(session.accountId, session.worldId),
       patches,
       { merge: true },
     );
@@ -178,12 +182,12 @@ export class OnlineSaveRejectedError extends Error {
 
 async function assignPlayerSaveSessionId(
   worldId: WorldId,
-  playerId: PlayerId,
+  accountId: string,
   saveSessionId = newSaveSessionId(),
 ): Promise<string> {
   await setDoc(
     metaRef(worldId),
-    { playerSaveSessionId: { [playerId]: saveSessionId } },
+    { playerSaveSessionId: { [accountId]: saveSessionId } },
     { merge: true },
   );
   return saveSessionId;
@@ -191,15 +195,15 @@ async function assignPlayerSaveSessionId(
 
 async function bumpPlayerResetAt(
   worldId: WorldId,
-  playerId: PlayerId,
+  accountId: string,
   resetAt = Date.now(),
 ): Promise<{ resetAt: number; saveSessionId: string }> {
   const saveSessionId = newSaveSessionId();
   await setDoc(
     metaRef(worldId),
     {
-      playerResetAt: { [playerId]: resetAt },
-      playerSaveSessionId: { [playerId]: saveSessionId },
+      playerResetAt: { [accountId]: resetAt },
+      playerSaveSessionId: { [accountId]: saveSessionId },
     },
     { merge: true },
   );
@@ -208,13 +212,13 @@ async function bumpPlayerResetAt(
 
 async function writeFreshPrivateState(
   session: OnlineSession,
-  playerId: PlayerId,
+  accountId: string,
   resetAt: number,
   saveSessionId: string,
 ): Promise<void> {
-  const playerSession: OnlineSession = { ...session, playerId };
+  const playerSession: OnlineSession = { ...session, accountId };
   await setDoc(
-    privateStateRef(playerId, session.worldId),
+    privateStateRef(accountId, session.worldId),
     serializePrivateState(
       createFreshOnlineState(playerSession, resetAt, saveSessionId),
       resetAt,
@@ -237,17 +241,17 @@ export async function repairPrivateStateIfStale(
 ): Promise<GameState> {
   const meta = await loadWorldMeta(session);
   const sessionId =
-    expectedSessionId ?? playerSaveSessionId(meta, session.playerId);
+    expectedSessionId ?? playerSaveSessionId(meta, session.accountId);
   let remote = await loadPrivateState(session);
   if (!remote) {
-    clearOnlineLocalCache(session.playerId, session.worldId);
+    clearOnlineLocalCache(session.accountId, session.worldId);
     if (resetAt > 0) {
       const saveSessionId =
         sessionId ??
-        (await assignPlayerSaveSessionId(session.worldId, session.playerId));
+        (await assignPlayerSaveSessionId(session.worldId, session.accountId));
       await writeFreshPrivateState(
         session,
-        session.playerId,
+        session.accountId,
         resetAt,
         saveSessionId,
       );
@@ -266,14 +270,14 @@ export async function repairPrivateStateIfStale(
   }
 
   if (isPrivateStateStale(remote, resetAt, sessionId)) {
-    clearOnlineLocalCache(session.playerId, session.worldId);
+    clearOnlineLocalCache(session.accountId, session.worldId);
     if (resetAt > 0) {
       const saveSessionId =
         sessionId ??
-        (await assignPlayerSaveSessionId(session.worldId, session.playerId));
+        (await assignPlayerSaveSessionId(session.worldId, session.accountId));
       await writeFreshPrivateState(
         session,
-        session.playerId,
+        session.accountId,
         resetAt,
         saveSessionId,
       );
@@ -290,7 +294,7 @@ export async function repairPrivateStateIfStale(
   }
   if (Object.keys(patches).length > 0) {
     await setDoc(
-      privateStateRef(session.playerId, session.worldId),
+      privateStateRef(session.accountId, session.worldId),
       patches,
       { merge: true },
     );
@@ -304,11 +308,11 @@ export async function forceResyncPrivateState(
   session: OnlineSession,
 ): Promise<GameState> {
   const meta = await loadWorldMeta(session);
-  const resetAt = playerResetTimestamp(meta, session.playerId);
+  const resetAt = playerResetTimestamp(meta, session.accountId);
   return repairPrivateStateIfStale(
     session,
     resetAt,
-    playerSaveSessionId(meta, session.playerId),
+    playerSaveSessionId(meta, session.accountId),
   );
 }
 
@@ -338,12 +342,20 @@ function jobPostingsCol(worldId: WorldId = WORLD_ID) {
   return collection(getDb(), "worlds", worldId, "jobPostings");
 }
 
-function companyRef(playerId: PlayerId, worldId: WorldId = WORLD_ID) {
-  return doc(getDb(), "worlds", worldId, "companies", playerId);
+function companyRef(accountId: string, worldId: WorldId = WORLD_ID) {
+  return doc(getDb(), "worlds", worldId, "companies", accountId);
 }
 
-function privateStateRef(playerId: PlayerId, worldId: WorldId = WORLD_ID) {
-  return doc(getDb(), "worlds", worldId, "companies", playerId, "private", "state");
+function privateStateRef(accountId: string, worldId: WorldId = WORLD_ID) {
+  return doc(
+    getDb(),
+    "worlds",
+    worldId,
+    "companies",
+    accountId,
+    "private",
+    "state",
+  );
 }
 
 function companiesCol(worldId: WorldId = WORLD_ID) {
@@ -355,9 +367,9 @@ export function presenceFromState(
   state: GameState,
 ): CompanyPresence {
   return {
-    playerId: session.playerId,
-    displayName: PLAYER_LABELS[session.playerId],
-    hqCoord: playerHqCoord(session.playerId),
+    accountId: session.accountId,
+    displayName: accountDisplayName(session.accountId, session.displayName),
+    hqCoord: playerHqCoord(session.accountId),
     branchSites: state.branchSites.map((site) => ({
       coord: branchSiteCoord(site),
       name: site.name,
@@ -379,13 +391,14 @@ export function parseCompanyPresence(
   docId: string,
   raw: Record<string, unknown>,
 ): CompanyPresence | null {
-  const playerId =
-    raw.playerId === "tim" || raw.playerId === "chris"
-      ? raw.playerId
-      : docId === "tim" || docId === "chris"
-        ? docId
-        : null;
-  if (!playerId) return null;
+  const rawAccount =
+    typeof raw.accountId === "string"
+      ? raw.accountId
+      : typeof raw.playerId === "string"
+        ? raw.playerId
+        : docId;
+  if (!isValidOnlineAccountId(rawAccount)) return null;
+  const accountId = rawAccount;
 
   const hqCoord = parseAxialCoord(raw.hqCoord) ?? { q: 0, r: 0 };
   const branchSites = Array.isArray(raw.branchSites)
@@ -403,11 +416,11 @@ export function parseCompanyPresence(
     : [];
 
   return {
-    playerId,
+    accountId,
     displayName:
       typeof raw.displayName === "string"
         ? raw.displayName
-        : PLAYER_LABELS[playerId],
+        : accountDisplayName(accountId),
     hqCoord,
     branchSites,
     lastSeenAt: Number(raw.lastSeenAt ?? 0),
@@ -415,13 +428,13 @@ export function parseCompanyPresence(
 }
 
 export async function repairCompanyPresenceDoc(
-  playerId: PlayerId,
+  accountId: string,
   worldId: WorldId,
   presence: CompanyPresence,
 ): Promise<void> {
   if (!presenceHqNeedsRepair(presence)) return;
   await setDoc(
-    companyRef(playerId, worldId),
+    companyRef(accountId, worldId),
     canonicalCompanyPresence(presence),
   );
 }
@@ -435,7 +448,7 @@ export async function repairStaleCompanyPresences(
     snap.docs.map(async (d) => {
       const parsed = parseCompanyPresence(d.id, d.data() as Record<string, unknown>);
       if (!parsed) return;
-      await repairCompanyPresenceDoc(parsed.playerId, worldId, parsed);
+      await repairCompanyPresenceDoc(parsed.accountId, worldId, parsed);
     }),
   );
 }
@@ -489,7 +502,7 @@ export async function seedSharedJobPostingsIfNeeded(
 export async function loadPrivateState(
   session: OnlineSession,
 ): Promise<Record<string, unknown> | null> {
-  const snap = await getDoc(privateStateRef(session.playerId, session.worldId));
+  const snap = await getDoc(privateStateRef(session.accountId, session.worldId));
   if (!snap.exists()) return null;
   return snap.data() as Record<string, unknown>;
 }
@@ -499,14 +512,14 @@ export async function savePrivateState(
   state: GameState,
   updatedAt = Date.now(),
 ): Promise<{ updatedAt: number; generation: number }> {
-  const ref = privateStateRef(session.playerId, session.worldId);
+  const ref = privateStateRef(session.accountId, session.worldId);
   const metaRefDoc = metaRef(session.worldId);
 
   return runTransaction(getDb(), async (tx) => {
     const metaSnap = await tx.get(metaRefDoc);
     const meta = metaSnap.exists() ? (metaSnap.data() as WorldMeta) : undefined;
-    const requiredGeneration = playerResetTimestamp(meta, session.playerId);
-    const expectedSessionId = playerSaveSessionId(meta, session.playerId);
+    const requiredGeneration = playerResetTimestamp(meta, session.accountId);
+    const expectedSessionId = playerSaveSessionId(meta, session.accountId);
     const localGeneration = state.onlineResetGeneration ?? 0;
     let localSessionId = state.onlineSaveSessionId;
 
@@ -551,7 +564,7 @@ export async function upsertCompanyPresence(
   state: GameState,
 ): Promise<void> {
   await setDoc(
-    companyRef(session.playerId, session.worldId),
+    companyRef(session.accountId, session.worldId),
     presenceFromState(session, state),
   );
 }
@@ -575,23 +588,23 @@ export function subscribeJobPostings(
 
 export function subscribeCompanies(
   session: OnlineSession,
-  onChange: (presence: Record<PlayerId, CompanyPresence>) => void,
+  onChange: (presence: Record<string, CompanyPresence>) => void,
   onError: (error: Error) => void,
 ): Unsubscribe {
   return onSnapshot(
     companiesCol(session.worldId),
     (snap) => {
-      const map = {} as Record<PlayerId, CompanyPresence>;
+      const map: Record<string, CompanyPresence> = {};
       for (const d of snap.docs) {
         const parsed = parseCompanyPresence(
           d.id,
           d.data() as Record<string, unknown>,
         );
         if (!parsed) continue;
-        map[parsed.playerId] = parsed;
+        map[parsed.accountId] = parsed;
         if (presenceHqNeedsRepair(parsed)) {
           void repairCompanyPresenceDoc(
-            parsed.playerId,
+            parsed.accountId,
             session.worldId,
             parsed,
           ).catch((err) =>
@@ -611,7 +624,7 @@ export function subscribePrivateState(
   onError: (error: Error) => void,
 ): Unsubscribe {
   return onSnapshot(
-    privateStateRef(session.playerId, session.worldId),
+    privateStateRef(session.accountId, session.worldId),
     (snap) => {
       onChange(snap.exists() ? (snap.data() as Record<string, unknown>) : null);
     },
@@ -727,30 +740,30 @@ export async function expireSharedPosting(
 }
 
 export async function deletePrivateStateDoc(
-  playerId: PlayerId,
+  accountId: string,
   worldId: WorldId = WORLD_ID,
 ): Promise<void> {
-  await deleteDoc(privateStateRef(playerId, worldId));
+  await deleteDoc(privateStateRef(accountId, worldId));
 }
 
 /** Dev: wipe one player's private save, presence, and local online cache. */
 export async function resetOnlinePlayerAccount(
   session: OnlineSession,
-  playerId: PlayerId,
+  accountId: string,
 ): Promise<void> {
   const { resetAt, saveSessionId } = await bumpPlayerResetAt(
     session.worldId,
-    playerId,
+    accountId,
   );
-  await writeFreshPrivateState(session, playerId, resetAt, saveSessionId);
-  await setDoc(companyRef(playerId, session.worldId), {
-    playerId,
-    displayName: PLAYER_LABELS[playerId],
-    hqCoord: playerHqCoord(playerId),
+  await writeFreshPrivateState(session, accountId, resetAt, saveSessionId);
+  await setDoc(companyRef(accountId, session.worldId), {
+    accountId,
+    displayName: accountDisplayName(accountId),
+    hqCoord: playerHqCoord(accountId),
     branchSites: [],
     lastSeenAt: Date.now(),
   });
-  clearOnlineLocalCache(playerId, session.worldId);
+  clearOnlineLocalCache(accountId, session.worldId);
 }
 
 /** Dev: reseed shared job board; keep private saves and map presence. */
@@ -803,7 +816,7 @@ export async function resetOnlineDatabase(
         saveSessionIds[playerId],
       );
       await setDoc(companyRef(playerId, session.worldId), {
-        playerId,
+        accountId: playerId,
         displayName: PLAYER_LABELS[playerId],
         hqCoord: playerHqCoord(playerId),
         branchSites: [],

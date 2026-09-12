@@ -58,7 +58,7 @@ import type {
   ContractorCategoryId,
   JobEngagement,
 } from "./types";
-import type { OnlineSession, PlayerId } from "../multiplayer/types";
+import type { OnlineSession } from "../multiplayer/types";
 import {
   offlineSaveKey,
   onlineCacheKey,
@@ -168,7 +168,7 @@ function hydrateOnlineNavigationFromCache(
 function readOfflineSaveRaw(session?: OnlineSession | null): string | null {
   if (typeof localStorage === "undefined") return null;
   const playerKey =
-    session?.playerId != null ? offlineSaveKey(session.playerId) : null;
+    session?.accountId != null ? offlineSaveKey(session.accountId) : null;
   if (playerKey) {
     const playerRaw = localStorage.getItem(playerKey);
     if (playerRaw) return playerRaw;
@@ -664,6 +664,11 @@ function normalizeSave(
                 : now) / 1000,
             ),
           ),
+    worldPersistRevision:
+      typeof parsed.worldPersistRevision === "number" &&
+      Number.isFinite(parsed.worldPersistRevision)
+        ? parsed.worldPersistRevision
+        : 0,
     view:
       normalizeView(parsed.view) === "logbook"
         ? "secretary"
@@ -939,8 +944,8 @@ export function saveGameState(
   }
 
   const key =
-    session?.playerId != null
-      ? offlineSaveKey(session.playerId)
+    session?.accountId != null
+      ? offlineSaveKey(session.accountId)
       : SAVE_KEY;
 
   const {
@@ -963,9 +968,9 @@ export function saveGameState(
 
 export function resetGameState(
   preserveSettings?: GameState["settings"],
-  playerId?: PlayerId,
+  accountId?: string,
 ): GameState {
-  const key = playerId ? offlineSaveKey(playerId) : SAVE_KEY;
+  const key = accountId ? offlineSaveKey(accountId) : SAVE_KEY;
   localStorage.removeItem(key);
   const fresh = createInitialState();
   if (preserveSettings) {

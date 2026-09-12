@@ -693,6 +693,7 @@ export function createInitialState(now = Date.now()): GameState {
     logbookFilterId: "all",
     lastTickAt: now,
     persistRevision: 0,
+    worldPersistRevision: 0,
     pendingOfflineSummary: null,
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,

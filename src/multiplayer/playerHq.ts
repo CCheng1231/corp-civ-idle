@@ -1,7 +1,7 @@
 import { MAP_HQ, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
 import type { CompanyPresence, OnlineSession, PlayerId } from "./types";
-import { PLAYER_IDS } from "./types";
+import { isDevAccount } from "./types";
 
 export function resolveOnlineSession(
   state: GameState,
@@ -15,17 +15,30 @@ export function resolveOnlineSession(
 /** Chris HQ — fixed countryside-adjacent hex, distinct from Tim (must fit MAP_RADIUS). */
 export const CHRIS_HQ: AxialCoord = { q: -2, r: -4 };
 
-const HQ_BY_PLAYER: Record<PlayerId, AxialCoord> = {
+const HQ_BY_DEV: Record<PlayerId, AxialCoord> = {
   tim: MAP_HQ,
   chris: CHRIS_HQ,
 };
 
-export function playerHqCoord(playerId: PlayerId): AxialCoord {
-  return HQ_BY_PLAYER[playerId];
+/** Deterministic HQ hex for guest playtest accounts. */
+function guestHqCoord(accountId: string): AxialCoord {
+  let hash = 0;
+  for (let i = 0; i < accountId.length; i++) {
+    hash = (hash * 31 + accountId.charCodeAt(i)) | 0;
+  }
+  return {
+    q: (hash % 5) - 2,
+    r: ((hash >> 3) % 5) - 2,
+  };
+}
+
+export function playerHqCoord(accountId: string): AxialCoord {
+  if (isDevAccount(accountId)) return HQ_BY_DEV[accountId];
+  return guestHqCoord(accountId);
 }
 
 export function presenceHqNeedsRepair(presence: CompanyPresence): boolean {
-  const canonical = playerHqCoord(presence.playerId);
+  const canonical = playerHqCoord(presence.accountId);
   return (
     presence.hqCoord.q !== canonical.q || presence.hqCoord.r !== canonical.r
   );
@@ -35,7 +48,7 @@ export function presenceHqNeedsRepair(presence: CompanyPresence): boolean {
 export function canonicalCompanyPresence(
   presence: CompanyPresence,
 ): CompanyPresence {
-  const hqCoord = playerHqCoord(presence.playerId);
+  const hqCoord = playerHqCoord(presence.accountId);
   if (presence.hqCoord.q === hqCoord.q && presence.hqCoord.r === hqCoord.r) {
     return presence;
   }
@@ -43,13 +56,11 @@ export function canonicalCompanyPresence(
 }
 
 export function canonicalCompanyPresenceMap(
-  map: Record<PlayerId, CompanyPresence>,
-): Record<PlayerId, CompanyPresence> {
+  map: Record<string, CompanyPresence>,
+): Record<string, CompanyPresence> {
   const next = { ...map };
-  for (const playerId of PLAYER_IDS) {
-    if (next[playerId]) {
-      next[playerId] = canonicalCompanyPresence(next[playerId]);
-    }
+  for (const accountId of Object.keys(next)) {
+    next[accountId] = canonicalCompanyPresence(next[accountId]);
   }
   return next;
 }
@@ -60,7 +71,7 @@ export function hqCoordForState(
 ): AxialCoord {
   const onlineSession = resolveOnlineSession(state, session);
   if (onlineSession) {
-    return playerHqCoord(onlineSession.playerId);
+    return playerHqCoord(onlineSession.accountId);
   }
   return MAP_HQ;
 }
@@ -90,7 +101,7 @@ export function applyOnlineDevRestrictions(state: GameState): GameState {
 
 export function activePlayerId(state: GameState): string {
   if (state.onlineSession?.playMode === "online") {
-    return state.onlineSession.playerId;
+    return state.onlineSession.accountId;
   }
   return "local";
 }

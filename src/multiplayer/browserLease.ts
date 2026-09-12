@@ -7,7 +7,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import type { OnlineSession, PlayerId, WorldId, WorldMeta } from "./types";
+import type { OnlineAccountId, OnlineSession, WorldId, WorldMeta } from "./types";
 
 const LEASE_STORAGE_PREFIX = "corp-civ-idle-browser-lease";
 
@@ -18,11 +18,11 @@ export interface PlayerBrowserLease {
 }
 
 function leaseStorageKey(session: OnlineSession): string {
-  return `${LEASE_STORAGE_PREFIX}-${session.worldId}-${session.playerId}`;
+  return `${LEASE_STORAGE_PREFIX}-${session.worldId}-${session.accountId}`;
 }
 
 function claimGenStorageKey(session: OnlineSession): string {
-  return `${LEASE_STORAGE_PREFIX}-gen-${session.worldId}-${session.playerId}`;
+  return `${LEASE_STORAGE_PREFIX}-gen-${session.worldId}-${session.accountId}`;
 }
 
 function metaRef(worldId: WorldId) {
@@ -73,9 +73,9 @@ function bumpClaimGeneration(session: OnlineSession): number {
 
 export function readPlayerBrowserLease(
   meta: WorldMeta | undefined,
-  playerId: PlayerId,
+  accountId: OnlineAccountId,
 ): PlayerBrowserLease | undefined {
-  const lease = meta?.playerBrowserLease?.[playerId];
+  const lease = meta?.playerBrowserLease?.[accountId];
   if (
     !lease ||
     typeof lease.leaseId !== "string" ||
@@ -122,7 +122,7 @@ export async function claimBrowserLease(
     metaRef(session.worldId),
     {
       playerBrowserLease: {
-        [session.playerId]: { leaseId, lastSeenAt: now, claimGeneration },
+        [session.accountId]: { leaseId, lastSeenAt: now, claimGeneration },
       },
     },
     { merge: true },
@@ -140,13 +140,13 @@ export async function heartbeatBrowserLease(
   return runTransaction(getDb(), async (tx) => {
     const snap = await tx.get(ref);
     const meta = snap.exists() ? (snap.data() as WorldMeta) : undefined;
-    const held = readPlayerBrowserLease(meta, session.playerId);
+    const held = readPlayerBrowserLease(meta, session.accountId);
     if (!stillHoldsLease(held, leaseId, claimGeneration)) return false;
     tx.set(
       ref,
       {
         playerBrowserLease: {
-          [session.playerId]: {
+          [session.accountId]: {
             leaseId,
             lastSeenAt: Date.now(),
             claimGeneration,
@@ -171,7 +171,7 @@ export async function tryRecoverVacantBrowserLease(
   const ref = metaRef(session.worldId);
   const snap = await getDoc(ref);
   const meta = snap.exists() ? (snap.data() as WorldMeta) : undefined;
-  const held = readPlayerBrowserLease(meta, session.playerId);
+  const held = readPlayerBrowserLease(meta, session.accountId);
 
   if (stillHoldsLease(held, leaseId, claimGeneration)) return "held";
   if (supersededByOtherClient(held, leaseId, claimGeneration)) return "lost";
@@ -180,7 +180,7 @@ export async function tryRecoverVacantBrowserLease(
     ref,
     {
       playerBrowserLease: {
-        [session.playerId]: {
+        [session.accountId]: {
           leaseId,
           lastSeenAt: Date.now(),
           claimGeneration,
@@ -204,13 +204,13 @@ export async function releaseBrowserLease(
       const snap = await tx.get(ref);
       if (!snap.exists()) return;
       const meta = snap.data() as WorldMeta;
-      const held = readPlayerBrowserLease(meta, session.playerId);
+      const held = readPlayerBrowserLease(meta, session.accountId);
       if (!stillHoldsLease(held, leaseId, claimGeneration)) return;
       tx.set(
         ref,
         {
           playerBrowserLease: {
-            [session.playerId]: { leaseId: "", lastSeenAt: 0, claimGeneration: 0 },
+            [session.accountId]: { leaseId: "", lastSeenAt: 0, claimGeneration: 0 },
           },
         },
         { merge: true },
@@ -229,7 +229,7 @@ export function subscribeBrowserLease(
 ): Unsubscribe {
   return onSnapshot(metaRef(session.worldId), (snap) => {
     const meta = snap.exists() ? (snap.data() as WorldMeta) : undefined;
-    const held = readPlayerBrowserLease(meta, session.playerId);
+    const held = readPlayerBrowserLease(meta, session.accountId);
     if (supersededByOtherClient(held, leaseId, claimGeneration)) {
       onSuperseded();
     }

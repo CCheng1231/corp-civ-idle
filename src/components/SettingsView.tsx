@@ -14,9 +14,21 @@ import { DevTimeSkip } from "./DevTimeSkip";
 import { AudioControls } from "./AudioControls";
 import type { GameAction, GameState } from "../game/types";
 import type { OnlineSession, PlayerId } from "../multiplayer/types";
-import { PLAYER_IDS, PLAYER_LABELS, isOnlineSession } from "../multiplayer/types";
+import {
+  PLAYER_IDS,
+  PLAYER_LABELS,
+  accountDisplayName,
+  isDevAccount,
+  isOnlineSession,
+} from "../multiplayer/types";
 import { isFirebaseConfigured } from "../multiplayer/firebase";
-import { clearSession, writeSession, createSession } from "../multiplayer/session";
+import {
+  clearSession,
+  writeSession,
+  createOfflineSession,
+  createOnlineSession,
+} from "../multiplayer/session";
+import { createPlaytestAccessKey } from "../multiplayer/onlineAccess";
 import {
   forceResyncPrivateState,
   savePrivateState,
@@ -26,6 +38,7 @@ import {
 } from "../multiplayer/worldSync";
 import { saveGameState } from "../game/save";
 import { clearAllOnlineLocalCaches, clearOnlineLocalCache } from "../multiplayer/companySave";
+import { flushPendingOnlineWork } from "../hooks/useOnlineWorld";
 
 const ONLINE_RESET_TIMEOUT_MS = 30_000;
 
@@ -58,6 +71,9 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     null,
   );
   const [pullingServerSave, setPullingServerSave] = useState(false);
+  const [playtesterName, setPlaytesterName] = useState("");
+  const [creatingAccessKey, setCreatingAccessKey] = useState(false);
+  const [lastCreatedKey, setLastCreatedKey] = useState<string | null>(null);
 
   async function pullServerSave() {
     if (!session || !isOnlineSession(session)) return;
@@ -89,6 +105,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     if (session && isOnlineSession(session)) {
       saveGameState({ ...state, onlineSession: session }, session);
       try {
+        await flushPendingOnlineWork(session, state, dispatch);
         await savePrivateState(session, { ...state, onlineSession: session });
       } catch (err) {
         console.error("Failed to flush online save before account switch", err);
@@ -111,7 +128,11 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     ) {
       return;
     }
-    writeSession(createSession(session.playerId, mode));
+    writeSession(
+      mode === "online"
+        ? createOnlineSession(session.accountId, session.displayName)
+        : createOfflineSession(session.accountId as PlayerId),
+    );
     window.location.reload();
   }
 
@@ -158,7 +179,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
       if (
         target === "world" ||
         target === "shared-world" ||
-        target === session.playerId
+        target === session.accountId
       ) {
         window.location.reload();
         return;
@@ -194,7 +215,11 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         <section className="settings-block">
           <h3>Account &amp; mode</h3>
           <p className="muted setting-hint">
-            Playing as <strong>{PLAYER_LABELS[session.playerId]}</strong> in{" "}
+            Playing as{" "}
+            <strong>
+              {accountDisplayName(session.accountId, session.displayName)}
+            </strong>{" "}
+            in{" "}
             <strong>{session.playMode}</strong> mode.
             {isOnlineSession(session) && state.onlineConnectionStatus
               ? ` Firestore: ${state.onlineConnectionStatus}.`
@@ -414,6 +439,65 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         </section>
       ) : null}
 
+      {online && session && isDevAccount(session.accountId) ? (
+        <section className="settings-block">
+          <h3>Playtest access keys</h3>
+          <p className="muted setting-hint">
+            Create a one-time invite for friends or family. They enter the key
+            once; their browser remembers the account afterward.
+          </p>
+          <label className="setting-row">
+            Playtester name
+            <input
+              type="text"
+              value={playtesterName}
+              onChange={(e) => setPlaytesterName(e.target.value)}
+              placeholder="e.g. Alice"
+            />
+          </label>
+          <div className="settings-account-actions">
+            <button
+              type="button"
+              className="btn primary"
+              disabled={creatingAccessKey || !playtesterName.trim()}
+              onClick={() => {
+                void (async () => {
+                  setCreatingAccessKey(true);
+                  setLastCreatedKey(null);
+                  try {
+                    const created = await createPlaytestAccessKey(
+                      session,
+                      playtesterName,
+                    );
+                    setLastCreatedKey(created.keyId);
+                    setPlaytesterName("");
+                    window.alert(
+                      `Access key for ${created.displayName}:\n\n${created.keyId}\n\nCopy this now — it won't be shown again.`,
+                    );
+                  } catch (err) {
+                    console.error("Create access key failed", err);
+                    window.alert(
+                      err instanceof Error
+                        ? err.message
+                        : "Could not create access key.",
+                    );
+                  } finally {
+                    setCreatingAccessKey(false);
+                  }
+                })();
+              }}
+            >
+              {creatingAccessKey ? "Creating…" : "Create access key"}
+            </button>
+          </div>
+          {lastCreatedKey ? (
+            <p className="muted setting-hint">
+              Last key: <code>{lastCreatedKey}</code>
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       {online && session ? (
         <section className="settings-block">
           <h3>Online world</h3>
@@ -512,7 +596,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             onClick={() =>
               dispatch({
                 type: "LOAD",
-                state: resetGameState(state.settings, session?.playerId),
+                state: resetGameState(state.settings, session?.accountId),
               })
             }
           >

@@ -760,7 +760,7 @@ export function mapFocusCoord(
 ): AxialCoord {
   const onlineSession = resolveOnlineSession(state, session);
   if (onlineSession) {
-    return playerHqCoord(onlineSession.playerId);
+    return playerHqCoord(onlineSession.accountId);
   }
   return mapMainOfficeCoord(state, session);
 }

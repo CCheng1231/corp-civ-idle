@@ -12521,6 +12521,40 @@ html.viewport-preview-galaxy-s24 .shortcut-sidebar-mobile {
   margin-top: 1.35rem;
 }
 
+.account-gate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.account-gate-field-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.account-gate-access-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--panel, rgba(0, 0, 0, 0.25));
+  color: inherit;
+  font: inherit;
+}
+
+.account-gate-dev-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.account-gate-resume {
+  margin: 0;
+}
+
 .brand-online-badge,
 .brand-player-badge {
   font-size: 0.65rem;

@@ -31,6 +31,7 @@ import {
 } from "../game/save";
 import { clearOnlineLocalCache } from "../multiplayer/companySave";
 import { getDb } from "../multiplayer/firebase";
+import { ensureOnlineAccess } from "../multiplayer/onlineAccess";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { WorldMeta } from "../multiplayer/types";
 
@@ -46,10 +47,10 @@ async function resolveOnlineLoadState(
   return repairPrivateStateIfStale(session, resetAt, expectedSessionId);
 }
 
-const FLUSH_INTERVAL_MS = 5000;
+/** Auto-sync private save + shared job work to Firestore. */
+const ONLINE_SYNC_INTERVAL_MS = 60_000;
 
 const PRESENCE_INTERVAL_MS = 15000;
-const PRIVATE_SAVE_INTERVAL_MS = 5000;
 const IGNORE_OWN_REMOTE_MS = 3000;
 const JOB_MAINTENANCE_DELAY_MS = 4000;
 
@@ -101,6 +102,9 @@ export function useOnlineWorld({
   const bootstrapCompleteRef = useRef(false);
   const bootstrapSaveReadyRef = useRef(false);
   const jobMaintenanceReadyRef = useRef(false);
+  const lastFlushedWorldRevRef = useRef(0);
+  const privateFlushInFlightRef = useRef(false);
+  const flushOnlineSyncRef = useRef<() => void>(() => {});
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
@@ -120,11 +124,12 @@ export function useOnlineWorld({
 
     async function bootstrap() {
       try {
-        clearOnlineLocalCache(session.playerId, session.worldId);
+        await ensureOnlineAccess(session);
+        clearOnlineLocalCache(session.accountId, session.worldId);
         await ensureWorldBootstrapped(session);
         const meta = await loadWorldMeta(session);
-        const resetAt = playerResetTimestamp(meta, session.playerId);
-        const expectedSessionId = playerSaveSessionId(meta, session.playerId);
+        const resetAt = playerResetTimestamp(meta, session.accountId);
+        const expectedSessionId = playerSaveSessionId(meta, session.accountId);
         lastAckResetAtRef.current = resetAt;
         lastExpectedSessionIdRef.current = expectedSessionId;
 
@@ -169,7 +174,7 @@ export function useOnlineWorld({
               "Online save deserialize failed — repairing from Firestore",
               err,
             );
-            clearOnlineLocalCache(session.playerId, session.worldId);
+            clearOnlineLocalCache(session.accountId, session.worldId);
             loaded = await repairPrivateStateIfStale(
               session,
               resetAt,
@@ -209,6 +214,8 @@ export function useOnlineWorld({
 
         bootstrapCompleteRef.current = true;
         bootstrapSaveReadyRef.current = true;
+        lastFlushedWorldRevRef.current =
+          stateRef.current.worldPersistRevision ?? 0;
         setBootstrapped(true);
         dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "connected" });
         void repairStaleCompanyPresences(session.worldId).catch((err) =>
@@ -353,15 +360,15 @@ export function useOnlineWorld({
         if (!bootstrapCompleteRef.current) return;
 
         const meta = snap.exists() ? (snap.data() as WorldMeta) : undefined;
-        const resetAt = playerResetTimestamp(meta, session.playerId);
-        const expectedSessionId = playerSaveSessionId(meta, session.playerId);
+        const resetAt = playerResetTimestamp(meta, session.accountId);
+        const expectedSessionId = playerSaveSessionId(meta, session.accountId);
         if (resetAt <= lastAckResetAtRef.current) return;
         lastAckResetAtRef.current = resetAt;
         lastExpectedSessionIdRef.current = expectedSessionId;
         lastLocalSaveAtRef.current = 0;
         lastAppliedRemoteAtRef.current = 0;
         ignoreRemoteUntilRef.current = Date.now() + IGNORE_OWN_REMOTE_MS;
-        clearOnlineLocalCache(session.playerId, session.worldId);
+        clearOnlineLocalCache(session.accountId, session.worldId);
         void resolveOnlineLoadState(session, resetAt, expectedSessionId).then(
           (loaded) => {
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
@@ -388,14 +395,6 @@ export function useOnlineWorld({
 
   useEffect(() => {
     if (!enabled || !bootstrapped) return;
-    const id = window.setInterval(() => {
-      void flushPendingWork(session, stateRef.current, dispatch);
-    }, FLUSH_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [session, enabled, dispatch, bootstrapped]);
-
-  useEffect(() => {
-    if (!enabled || !bootstrapped) return;
 
     const pushPresence = () => {
       void upsertCompanyPresence(session, stateRef.current).catch((err) =>
@@ -412,19 +411,23 @@ export function useOnlineWorld({
     if (!enabled || !bootstrapped) return;
 
     const flushPrivate = () => {
-      if (!bootstrapSaveReadyRef.current) return;
+      if (!bootstrapSaveReadyRef.current || privateFlushInFlightRef.current) {
+        return;
+      }
 
+      privateFlushInFlightRef.current = true;
       void (async () => {
+        try {
         const meta = await loadWorldMeta(session);
-        const resetAt = playerResetTimestamp(meta, session.playerId);
-        const expectedSessionId = playerSaveSessionId(meta, session.playerId);
+        const resetAt = playerResetTimestamp(meta, session.accountId);
+        const expectedSessionId = playerSaveSessionId(meta, session.accountId);
         if (resetAt > lastAckResetAtRef.current) {
           lastAckResetAtRef.current = resetAt;
           lastExpectedSessionIdRef.current = expectedSessionId;
           lastLocalSaveAtRef.current = 0;
           lastAppliedRemoteAtRef.current = 0;
           ignoreRemoteUntilRef.current = Date.now() + IGNORE_OWN_REMOTE_MS;
-          clearOnlineLocalCache(session.playerId, session.worldId);
+          clearOnlineLocalCache(session.accountId, session.worldId);
           const loaded = await resolveOnlineLoadState(
             session,
             resetAt,
@@ -472,7 +475,7 @@ export function useOnlineWorld({
             lastLocalSaveAtRef.current = 0;
             lastAppliedRemoteAtRef.current = 0;
             ignoreRemoteUntilRef.current = Date.now() + IGNORE_OWN_REMOTE_MS;
-            clearOnlineLocalCache(session.playerId, session.worldId);
+            clearOnlineLocalCache(session.accountId, session.worldId);
             const loaded = await resolveOnlineLoadState(
               session,
               resetAt,
@@ -521,7 +524,7 @@ export function useOnlineWorld({
             lastLocalSaveAtRef.current = 0;
             lastAppliedRemoteAtRef.current = 0;
             ignoreRemoteUntilRef.current = Date.now() + IGNORE_OWN_REMOTE_MS;
-            clearOnlineLocalCache(session.playerId, session.worldId);
+            clearOnlineLocalCache(session.accountId, session.worldId);
             const loaded = await resolveOnlineLoadState(
               session,
               err.requiredGeneration,
@@ -534,17 +537,24 @@ export function useOnlineWorld({
           console.error("Private state save failed", err);
           dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "error" });
         }
+        } finally {
+          privateFlushInFlightRef.current = false;
+        }
       })();
     };
 
-    void flushPrivate();
-    const id = window.setInterval(() => {
-      void flushPrivate();
-    }, PRIVATE_SAVE_INTERVAL_MS);
+    const flushOnlineSync = () => {
+      void flushPendingOnlineWork(session, stateRef.current, dispatch).finally(() => {
+        flushPrivate();
+      });
+    };
+    flushOnlineSyncRef.current = flushOnlineSync;
+
+    const id = window.setInterval(flushOnlineSync, ONLINE_SYNC_INTERVAL_MS);
 
     const onHide = () => {
       if (document.visibilityState !== "hidden") return;
-      void flushPrivate();
+      flushOnlineSync();
     };
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", onHide);
@@ -555,9 +565,18 @@ export function useOnlineWorld({
       window.removeEventListener("pagehide", onHide);
     };
   }, [session, enabled, dispatch, bootstrapped]);
+
+  useEffect(() => {
+    if (!enabled || !bootstrapped) return;
+
+    const rev = state.worldPersistRevision ?? 0;
+    if (rev <= lastFlushedWorldRevRef.current) return;
+    lastFlushedWorldRevRef.current = rev;
+    flushOnlineSyncRef.current();
+  }, [state.worldPersistRevision, enabled, bootstrapped]);
 }
 
-async function flushPendingWork(
+export async function flushPendingOnlineWork(
   session: OnlineSession,
   state: GameState,
   dispatch: Dispatch<GameAction>,

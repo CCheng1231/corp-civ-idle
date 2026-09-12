@@ -1,9 +1,120 @@
 rules_version = '2';
+
+// Corp Civ Idle — access-key gated online world (worlds/dev).
+//
+// Setup: Firebase Console → Authentication → Anonymous → Enable
+// Deploy: firebase deploy --only firestore:rules
+//
+// Flow: dev creates worlds/dev/accessKeys/{uuid} → playtester redeems on each
+// browser (keys are reusable) → bindings/{firebaseUid} stores accountId.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // MVP dev trust model — lock down before public launch.
-    match /worlds/dev/{document=**} {
-      allow read, write: if true;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isDevWorld(worldId) {
+      return worldId == 'dev';
+    }
+
+    function isValidAccountId(accountId) {
+      return accountId == 'tim'
+        || accountId == 'chris'
+        || accountId.matches('^guest-[a-z0-9-]{4,32}$');
+    }
+
+    function bindingPath(worldId) {
+      return /databases/$(database)/documents/worlds/$(worldId)/bindings/$(request.auth.uid);
+    }
+
+    function isBoundToWorld(worldId) {
+      return isSignedIn()
+        && isDevWorld(worldId)
+        && exists(bindingPath(worldId));
+    }
+
+    function boundAccountId(worldId) {
+      return get(bindingPath(worldId)).data.accountId;
+    }
+
+    function isDevAccount(accountId) {
+      return accountId == 'tim' || accountId == 'chris';
+    }
+
+    function accessKeyPath(worldId, keyId) {
+      return /databases/$(database)/documents/worlds/$(worldId)/accessKeys/$(keyId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Invite keys — doc id IS the secret key (unguessable UUID).
+    match /worlds/{worldId}/accessKeys/{keyId} {
+      allow read: if isSignedIn() && isDevWorld(worldId);
+      allow create: if isSignedIn()
+        && isDevWorld(worldId)
+        && isBoundToWorld(worldId)
+        && isDevAccount(boundAccountId(worldId))
+        && isValidAccountId(request.resource.data.accountId)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.createdAt is int
+        && request.resource.data.revoked == false;
+      allow update: if isSignedIn()
+        && isDevWorld(worldId)
+        && isDevAccount(boundAccountId(worldId))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+        && request.resource.data.revoked == true;
+      allow delete: if false;
+    }
+
+    // Browser binding — created when a key is redeemed (one per Firebase uid).
+    match /worlds/{worldId}/bindings/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid && isDevWorld(worldId);
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && isDevWorld(worldId)
+        && request.resource.data.uid == uid
+        && isValidAccountId(request.resource.data.accountId)
+        && request.resource.data.displayName is string
+        && request.resource.data.boundAt is int
+        && request.resource.data.keyId is string
+        && exists(accessKeyPath(worldId, request.resource.data.keyId))
+        && get(accessKeyPath(worldId, request.resource.data.keyId)).data.revoked != true
+        && get(accessKeyPath(worldId, request.resource.data.keyId)).data.accountId
+          == request.resource.data.accountId;
+      allow update, delete: if false;
+    }
+
+    match /worlds/{worldId} {
+      allow read, create, update: if isBoundToWorld(worldId);
+      allow delete: if false;
+    }
+
+    match /worlds/{worldId}/meta/world {
+      allow read, write: if isBoundToWorld(worldId);
+    }
+
+    match /worlds/{worldId}/jobPostings/{postingId} {
+      allow read, write: if isBoundToWorld(worldId);
+    }
+
+    match /worlds/{worldId}/companies/{accountId} {
+      allow read: if isBoundToWorld(worldId) && isValidAccountId(accountId);
+      allow write: if isBoundToWorld(worldId)
+        && isValidAccountId(accountId)
+        && (boundAccountId(worldId) == accountId || isDevAccount(boundAccountId(worldId)));
+    }
+
+    match /worlds/{worldId}/companies/{accountId}/private/state {
+      allow read: if isBoundToWorld(worldId) && isValidAccountId(accountId);
+      allow write: if isBoundToWorld(worldId)
+        && isValidAccountId(accountId)
+        && (boundAccountId(worldId) == accountId || isDevAccount(boundAccountId(worldId)));
     }
   }
 }

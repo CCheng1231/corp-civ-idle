@@ -63,7 +63,6 @@ import {
 } from "../game/mapWorld";
 import { jobDefinitionForPosting } from "../game/jobs";
 import { officeAtForState, playerHqCoord as hqCoordForPlayer } from "../multiplayer/playerHq";
-import { PLAYER_IDS } from "../multiplayer/types";
 import type {
   AxialCoord,
   GameAction,
@@ -590,24 +589,23 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
   const peerMarkers = useMemo(() => {
     if (state.onlineSession?.playMode !== "online") return [];
-    const selfId = state.onlineSession.playerId;
-    return PLAYER_IDS.filter((id) => id !== selfId)
-      .map((id) => state.companyPresence?.[id])
-      .filter((presence) => Boolean(presence))
+    const selfId = state.onlineSession.accountId;
+    return Object.values(state.companyPresence ?? {})
+      .filter((presence) => presence.accountId !== selfId)
       .flatMap((presence) => {
         const items: { coord: AxialCoord; label: string; key: string }[] = [
           {
-            coord: hqCoordForPlayer(presence!.playerId),
-            label: `${presence!.displayName} HQ`,
-            key: `${presence!.playerId}-hq`,
+            coord: hqCoordForPlayer(presence.accountId),
+            label: `${presence.displayName} HQ`,
+            key: `${presence.accountId}-hq`,
           },
         ];
-        if (presence!.branchSites?.length) {
-          for (const [index, branch] of presence!.branchSites.entries()) {
+        if (presence.branchSites?.length) {
+          for (const [index, branch] of presence.branchSites.entries()) {
             items.push({
               coord: branch.coord,
-              label: branch.name ?? `${presence!.displayName} branch`,
-              key: `${presence!.playerId}-branch-${index}`,
+              label: branch.name ?? `${presence.displayName} branch`,
+              key: `${presence.accountId}-branch-${index}`,
             });
           }
         }

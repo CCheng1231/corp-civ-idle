@@ -871,16 +871,46 @@ export function devSkipTime(state: GameState, minutes: number): GameState {
   });
 }
 
+/** Economy/world actions — trigger immediate online Firestore sync (not UI nav). */
+export const WORLD_PERSIST_ACTIONS = new Set<GameAction["type"]>([
+  "ESTABLISH_BRANCH",
+  "RENAME_BRANCH",
+  "BUY_STRUCTURE",
+  "CANCEL_STRUCTURE_JOB",
+  "DOWNGRADE_STRUCTURE",
+  "BUY_RESEARCH",
+  "CANCEL_RESEARCH_JOB",
+  "RECRUIT_CONTRACTOR",
+  "START_RECRUITMENT",
+  "CANCEL_RECRUITMENT_JOB",
+  "START_CONTRACTOR_TRANSFER",
+  "ENGAGE_JOB",
+  "CANCEL_JOB_ENGAGEMENT",
+  "START_PROJECT",
+  "COMPLETE_PROJECT",
+  "ONLINE_HANDLE_COMPLETED_POSTING",
+]);
+
+export function shouldBumpWorldPersistRevision(action: GameAction): boolean {
+  return WORLD_PERSIST_ACTIONS.has(action.type);
+}
+
 export function gameReducer(state: GameState, action: GameAction): GameState {
-  const next = reduceGameState(state, action);
-  if (next === state || !shouldBumpPersistRevision(action)) {
-    return next;
+  let next = reduceGameState(state, action);
+  if (next === state) return next;
+
+  if (shouldBumpPersistRevision(action)) {
+    const baseRev = Math.max(state.persistRevision ?? 0, next.persistRevision ?? 0);
+    next = { ...next, persistRevision: baseRev + 1 };
   }
-  const baseRev = Math.max(state.persistRevision ?? 0, next.persistRevision ?? 0);
-  return {
-    ...next,
-    persistRevision: baseRev + 1,
-  };
+  if (shouldBumpWorldPersistRevision(action)) {
+    const baseRev = Math.max(
+      state.worldPersistRevision ?? 0,
+      next.worldPersistRevision ?? 0,
+    );
+    next = { ...next, worldPersistRevision: baseRev + 1 };
+  }
+  return next;
 }
 
 const PERSIST_NEUTRAL_ACTIONS = new Set<GameAction["type"]>([
@@ -892,6 +922,8 @@ const PERSIST_NEUTRAL_ACTIONS = new Set<GameAction["type"]>([
   "SET_ONLINE_SAVE_SESSION",
   "SYNC_SHARED_JOBS",
   "SYNC_COMPANY_PRESENCE",
+  "CLEAR_PENDING_SYNC",
+  "MARK_POSTING_PAYOUT_DONE",
 ]);
 
 function shouldBumpPersistRevision(action: GameAction): boolean {

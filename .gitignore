@@ -6,6 +6,7 @@ secrets/
 credentials/
 *.sa.json
 *-service-account*.json
+firebase-admin-sa.json
 .DS_Store
 
 # Local backup / reference workbooks (live file is 20260905 Corp Idle Working.xlsx)

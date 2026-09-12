@@ -1,8 +1,4 @@
-import type {
-  CompanyPresence,
-  OnlineSession,
-  PlayerId,
-} from "../multiplayer/types";
+import type { CompanyPresence, OnlineSession } from "../multiplayer/types";
 
 export type ResourceKey =
   | "cash"
@@ -475,6 +471,8 @@ export interface GameState {
   lastTickAt: number;
   /** Monotonic counter — queue/build actions bump this so tick-only saves cannot clobber them. */
   persistRevision?: number;
+  /** Economy/world actions bump this to trigger immediate online Firestore sync. */
+  worldPersistRevision?: number;
   settings: GameSettings;
   /** Shown once after load catch-up; stripped from saves. */
   pendingOfflineSummary?: OfflineWelcomeSummary | null;
@@ -489,7 +487,7 @@ export interface GameState {
   /** Active Tim/Chris session — not persisted in offline blob. */
   onlineSession?: OnlineSession | null;
   /** Other companies on the shared map (Online). */
-  companyPresence?: Partial<Record<PlayerId, CompanyPresence>>;
+  companyPresence?: Record<string, CompanyPresence>;
   /** Online: posting ids this client already paid out for. */
   completedPostingPayouts?: string[];
   /** Online Firestore listener status (UI only). */
@@ -666,7 +664,7 @@ export type GameAction =
     }
   | {
       type: "SYNC_COMPANY_PRESENCE";
-      companyPresence: Partial<Record<PlayerId, CompanyPresence>>;
+      companyPresence: Record<string, CompanyPresence>;
     }
   | { type: "SET_ONLINE_SESSION"; session: OnlineSession | null }
   | {

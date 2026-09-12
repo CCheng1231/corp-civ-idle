@@ -11,7 +11,7 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 
 **Session changelog:** **ChangeLog** tab in the balance workbook (`20260905 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-online-save-lease.mjs`; close Excel first if EBUSY).
 
-**Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Read `src/hooks/useOnlineWorld.ts`, `src/multiplayer/worldSync.ts`, `src/multiplayer/browserLease.ts` before changing sync. One browser tab per online account (Firestore lease on world meta).
+**Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Access via **access keys** (`src/multiplayer/onlineAccess.ts`) — playtester enters key once; browser binds via Anonymous Auth + `worlds/dev/bindings/{uid}`. Devs create keys in Settings or `scripts/create-access-key.mjs`. Read `useOnlineWorld.ts`, `worldSync.ts`, `browserLease.ts` before changing sync. **Firestore rules:** `firestore.rules` + [`docs/firestore-security.md`](docs/firestore-security.md). One browser tab per online account (lease on world meta).
 
 **Resume prompt:**
 

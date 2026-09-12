@@ -17,7 +17,7 @@ import { useOnlineWorld } from "./hooks/useOnlineWorld";
 import { ONLINE_KICKED_MESSAGE } from "./multiplayer/browserLease";
 import { clearSession, readSession, writeSession } from "./multiplayer/session";
 import type { OnlineSession } from "./multiplayer/types";
-import { PLAYER_LABELS, isOnlineSession } from "./multiplayer/types";
+import { accountDisplayName, isOnlineSession } from "./multiplayer/types";
 import "./App.css";
 
 function GameShell({
@@ -117,7 +117,7 @@ function GameShell({
             className={`online-status-banner online-status-${state.onlineConnectionStatus}`}
             role="status"
           >
-            {PLAYER_LABELS[session.playerId]} · Online{" "}
+            {accountDisplayName(session.accountId, session.displayName)} · Online{" "}
             {state.onlineConnectionStatus}
           </div>
         ) : null}
