@@ -91,7 +91,7 @@ export function SecretaryRosterView({
       aria-label="Secretary roster"
     >
       <header className="secretary-roster-toolbar">
-        <h3 className="secretary-roster-toolbar-title">Roaster</h3>
+        <h3 className="secretary-roster-toolbar-title">Roster</h3>
         <div className="secretary-roster-toolbar-actions">
           <button
             type="button"

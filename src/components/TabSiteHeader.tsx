@@ -15,7 +15,7 @@ export const HOME_HUB_TABS: { id: HomeHubTab; label: string }[] = [
 export type SecretaryHubTab = "roaster" | "job" | "log";
 
 export const SECRETARY_HUB_TABS: { id: SecretaryHubTab; label: string }[] = [
-  { id: "roaster", label: "Roaster" },
+  { id: "roaster", label: "Roster" },
   { id: "job", label: "Job" },
   { id: "log", label: "Log" },
 ];
