@@ -32,7 +32,6 @@ import {
   MAX_RECRUIT_BATCH,
   normalizeResourceWallet,
   OFFICE_EXPANSION_STRUCTURE_ID,
-  OFFLINE_CATCHUP_CAP_SEC,
   recruitmentOrderDurationMs,
   recruitmentOrderBuildTimeHours,
   clampUiScale,
@@ -637,11 +636,8 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
     ),
   );
   const awaySec = Math.max(0, (now - previousTickAt) / 1000);
-  const productionDeltaSec = Math.min(OFFLINE_CATCHUP_CAP_SEC, awaySec);
   let next =
-    productionDeltaSec > 0
-      ? tickProduction(afterQueues, productionDeltaSec)
-      : afterQueues;
+    awaySec > 0 ? tickProduction(afterQueues, awaySec) : afterQueues;
   next.lastTickAt = now;
   next.pendingOfflineSummary = buildOfflineWelcomeSummary(
     beforeCatchUp,
@@ -652,8 +648,9 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
   return next;
 }
 
-/** Online Firestore load — resolve queues but skip offline production catch-up. */
+/** Online Firestore load — resolve queues and apply passive production since lastTickAt. */
 export function finalizeOnlineSyncState(state: GameState, now: number): GameState {
+  const previousTickAt = state.lastTickAt;
   const normalized = reconcileStructureBuildTimers(
     {
       ...state,
@@ -686,12 +683,15 @@ export function finalizeOnlineSyncState(state: GameState, now: number): GameStat
       false,
     ),
   );
+  const awaySec = Math.max(0, (now - previousTickAt) / 1000);
+  const afterProduction =
+    awaySec > 0 ? tickProduction(afterQueues, awaySec) : afterQueues;
   return {
-    ...afterQueues,
+    ...afterProduction,
     lastTickAt: now,
     pendingOfflineSummary: null,
-    onlineResetGeneration: afterQueues.onlineResetGeneration,
-    onlineSaveSessionId: afterQueues.onlineSaveSessionId,
+    onlineResetGeneration: afterProduction.onlineResetGeneration,
+    onlineSaveSessionId: afterProduction.onlineSaveSessionId,
   };
 }
 
@@ -1205,10 +1205,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "TICK": {
       const now = action.now;
-      const deltaSec = Math.min(
-        OFFLINE_CATCHUP_CAP_SEC,
-        (now - state.lastTickAt) / 1000,
-      );
+      const deltaSec = (now - state.lastTickAt) / 1000;
       if (deltaSec <= 0) return state;
 
       return advanceSimulatedTime(state, {

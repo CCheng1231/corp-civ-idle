@@ -1,4 +1,4 @@
-import type { StructureId, StructureLevels } from "./types";
+import type { OfficeLocationId, StructureId, StructureLevels } from "./types";
 
 /** HQ day-one capacity (Phase A — Office Concept tab). */
 export const HQ_BASE_OFFICE_SPACE = 20;
@@ -42,6 +42,20 @@ export function hqStartStructureLevels(): StructureLevels {
 
 export function branchStartStructureLevels(): StructureLevels {
   return { ...ZERO_LEVELS };
+}
+
+/** REP/GREP holding cap before any Company Statue is built (any site). */
+export const REP_GREP_CAP_WITHOUT_COMPANY_STATUE = 10;
+
+/** Minimum level for a structure at a site; HQ starter buildings cannot be sold below day-one levels. */
+export function minimumStructureLevelAtSite(
+  locationId: OfficeLocationId,
+  structureId: StructureId,
+): number {
+  if (locationId === "hq") {
+    return HQ_START_STRUCTURE_LEVELS[structureId] ?? 0;
+  }
+  return 0;
 }
 
 /** Display metadata for structure UI (costs/rates come from structureBalanceData.ts). */

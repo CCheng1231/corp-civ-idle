@@ -1,5 +1,4 @@
 import { type Dispatch } from "react";
-import { OFFLINE_CATCHUP_CAP_SEC } from "../game/constants";
 import {
   formatOfflineAway,
   formatOfflineGained,
@@ -47,11 +46,7 @@ export function OfflineWelcomeDialog({
         <div className="offline-welcome-body">
           <p className="offline-welcome-away">
             You were away for{" "}
-            <strong>{formatOfflineAway(summary.awaySec)}</strong>
-            {summary.awaySec > OFFLINE_CATCHUP_CAP_SEC
-              ? " (resource catch-up capped at 24 hr)"
-              : ""}
-            .
+            <strong>{formatOfflineAway(summary.awaySec)}</strong>.
           </p>
           {gainedText ? (
             <p className="offline-welcome-gained">

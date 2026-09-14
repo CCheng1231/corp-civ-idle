@@ -13,6 +13,7 @@ import {
   type StructureLevelBalanceRow,
 } from "./structureBalanceData";
 import { RESEARCH_DEFINITIONS } from "./researchData";
+import { REP_GREP_CAP_WITHOUT_COMPANY_STATUE } from "./phaseA";
 
 function structureOfficeIds(
   structureLevelsByLocation: GameState["structureLevelsByLocation"],
@@ -341,9 +342,13 @@ export function computeResourceCaps(state: {
 }): {
   cashCap: number;
   supplyCap: number;
+  reputationCap: number;
+  govReputationCap: number;
 } {
   let cashCap = 0;
   let supplyCap = 0;
+  let reputationCap = 0;
+  let govReputationCap = 0;
 
   for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const levels = state.structureLevelsByLocation[officeId];
@@ -354,6 +359,12 @@ export function computeResourceCaps(state: {
     const storageLevel = levels.storage_room;
     if (storageLevel > 0) {
       supplyCap += effectAtStructureLevel("storage_room", storageLevel);
+    }
+    const statueLevel = levels.company_statue;
+    if (statueLevel > 0) {
+      const hold = effectAtStructureLevel("company_statue", statueLevel);
+      reputationCap += hold;
+      govReputationCap += hold;
     }
   }
 
@@ -371,17 +382,34 @@ export function computeResourceCaps(state: {
 
   if (cashCap <= 0) cashCap = Number.POSITIVE_INFINITY;
   if (supplyCap <= 0) supplyCap = Number.POSITIVE_INFINITY;
+  if (reputationCap <= 0) {
+    reputationCap = REP_GREP_CAP_WITHOUT_COMPANY_STATUE;
+  }
+  if (govReputationCap <= 0) {
+    govReputationCap = REP_GREP_CAP_WITHOUT_COMPANY_STATUE;
+  }
 
-  return { cashCap, supplyCap };
+  return { cashCap, supplyCap, reputationCap, govReputationCap };
 }
 
 /** Holding cap for top-bar display; null if uncapped. */
 export function resourceCapForKey(
-  caps: { cashCap: number; supplyCap: number },
+  caps: {
+    cashCap: number;
+    supplyCap: number;
+    reputationCap: number;
+    govReputationCap: number;
+  },
   key: ResourceKey,
 ): number | null {
   if (key === "cash" && Number.isFinite(caps.cashCap)) return caps.cashCap;
   if (key === "supply" && Number.isFinite(caps.supplyCap)) return caps.supplyCap;
+  if (key === "reputation" && Number.isFinite(caps.reputationCap)) {
+    return caps.reputationCap;
+  }
+  if (key === "govReputation" && Number.isFinite(caps.govReputationCap)) {
+    return caps.govReputationCap;
+  }
   return null;
 }
 
@@ -393,12 +421,19 @@ export function resourceCapFillClass(percentOfCap: number): string {
 
 export function clampResourcesToCaps(
   resources: GameState["resources"],
-  caps: { cashCap: number; supplyCap: number },
+  caps: {
+    cashCap: number;
+    supplyCap: number;
+    reputationCap: number;
+    govReputationCap: number;
+  },
 ): GameState["resources"] {
   return {
     ...resources,
     cash: Math.min(resources.cash, caps.cashCap),
     supply: Math.min(resources.supply, caps.supplyCap),
+    reputation: Math.min(resources.reputation, caps.reputationCap),
+    govReputation: Math.min(resources.govReputation, caps.govReputationCap),
   };
 }
 

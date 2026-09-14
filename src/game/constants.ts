@@ -39,6 +39,7 @@ import {
   hqStartStructureLevels,
   branchStartStructureLevels,
   initialResourcesPhaseA,
+  minimumStructureLevelAtSite,
   PHASE_A_PLACEHOLDER_ROWS,
 } from "./phaseA";
 import {
@@ -79,8 +80,6 @@ export function clampUiScale(value: unknown): number {
   const stepped = Math.round(n / 0.05) * 0.05;
   return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, stepped));
 }
-/** Max real-time seconds of passive production applied after being away. */
-export const OFFLINE_CATCHUP_CAP_SEC = 24 * 60 * 60;
 export const WIN_NET_WORTH = 100_000_000;
 export const BASE_LOCATION_POWER = HQ_BASE_POWER;
 export const BASE_OFFICE_SPACE = HQ_BASE_OFFICE_SPACE;
@@ -418,7 +417,8 @@ export function canSellStructureLevel(
   structureId: StructureId,
 ): boolean {
   const level = state.structureLevelsByLocation[locationId][structureId];
-  if (level <= 0) return false;
+  const minLevel = minimumStructureLevelAtSite(locationId, structureId);
+  if (level <= minLevel) return false;
   return !isStructureQueuedAt(state, locationId, structureId);
 }
 
