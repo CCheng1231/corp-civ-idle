@@ -10,6 +10,7 @@ import {
   towerAtCoord,
   towerById,
 } from "../game/mapWorld";
+import { majorHubAtCoord } from "../game/worldMapMajorHubs";
 import type {
   AxialCoord,
   CommercialLotId,
@@ -39,6 +40,13 @@ export type MapHexInfo =
       region: ReturnType<typeof regionAtCoord>;
       available: boolean;
     }
+  | {
+      kind: "major-hub";
+      coord: AxialCoord;
+      hubId: string;
+      label: string;
+      region: ReturnType<typeof regionAtCoord>;
+    }
   | { kind: "terrain"; coord: AxialCoord; region: ReturnType<typeof regionAtCoord> };
 
 export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
@@ -53,12 +61,12 @@ export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
     return { kind: "office", coord, officeId, region };
   }
 
-  const towerId = towerAtCoord(coord);
+  const towerId = towerAtCoord(coord, state.settings);
   if (towerId) {
     return { kind: "tower", coord, towerId, region };
   }
 
-  const commercial = commercialSiteAt(coord);
+  const commercial = commercialSiteAt(coord, state.settings);
   if (commercial) {
     return {
       kind: "commercial",
@@ -67,6 +75,17 @@ export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
       label: commercial.label,
       region: commercial.region,
       available: isAvailableCommercialLot(coord, state),
+    };
+  }
+
+  const major = majorHubAtCoord(coord, state.settings);
+  if (major) {
+    return {
+      kind: "major-hub",
+      coord,
+      hubId: major.id,
+      label: major.label,
+      region,
     };
   }
 
@@ -87,6 +106,8 @@ export function mapHexTitle(info: MapHexInfo, state?: GameState): string {
       return towerById(info.towerId).name;
     case "commercial":
       return info.label;
+    case "major-hub":
+      return info.label;
     case "terrain":
       return REGION_LABELS[info.region];
   }
@@ -102,6 +123,8 @@ export function mapHexKindLabel(info: MapHexInfo): string {
       return "Office tower";
     case "commercial":
       return "Commercial lot";
+    case "major-hub":
+      return "Major hub";
     case "terrain":
       return "Open region";
   }

@@ -1,0 +1,62 @@
+{
+  "lockedAt": "2026-09-15",
+  "note": "Z1 v5: rasterAlign + majorHubHexes defaults + Gov 0,0. Dev toolbar cannot move gov/major hubs; saved layout overrides still apply until baked here via update-z1-layout-canonical.mjs.",
+  "rasterAlign": {
+    "offsetX": 1042.9438781738281,
+    "offsetY": 1131.8708190917969,
+    "scale": 1,
+    "rotationDeg": 0
+  },
+  "majorHubMarkers": [
+    {
+      "x": -272.8,
+      "y": -472.5
+    },
+    {
+      "x": -1018.45,
+      "y": 0
+    },
+    {
+      "x": 436.48,
+      "y": 756
+    },
+    {
+      "x": 654.72,
+      "y": -630
+    },
+    {
+      "x": -581.97,
+      "y": 756
+    },
+    {
+      "x": -727.46,
+      "y": -504
+    }
+  ],
+  "majorHubHexes": [
+    {
+      "q": 0,
+      "r": -5
+    },
+    {
+      "q": -7,
+      "r": 0
+    },
+    {
+      "q": 0,
+      "r": 6
+    },
+    {
+      "q": 7,
+      "r": -5
+    },
+    {
+      "q": -7,
+      "r": 6
+    },
+    {
+      "q": -3,
+      "r": -4
+    }
+  ]
+}

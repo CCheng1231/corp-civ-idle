@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+  viewBox="-1473.4458748504999 -1337 2946.8917497009998 2742.2058748504996"
+  width="1200" height="1056">
+  <rect x="-1473.4458748504999" y="-1337" width="2946.8917497009998" height="2742.2058748504996" fill="#1e2420"/>
+  <circle cx="0" cy="0" r="1009.2058748504999" fill="#2d4a32"/>
+  <circle cx="0" cy="0" r="524.7870549222599" fill="#4a6048"/>
+  <circle cx="0" cy="0" r="1009.2058748504999" fill="none" stroke="#6a9a62" stroke-width="3" opacity="0.6"/>
+  <circle cx="0" cy="0" r="1349.2058748504999" fill="none" stroke="#8ac080" stroke-width="2" stroke-dasharray="12 10" opacity="0.45"/>
+  <circle cx="0" cy="0" r="28" fill="#e8a040" stroke="#1a1a1a" stroke-width="3"/>
+  
+  <circle cx="-1349.2058748504999" cy="-8.261503280132346e-14" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  <circle cx="1211.7478327449628" cy="-699.60293742525" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  <circle cx="1303.2327994990344" cy="349.2001761755173" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  <circle cx="0" cy="-938.5614636109649" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  <circle cx="-1.6523006560264692e-13" cy="1349.2058748504999" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  <circle cx="-954.0326233235168" cy="-954.0326233235169" r="14" fill="#149aaa" stroke="#fff" stroke-width="2"/>
+  
+</svg>

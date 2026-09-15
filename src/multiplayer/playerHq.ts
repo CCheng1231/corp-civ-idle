@@ -1,3 +1,4 @@
+import { effectiveLandmarkCoord } from "../game/mapDevLayout";
 import { MAP_HQ, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
 import type { CompanyPresence, OnlineSession, PlayerId } from "./types";
@@ -13,7 +14,7 @@ export function resolveOnlineSession(
 }
 
 /** Chris HQ — fixed countryside-adjacent hex, distinct from Tim (must fit MAP_RADIUS). */
-export const CHRIS_HQ: AxialCoord = { q: -2, r: -4 };
+export const CHRIS_HQ: AxialCoord = { q: 4, r: -1 };
 
 const HQ_BY_DEV: Record<PlayerId, AxialCoord> = {
   tim: MAP_HQ,
@@ -32,8 +33,19 @@ function guestHqCoord(accountId: string): AxialCoord {
   };
 }
 
-export function playerHqCoord(accountId: string): AxialCoord {
-  if (isDevAccount(accountId)) return HQ_BY_DEV[accountId];
+export function playerHqCoord(
+  accountId: string,
+  settings?: GameState["settings"],
+): AxialCoord {
+  if (isDevAccount(accountId)) {
+    if (accountId === "tim") {
+      return effectiveLandmarkCoord("hq:tim", settings) ?? HQ_BY_DEV.tim;
+    }
+    if (accountId === "chris") {
+      return effectiveLandmarkCoord("hq:chris", settings) ?? HQ_BY_DEV.chris;
+    }
+    return HQ_BY_DEV[accountId];
+  }
   return guestHqCoord(accountId);
 }
 
@@ -49,6 +61,7 @@ export function canonicalCompanyPresence(
   presence: CompanyPresence,
 ): CompanyPresence {
   const hqCoord = playerHqCoord(presence.accountId);
+  // presence repair ignores dev overrides — canonical dev hexes live in code/settings export
   if (presence.hqCoord.q === hqCoord.q && presence.hqCoord.r === hqCoord.r) {
     return presence;
   }
@@ -71,9 +84,9 @@ export function hqCoordForState(
 ): AxialCoord {
   const onlineSession = resolveOnlineSession(state, session);
   if (onlineSession) {
-    return playerHqCoord(onlineSession.accountId);
+    return playerHqCoord(onlineSession.accountId, state.settings);
   }
-  return MAP_HQ;
+  return effectiveLandmarkCoord("hq:tim", state.settings) ?? MAP_HQ;
 }
 
 export function isOnlineMode(state: GameState): boolean {

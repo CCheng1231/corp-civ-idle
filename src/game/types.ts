@@ -539,6 +539,45 @@ export interface GameSettings {
   mapRegionOutlines: boolean;
   /** World map: distance rings and focus button anchor to HQ or branch. */
   mapMainOffice: "hq" | "branch";
+  /** Z1 layer stack visibility (v0.2 filters); omitted groups default to visible. */
+  mapZ1LayerFilters?: Partial<
+    Record<
+      "base" | "geography" | "hubs" | "roads" | "flavor",
+      boolean
+    >
+  >;
+  /** Dev: overlay pass-2 align guide on Z1 bake. */
+  mapZ1AlignGuide?: boolean;
+  /** Dev: drag Z1 bake over hex grid to tune alignment. */
+  mapZ1AlignDrag?: boolean;
+  /** Persisted Z1 bake transform (dev tuning → player view). */
+  mapZ1RasterAlign?: Partial<{
+    offsetX: number;
+    offsetY: number;
+    scale: number;
+    rotationDeg: number;
+  }>;
+  /** Dev: click map to place six major hub target positions (content pixels). */
+  mapZ1PlaceMajorHubs?: boolean;
+  mapZ1MajorHubMarkers?: Array<{ x: number; y: number }>;
+  /** Dev: click/drag hex layout against Z1 bake. */
+  mapDevHexEdit?: boolean;
+  /** Dev: add hex cells outside the default MAP_RADIUS patch. */
+  mapDevExtraHexes?: Array<{ q: number; r: number }>;
+  /** Dev: landmark id → axial coord (see mapDevLayout.ts keys). */
+  mapDevLandmarkCoords?: Record<string, { q: number; r: number }>;
+  /** Dev: move landmark | create hex */
+  mapDevHexEditMode?: "move" | "create";
+  /** Dev: selected landmark key for move mode. */
+  mapDevHexEditLandmark?: string;
+  /** Dev: shift entire hex grid vs Z1 bake (viewBox px). */
+  mapDevGridNudge?: { dx: number; dy: number };
+  /** Dev: per axial cell (axialKey) pixel offset — moves hex tile + content at q,r. */
+  mapDevHexNudges?: Record<string, { dx: number; dy: number }>;
+  /** Dev: last hex selected for per-cell nudge (when map click did not inspect). */
+  mapDevHexNudgeTarget?: { q: number; r: number };
+  /** Dev: per-landmark pixel offset (viewBox px); legacy — prefer mapDevHexNudges. */
+  mapDevSiteNudges?: Record<string, { dx: number; dy: number }>;
 }
 
 export type MainView =

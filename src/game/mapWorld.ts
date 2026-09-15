@@ -17,6 +17,7 @@ import {
   axialDistance,
   axialEquals,
   axialToPixel,
+  generateHexagonMap,
   HEX_RADIUS,
   isCoordOnMapGrid,
   MAP_GOV,
@@ -29,6 +30,7 @@ import type {
   CommercialLotDefinition,
   CommercialLotId,
   EstablishedBranchSite,
+  GameSettings,
   GameState,
   JobDefinition,
   JobPosting,
@@ -39,6 +41,7 @@ import type {
   ResourceCost,
   TowerId,
 } from "./types";
+import { effectiveLandmarkCoord } from "./mapDevLayout";
 import {
   canAffordAtOffice,
   formatNumber,
@@ -113,28 +116,28 @@ export const OFFICE_TOWERS: OfficeTowerDefinition[] = [
   {
     id: "metro_central",
     name: "Central Exchange Tower",
-    coord: { q: -1, r: 1 },
+    coord: { q: 0, r: -4 },
     region: "metropolis",
     companyCrewCapacity: 8,
   },
   {
     id: "suburban_park",
     name: "Parkview Office Tower",
-    coord: { q: 4, r: -5 },
+    coord: { q: 2, r: 5 },
     region: "suburban",
     companyCrewCapacity: 5,
   },
   {
     id: "rural_crossing",
     name: "Crossroads Business Tower",
-    coord: { q: -6, r: 2 },
+    coord: { q: -7, r: 2 },
     region: "rural",
     companyCrewCapacity: 3,
   },
   {
     id: "country_estate",
     name: "Hillside Corporate Tower",
-    coord: { q: 3, r: 4 },
+    coord: { q: 7, r: -6 },
     region: "countryside",
     companyCrewCapacity: 4,
   },
@@ -157,21 +160,21 @@ export const COMMERCIAL_BRANCH_SLOT_TEMPLATES: CommercialLotBranchSlot[] = [
 export const COMMERCIAL_REAL_ESTATE: CommercialLotDefinition[] = [
   {
     id: "suburban_strip",
-    coord: { q: 6, r: -3 },
+    coord: { q: 5, r: 2 },
     region: "suburban",
     label: "Suburban strip parcel",
     branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
   },
   {
     id: "rural_highway",
-    coord: { q: -5, r: 4 },
+    coord: { q: -1, r: -6 },
     region: "rural",
     label: "Rural highway frontage",
     branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
   },
   {
     id: "countryside_lot",
-    coord: { q: -2, r: 6 },
+    coord: { q: -5, r: 7 },
     region: "countryside",
     label: "Countryside lot",
     branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
@@ -323,9 +326,22 @@ export function projectsForTower(towerId: TowerId): ProjectDefinition[] {
   return TOWER_PROJECTS.filter((p) => p.towerId === towerId);
 }
 
-export function towerAtCoord(coord: AxialCoord): TowerId | null {
+function towerCoord(
+  tower: OfficeTowerDefinition,
+  settings?: GameSettings,
+): AxialCoord {
+  return (
+    effectiveLandmarkCoord(`tower:${tower.id}`, settings) ?? tower.coord
+  );
+}
+
+export function towerAtCoord(
+  coord: AxialCoord,
+  settings?: GameSettings,
+): TowerId | null {
   for (const tower of OFFICE_TOWERS) {
-    if (tower.coord.q === coord.q && tower.coord.r === coord.r) return tower.id;
+    const c = towerCoord(tower, settings);
+    if (c.q === coord.q && c.r === coord.r) return tower.id;
   }
   return null;
 }
@@ -410,18 +426,20 @@ export function jobSiteLabelForPosting(
   return jobSiteLabelForDefinition(def);
 }
 
-export function commercialSiteAt(coord: AxialCoord) {
-  return COMMERCIAL_REAL_ESTATE.find(
-    (s) => s.coord.q === coord.q && s.coord.r === coord.r,
-  );
+export function commercialSiteAt(coord: AxialCoord, settings?: GameSettings) {
+  return COMMERCIAL_REAL_ESTATE.find((s) => {
+    const c =
+      effectiveLandmarkCoord(`commercial:${s.id}`, settings) ?? s.coord;
+    return c.q === coord.q && c.r === coord.r;
+  });
 }
 
 /** Commercial lot not yet leased as an office site. */
 export function isAvailableCommercialLot(
   coord: AxialCoord,
-  _state: GameState,
+  state: GameState,
 ): boolean {
-  return Boolean(commercialSiteAt(coord));
+  return Boolean(commercialSiteAt(coord, state.settings));
 }
 
 export function regionAtCoord(coord: AxialCoord): MapRegion {
@@ -464,8 +482,31 @@ export function worldMapAxialToPixel(
   };
 }
 
-/** Extra viewBox margin (green undercoat) beyond outermost hexes. */
-export const MAP_VIEWBOX_PAD = HEX_RADIUS * 0.95;
+/**
+ * Painted forest greenbelt sits on this hex ring (Z1 v5 bake); playable hexes may extend past it.
+ */
+export const MAP_GREENBELT_HEX_RADIUS = 7;
+
+/** Extra viewBox margin beyond outermost hexes (Z1 bake bleed). */
+export const MAP_VIEWBOX_PAD = HEX_RADIUS * 4;
+
+/** Canon major-hub pins sit this far past the forest greenbelt radius (viewBox px). */
+export const Z1_MAJOR_HUB_OUTSIDE_BELT_PX = 340;
+
+/** Greenbelt stroke radius — outer edge of the playable hex ring (presentation pixels). */
+export function worldMapOuterGreenbeltRadiusPx(
+  beltRingRadius: number = MAP_GREENBELT_HEX_RADIUS,
+  size: number = HEX_RADIUS,
+): number {
+  const gov = worldMapAxialToPixel(MAP_GOV, size);
+  let maxDist = 0;
+  for (const c of generateHexagonMap(MAP_RADIUS)) {
+    if (axialDistance(c, MAP_GOV) !== beltRingRadius) continue;
+    const p = worldMapAxialToPixel(c, size);
+    maxDist = Math.max(maxDist, Math.hypot(p.x - gov.x, p.y - gov.y));
+  }
+  return maxDist - size * 0.22;
+}
 
 export function worldMapHexBounds(
   cells: AxialCoord[],

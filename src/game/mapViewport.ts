@@ -6,8 +6,8 @@
  * WorldView together (see `.cursor/rules/world-map-viewport.mdc`).
  */
 
-import type { AxialCoord } from "./types";
-import { worldMapAxialToPixel } from "./mapWorld";
+import type { AxialCoord, GameSettings } from "./types";
+import { worldMapPresentationPixel } from "./mapDevLayout";
 
 export type MapViewBounds = {
   minX: number;
@@ -22,13 +22,39 @@ export type MapContentSize = {
 };
 
 /** Zoom relative to fit-to-viewport baseline (100% = map fills the panel). */
-export const MAP_ZOOM_REL_MIN = 0.55;
+export const MAP_ZOOM_REL_MIN = 0.2;
 export const MAP_ZOOM_REL_MAX = 1.75;
 export const MAP_ZOOM_REL_STEP = 0.05;
 /** Open at 100% — same scale as HQ focus on the new baseline. */
 export const MAP_ZOOM_REL_DEFAULT = 1;
 /** HQ button: center player HQ at 100% relative zoom. */
 export const MAP_HQ_FOCUS_ZOOM_REL = 1;
+
+/** Keep in sync with `MAP_V01_ZOOM_Z2_MIN` in worldMapV01.ts */
+export const MAP_V01_ZOOM_Z2_MIN_TILT = 1.12;
+
+/**
+ * v0.1 — oblique tilt (never fully flat). Z1 band uses stronger tilt (hybrid-soft ref).
+ * @param zoomBand — from `worldMapV01ZoomBand(zoomRel)`; omit for Z2+ style ramp only.
+ */
+export function mapPresentationTiltDeg(
+  zoomRel: number,
+  zoomBand?: 1 | 2 | 3 | 4,
+): number {
+  const z = clampMapZoomRel(zoomRel, { snapStep: false });
+  const span = MAP_ZOOM_REL_MAX - MAP_ZOOM_REL_MIN;
+  if (span <= 0) return 12;
+
+  if (zoomBand === 1) {
+    const z1Span = MAP_V01_ZOOM_Z2_MIN_TILT - MAP_ZOOM_REL_MIN;
+    const t1 =
+      z1Span <= 0 ? 1 : Math.min(1, (z - MAP_ZOOM_REL_MIN) / z1Span);
+    return 13 + t1 * 5;
+  }
+
+  const t = (z - MAP_ZOOM_REL_MIN) / span;
+  return 8 + t * 12;
+}
 /** Exponential wheel zoom — higher = faster scroll zoom. */
 export const MAP_WHEEL_ZOOM_SENSITIVITY = 0.00115;
 /**
@@ -230,9 +256,10 @@ export function worldMapCoordToContentPixel(
   coord: AxialCoord,
   bounds: MapViewBounds,
   content: MapContentSize,
+  settings?: GameSettings,
 ): { x: number; y: number } {
   return viewBoxPointToContentPixel(
-    worldMapAxialToPixel(coord),
+    worldMapPresentationPixel(coord, settings),
     bounds,
     content,
   );

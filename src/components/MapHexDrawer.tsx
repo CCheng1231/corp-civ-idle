@@ -644,6 +644,12 @@ export function MapHexDrawer({
           />
         )}
 
+        {info.kind === "major-hub" && (
+          <p className="map-hex-desc muted">
+            Strategic major hub — regional anchor on the world map (Z1 ring).
+          </p>
+        )}
+
         {info.kind === "commercial" && (
           <CommercialLotSection
             state={state}

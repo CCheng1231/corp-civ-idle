@@ -10,7 +10,7 @@ import {
 export const HEX_RADIUS = 42;
 
 /** Axial hexagon patch radius (map extent from Gov). */
-export const MAP_RADIUS = 7;
+export const MAP_RADIUS = 9;
 
 export type { AxialCoord } from "./types";
 
@@ -19,7 +19,7 @@ export const MAP_GOV: AxialCoord = { q: 0, r: 0 };
  * Starting HQ in the countryside rim (future company starts land here too).
  * Slightly off-axis so the map spine isn't a straight column.
  */
-export const MAP_HQ: AxialCoord = { q: 2, r: -7 };
+export const MAP_HQ: AxialCoord = { q: -6, r: 5 };
 /** Legacy fallback branch tile (live branches use branchCoord). */
 export const MAP_BRANCH: AxialCoord = { q: -1, r: -3 };
 

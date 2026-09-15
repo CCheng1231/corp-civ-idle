@@ -3,6 +3,7 @@
 export type MapLandmarkIconKind =
   | "gov"
   | "tower"
+  | "major-hub"
   | "commercial"
   | "active"
   | "hq"
@@ -23,6 +24,7 @@ const PIN_COLORS: Record<
 > = {
   gov: { fill: "#e37400", glyph: "#1a1a1a" },
   tower: { fill: "#1a73e8", glyph: "#ffffff" },
+  "major-hub": { fill: "#149aaa", glyph: "#ffffff" },
   commercial: { fill: "#f9ab00", glyph: "#1a1a1a" },
   active: { fill: "#34a853", glyph: "#ffffff" },
 };
@@ -59,6 +61,8 @@ const ICON_PATHS = {
   gov: "M6 20h12V10H6v10zm2-8h2v6H8v-6zm4 0h2v6h-2v-6zm6 4h2v4h-2v-4zM12 2L4 8v2h16V8L12 2z",
   tower:
     "M12 7V3H2v18h20V7H12zm-2 12H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V9h6v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V9h6v2z",
+  "major-hub":
+    "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z",
   commercial:
     "M4 4h16v2H4V4zm0 4h10v12H4V8zm12 0h4v12h-4V8zM8 11h2v2H8v-2zm0 4h2v2H8v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2z",
   active:

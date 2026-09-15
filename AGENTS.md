@@ -5,7 +5,7 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 1. [`docs/ui-principles.md`](docs/ui-principles.md) — design rules, file map, resume checklist, recent state
 2. [`.cursor/rules/player-view-ui.mdc`](.cursor/rules/player-view-ui.mdc) — auto-applied on `src/components/**` and `src/App.css`
 3. [`.cursor/rules/cross-platform-layout.mdc`](.cursor/rules/cross-platform-layout.mdc) — Android / iOS / PC scaling, safe areas, 48px touch targets
-4. **World map layout / zoom** — [`.cursor/rules/world-map-viewport.mdc`](.cursor/rules/world-map-viewport.mdc) when editing `WorldView`, `mapWorld`, or `mapViewport`
+4. **World map layout / zoom** — [`.cursor/rules/world-map-viewport.mdc`](.cursor/rules/world-map-viewport.mdc) when editing `WorldView`, `mapWorld`, or `mapViewport`; art direction **v0.1** — [`docs/world-map-v0.1.md`](docs/world-map-v0.1.md)
 
 **Balance / sheet numbers:** [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc) — use `google-sheets` MCP; engine data via `scripts/build-structure-balance.mjs` and `scripts/build-research-data.mjs`.
 
@@ -22,11 +22,12 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
-**Recent state (Aug 31, late evening):**
+**Recent state (Sep 14, 2026 — world map session, paused):**
 
-- **Online saves:** Bootstrap gating, resetGeneration / onlineSaveSessionId, transactional saves, migration fixes (`structureQueues`, empty `branchSites`). Stale-tab overwrite protection via `playerResetAt` + session id on world meta.
-- **Browser lease:** `playerBrowserLease` + `claimGeneration` — kicks duplicate tabs; reclaim vacant lease instead of false kick in dev (StrictMode).
-- **Settings (online):** Reset Tim/Chris account, shared-world reset (job board only), full world reset, **Pull from Firestore**.
-- **Map:** Chris HQ `{-2,-4}`; HQ/Home focus uses DOM-centered pan (`mapViewport.ts`).
+- **Z1 in-game base:** `world-map-z1-hybrid-soft-pass1-v5.png` + `src/assets/z1-layout-canonical.json`. Dev: drag bake, hex edit (non-locked sites), per-hex nudge, export JSON (`WorldMapDevToolbar`).
+- **Hub lock:** Gov + six majors — dev **cannot move** them (`src/game/mapLayoutLock.ts`). Saved `mapDevLandmarkCoords` / hex nudges for hubs **still apply** (freeze-in-place; not reset to canon on load). Canon defaults in `z1-layout-canonical.json`.
+- **Reverted (do not re-apply without Chris):** Rim terrain hexes, viewBox `MAP_VISUAL_HEX_RADIUS`, undercoat layer — moved layout; user asked full revert.
+- **Z1 world extend (next):** Fill grey at **20% zoom + pan slack** with **visual-only** larger plate; v5 cornerstone unchanged. Spec: [`docs/z1-world-extend-gen-spec.md`](docs/z1-world-extend-gen-spec.md). Margin script: `npx tsx scripts/compute-z1-world-extend-margin.mjs` → **~2600 viewBox pad/side**, master **~8240×7890**. **Draft image** (not in repo): Cursor assets `world-map-z1-hybrid-soft-world-extend-draft.png` — composite v5 center + feather; then engine underlay in `WorldMapBaseArt` (not started).
+- **Online / map (older):** Chris HQ `{-2,-4}`; HQ focus via `mapViewport.ts`; online saves / browser lease — see bullets in prior sessions.
 
 Before large UI reads, check `git status` / `git diff` — this repo often has in-progress work on `main`.

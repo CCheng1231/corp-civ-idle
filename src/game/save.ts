@@ -25,6 +25,7 @@ import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { branchSiteCoord, isEstablishedBranchSiteOnMap } from "./branchSites";
 import { isCoordOnMapGrid, MAP_BRANCH } from "./hexLayout";
+import { isMapDevLandmarkKeyLocked } from "./mapLayoutLock";
 import {
   commercialSiteAt,
   defaultBranchSiteName,
@@ -65,6 +66,36 @@ import {
   deserializePrivateState,
   serializePrivateState,
 } from "../multiplayer/companySave";
+import { MAP_Z1_LAYER_DEFAULTS, type MapZ1FilterGroup } from "./worldMapLayout";
+import { resolveZ1RasterAlignment } from "./worldMapZ1Align";
+import { parseMapZ1MajorHubMarkers } from "./worldMapZ1Markers";
+import type { GameSettings } from "./types";
+
+function parseMapZ1LayerFilters(
+  raw: unknown,
+): GameSettings["mapZ1LayerFilters"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: Partial<Record<MapZ1FilterGroup, boolean>> = {};
+  for (const key of Object.keys(MAP_Z1_LAYER_DEFAULTS) as MapZ1FilterGroup[]) {
+    const v = (raw as Record<string, unknown>)[key];
+    if (typeof v === "boolean") out[key] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function parseMapZ1RasterAlign(
+  raw: unknown,
+): GameSettings["mapZ1RasterAlign"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const resolved = resolveZ1RasterAlignment(raw as Record<string, unknown>);
+  const defaults = resolveZ1RasterAlignment(null);
+  const changed =
+    resolved.offsetX !== defaults.offsetX ||
+    resolved.offsetY !== defaults.offsetY ||
+    resolved.scale !== defaults.scale ||
+    resolved.rotationDeg !== defaults.rotationDeg;
+  return changed ? resolved : undefined;
+}
 
 export const ALERT_AUTO_DISMISS_SEC_MIN = 2;
 export const ALERT_AUTO_DISMISS_SEC_MAX = 30;
@@ -598,6 +629,86 @@ function normalizeSave(
         (parsed.branchEstablished ?? (parsed.branchSites?.length ?? 0) > 0)
           ? "branch"
           : "hq",
+      mapZ1AlignGuide:
+        parsed.settings?.mapZ1AlignGuide === true ? true : undefined,
+      mapZ1AlignDrag:
+        parsed.settings?.mapZ1AlignDrag === true ? true : undefined,
+      mapZ1RasterAlign: parseMapZ1RasterAlign(parsed.settings?.mapZ1RasterAlign),
+      mapZ1PlaceMajorHubs:
+        parsed.settings?.mapZ1PlaceMajorHubs === true ? true : undefined,
+      mapZ1MajorHubMarkers: (() => {
+        const m = parseMapZ1MajorHubMarkers(parsed.settings?.mapZ1MajorHubMarkers);
+        return m.length > 0 ? m : undefined;
+      })(),
+      mapDevHexEdit:
+        parsed.settings?.mapDevHexEdit === true ? true : undefined,
+      mapDevHexEditMode:
+        parsed.settings?.mapDevHexEditMode === "create" ||
+        parsed.settings?.mapDevHexEditMode === "move"
+          ? parsed.settings.mapDevHexEditMode
+          : undefined,
+      mapDevHexEditLandmark: (() => {
+        const k = parsed.settings?.mapDevHexEditLandmark;
+        if (typeof k !== "string" || isMapDevLandmarkKeyLocked(k)) {
+          return undefined;
+        }
+        return k;
+      })(),
+      mapDevExtraHexes: Array.isArray(parsed.settings?.mapDevExtraHexes)
+        ? parsed.settings.mapDevExtraHexes
+            .filter(
+              (c: unknown) =>
+                c &&
+                typeof c === "object" &&
+                typeof (c as { q?: unknown }).q === "number" &&
+                typeof (c as { r?: unknown }).r === "number",
+            )
+            .map((c: { q: number; r: number }) => ({ q: c.q, r: c.r }))
+        : undefined,
+      mapDevLandmarkCoords:
+        parsed.settings?.mapDevLandmarkCoords &&
+        typeof parsed.settings.mapDevLandmarkCoords === "object"
+          ? (parsed.settings.mapDevLandmarkCoords as Record<
+              string,
+              { q: number; r: number }
+            >)
+          : undefined,
+      mapDevGridNudge: (() => {
+        const g = parsed.settings?.mapDevGridNudge;
+        if (!g || typeof g !== "object") return undefined;
+        const dx = (g as { dx?: unknown }).dx;
+        const dy = (g as { dy?: unknown }).dy;
+        if (typeof dx !== "number" || typeof dy !== "number") return undefined;
+        if (dx === 0 && dy === 0) return undefined;
+        return { dx, dy };
+      })(),
+      mapDevHexNudges:
+        parsed.settings?.mapDevHexNudges &&
+        typeof parsed.settings.mapDevHexNudges === "object"
+          ? (parsed.settings.mapDevHexNudges as Record<
+              string,
+              { dx: number; dy: number }
+            >)
+          : undefined,
+      mapDevHexNudgeTarget: (() => {
+        const t = parsed.settings?.mapDevHexNudgeTarget;
+        if (!t || typeof t !== "object") return undefined;
+        const q = (t as { q?: unknown }).q;
+        const r = (t as { r?: unknown }).r;
+        if (typeof q !== "number" || typeof r !== "number") return undefined;
+        return { q, r };
+      })(),
+      mapDevSiteNudges:
+        parsed.settings?.mapDevSiteNudges &&
+        typeof parsed.settings.mapDevSiteNudges === "object"
+          ? (parsed.settings.mapDevSiteNudges as Record<
+              string,
+              { dx: number; dy: number }
+            >)
+          : undefined,
+      mapZ1LayerFilters: parseMapZ1LayerFilters(
+        parsed.settings?.mapZ1LayerFilters,
+      ),
     },
     structureLevelsByLocation,
     structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),
