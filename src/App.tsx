@@ -119,6 +119,9 @@ function GameShell({
           >
             {accountDisplayName(session.accountId, session.displayName)} · Online{" "}
             {state.onlineConnectionStatus}
+            {state.onlineConnectionStatus === "error"
+              ? " — use Settings → Switch account and reconnect with your access key"
+              : null}
           </div>
         ) : null}
         {state.won && (

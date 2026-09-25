@@ -14,6 +14,7 @@ import {
   returnPerHour,
   validateEngagementAssignment,
 } from "../game/jobs";
+import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
 import { formatJobDurationSec } from "../game/jobBoard";
 import {
   REGION_LABELS,
@@ -101,6 +102,7 @@ export function JobPostingCard({
   const officeRoster = rosterAt(state, officeId);
   const engageLocked = isAllOfficesSelected(state.selectedOffice);
   const def = jobDefinitionForPosting(posting);
+  const minUnitTier = requiredMinUnitTierForJob(def);
   const siteLabel = jobSiteLabelForPosting(posting, def);
   const siteRegion = jobSiteRegionForPosting(posting, def);
   const band = completionBand(posting.unitHoursCompleted, def.unitHoursTotal);
@@ -194,11 +196,11 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Expires</span>
           <span>{expiresIn}</span>
         </li>
-        {def.tier > 1 ? (
+        {minUnitTier > 1 ? (
           <li>
             <span className="job-posting-fact-label">Needs</span>
             <span>
-              {def.requiredCategory} tier {def.minUnitTier}+
+              {def.requiredCategory} tier {minUnitTier}+
             </span>
           </li>
         ) : null}

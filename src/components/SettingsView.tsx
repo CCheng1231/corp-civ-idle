@@ -28,7 +28,12 @@ import {
   createOfflineSession,
   createOnlineSession,
 } from "../multiplayer/session";
-import { createPlaytestAccessKey } from "../multiplayer/onlineAccess";
+import {
+  createPlaytestAccessKey,
+  loadBrowserBinding,
+  readDevAccessKeyHint,
+  redeemAccessKey,
+} from "../multiplayer/onlineAccess";
 import {
   forceResyncPrivateState,
   savePrivateState,
@@ -115,7 +120,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     window.location.reload();
   }
 
-  function switchPlayMode(mode: "offline" | "online") {
+  async function switchPlayMode(mode: "offline" | "online") {
     if (!session || session.playMode === mode) return;
     if (mode === "online" && !isFirebaseConfigured()) {
       window.alert("Online mode requires Firebase config in .env.local");
@@ -128,6 +133,37 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     ) {
       return;
     }
+
+    if (mode === "online") {
+      try {
+        let binding = await loadBrowserBinding(session.worldId);
+        if (!binding && import.meta.env.DEV && isDevAccount(session.accountId)) {
+          const hint = readDevAccessKeyHint(session.accountId);
+          if (hint) {
+            binding = await redeemAccessKey(hint, session.worldId);
+          }
+        }
+        if (!binding) {
+          window.alert(
+            "Online mode needs an access key on this browser. Use Switch account and connect with your key (or Use Chris key in dev).",
+          );
+          return;
+        }
+        if (binding.accountId !== session.accountId) {
+          window.alert(
+            `This browser is linked to ${binding.displayName}. Use Switch account to change online identity.`,
+          );
+          return;
+        }
+      } catch (err) {
+        console.error("Online access check before mode switch failed", err);
+        window.alert(
+          "Could not verify online access. Check Firebase config, Anonymous Auth, and Firestore rules.",
+        );
+        return;
+      }
+    }
+
     writeSession(
       mode === "online"
         ? createOnlineSession(session.accountId, session.displayName)

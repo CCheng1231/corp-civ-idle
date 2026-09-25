@@ -58,59 +58,71 @@ export function SecretaryBriefing({
       className={`secretary-job-work secretary-job-work--${workTab}`}
       aria-label="Secretary job desk"
     >
-      <header className="secretary-job-work-toolbar">
-        <div
-          className="secretary-job-work-tabs logbook-filters"
-          role="tablist"
-          aria-label="Secretary work panels"
-        >
-          <button
-            type="button"
-            role="tab"
-            id="secretary-tab-reports"
-            aria-selected={workTab === "reports"}
-            aria-controls="secretary-panel-reports"
-            className={workTab === "reports" ? "tab active" : "tab"}
-            onClick={() => onWorkTabChange("reports")}
+      <header
+        className={`secretary-job-work-toolbar${
+          workTab === "board" ? " secretary-job-work-toolbar--board" : ""
+        }`}
+      >
+        <div className="secretary-job-work-toolbar-row">
+          <div
+            className="secretary-job-work-tabs logbook-filters"
+            role="tablist"
+            aria-label="Secretary work panels"
           >
-            Job reports
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="secretary-tab-board"
-            aria-selected={workTab === "board"}
-            aria-controls="secretary-panel-board"
-            className={workTab === "board" ? "tab active" : "tab"}
-            onClick={() => onWorkTabChange("board")}
-          >
-            Job board
-          </button>
-        </div>
-        {workTab === "reports" ? (
-          <div className="secretary-job-reports-actions">
             <button
               type="button"
-              className="btn linkish secretary-job-reports-log-link"
-              onClick={() => openJobLogbook()}
+              role="tab"
+              id="secretary-tab-reports"
+              aria-selected={workTab === "reports"}
+              aria-controls="secretary-panel-reports"
+              className={workTab === "reports" ? "tab active" : "tab"}
+              onClick={() => onWorkTabChange("reports")}
             >
-              Open job log
+              Job reports
             </button>
             <button
               type="button"
-              className="btn linkish secretary-job-reports-clear-link"
-              disabled={jobReports.length === 0}
-              onClick={() => dispatch({ type: "CLEAR_ALL_JOB_REPORTS" })}
+              role="tab"
+              id="secretary-tab-board"
+              aria-selected={workTab === "board"}
+              aria-controls="secretary-panel-board"
+              className={workTab === "board" ? "tab active" : "tab"}
+              onClick={() => onWorkTabChange("board")}
             >
-              Clear all
+              Job board
             </button>
           </div>
-        ) : (
+          {workTab === "reports" ? (
+            <div className="secretary-job-reports-actions">
+              <button
+                type="button"
+                className="btn linkish secretary-job-reports-log-link"
+                onClick={() => openJobLogbook()}
+              >
+                Open job log
+              </button>
+              <button
+                type="button"
+                className="btn linkish secretary-job-reports-clear-link"
+                disabled={jobReports.length === 0}
+                onClick={() => dispatch({ type: "CLEAR_ALL_JOB_REPORTS" })}
+              >
+                Clear all
+              </button>
+            </div>
+          ) : (
+            <div
+              id="secretary-job-board-toolbar-slot"
+              className="secretary-job-work-toolbar-slot"
+            />
+          )}
+        </div>
+        {workTab === "board" ? (
           <div
-            id="secretary-job-board-toolbar-slot"
-            className="secretary-job-work-toolbar-slot"
+            id="secretary-job-board-active-filters-slot"
+            className="secretary-job-work-toolbar-filters"
           />
-        )}
+        ) : null}
       </header>
 
       {workTab === "reports" ? (

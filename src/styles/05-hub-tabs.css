@@ -1,0 +1,551 @@
+/* Hub tabs: readable controls on portrait bg */
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-select {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-label {
+  color: rgba(232, 238, 245, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-hint {
+  color: rgba(200, 212, 228, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-select {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-label {
+  color: rgba(232, 238, 245, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-hero-header-hub .tab-hub-picker-hint {
+  color: rgba(200, 212, 228, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .location-view-section + .location-view-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-queue-heading h3 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.hub-synced-tab-view .tab-hero-main .tab-compact-queue .build-queue li {
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(8, 12, 18, 0.38);
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+) {
+  position: relative;
+  isolation: isolate;
+  padding: 0.38rem 0.5rem;
+  border-radius: 0.4rem;
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    128deg,
+    rgba(8, 12, 18, 0.88) 0%,
+    rgba(8, 12, 18, 0.58) 55%,
+    rgba(8, 12, 18, 0.38) 100%
+  );
+}
+
+.hub-synced-tab-view :is(
+  .overview-summary-block,
+  .office-site-summary-banner,
+  .recruitment-units-banner,
+  .research-progress-banner,
+  .secretary-roster-chief-banner,
+  .secretary-roster-panel,
+  .secretary-task-forces-beside,
+  .secretary-job-work,
+  .secretary-panel,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
+  .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
+) :where(
+  .overview-panel-title,
+  .tab-net-worth-label,
+  .tab-net-worth-value,
+  .tab-net-worth-goal,
+  .office-site-capacity-label,
+  .office-site-capacity-values,
+  .office-site-capacity-stat strong,
+  .office-site-capacity-free,
+  .office-expand-meta,
+  .recruitment-units-label,
+  .recruitment-units-count,
+  .recruitment-units-banner .office-site-staff-role,
+  .recruitment-units-banner .office-site-staff-count,
+  .recruitment-units-banner .recruitment-roster-empty,
+  .research-progress-label,
+  .research-progress-value,
+  .secretary-roster-title,
+  .secretary-roster-stat-line,
+  .secretary-roster-toolbar-title,
+  .secretary-roster-view-toggle,
+  .secretary-roster-hide-used,
+  .secretary-roster-empty,
+  .secretary-roster-grid-name,
+  .secretary-roster-row-name,
+  .secretary-roster-row-role,
+  .secretary-roster-row-bonus-label,
+  .secretary-roster-row-bonus-text,
+  .tab-queue-heading h3,
+  .tab-queue-count,
+  .secretary-panel-head h3,
+  .secretary-job-reports-log-link,
+  .secretary-job-reports-clear-link,
+  .secretary-job-reports-empty,
+  .secretary-job-report-line1,
+  .secretary-job-report-line2,
+  .secretary-tips-list li,
+  .secretary-job-work-tabs .tab,
+  .job-board-filters-head h3,
+  .job-board-filter span,
+  .job-board-results-toolbar,
+  .job-board-row-btn strong,
+  .job-board-row-btn .muted,
+  .job-board-empty,
+  .job-board-count,
+  .job-board-filters-toggle,
+  .job-board-active-filter-chip,
+  .job-board-sort-compact span
+) {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.tab-portrait-column-spacer {
+  visibility: hidden;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.hub-landing-copy-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.hub-landing-copy-body::-webkit-scrollbar {
+  display: none;
+}
+
+.hub-landing-actions {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+
+.hub-landing-dest-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  width: 100%;
+  margin-bottom: 0.35rem;
+  padding: 0.32rem 0.38rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(124, 156, 255, 0.04);
+}
+
+.hub-landing-dest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.04rem;
+  font-size: 0.58rem;
+  line-height: 1.32;
+}
+
+.hub-landing-dest-item strong {
+  font-size: 0.6rem;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.hub-landing-dest-item span {
+  color: var(--muted);
+}
+
+.hub-landing-dest-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.overview-dashboard-view .overview-dashboard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.overview-dashboard-view .overview-dashboard-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  gap: 0;
+}
+
+.secretary-roster-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.hub-synced-tab-view .hub-synced-tab-portrait-reveal {
+  flex: 0 0 auto;
+  width: 100%;
+  /* Secretary Roaster / Job / Log — portrait breathing room before tables */
+  min-height: clamp(4rem, 18dvh, 12rem);
+  pointer-events: none;
+}
+
+.secretary-roster-view.hub-synced-tab-view .tab-below-portrait {
+  gap: 0.28rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner {
+  width: 100%;
+  text-align: center;
+  margin: 0;
+  padding: 0.1rem 0.5rem 0.16rem;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-title,
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-stat-line {
+  text-align: center;
+}
+
+.secretary-roster-view.hub-synced-tab-view .secretary-roster-chief-banner .secretary-roster-stat-line {
+  margin: 0.1rem 0 0;
+  font-size: 0.58rem;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.secretary-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-reports,
+.secretary-view.hub-synced-tab-view.secretary-view--work-board {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-reports .location-view-body {
+  flex: 0 1 auto;
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .location-view-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.secretary-view.hub-synced-tab-view .tab-below-portrait {
+  flex: 0 0 auto;
+  min-height: 0;
+  gap: 0.08rem;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .tab-below-portrait {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-task-forces-beside {
+  padding: 0.16rem 0.38rem;
+}
+
+.secretary-view.hub-synced-tab-view
+  .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-column-spacer,
+.secretary-roster-view.hub-synced-tab-view
+  .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-column-spacer,
+.logbook-view.hub-synced-tab-view
+  .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-column-spacer {
+  min-height: 0;
+  height: 0;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work {
+  display: flex;
+  flex-direction: column;
+  gap: 0.04rem;
+  min-width: 0;
+  width: 100%;
+  flex: 0 0 auto;
+  padding: 0.12rem 0.38rem;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .secretary-job-work {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+  padding: 0 0.38rem;
+  isolation: auto;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .secretary-job-work::before {
+  content: none;
+  display: none;
+}
+
+.secretary-view.hub-synced-tab-view.secretary-view--work-board .secretary-job-work-toolbar--board {
+  flex-shrink: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-task-forces-beside .build-queue li {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 18, 0.28);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.28rem;
+  flex-wrap: nowrap;
+  padding: 0;
+  margin: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar--board {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.28rem;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.2rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-tabs.logbook-filters {
+  margin-bottom: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-tabs .tab {
+  padding: 0.1rem 0.32rem;
+  line-height: 1.1;
+  min-height: 0;
+  font-size: 0.6rem;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar--board .secretary-job-work-toolbar-row {
+  align-items: center;
+  min-height: 0;
+}
+
+.secretary-view.hub-synced-tab-view
+  .secretary-job-work-toolbar-slot
+  .secretary-job-board-tab-toolbar
+  .job-board-filters-toggle.btn {
+  min-height: 0;
+  height: auto;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-actions,
+.secretary-view.hub-synced-tab-view .secretary-job-work-toolbar-slot {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-reports-empty {
+  margin: 0;
+  padding: 0.12rem 0;
+  font-size: 0.64rem;
+  line-height: 1.3;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.12rem 0.3rem;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.35rem;
+  background: rgba(8, 12, 18, 0.32);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-job_cancel {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-body {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line1,
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-line2::before {
+  content: "·";
+  margin-right: 0.25rem;
+  color: var(--muted);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-dismiss {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.85rem;
+}

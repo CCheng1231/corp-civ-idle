@@ -1,0 +1,648 @@
+/* Home / Hire / Research: tall vertical portrait + parallax drift */
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row {
+  align-items: stretch;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-portrait-column-sticky {
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-portrait-parallax-track {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row .tab-portrait-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene.tab-portrait-stretch .tab-sticky-hero-row .secretary-portrait-frame {
+  flex: 1 1 auto;
+  aspect-ratio: unset;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 14rem;
+  max-height: none;
+}
+
+/* Compact tab heroes (Overview, Build, Recruit, Research, Logbook) */
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row {
+  grid-template-columns: minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
+}
+
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-frame-pannable {
+  flex: none;
+  width: 100%;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
+  aspect-ratio: unset;
+}
+
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-wrap,
+.tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  > .tab-sticky-hero-row
+  .tab-portrait-stack {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.tab-portrait-scene.tab-portrait-stretch.secretary-portrait-large
+  .secretary-portrait-frame {
+  min-height: 24rem;
+  max-height: min(40rem, 68vh);
+}
+
+/* Office sites: capped frame (low-res asset) */
+.tab-portrait-scene.tab-portrait-fixed .tab-sticky-hero-row {
+  align-items: flex-start;
+}
+
+.tab-portrait-scene.tab-portrait-fixed .tab-sticky-hero-row .tab-portrait-wrap {
+  flex: none;
+}
+
+.tab-portrait-scene.tab-portrait-fixed .secretary-portrait-frame {
+  flex: none;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  max-width: 18rem;
+  margin: 0 auto;
+  min-height: 14rem;
+  max-height: min(32rem, 55vh);
+}
+
+.tab-portrait-scene.tab-portrait-fixed.secretary-portrait-large .secretary-portrait-frame {
+  max-width: 22rem;
+  min-height: 18rem;
+  max-height: min(38rem, 62vh);
+}
+
+/* Home / Office sites: fixed tall portrait — HQ/Branch won't resize it */
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed .secretary-portrait-frame {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  flex: none;
+  aspect-ratio: 3 / 4;
+  min-height: 26rem;
+  max-height: min(48rem, 76vh);
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed.secretary-portrait-large
+  .secretary-portrait-frame {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 40rem;
+  max-height: min(68rem, 90vh);
+}
+
+/* Large portrait: taller frame, same column width (no grid / max-width shrink) */
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large:not(.tab-portrait-locked)
+  .secretary-hero-row {
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large:not(.tab-portrait-locked)
+  .secretary-portrait-column {
+  min-width: 0;
+  align-items: stretch;
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large .tab-portrait-quote,
+.tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large
+  .secretary-portrait-resize {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Portrait lock pages (Home, Office sites): frozen header + image, scroll body */
+.main-panel:has(.portrait-lock-page) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0.65rem;
+  min-height: 0;
+}
+
+.portrait-lock-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  --portrait-lock-viewport: calc(
+    100vh - 5.5rem - var(--mobile-bottom-nav-space, 0px) - 1.25rem
+  );
+  --portrait-lock-viewport: calc(
+    100dvh - 5.5rem - var(--mobile-bottom-nav-space, 0px) - 1.25rem
+  );
+}
+
+.main-panel:has(.logbook-view.portrait-lock-page) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.main-view-panel.location-view-panel:has(.portrait-lock-tab) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.main-view-panel.location-view-panel:has(.portrait-lock-tab) .location-view-body {
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+
+.portrait-lock-page .location-view-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.portrait-lock-layout-body {
+  gap: 0;
+  margin: 0;
+}
+
+.portrait-lock-tab.tab-portrait-scene {
+  flex: 1;
+  min-height: 0;
+  --portrait-lock-viewport: calc(
+    100vh - 5.5rem - var(--mobile-bottom-nav-space, 0px) - 1.25rem
+  );
+  --portrait-lock-viewport: calc(
+    100dvh - 5.5rem - var(--mobile-bottom-nav-space, 0px) - 1.25rem
+  );
+}
+
+.portrait-lock-split-right {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.portrait-lock-frozen-header {
+  flex-shrink: 0;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.65rem;
+}
+
+.portrait-lock-frozen-header .main-view-header {
+  margin-bottom: 0;
+}
+
+.portrait-lock-scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-right: 0.15rem;
+  overscroll-behavior: contain;
+}
+
+.logbook-view.portrait-lock-page .portrait-lock-scroll-body {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-right: 0;
+}
+
+/* Portrait lock layout — all viewport widths (phone, narrow preview, desktop) */
+.tab-portrait-scene.tab-portrait-locked {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene.tab-portrait-locked .tab-sticky-hero-row {
+  flex: 1;
+  min-height: 0;
+  height: var(--portrait-lock-viewport);
+  max-height: var(--portrait-lock-viewport);
+  align-items: stretch;
+}
+
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-column-sticky {
+  position: relative;
+  top: auto;
+  align-self: stretch;
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene .tab-portrait-stack,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-stack,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-stack {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-portrait-scene:not(.tab-portrait-fit) .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-scene:not(.tab-portrait-fit) .tab-portrait-stack .tab-portrait-frame-pannable,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-stack .secretary-portrait-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  aspect-ratio: unset;
+  flex-shrink: 1;
+}
+
+/* Shared tab image size — Overview, Build, Recruit, Research, Logbook */
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-fit.tab-portrait-scene .tab-portrait-stack .tab-portrait-frame-pannable {
+  flex: none;
+  width: 100%;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
+  aspect-ratio: unset;
+}
+
+.tab-portrait-scene .tab-portrait-quote-foot,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-quote-foot,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-quote-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+  padding: 0 0 0.55rem;
+}
+
+.tab-portrait-scene .tab-portrait-quote-foot::before,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-quote-foot::before,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-quote-foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5.5rem;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 20, 25, 0) 0%,
+    rgba(15, 20, 25, 0.55) 42%,
+    rgba(15, 20, 25, 0.9) 100%
+  );
+  pointer-events: none;
+}
+
+.tab-portrait-scene .tab-portrait-quote-foot .tab-portrait-quote,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-quote-foot .tab-portrait-quote,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-quote-foot .tab-portrait-quote {
+  position: relative;
+  pointer-events: auto;
+  margin: 0;
+  padding: 0.55rem 0.65rem 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tab-portrait-scene .tab-portrait-quote-foot .secretary-quote p,
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-quote-foot .secretary-quote p,
+.tab-portrait-scene.tab-portrait-tall .tab-portrait-quote-foot .secretary-quote p {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.tab-portrait-scene.tab-portrait-locked .tab-portrait-notes {
+  flex-shrink: 0;
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+  .secretary-portrait-frame {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  max-height: none;
+  height: auto;
+  aspect-ratio: unset;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+  .tab-portrait-stack .secretary-portrait-frame,
+.tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+  .tab-portrait-stack .tab-portrait-frame-pannable {
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 auto;
+}
+
+.portrait-lock-tab.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+  .secretary-portrait-frame {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  max-height: none;
+}
+
+.office-scene.portrait-lock-tab .secretary-hero-row {
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+}
+
+.office-scene.portrait-lock-tab .secretary-portrait-column {
+  min-width: 0;
+}
+
+/* Large portrait: Hire vertical stretch, same column width as locked mode */
+.office-scene.tab-portrait-hire-stretch .secretary-hero-row,
+.office-scene.office-portrait-hire-stretch .secretary-hero-row {
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+}
+
+.office-scene.tab-portrait-hire-stretch .secretary-portrait-column,
+.office-scene.office-portrait-hire-stretch .secretary-portrait-column {
+  min-width: 0;
+  align-self: stretch;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch .tab-sticky-hero-row,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch .tab-sticky-hero-row {
+  align-items: stretch;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch .tab-portrait-column-sticky,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch .tab-portrait-column-sticky {
+  align-self: stretch;
+  min-height: 0;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch .tab-portrait-parallax-track,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch .tab-portrait-parallax-track {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch .tab-sticky-hero-row .tab-portrait-wrap,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch .tab-sticky-hero-row .tab-portrait-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch .secretary-portrait-frame,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch .secretary-portrait-frame {
+  flex: 1 1 auto;
+  aspect-ratio: unset;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 14rem;
+  max-height: none;
+}
+
+.office-scene.tab-portrait-hire-stretch.tab-portrait-stretch.secretary-portrait-large
+  .secretary-portrait-frame,
+.office-scene.office-portrait-hire-stretch.tab-portrait-stretch.secretary-portrait-large
+  .secretary-portrait-frame {
+  min-height: 24rem;
+  max-height: none;
+}
+
+.tab-portrait-scene.tab-portrait-tall.tab-portrait-hire-stretch .secretary-portrait-frame {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
+.tab-portrait-scene.tab-portrait-locked .tab-hero-main-scroll {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+}
+
+.portrait-lock-tab.tab-portrait-locked .tab-portrait-column-sticky {
+  padding-top: 0;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.portrait-lock-tab.tab-portrait-locked .tab-portrait-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+@media (max-width: 960px) {
+  .tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large:not(.tab-portrait-locked)
+    .secretary-hero-row {
+    grid-template-columns: minmax(7.25rem, 32%) minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .portrait-lock-tab.tab-portrait-vertical-layout.tab-portrait-locked.tab-portrait-fixed
+    .secretary-portrait-frame {
+    flex: 1 1 auto;
+    min-height: 9.5rem;
+    max-height: none;
+  }
+
+  .tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed:not(.tab-portrait-locked)
+    .secretary-portrait-frame {
+    min-height: 9.5rem;
+    max-height: min(34vh, 16rem);
+  }
+
+  .tab-portrait-scene.tab-portrait-vertical-layout.tab-portrait-fixed.secretary-portrait-large:not(.tab-portrait-locked)
+    .secretary-portrait-frame {
+    max-width: 100%;
+    min-height: 10.5rem;
+    max-height: min(38vh, 17.5rem);
+  }
+
+  .tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large
+    .tab-portrait-quote,
+  .tab-portrait-scene.tab-portrait-vertical-layout.secretary-portrait-large
+    .secretary-portrait-resize {
+    max-width: 100%;
+  }
+
+  .portrait-lock-frozen-header .location-view-header-row {
+    gap: 0.5rem;
+  }
+
+  .portrait-lock-frozen-header .location-office-picker {
+    width: 100%;
+    max-width: none;
+  }
+
+  .portrait-lock-frozen-header .location-office-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .portrait-lock-frozen-header .location-office-hint {
+    font-size: 0.78rem;
+  }
+}
+
+.tab-portrait-scene.tab-portrait-tall:not(.secretary-tab-scene) .secretary-portrait-frame {
+  min-height: 20rem;
+  max-height: min(44rem, 72vh);
+  max-width: 20rem;
+}
+
+.tab-portrait-scene.tab-portrait-tall:not(.secretary-tab-scene).secretary-portrait-large
+  .secretary-portrait-frame {
+  min-height: 28rem;
+  max-height: min(52rem, 78vh);
+  max-width: 24rem;
+}
+
+.secretary-tab-scene.tab-portrait-hire-stretch .secretary-hero-row,
+.secretary-tab-scene.portrait-lock-tab .secretary-hero-row {
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+}
+
+.secretary-tab-scene.tab-portrait-hire-stretch .secretary-portrait-column,
+.secretary-tab-scene.portrait-lock-tab .secretary-portrait-column {
+  min-width: 0;
+}
+
+.secretary-tab-scene.tab-portrait-tall .secretary-portrait-frame {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
+.secretary-tab-scene.tab-portrait-tall.secretary-portrait-large .secretary-portrait-frame {
+  max-width: none;
+  max-height: none;
+}
+
+.secretary-tab-scene.tab-portrait-hire-stretch.tab-portrait-stretch .secretary-portrait-frame {
+  flex: 1 1 auto;
+  aspect-ratio: unset;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 14rem;
+  max-height: none;
+}
+
+.tab-portrait-scene.tab-portrait-parallax .tab-portrait-column-sticky {
+  overflow: visible;
+}
+
+@media (min-width: 961px) {
+  .tab-portrait-scene.tab-portrait-parallax .tab-portrait-column-sticky {
+    overflow: visible;
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-portrait-parallax-track,
+  .tab-parallax-main {
+    transform: none !important;
+    will-change: auto;
+  }
+}
+
+.tab-sticky-hero-row {
+  align-items: flex-start;
+}
+
+.tab-portrait-column-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+@media (min-width: 961px) {
+  .tab-portrait-column-sticky {
+    position: sticky;
+    top: 0.5rem;
+    align-self: start;
+    max-height: calc(
+      100vh - 0.5rem - var(--mobile-bottom-nav-space, 0px) - 5.5rem
+    );
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
+
+.tab-portrait-quote {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tab-portrait-notes {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.tab-portrait-notes .logbook-notes-editor {
+  min-height: 6.5rem;
+  max-height: 10rem;
+  width: 100%;
+  box-sizing: border-box;
+}

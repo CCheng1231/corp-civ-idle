@@ -22,12 +22,13 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
-**Recent state (Sep 14, 2026 — world map session, paused):**
+**Recent state (Sep 24, 2026 — Z1 world plate):**
 
 - **Z1 in-game base:** `world-map-z1-hybrid-soft-pass1-v5.png` + `src/assets/z1-layout-canonical.json`. Dev: drag bake, hex edit (non-locked sites), per-hex nudge, export JSON (`WorldMapDevToolbar`).
+- **Z1 world plate (margin underlay):** `world-map-z1-hybrid-soft-world-plate.png` under v5 in `WorldMapBaseArt` (`worldMapZ1WorldPlate.ts`, pad **2600** viewBox/side). Regen: `npx tsx scripts/composite-z1-world-plate.mjs` (v5 center + rim feather; `--tier=ship` for 1:1). Hex/hub/viewBox unchanged.
 - **Hub lock:** Gov + six majors — dev **cannot move** them (`src/game/mapLayoutLock.ts`). Saved `mapDevLandmarkCoords` / hex nudges for hubs **still apply** (freeze-in-place; not reset to canon on load). Canon defaults in `z1-layout-canonical.json`.
-- **Reverted (do not re-apply without Chris):** Rim terrain hexes, viewBox `MAP_VISUAL_HEX_RADIUS`, undercoat layer — moved layout; user asked full revert.
-- **Z1 world extend (next):** Fill grey at **20% zoom + pan slack** with **visual-only** larger plate; v5 cornerstone unchanged. Spec: [`docs/z1-world-extend-gen-spec.md`](docs/z1-world-extend-gen-spec.md). Margin script: `npx tsx scripts/compute-z1-world-extend-margin.mjs` → **~2600 viewBox pad/side**, master **~8240×7890**. **Draft image** (not in repo): Cursor assets `world-map-z1-hybrid-soft-world-extend-draft.png` — composite v5 center + feather; then engine underlay in `WorldMapBaseArt` (not started).
+- **Reverted (do not re-apply without Chris):** Rim terrain hexes, viewBox `MAP_VISUAL_HEX_RADIUS`, old undercoat layer — moved layout; user asked full revert.
+- **Spec / margins:** [`docs/z1-world-extend-gen-spec.md`](docs/z1-world-extend-gen-spec.md); `npx tsx scripts/compute-z1-world-extend-margin.mjs`.
 - **Online / map (older):** Chris HQ `{-2,-4}`; HQ focus via `mapViewport.ts`; online saves / browser lease — see bullets in prior sessions.
 
 Before large UI reads, check `git status` / `git diff` — this repo often has in-progress work on `main`.

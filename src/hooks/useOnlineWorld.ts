@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch } from "react";
-import type { GameAction, GameState } from "../game/types";
+import type { GameAction, GameState, JobPosting } from "../game/types";
 import type { OnlineSession } from "../multiplayer/types";
 import { activePlayerId } from "../multiplayer/playerHq";
 import { isFirebaseConfigured } from "../multiplayer/firebase";
@@ -31,7 +31,10 @@ import {
 } from "../game/save";
 import { clearOnlineLocalCache } from "../multiplayer/companySave";
 import { getDb } from "../multiplayer/firebase";
-import { ensureOnlineAccess } from "../multiplayer/onlineAccess";
+import {
+  ensureOnlineAccess,
+  OnlineAccessError,
+} from "../multiplayer/onlineAccess";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { WorldMeta } from "../multiplayer/types";
 
@@ -52,7 +55,100 @@ const ONLINE_SYNC_INTERVAL_MS = 60_000;
 
 const PRESENCE_INTERVAL_MS = 15000;
 const IGNORE_OWN_REMOTE_MS = 3000;
+/** Avoid racing bootstrap seed; then sweep in case the first snapshot arrived early. */
 const JOB_MAINTENANCE_DELAY_MS = 4000;
+/** Re-check expired/completed postings (Firestore has no server-side expiry). */
+const JOB_MAINTENANCE_INTERVAL_MS = 30_000;
+const ONLINE_BOOTSTRAP_TIMEOUT_MS = 45_000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error(`${label} timed out after ${ms / 1000}s`)),
+        ms,
+      );
+    }),
+  ]);
+}
+
+interface SharedJobMaintenanceRefs {
+  handledCompleted: { current: Set<string> };
+  handledClosed: { current: Set<string> };
+}
+
+async function maintainSharedJobPostings(
+  session: OnlineSession,
+  postings: JobPosting[],
+  dispatch: Dispatch<GameAction>,
+  refs: SharedJobMaintenanceRefs,
+): Promise<void> {
+  const now = Date.now();
+
+  for (const posting of postings) {
+    if (
+      posting.status === "completed" &&
+      !refs.handledCompleted.current.has(posting.id)
+    ) {
+      refs.handledCompleted.current.add(posting.id);
+      dispatch({
+        type: "ONLINE_HANDLE_COMPLETED_POSTING",
+        postingId: posting.id,
+        now,
+      });
+      const repKey = `rep-${posting.id}`;
+      if (refs.handledClosed.current.has(repKey)) continue;
+      try {
+        await replaceClosedPosting(
+          session,
+          posting.id,
+          posting.definitionId,
+          now,
+        );
+        refs.handledClosed.current.add(repKey);
+      } catch (err) {
+        console.error("Replace completed posting failed", err);
+      }
+      continue;
+    }
+
+    const timedOut =
+      posting.status === "open" && posting.expiresAt <= now;
+    const stuckExpired = posting.status === "expired";
+    if (!timedOut && !stuckExpired) continue;
+
+    const repKey = `rep-${posting.id}`;
+    if (refs.handledClosed.current.has(repKey)) continue;
+
+    const busyKey = `busy-${posting.id}`;
+    if (refs.handledClosed.current.has(busyKey)) continue;
+    refs.handledClosed.current.add(busyKey);
+
+    const expKey = `exp-${posting.id}`;
+    try {
+      if (timedOut && !refs.handledClosed.current.has(expKey)) {
+        await expireSharedPosting(session, posting.id);
+        refs.handledClosed.current.add(expKey);
+      }
+      await replaceClosedPosting(
+        session,
+        posting.id,
+        posting.definitionId,
+        Date.now(),
+      );
+      refs.handledClosed.current.add(repKey);
+    } catch (err) {
+      console.error("Expire/replace shared posting failed", err);
+    } finally {
+      refs.handledClosed.current.delete(busyKey);
+    }
+  }
+}
 
 function remoteUpdatedAt(remote: Record<string, unknown>): number {
   return Number(remote.updatedAt ?? 0);
@@ -102,21 +198,56 @@ export function useOnlineWorld({
   const bootstrapCompleteRef = useRef(false);
   const bootstrapSaveReadyRef = useRef(false);
   const jobMaintenanceReadyRef = useRef(false);
+  const latestSharedPostingsRef = useRef<JobPosting[]>([]);
   const lastFlushedWorldRevRef = useRef(0);
   const privateFlushInFlightRef = useRef(false);
   const flushOnlineSyncRef = useRef<() => void>(() => {});
+  const bootstrapGenerationRef = useRef(0);
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
     if (!enabled || !isFirebaseConfigured()) return;
 
     let cancelled = false;
+    const bootstrapGeneration = ++bootstrapGenerationRef.current;
     bootstrapCompleteRef.current = false;
     bootstrapSaveReadyRef.current = false;
     jobMaintenanceReadyRef.current = false;
-    const jobMaintenanceTimer = window.setTimeout(() => {
-      jobMaintenanceReadyRef.current = true;
-    }, JOB_MAINTENANCE_DELAY_MS);
+    latestSharedPostingsRef.current = [];
+    let jobMaintenanceTimer: number | undefined;
+    const maintenanceRefs = {
+      handledCompleted: handledCompletedRef,
+      handledClosed: handledClosedRef,
+    };
+    const isStaleBootstrap = () =>
+      cancelled || bootstrapGeneration !== bootstrapGenerationRef.current;
+
+    const runJobMaintenance = () => {
+      if (
+        !bootstrapCompleteRef.current ||
+        !jobMaintenanceReadyRef.current ||
+        isStaleBootstrap()
+      ) {
+        return;
+      }
+      void maintainSharedJobPostings(
+        session,
+        latestSharedPostingsRef.current,
+        dispatch,
+        maintenanceRefs,
+      );
+    };
+
+    const armJobMaintenanceTimer = () => {
+      if (jobMaintenanceTimer !== undefined) {
+        window.clearTimeout(jobMaintenanceTimer);
+      }
+      jobMaintenanceTimer = window.setTimeout(() => {
+        if (isStaleBootstrap()) return;
+        jobMaintenanceReadyRef.current = true;
+        runJobMaintenance();
+      }, JOB_MAINTENANCE_DELAY_MS);
+    };
 
     dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "connecting" });
 
@@ -124,93 +255,113 @@ export function useOnlineWorld({
 
     async function bootstrap() {
       try {
-        await ensureOnlineAccess(session);
-        clearOnlineLocalCache(session.accountId, session.worldId);
-        await ensureWorldBootstrapped(session);
-        const meta = await loadWorldMeta(session);
-        const resetAt = playerResetTimestamp(meta, session.accountId);
-        const expectedSessionId = playerSaveSessionId(meta, session.accountId);
-        lastAckResetAtRef.current = resetAt;
-        lastExpectedSessionIdRef.current = expectedSessionId;
-
-        await seedSharedJobPostingsIfNeeded(session);
-
-        let remote = await loadPrivateState(session);
-        if (cancelled) return;
-
-        if (remote) {
-          remote = await patchRemoteSaveAuthFields(
-            session,
-            remote,
-            resetAt,
-            expectedSessionId,
-          );
-        }
-
-        let loaded: GameState;
-        if (
-          !remote ||
-          isPrivateStateStale(remote, resetAt, expectedSessionId)
-        ) {
-          loaded = await repairPrivateStateIfStale(
-            session,
-            resetAt,
-            expectedSessionId,
-          );
-          if (cancelled) return;
-          lastAppliedRemoteAtRef.current = resetAt > 0 ? resetAt : 0;
-        } else {
-          try {
-            lastAppliedRemoteAtRef.current = remoteUpdatedAt(remote);
-            loaded = loadOnlineStateFromRemote(
-              session,
-              remote,
-              resetAt,
-              expectedSessionId,
-              onlineNavigationFallback(stateRef.current),
-            );
-          } catch (err) {
-            console.warn(
-              "Online save deserialize failed — repairing from Firestore",
-              err,
-            );
+        await withTimeout(
+          (async () => {
+            await ensureOnlineAccess(session);
             clearOnlineLocalCache(session.accountId, session.worldId);
-            loaded = await repairPrivateStateIfStale(
-              session,
-              resetAt,
-              expectedSessionId,
+            await ensureWorldBootstrapped(session);
+            const meta = await loadWorldMeta(session);
+            const resetAt = playerResetTimestamp(meta, session.accountId);
+            const expectedSessionId = playerSaveSessionId(
+              meta,
+              session.accountId,
             );
-            lastAppliedRemoteAtRef.current = resetAt > 0 ? resetAt : 0;
-          }
-        }
+            lastAckResetAtRef.current = resetAt;
+            lastExpectedSessionIdRef.current = expectedSessionId;
 
-        const authorized = authorizeOnlineSaveState(
-          loaded,
-          resetAt,
-          expectedSessionId ?? loaded.onlineSaveSessionId,
+            await seedSharedJobPostingsIfNeeded(session);
+
+            let remote = await loadPrivateState(session);
+            if (isStaleBootstrap()) return;
+
+            if (remote) {
+              remote = await patchRemoteSaveAuthFields(
+                session,
+                remote,
+                resetAt,
+                expectedSessionId,
+              );
+            }
+
+            let loaded: GameState;
+            if (
+              !remote ||
+              isPrivateStateStale(remote, resetAt, expectedSessionId)
+            ) {
+              loaded = await repairPrivateStateIfStale(
+                session,
+                resetAt,
+                expectedSessionId,
+              );
+              if (isStaleBootstrap()) return;
+              lastAppliedRemoteAtRef.current = resetAt > 0 ? resetAt : 0;
+            } else {
+              try {
+                lastAppliedRemoteAtRef.current = remoteUpdatedAt(remote);
+                loaded = loadOnlineStateFromRemote(
+                  session,
+                  remote,
+                  resetAt,
+                  expectedSessionId,
+                  onlineNavigationFallback(stateRef.current),
+                );
+              } catch (err) {
+                console.warn(
+                  "Online save deserialize failed — repairing from Firestore",
+                  err,
+                );
+                clearOnlineLocalCache(session.accountId, session.worldId);
+                loaded = await repairPrivateStateIfStale(
+                  session,
+                  resetAt,
+                  expectedSessionId,
+                );
+                lastAppliedRemoteAtRef.current = resetAt > 0 ? resetAt : 0;
+              }
+            }
+
+            if (isStaleBootstrap()) return;
+
+            const authorized = authorizeOnlineSaveState(
+              loaded,
+              resetAt,
+              expectedSessionId ?? loaded.onlineSaveSessionId,
+            );
+            lastExpectedSessionIdRef.current = authorized.onlineSaveSessionId;
+            applyLoadedOnlineState(authorized, stateRef, dispatch);
+
+            if (
+              remote &&
+              !isPrivateStateStale(remote, resetAt, expectedSessionId)
+            ) {
+              const syncedAt = Date.now();
+              lastLocalSaveAtRef.current = syncedAt;
+              lastAppliedRemoteAtRef.current = syncedAt;
+              ignoreRemoteUntilRef.current = syncedAt + IGNORE_OWN_REMOTE_MS;
+              try {
+                const saved = await savePrivateState(
+                  session,
+                  authorized,
+                  syncedAt,
+                );
+                stateRef.current = authorizeOnlineSaveState(
+                  {
+                    ...stateRef.current,
+                    onlineResetGeneration: saved.generation,
+                  },
+                  resetAt,
+                  expectedSessionId ?? authorized.onlineSaveSessionId,
+                );
+              } catch {
+                /* periodic flush will retry */
+              }
+            }
+          })(),
+          ONLINE_BOOTSTRAP_TIMEOUT_MS,
+          "Online bootstrap",
         );
-        lastExpectedSessionIdRef.current = authorized.onlineSaveSessionId;
-        applyLoadedOnlineState(authorized, stateRef, dispatch);
 
-        if (remote && !isPrivateStateStale(remote, resetAt, expectedSessionId)) {
-          const syncedAt = Date.now();
-          lastLocalSaveAtRef.current = syncedAt;
-          lastAppliedRemoteAtRef.current = syncedAt;
-          ignoreRemoteUntilRef.current = syncedAt + IGNORE_OWN_REMOTE_MS;
-          try {
-            const saved = await savePrivateState(session, authorized, syncedAt);
-            stateRef.current = authorizeOnlineSaveState(
-              {
-                ...stateRef.current,
-                onlineResetGeneration: saved.generation,
-              },
-              resetAt,
-              expectedSessionId ?? authorized.onlineSaveSessionId,
-            );
-          } catch {
-            /* periodic flush will retry */
-          }
-        }
+        if (isStaleBootstrap()) return;
 
         bootstrapCompleteRef.current = true;
         bootstrapSaveReadyRef.current = true;
@@ -218,6 +369,7 @@ export function useOnlineWorld({
           stateRef.current.worldPersistRevision ?? 0;
         setBootstrapped(true);
         dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "connected" });
+        armJobMaintenanceTimer();
         void repairStaleCompanyPresences(session.worldId).catch((err) =>
           console.error("Repair stale company presences failed", err),
         );
@@ -225,7 +377,12 @@ export function useOnlineWorld({
           console.error("Initial company presence upsert failed", err),
         );
       } catch (err) {
-        console.error("Online bootstrap failed", err);
+        if (isStaleBootstrap()) return;
+        if (err instanceof OnlineAccessError) {
+          console.error("Online access check failed:", err.message);
+        } else {
+          console.error("Online bootstrap failed", err);
+        }
         dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "error" });
       }
     }
@@ -235,57 +392,9 @@ export function useOnlineWorld({
     const unsubJobs = subscribeJobPostings(
       session,
       (postings) => {
+        latestSharedPostingsRef.current = postings;
         dispatch({ type: "SYNC_SHARED_JOBS", jobPostings: postings });
-
-        if (!jobMaintenanceReadyRef.current) return;
-
-        const now = Date.now();
-        for (const posting of postings) {
-          if (
-            posting.status === "completed" &&
-            !handledCompletedRef.current.has(posting.id)
-          ) {
-            handledCompletedRef.current.add(posting.id);
-            dispatch({
-              type: "ONLINE_HANDLE_COMPLETED_POSTING",
-              postingId: posting.id,
-              now,
-            });
-            if (!handledClosedRef.current.has(`rep-${posting.id}`)) {
-              handledClosedRef.current.add(`rep-${posting.id}`);
-              void replaceClosedPosting(
-                session,
-                posting.id,
-                posting.definitionId,
-                now,
-              ).catch((e) => console.error("Replace completed posting failed", e));
-            }
-          }
-
-          if (
-            posting.status === "open" &&
-            posting.expiresAt <= now &&
-            !handledClosedRef.current.has(`exp-${posting.id}`)
-          ) {
-            handledClosedRef.current.add(`exp-${posting.id}`);
-            void (async () => {
-              try {
-                await expireSharedPosting(session, posting.id);
-                if (!handledClosedRef.current.has(`rep-${posting.id}`)) {
-                  handledClosedRef.current.add(`rep-${posting.id}`);
-                  await replaceClosedPosting(
-                    session,
-                    posting.id,
-                    posting.definitionId,
-                    Date.now(),
-                  );
-                }
-              } catch (e) {
-                console.error("Expire shared posting failed", e);
-              }
-            })();
-          }
-        }
+        runJobMaintenance();
       },
       (err) => {
         console.error("Job listener error", err);
@@ -383,7 +492,10 @@ export function useOnlineWorld({
       cancelled = true;
       bootstrapCompleteRef.current = false;
       bootstrapSaveReadyRef.current = false;
-      window.clearTimeout(jobMaintenanceTimer);
+      jobMaintenanceReadyRef.current = false;
+      if (jobMaintenanceTimer !== undefined) {
+        window.clearTimeout(jobMaintenanceTimer);
+      }
       setBootstrapped(false);
       unsubJobs();
       unsubCompanies();
@@ -396,6 +508,23 @@ export function useOnlineWorld({
   useEffect(() => {
     if (!enabled || !bootstrapped) return;
 
+    const sweepJobs = () => {
+      if (!jobMaintenanceReadyRef.current) return;
+      latestSharedPostingsRef.current = stateRef.current.jobPostings;
+      void maintainSharedJobPostings(
+        session,
+        latestSharedPostingsRef.current,
+        dispatch,
+        {
+          handledCompleted: handledCompletedRef,
+          handledClosed: handledClosedRef,
+        },
+      );
+    };
+
+    sweepJobs();
+    const jobSweepId = window.setInterval(sweepJobs, JOB_MAINTENANCE_INTERVAL_MS);
+
     const pushPresence = () => {
       void upsertCompanyPresence(session, stateRef.current).catch((err) =>
         console.error("Company presence upsert failed", err),
@@ -404,8 +533,11 @@ export function useOnlineWorld({
 
     pushPresence();
     const id = window.setInterval(pushPresence, PRESENCE_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [session, enabled, bootstrapped]);
+    return () => {
+      window.clearInterval(id);
+      window.clearInterval(jobSweepId);
+    };
+  }, [session, enabled, bootstrapped, dispatch]);
 
   useEffect(() => {
     if (!enabled || !bootstrapped) return;

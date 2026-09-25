@@ -13,8 +13,10 @@ import {
   resolveZ1RasterAlignment,
   z1RasterGroupTransform,
 } from "../game/worldMapZ1Align";
+import { z1WorldPlateBounds } from "../game/worldMapZ1WorldPlate";
 
 import z1BakedArt from "../assets/reference/zoom-levels/world-map-z1-hybrid-soft-pass1-v5.png";
+import z1WorldPlateArt from "../assets/reference/zoom-levels/world-map-z1-hybrid-soft-world-plate.png";
 import z1AlignGuideArt from "../assets/reference/zoom-levels/world-map-z1-hybrid-soft-pass2-guide.png";
 import z2Art from "../assets/reference/zoom-levels/world-map-z2-hybrid-soft.png";
 import z3Art from "../assets/reference/zoom-levels/world-map-z3-hybrid-soft.png";
@@ -64,6 +66,28 @@ function Z1ClipDefs({ bounds }: { bounds: MapBounds }) {
         />
       </clipPath>
     </defs>
+  );
+}
+
+/** Extended margin art (1:1 viewBox); sits under clipped v5 bake. */
+function Z1WorldPlateUnderlay({
+  cornerstoneBounds,
+  href,
+}: {
+  cornerstoneBounds: MapBounds;
+  href: string;
+}) {
+  const plateBounds = z1WorldPlateBounds(cornerstoneBounds);
+  return (
+    <image
+      className="map-v01-raster-base map-z1-world-plate-underlay"
+      href={href}
+      x={plateBounds.minX}
+      y={plateBounds.minY}
+      width={plateBounds.width}
+      height={plateBounds.height}
+      preserveAspectRatio="none"
+    />
   );
 }
 
@@ -248,6 +272,9 @@ function WorldMapZ1Player({
 }) {
   return (
     <g className="map-base-art map-v01-z1-baked" pointerEvents="none" aria-hidden>
+      {visibility.base ? (
+        <Z1WorldPlateUnderlay cornerstoneBounds={bounds} href={z1WorldPlateArt} />
+      ) : null}
       <Z1ClipDefs bounds={bounds} />
       {visibility.base && !z1OmitBakedLayer ? (
         <Z1BakedRaster

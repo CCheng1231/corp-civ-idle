@@ -18,8 +18,10 @@ import {
 import {
   BUSINESS_TYPE_LABELS,
   JOB_SIZE_LABELS,
+  jobDefinitionById,
   jobDefinitionForPosting,
 } from "../game/jobs";
+import { pruneAssignmentForJob } from "../game/jobUnitTier";
 import { REGION_LABELS, jobSiteLabelForPosting, jobSiteRegionForPosting, towerById } from "../game/mapWorld";
 import { formatTimerRemainingCompact } from "../game/timers";
 import type { GameAction, GameState } from "../game/types";
@@ -30,6 +32,8 @@ const JOB_BOARD_DRAWER_SIZE_KEY = "corp-civ-idle-job-board-drawer-size";
 const JOB_BOARD_SORT_KEY = "corp-civ-idle-job-board-sort";
 export const SECRETARY_JOB_BOARD_TOOLBAR_SLOT_ID =
   "secretary-job-board-toolbar-slot";
+export const SECRETARY_JOB_BOARD_ACTIVE_FILTERS_SLOT_ID =
+  "secretary-job-board-active-filters-slot";
 
 type JobBoardDrawerSize = "compact" | "large";
 
@@ -221,12 +225,18 @@ export function JobBoard({
   }
 
   function assignmentFor(postingId: string, definitionId: string) {
-    return emptyAssignmentForJob(
+    const assignment = emptyAssignmentForJob(
       definitionId,
       officeRoster,
       crewByPosting,
       postingId,
     );
+    try {
+      const def = jobDefinitionById(definitionId);
+      return pruneAssignmentForJob(assignment, def);
+    } catch {
+      return assignment;
+    }
   }
 
   function clearFilter(key: keyof JobBoardFilters) {
@@ -287,40 +297,47 @@ export function JobBoard({
     </label>
   );
 
-  const filterControls = (
-    <>
-      <button
-        type="button"
-        className={`btn linkish job-board-filters-toggle${filtersExpanded ? " job-board-filters-toggle-open" : ""}`}
-        aria-expanded={filtersExpanded}
-        aria-controls="job-board-filters-body"
-        onClick={() => setFiltersExpanded((open) => !open)}
-      >
-        {filtersExpanded ? "Hide filters" : "Filters"}
-        {activeFilterCount > 0 && !filtersExpanded ? (
-          <span className="job-board-filter-badge">{activeFilterCount}</span>
-        ) : null}
-      </button>
-      {!filtersExpanded && activeFilterSummaries.length > 0 ? (
-        <ul className="job-board-active-filters" aria-label="Active filters">
-          {activeFilterSummaries.map(({ key, label }) => (
-            <li key={key}>
-              <button
-                type="button"
-                className="job-board-active-filter-chip"
-                title={`Clear filter: ${label}`}
-                onClick={() => clearFilter(key)}
-              >
-                <span>{label}</span>
-                <span className="job-board-active-filter-clear" aria-hidden="true">
-                  ×
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+  const filtersToggleButton = (
+    <button
+      type="button"
+      className={`btn linkish job-board-filters-toggle${filtersExpanded ? " job-board-filters-toggle-open" : ""}`}
+      aria-expanded={filtersExpanded}
+      aria-controls="job-board-filters-body"
+      onClick={() => setFiltersExpanded((open) => !open)}
+    >
+      {filtersExpanded ? "Hide filters" : "Filters"}
+      {activeFilterCount > 0 && !filtersExpanded ? (
+        <span className="job-board-filter-badge">{activeFilterCount}</span>
       ) : null}
-    </>
+    </button>
+  );
+
+  const activeFilterChips =
+    !filtersExpanded && activeFilterSummaries.length > 0 ? (
+      <ul className="job-board-active-filters" aria-label="Active filters">
+        {activeFilterSummaries.map(({ key, label }) => (
+          <li key={key}>
+            <button
+              type="button"
+              className="job-board-active-filter-chip"
+              title={`Clear filter: ${label}`}
+              onClick={() => clearFilter(key)}
+            >
+              <span>{label}</span>
+              <span className="job-board-active-filter-clear" aria-hidden="true">
+                ×
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
+  const filterControls = (
+    <div className="job-board-filter-controls">
+      {filtersToggleButton}
+      {!embedded ? activeFilterChips : null}
+    </div>
   );
 
   const toolbarStart = (
@@ -342,10 +359,14 @@ export function JobBoard({
     SECRETARY_JOB_BOARD_TOOLBAR_SLOT_ID,
     embeddedChromeActive,
   );
+  const activeFiltersPortalTarget = usePortalTarget(
+    SECRETARY_JOB_BOARD_ACTIVE_FILTERS_SLOT_ID,
+    embeddedChromeActive,
+  );
 
   const embeddedTabToolbar = (
     <div className="secretary-job-board-tab-toolbar">
-      {filterControls}
+      {filtersToggleButton}
       {sortControl(true)}
     </div>
   );
@@ -672,6 +693,12 @@ export function JobBoard({
     <>
       {toolbarPortalTarget
         ? createPortal(embeddedTabToolbar, toolbarPortalTarget)
+        : null}
+      {activeFiltersPortalTarget && activeFilterChips
+        ? createPortal(
+            <div className="job-board-active-filters-bar">{activeFilterChips}</div>,
+            activeFiltersPortalTarget,
+          )
         : null}
       <section
       className={`job-board${embedded ? " job-board-embedded" : ""}`}

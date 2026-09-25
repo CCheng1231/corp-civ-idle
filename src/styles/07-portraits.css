@@ -1,0 +1,1980 @@
+/* Tab hero portrait column — default ~1.5× prior 100% compact tab heroes */
+:root {
+  --tab-hero-portrait-col-min: 9.35rem;
+  --tab-hero-portrait-col-max: 15.85rem;
+  --tab-hero-portrait-frame-min-h: 12.5rem;
+  --tab-hero-portrait-frame-h: 15.85rem;
+  --tab-hero-portrait-frame-max-h: 18.75rem;
+  --tab-hero-portrait-col-min-narrow: 7.9rem;
+  --tab-hero-portrait-col-max-narrow: 11.15rem;
+}
+
+/* Tab portrait fit: compact header + portrait beside content (Home, Office, …) */
+.overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.secretary-roster-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row,
+.overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row {
+  align-items: start;
+  grid-template-columns: minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
+}
+
+.overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.secretary-roster-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky,
+.overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-portrait-column-sticky {
+  align-self: start;
+  min-height: 0;
+}
+
+.overview-view .tab-portrait-fit .tab-hero-main,
+.operations-view .tab-portrait-fit .tab-hero-main,
+.recruitment-view .tab-portrait-fit .tab-hero-main,
+.research-view .tab-portrait-fit .tab-hero-main,
+.secretary-view .tab-portrait-fit .tab-hero-main,
+.logbook-view .tab-portrait-fit .tab-hero-main,
+.secretary-roster-view .tab-portrait-fit .tab-hero-main,
+.overview-view .overview-portrait-fit .tab-hero-main {
+  gap: 0.55rem;
+}
+
+.tab-below-portrait,
+.overview-below-portrait {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.operations-view .tab-below-portrait,
+.recruitment-view .tab-below-portrait,
+.research-view .tab-below-portrait,
+.secretary-view .tab-below-portrait {
+  gap: 0.2rem;
+}
+
+.secretary-view .tab-below-portrait {
+  flex: 0 0 auto;
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.secretary-view--work-board .tab-below-portrait,
+.secretary-view:has(.secretary-job-work--board) .tab-below-portrait {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.secretary-view--work-reports .tab-below-portrait,
+.secretary-view:has(.secretary-job-work--reports) .tab-below-portrait {
+  flex: 0 0 auto;
+  min-height: auto;
+}
+
+.secretary-view .tab-below-portrait > .secretary-job-work {
+  flex: 0 0 auto;
+  min-height: auto;
+  align-self: stretch;
+}
+
+.secretary-view .tab-below-portrait > .secretary-job-work--reports,
+.secretary-view--work-reports .tab-below-portrait > .secretary-job-work {
+  flex: 0 0 auto;
+  min-height: auto;
+  align-self: stretch;
+}
+
+.secretary-view--work-board .tab-below-portrait > .secretary-job-work {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.layout-mobile-nav .secretary-view .tab-below-portrait > .scene-banner,
+.app-shell.viewport-preview-mobile .secretary-view .tab-below-portrait > .scene-banner,
+html.viewport-preview-galaxy-s24 .secretary-view .tab-below-portrait > .scene-banner {
+  display: none;
+}
+
+.layout-mobile-nav .secretary-view--work-reports .secretary-job-reports-list,
+.app-shell.viewport-preview-mobile .secretary-view--work-reports .secretary-job-reports-list,
+html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-reports-list {
+  overflow-y: visible;
+  max-height: none;
+}
+
+.overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.overview-view
+  .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.overview-view
+  .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch.secretary-portrait-large
+  .secretary-portrait-frame {
+  min-height: 0;
+  max-height: none;
+}
+
+.overview-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.operations-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.research-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.secretary-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.logbook-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack,
+.overview-view .overview-portrait-fit.tab-portrait-scene .tab-portrait-stack {
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.overview-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.operations-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.research-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.secretary-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.logbook-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-wrap,
+.overview-view .overview-portrait-fit.tab-portrait-scene .tab-portrait-wrap {
+  flex: 0 0 auto;
+}
+
+.overview-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.operations-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.research-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.secretary-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.logbook-view .tab-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.overview-view .overview-portrait-fit.tab-portrait-scene .tab-portrait-stack
+  .tab-portrait-frame-pannable,
+.overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame,
+.logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .secretary-portrait-frame {
+  flex: none;
+  width: 100%;
+  min-height: var(--tab-hero-portrait-frame-min-h);
+  height: var(--tab-hero-portrait-frame-h);
+  max-height: var(--tab-hero-portrait-frame-max-h);
+  aspect-ratio: unset;
+}
+
+.secretary-view.hub-synced-tab-view .tab-below-portrait > .secretary-job-work {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.tab-below-portrait > .location-view-section:first-child,
+.overview-below-portrait > .location-view-section:first-child,
+.tab-below-portrait > .location-site-block:first-child,
+.operations-view .tab-below-portrait > .office-sites-panel:first-child,
+.secretary-view .tab-below-portrait > .scene-banner,
+.logbook-view .tab-below-portrait > .logbook-activity-panel:first-child {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.overview-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.operations-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.recruitment-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.research-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.secretary-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.logbook-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.secretary-roster-view .tab-portrait-fit .tab-hero-main .location-view-header,
+.overview-view .overview-portrait-fit .tab-hero-main .location-view-header {
+  margin-bottom: 0;
+}
+
+.tab-hero-header,
+.overview-hero-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0;
+}
+
+.tab-hero-header-hub {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.45rem;
+  row-gap: 0.28rem;
+  align-items: center;
+}
+
+.tab-hero-header-hub .tab-hub-picker-label {
+  margin: 0;
+  line-height: 1;
+  font-size: 0.62rem;
+}
+
+.tab-hero-header-hub .tab-hub-picker-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.tab-hero-header-hub .tab-hub-picker-hint {
+  grid-column: 1 / -1;
+  margin: 0.12rem 0 0;
+  font-size: 0.62rem;
+}
+
+.tab-hero-header-row,
+.overview-hero-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.tab-title-extra-row,
+.overview-title-networth-row {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.tab-title-row h2,
+.tab-title-extra-row h2,
+.overview-title-networth-row h2 {
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tab-net-worth-inline,
+.overview-net-worth-inline {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.3rem 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+.tab-office-row,
+.overview-office-row {
+  min-height: 0;
+}
+
+.tab-office-row .location-office-picker-label,
+.overview-office-row .location-office-picker-label {
+  flex: 0 0 auto;
+  margin: 0;
+  line-height: 1;
+  font-size: 0.62rem;
+}
+
+.tab-office-select,
+.overview-office-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.tab-hero-queues,
+.overview-hero-queues {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}
+
+.tab-queue-section,
+.overview-queue-section {
+  margin: 0;
+}
+
+.tab-queue-heading,
+.overview-queue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.tab-queue-heading h3,
+.overview-queue-heading h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tab-queue-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.tab-queue-heading-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.12rem;
+}
+
+.tab-queue-heading-stacked h3 {
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.tab-queue-heading-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.tab-queue-heading-meta .tab-queue-filter {
+  margin-left: auto;
+}
+
+.tab-queue-filter {
+  font-size: 0.68rem;
+  gap: 0.28rem;
+}
+
+.tab-queue-count,
+.overview-queue-count {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.tab-compact-queue .build-queue-slot,
+.overview-compact-queue .build-queue-slot {
+  --queue-row-height: 1.45rem;
+  --queue-row-gap: 0.2rem;
+  min-height: 0;
+}
+
+.tab-compact-queue .build-queue-slot .queue-empty,
+.overview-compact-queue .build-queue-slot .queue-empty {
+  min-height: var(--queue-row-height);
+  font-size: 0.7rem;
+}
+
+.tab-compact-queue .build-queue li,
+.overview-compact-queue .build-queue li {
+  padding: 0.15rem 0.38rem;
+  font-size: 0.72rem;
+  min-height: var(--queue-row-height);
+}
+
+.tab-compact-queue .build-queue .queue-cancel-btn,
+.overview-compact-queue .build-queue .queue-cancel-btn {
+  font-size: 0.66rem;
+  padding: 0.08rem 0.32rem;
+}
+
+.tab-net-worth-label,
+.overview-net-worth-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.tab-net-worth-value,
+.overview-net-worth-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  color: var(--warn);
+  line-height: 1;
+}
+
+.tab-net-worth-goal,
+.overview-net-worth-goal {
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+/* Home: net worth sits in the bottom panel, above structure levels */
+.overview-summary-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.overview-panel-title {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.overview-view .tab-below-portrait .overview-panel-title,
+.hub-synced-tab-view .overview-panel-title {
+  font-size: 0.58rem;
+  margin: 0;
+}
+
+.overview-net-worth-banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  line-height: 1.15;
+}
+
+.overview-net-worth-amounts {
+  display: flex;
+  align-items: baseline;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.overview-net-worth-banner .tab-net-worth-label {
+  color: var(--accent);
+  font-size: 0.52rem;
+}
+
+.overview-net-worth-banner .tab-net-worth-value {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.overview-net-worth-banner .tab-net-worth-goal {
+  color: var(--accent-2);
+  font-size: 0.58rem;
+}
+
+.overview-view .tab-below-portrait > .overview-summary-block + .location-view-section {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.operations-view .tab-below-portrait > .office-site-summary-banner + .office-sites-panel {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.recruitment-view .tab-below-portrait > .recruitment-units-banner + .progression-category-section {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.research-view .tab-below-portrait > .research-progress-banner + .progression-category-section {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.secretary-view .tab-hero-main .tab-title-row h2 {
+  font-size: 0.95rem;
+}
+
+.secretary-view .job-board-embedded .job-board-layout {
+  margin-top: 0;
+}
+
+.secretary-view .job-board-embedded .job-board-layout-embedded {
+  grid-template-columns: 1fr;
+}
+
+.secretary-view .job-board-embedded .job-board-filters-popup .job-board-filters {
+  position: static;
+  top: auto;
+  max-height: none;
+}
+
+.secretary-view .job-board-embedded .job-board-filters {
+  padding: 0.65rem 0.7rem;
+}
+
+.secretary-view .job-board-embedded .job-board-filters-head h3 {
+  font-size: 0.68rem;
+}
+
+.secretary-view .job-board-embedded .job-board-filter span,
+.secretary-view .job-board-embedded .job-board-filter select,
+.secretary-view .job-board-embedded .job-board-results-toolbar,
+.secretary-view .job-board-embedded .job-board-row-btn strong {
+  font-size: 0.68rem;
+}
+
+.secretary-view .job-board-embedded .job-board-filter select {
+  min-height: 1.75rem;
+  padding: 0.22rem 0.35rem;
+}
+
+.secretary-view .job-board-embedded .job-board-row-btn .muted {
+  font-size: 0.62rem;
+}
+
+.secretary-view .secretary-job-reports-log-link,
+.secretary-view .secretary-job-reports-clear-link {
+  font-size: 0.6rem;
+}
+
+.secretary-view .secretary-job-reports-panel .secretary-panel-head,
+.secretary-view .secretary-tips-panel .secretary-panel-head {
+  padding: 0.25rem 0.4rem;
+}
+
+.secretary-view .secretary-job-reports-panel .secretary-job-reports-list {
+  padding: 0.12rem 0.32rem 0.14rem;
+  gap: 0.12rem;
+}
+
+.secretary-view .secretary-job-reports-empty {
+  font-size: 0.64rem;
+  padding: 0.3rem 0.4rem 0.32rem;
+}
+
+.secretary-view .secretary-job-report {
+  padding: 0.1rem 0.26rem;
+  gap: 0.2rem;
+  border-radius: 0.35rem;
+  align-items: center;
+}
+
+.secretary-view .secretary-job-report-body {
+  padding: 0;
+}
+
+.secretary-view .secretary-job-report-line1,
+.secretary-view .secretary-job-report-line2 {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.15;
+}
+
+.secretary-view .secretary-job-report-line1 {
+  font-weight: 600;
+}
+
+.secretary-view .secretary-job-report-line2 {
+  margin-top: 0.04rem;
+}
+
+.secretary-view .secretary-job-report-dismiss {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 0.12rem;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1;
+  min-height: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.secretary-view .secretary-tips-list {
+  padding: 0.32rem 0.45rem 0.4rem 1rem;
+  gap: 0.22rem;
+  font-size: 0.64rem;
+  line-height: 1.3;
+}
+
+.secretary-work-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.secretary-work-tabs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.secretary-work-tabs-toolbar[hidden] {
+  display: none;
+}
+
+.secretary-job-board-tab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.secretary-job-board-tab-toolbar .job-board-sort-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 0.64rem;
+}
+
+.secretary-job-board-tab-toolbar .job-board-sort-compact span {
+  font-size: 0.64rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.secretary-job-board-tab-toolbar .job-board-sort-compact select {
+  min-width: 5.75rem;
+  max-width: 7.5rem;
+  min-height: 0;
+  height: auto;
+  padding: 0.1rem 0.24rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
+.secretary-view .job-board-embedded .job-board-list-pane {
+  gap: 0;
+  position: relative;
+}
+
+.secretary-view .job-board-embedded .job-board-list-pane > .job-board-active-filters-bar {
+  margin-bottom: 0;
+}
+
+.job-board-filters-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+
+.job-board-filters-popup {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  left: 0.35rem;
+  max-width: 22rem;
+  margin-left: auto;
+  z-index: 30;
+  max-height: calc(100% - 0.7rem);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.secretary-view .job-board-embedded .job-board-list-pane > .job-board-list-stage,
+.secretary-view .job-board-embedded .job-board-list-pane > .job-board-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Home right panel: smaller type; empty queues show count only */
+.overview-view .tab-hero-main .tab-title-row h2 {
+  font-size: 0.95rem;
+}
+
+.overview-view .tab-hero-main .tab-queue-heading h3 {
+  font-size: 0.68rem;
+}
+
+.overview-view .tab-hero-main .tab-queue-count {
+  font-size: 0.62rem;
+}
+
+.overview-view .tab-hero-main .tab-compact-queue .build-queue li {
+  font-size: 0.64rem;
+}
+
+.overview-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
+  font-size: 0.58rem;
+}
+
+/* Office right column: keep Space/Power visible when the build queue is full */
+.operations-view .tab-hero-main .tab-queue-heading,
+.recruitment-view .tab-hero-main .tab-queue-heading,
+.research-view .tab-hero-main .tab-queue-heading,
+.secretary-view .tab-hero-main .tab-queue-heading {
+  margin-bottom: 0.06rem;
+  gap: 0.2rem;
+}
+
+.operations-view .tab-hero-main .tab-queue-heading h3,
+.recruitment-view .tab-hero-main .tab-queue-heading h3,
+.research-view .tab-hero-main .tab-queue-heading h3,
+.secretary-view .tab-hero-main .tab-queue-heading h3 {
+  font-size: 0.62rem;
+}
+
+.operations-view .tab-hero-main .tab-queue-count,
+.recruitment-view .tab-hero-main .tab-queue-count,
+.research-view .tab-hero-main .tab-queue-count,
+.secretary-view .tab-hero-main .tab-queue-count {
+  font-size: 0.58rem;
+}
+
+.operations-view .tab-hero-main .tab-queue-filter,
+.recruitment-view .tab-hero-main .tab-queue-filter,
+.research-view .tab-hero-main .tab-queue-filter,
+.secretary-view .tab-hero-main .tab-queue-filter {
+  font-size: 0.56rem;
+  gap: 0.18rem;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.recruitment-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.research-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot {
+  --queue-row-height: 1.12rem;
+  --queue-row-gap: 0.08rem;
+}
+
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot {
+  min-height: 0;
+  max-height: min(7.5rem, 26vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue .build-queue li,
+.recruitment-view .tab-hero-main .tab-compact-queue .build-queue li,
+.research-view .tab-hero-main .tab-compact-queue .build-queue li,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue li:not(.secretary-task-force-row) {
+  padding: 0.04rem 0.26rem;
+  font-size: 0.58rem;
+  gap: 0.22rem;
+  min-height: var(--queue-row-height);
+  line-height: 1.15;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue .queue-name,
+.recruitment-view .tab-hero-main .tab-compact-queue .queue-name,
+.research-view .tab-hero-main .tab-compact-queue .queue-name,
+.secretary-view .tab-hero-main .tab-compact-queue .queue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue .queue-status,
+.recruitment-view .tab-hero-main .tab-compact-queue .queue-status,
+.research-view .tab-hero-main .tab-compact-queue .queue-status,
+.secretary-view .tab-hero-main .tab-compact-queue .queue-status {
+  font-size: 0.56rem;
+  white-space: nowrap;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
+.recruitment-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
+.research-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
+  min-width: 0;
+}
+
+.operations-view .tab-hero-main .tab-compact-queue,
+.operations-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.operations-view .tab-hero-main .tab-compact-queue .build-queue,
+.recruitment-view .tab-hero-main .tab-compact-queue,
+.recruitment-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.recruitment-view .tab-hero-main .tab-compact-queue .build-queue,
+.research-view .tab-hero-main .tab-compact-queue,
+.research-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.research-view .tab-hero-main .tab-compact-queue .build-queue,
+.secretary-view .tab-hero-main .tab-compact-queue,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue {
+  overflow: visible;
+}
+
+.tab-compact-queue .build-queue li[data-tip] {
+  position: relative;
+}
+
+.tab-compact-queue .build-queue li[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.22rem);
+  z-index: 12;
+  max-width: min(16rem, calc(100% + 2.5rem));
+  padding: 0.28rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: rgba(23, 30, 39, 0.97);
+  color: var(--text);
+  font-size: 0.58rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.overview-view .tab-hero-main .tab-office-select {
+  font-size: 0.66rem;
+  min-height: 1.45rem;
+}
+
+.overview-view .tab-hero-main .location-office-hint {
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+}
+
+/* Home bottom panel: a little smaller than other tabs */
+.overview-view .tab-below-portrait .overview-section h3 {
+  font-size: 0.75rem;
+  margin-bottom: 0.32rem;
+}
+
+/* Short full-width pannable scene strip (Home / Office categories) */
+.scene-banner,
+.overview-scene-banner {
+  width: 100%;
+  margin: 0 0 0.4rem;
+}
+
+.scene-banner .secretary-portrait-frame,
+.overview-scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .scene-banner .tab-portrait-frame-pannable,
+html.viewport-preview-galaxy-s24 .overview-scene-banner .secretary-portrait-frame,
+html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pannable {
+  width: 100%;
+  min-height: 0 !important;
+  height: 2.85rem !important;
+  max-height: none !important;
+  max-width: none;
+  aspect-ratio: unset !important;
+  border-radius: 0.45rem;
+  flex: none;
+}
+
+.scene-banner
+  .tab-portrait-frame-pannable
+  .secretary-portrait.tab-portrait-pannable:not(.tab-portrait-pannable-ready),
+.overview-scene-banner
+  .tab-portrait-frame-pannable
+  .secretary-portrait.tab-portrait-pannable:not(.tab-portrait-pannable-ready) {
+  object-position: center 42%;
+}
+
+.overview-view .tab-below-portrait .overview-research-list,
+.overview-view .tab-below-portrait .overview-empty-note,
+.overview-view .tab-below-portrait .overview-staff-total,
+.overview-view .tab-below-portrait .overview-units-total,
+.overview-view .tab-below-portrait .overview-research-note {
+  font-size: 0.72rem;
+}
+
+.overview-view .tab-below-portrait .office-site-staff-list {
+  font-size: 0.7rem;
+}
+
+.overview-view .tab-below-portrait .overview-staff-total {
+  margin: 0.35rem 0 0;
+}
+
+.overview-view .tab-below-portrait .overview-staff-section {
+  padding-bottom: 1.5rem;
+}
+
+/* Office catalog: no outer grey panel; extra space above nav */
+.operations-view .office-structures-panel > .progression-category-section {
+  margin-top: 0.65rem;
+}
+
+.operations-view .office-structures-panel > .progression-category-section:first-of-type {
+  margin-top: 0.15rem;
+}
+
+.recruitment-view .tab-below-portrait > .progression-category-section {
+  margin-top: 0.65rem;
+}
+
+.recruitment-view .tab-below-portrait > .progression-category-section:first-of-type {
+  margin-top: 0.15rem;
+}
+
+.research-view .tab-below-portrait > .progression-category-section {
+  margin-top: 0.65rem;
+}
+
+.research-view .tab-below-portrait > .progression-category-section:first-of-type {
+  margin-top: 0.15rem;
+}
+
+.research-view .tab-below-portrait > .progression-category-section:last-of-type {
+  padding-bottom: 1.5rem;
+}
+
+.operations-view .progression-category-summary.research-type-heading,
+.recruitment-view .progression-category-summary.research-type-heading,
+.research-view .progression-category-summary.research-type-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin: 0 0 0.22rem;
+  font-size: 0.88rem;
+}
+
+.operations-view .progression-category-summary::before,
+.recruitment-view .progression-category-summary::before,
+.research-view .progression-category-summary::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0.26em 0.38em 0.26em 0;
+  border-color: transparent currentColor transparent transparent;
+  flex: 0 0 auto;
+}
+
+.operations-view
+  .progression-category-section[open]
+  > .progression-category-summary::before,
+.recruitment-view
+  .progression-category-section[open]
+  > .progression-category-summary::before,
+.research-view
+  .progression-category-section[open]
+  > .progression-category-summary::before {
+  border-width: 0.26em 0 0.26em 0.38em;
+  border-color: transparent transparent transparent currentColor;
+}
+
+.office-collapse-all {
+  display: block;
+  width: fit-content;
+  margin: 0.32rem 0 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  cursor: pointer;
+}
+
+.office-collapse-all:hover {
+  color: var(--text);
+}
+
+.operations-view .tab-below-portrait > .office-sites-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  padding-bottom: 1.5rem;
+}
+
+.operations-view .structure-upgrade-preview {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.15rem 0;
+}
+
+/* Tab portrait fit: lighter quote strip */
+.overview-view .tab-portrait-fit .tab-portrait-quote-foot,
+.operations-view .tab-portrait-fit .tab-portrait-quote-foot,
+.recruitment-view .tab-portrait-fit .tab-portrait-quote-foot,
+.research-view .tab-portrait-fit .tab-portrait-quote-foot,
+.secretary-view .tab-portrait-fit .tab-portrait-quote-foot,
+.logbook-view .tab-portrait-fit .tab-portrait-quote-foot,
+.overview-view .overview-portrait-fit .tab-portrait-quote-foot {
+  padding: 0 0 0.2rem;
+}
+
+.overview-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.operations-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.recruitment-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.research-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.secretary-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.logbook-view .tab-portrait-fit .tab-portrait-quote-foot::before,
+.overview-view .overview-portrait-fit .tab-portrait-quote-foot::before {
+  height: 2.35rem;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 20, 25, 0) 0%,
+    rgba(15, 20, 25, 0.28) 50%,
+    rgba(15, 20, 25, 0.72) 100%
+  );
+}
+
+.overview-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.operations-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.recruitment-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.research-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.secretary-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.logbook-view .tab-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote,
+.overview-view .overview-portrait-fit .tab-portrait-quote-foot .tab-portrait-quote {
+  padding: 0.15rem 0.38rem 0;
+}
+
+.overview-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.operations-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.recruitment-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.research-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.secretary-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.logbook-view .tab-portrait-fit .tab-portrait-quote-foot .secretary-quote p,
+.overview-view .overview-portrait-fit .tab-portrait-quote-foot .secretary-quote p {
+  font-size: 0.66rem;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .overview-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .operations-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .recruitment-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .research-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .secretary-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .secretary-roster-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .logbook-view .tab-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row,
+  .overview-view .overview-portrait-fit.tab-portrait-scene.tab-portrait-stretch
+    .tab-sticky-hero-row {
+    grid-template-columns: minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
+      minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .overview-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .operations-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .recruitment-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .research-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .secretary-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .logbook-view .tab-portrait-fit .tab-portrait-column-sticky,
+  .overview-view .overview-portrait-fit .tab-portrait-column-sticky {
+    position: relative;
+    top: auto;
+    align-self: start;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.overview-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.overview-office-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 10rem;
+}
+
+.overview-office-picker-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.overview-office-select {
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, #3a3f4b);
+  background: var(--panel, #1e222a);
+  color: inherit;
+  font: inherit;
+}
+
+.overview-office-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+}
+
+.overview-section h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.overview-empty-note {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.overview-structure-levels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.4rem;
+}
+
+.overview-structure-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.42rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+}
+
+.overview-structure-name {
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-structure-level {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.overview-structure-level-max {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.overview-research-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.overview-research-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.overview-research-note,
+.overview-units-total {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+}
+
+.overview-view .office-site-staff-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.office-recruitment-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.office-recruitment-queue {
+  margin-bottom: 0.75rem;
+}
+
+.office-recruitment-queue h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.recruit-count-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.35rem 0;
+}
+
+.recruit-count-field input {
+  max-width: 5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.branch-rename-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0.75rem;
+}
+
+.branch-rename-field input {
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.location-overview-head {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 1rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+.main-panel {
+  padding: 1rem 1.25rem 2rem;
+  overflow: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar section + section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar h2,
+.main-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.structure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.structure-card,
+.project-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.structure-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.location-stats {
+  margin-bottom: 0.65rem;
+}
+
+.location-overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.location-overview-head h2 {
+  margin: 0;
+}
+
+.location-overview-toggle {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 0.45rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.location-overview-toggle:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.location-overview-collapsed .location-card {
+  padding: 0.55rem 0.75rem;
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.office-site-staff {
+  margin-top: 0.15rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.office-site-staff-head {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.office-site-staff-head strong {
+  color: var(--text);
+  font-family: "JetBrains Mono", monospace;
+  margin-left: 0.25rem;
+}
+
+.office-site-staff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.office-site-staff-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.office-site-staff-role {
+  color: var(--muted);
+}
+
+.office-site-staff-count {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+}
+
+.office-upgrades-section {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.office-upgrades-heading {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.office-structures-panel {
+  margin: 0;
+}
+
+.office-structures-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.structure-card .structure-sell-btn {
+  margin-top: 0.35rem;
+}
+
+.structure-refund-line,
+.structure-space-line {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+}
+
+.location-card {
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.location-card-select {
+  text-align: left;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.75rem;
+  cursor: pointer;
+  color: inherit;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.location-card-expanded {
+  border-color: var(--warn);
+  box-shadow:
+    inset 0 0 0 2px #0a0e12,
+    0 0 0 2px var(--warn);
+}
+
+.location-card-selected .location-card-select {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.location-structures-panel {
+  border-top: 1px solid var(--border);
+  padding: 0.65rem 0.75rem 0.75rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.location-structures-intro {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+.structure-list-compact {
+  gap: 0.5rem;
+}
+
+.structure-cost-primary {
+  margin: 0.35rem 0 0.25rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.structure-cost-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.structure-cost-part-label {
+  color: var(--text);
+}
+
+.structure-cost-sep {
+  color: var(--text);
+}
+
+.structure-cost-affordable {
+  color: var(--success);
+}
+
+.structure-cost-unaffordable {
+  color: var(--danger);
+}
+
+.structure-blocker {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #f87171;
+}
+
+.structure-desc {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.location-card-selected {
+  border-color: var(--warn);
+  box-shadow:
+    inset 0 0 0 2px #0a0e12,
+    0 0 0 2px var(--warn);
+}
+
+.location-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.location-stat {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.location-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.location-stat strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88rem;
+}
+
+.location-stat small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.progression-locked {
+  opacity: 0.72;
+}
+
+.progression-name-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px dotted transparent;
+}
+
+.progression-name-btn:hover,
+.progression-name-btn:focus-visible {
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+  outline: none;
+}
+
+.progression-maxed-summary-main .progression-name-btn {
+  font-size: inherit;
+}
+
+.progression-detail-dialog {
+  width: min(19.5rem, 96vw);
+  max-height: min(88vh, 640px);
+  padding: 0.85rem 0.95rem 0.95rem;
+}
+
+.progression-detail-header {
+  margin-bottom: 0.65rem;
+}
+
+.progression-detail-level {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progression-detail-queued {
+  color: var(--warn);
+}
+
+.progression-detail-close {
+  flex-shrink: 0;
+  min-width: 2rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.progression-detail-desc {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.progression-detail-requirement {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.progression-detail-status {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.progression-detail-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.progression-tree-section {
+  margin-bottom: 0.35rem;
+}
+
+.progression-tree-scroll {
+  max-height: min(42vh, 360px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.progression-tree-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.progression-tree-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(23, 30, 39, 0.98);
+  border-bottom: 1px solid var(--border);
+}
+
+.progression-tree-table td {
+  padding: 0.32rem 0.45rem;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progression-tree-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.progression-tree-lv {
+  width: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progression-tree-cost {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  min-width: 4.5rem;
+}
+
+.progression-tree-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.progression-tree-effect {
+  color: var(--text);
+  font-size: 0.68rem;
+}
+
+.progression-tree-row--done {
+  opacity: 0.55;
+}
+
+.progression-tree-row--done .progression-tree-lv {
+  color: var(--success);
+}
+
+.progression-tree-row--queued {
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.progression-tree-row--queued .progression-tree-lv {
+  color: var(--warn);
+}
+
+.progression-tree-row--next {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.progression-tree-row--next .progression-tree-lv {
+  color: var(--accent);
+}
+
+.progression-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal {
+  width: min(920px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.modal-backdrop.secretary-detail-backdrop {
+  padding: max(0.2rem, env(safe-area-inset-top))
+    env(safe-area-inset-right, 0px)
+    max(0.2rem, env(safe-area-inset-bottom))
+    env(safe-area-inset-left, 0px);
+}
+
+.modal.secretary-detail-dialog {
+  width: 100%;
+  max-width: 100%;
+  height: min(96vh, 800px);
+  max-height: min(96vh, 800px);
+  padding: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  margin: 0 0 0.25rem;
+}
+
+
+.recruitment-card .recruitment-flavor {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: var(--accent-2);
+  font-size: 0.88rem;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-color: var(--accent-2);
+  background: rgba(124, 156, 255, 0.15);
+}
+
+.tab.danger {
+  margin-left: auto;
+  color: var(--danger);
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: #243041;
+  color: var(--text);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border-color: transparent;
+}
+
+.btn-muted {
+  margin-top: 0.35rem;
+  background: transparent;
+  border-style: dashed;
+}
+
+.btn small {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.85;
+  margin-top: 0.15rem;
+}
+
+.cost-line {
+  display: block;
+  margin: 0.35rem 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.9rem;
+}
+
+.setting-row-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.setting-row-inline input[type="range"] {
+  width: min(10rem, 36vw);
+}
+
+.setting-value {
+  min-width: 2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.setting-row:has(input:disabled) {
+  opacity: 0.55;
+}
+
+.dev-menu {
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px dashed rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.dev-menu h2 {
+  margin-top: 0;
+}
+
+.dev-time-skip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dev-skip-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dev-time-skip .dev-skip-btn {
+  margin-top: 0.1rem;
+  width: fit-content;
+}
+
+.dev-time-skip input[type="number"] {
+  width: 5rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+}
+
+.world-view,
+.office-view {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 0;
+}

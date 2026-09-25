@@ -102,7 +102,7 @@ for (let i = headerIdx + 1; i < rows.length; i += 1) {
     unitHoursTotal: num(r[16]) || 100,
     bonusPercent: num(r[18]) || 0.1,
     requiredCategory: String(r[11] ?? "farming").trim().toLowerCase(),
-    minUnitTier: num(r[12]) || Math.max(1, tier - 1),
+    minUnitTier: Math.max(tier, num(r[12])),
     optionalIntelBoost: String(r[14]).toUpperCase() === "TRUE",
     completionPayout: {},
   });

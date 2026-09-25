@@ -130,7 +130,12 @@ export function filterAndSortJobPostings(
   now = Date.now(),
 ): JobPosting[] {
   const filtered = postings.filter((posting) => {
-    const def = jobDefinitionForPosting(posting);
+    let def;
+    try {
+      def = jobDefinitionForPosting(posting);
+    } catch {
+      return false;
+    }
     const region = jobSiteRegionForPosting(posting, def);
 
     if (filters.region !== "all" && region !== filters.region) {
@@ -157,8 +162,14 @@ export function filterAndSortJobPostings(
   });
 
   filtered.sort((a, b) => {
-    const defA = jobDefinitionForPosting(a);
-    const defB = jobDefinitionForPosting(b);
+    let defA;
+    let defB;
+    try {
+      defA = jobDefinitionForPosting(a);
+      defB = jobDefinitionForPosting(b);
+    } catch {
+      return 0;
+    }
 
     switch (sort) {
       case "expires_soon":

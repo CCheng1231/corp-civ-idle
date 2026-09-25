@@ -1,11 +1,8 @@
 import { type Dispatch } from "react";
-import { formatResourceCost, rosterAt } from "../game/constants";
+import { rosterAt } from "../game/constants";
 import { jobDefinitionById } from "../game/jobs";
-import {
-  DEFAULT_TIER1_UNIT,
-  RECRUITMENT_UNITS,
-} from "../game/recruitmentData";
-import { unitDefinition, unitsInCategory } from "../game/unitEffects";
+import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
+import { unitsInCategory } from "../game/unitEffects";
 import type {
   GameAction,
   JobDefinition,
@@ -33,12 +30,10 @@ export function MissionCrewPicker({
   dispatch,
   onChange,
 }: MissionCrewPickerProps) {
-  const tier1Job = job.tier === 1;
-  const units = tier1Job
-    ? [unitDefinition(DEFAULT_TIER1_UNIT[job.requiredCategory])]
-    : unitsInCategory(job.requiredCategory).filter(
-        (unit) => unit.tier >= job.minUnitTier,
-      );
+  const minUnitTier = requiredMinUnitTierForJob(job);
+  const units = unitsInCategory(job.requiredCategory).filter(
+    (unit) => unit.tier >= minUnitTier,
+  );
 
   function setUnitCount(unitId: UnitId, raw: number) {
     const max = roster[unitId] ?? 0;
@@ -153,33 +148,10 @@ export function emptyAssignmentForJob(
   } catch {
     job = { requiredCategory: "farming", minUnitTier: 1, tier: 1 } as JobDefinition;
   }
-  if (job.tier === 1) {
-    const unitId = DEFAULT_TIER1_UNIT[job.requiredCategory];
-    if ((roster[unitId] ?? 0) > 0) return { [unitId]: 1 };
-    return {};
-  }
+  const minUnitTier = requiredMinUnitTierForJob(job);
   const eligible = unitsInCategory(job.requiredCategory).filter(
-    (def) => def.tier >= job.minUnitTier && (roster[def.id] ?? 0) > 0,
+    (def) => def.tier >= minUnitTier && (roster[def.id] ?? 0) > 0,
   );
   if (eligible[0]) return { [eligible[0].id]: 1 };
   return {};
 }
-
-/** @deprecated Use emptyAssignmentForJob */
-export function emptyAssignmentForProject(
-  projectId: string,
-  roster: ReturnType<typeof rosterAt>,
-  existing?: Record<string, UnitAssignment>,
-): UnitAssignment {
-  return emptyAssignmentForJob(projectId, roster, existing, projectId);
-}
-
-export function formatUnitName(unitId: UnitId): string {
-  return unitDefinition(unitId).name;
-}
-
-export function formatUnitCost(cost: ReturnType<typeof unitDefinition>["cost"]) {
-  return formatResourceCost(cost);
-}
-
-export { RECRUITMENT_UNITS };

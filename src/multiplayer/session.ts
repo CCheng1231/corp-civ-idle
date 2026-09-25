@@ -1,4 +1,4 @@
-import type { OnlineSession, PlayerId, PlayMode, WorldId } from "./types";
+import type { OnlineSession, PlayerId, WorldId } from "./types";
 import { isValidOnlineAccountId, PLAYER_IDS } from "./types";
 
 const SESSION_KEY = "corp-civ-idle-session";
@@ -57,14 +57,4 @@ export function createOnlineSession(
     playMode: "online",
     worldId: DEFAULT_WORLD_ID,
   };
-}
-
-/** @deprecated Use createOfflineSession / createOnlineSession */
-export function createSession(
-  playerId: PlayerId,
-  playMode: PlayMode,
-): OnlineSession {
-  return playMode === "online"
-    ? createOnlineSession(playerId)
-    : createOfflineSession(playerId);
 }
