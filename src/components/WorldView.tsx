@@ -35,7 +35,9 @@ import {
   MAP_ZOOM_REL_MAX,
   MAP_ZOOM_REL_MIN,
   MAP_ZOOM_REL_STEP,
+  MAP_STRATEGIC_ZOOM_PIN_MAX_REL,
   mapPresentationTiltDeg,
+  mapZ1Z2CrossfadeWeights,
   measureMapViewport,
   panToCenterViewportRect,
   type MapContentSize,
@@ -46,6 +48,10 @@ import {
   writeWorldMapViewportCache,
 } from "../game/worldMapViewportCache";
 import { worldMapV01ZoomBand } from "../game/worldMapV01";
+import {
+  mapZ1ViewBoxZoomFactor,
+  worldMapPlayerSvgViewBounds,
+} from "../game/worldMapZ1WorldPlate";
 import {
   HEX_RADIUS,
   MAP_GOV,
@@ -267,7 +273,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     () => worldMapCellsForSettings(state.settings),
     [state.settings],
   );
-  const bounds = useMemo(() => worldMapHexBounds(cells), [cells]);
+  const hexBounds = useMemo(() => worldMapHexBounds(cells), [cells]);
   const [inspectedCoord, setInspectedCoord] = useState<AxialCoord | null>(
     restoreViewport ? savedViewport.inspectedCoord : null,
   );
@@ -311,8 +317,21 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   const now = Date.now();
   const isDev = state.settings.mapPresentation === "dev";
   const mapGround = state.settings.mapPlayerGround ?? "hybrid";
-  const mapZoom = fitZoom * mapZoomRel;
   const mapV01Band = worldMapV01ZoomBand(mapZoomRel);
+  const z1z2Crossfade = mapZ1Z2CrossfadeWeights(mapZoomRel);
+  const usePlateMargin = !isDev && z1z2Crossfade.z1 > 0;
+  const svgViewBounds = useMemo(
+    () =>
+      worldMapPlayerSvgViewBounds(hexBounds, {
+        isDev,
+        usePlateMargin,
+      }),
+    [hexBounds, isDev, usePlateMargin],
+  );
+  const viewBoxZoomFactor = mapZ1ViewBoxZoomFactor(hexBounds, svgViewBounds);
+  const mapZoom = fitZoom * mapZoomRel * viewBoxZoomFactor;
+  const strategicPinZoom =
+    !isDev && mapZoomRel <= MAP_STRATEGIC_ZOOM_PIN_MAX_REL;
   const mapTiltDeg = !isDev ? mapPresentationTiltDeg(mapZoomRel, mapV01Band) : 0;
   const z1RasterAlign = useMemo(
     () => resolveZ1RasterAlignment(state.settings.mapZ1RasterAlign),
@@ -394,9 +413,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       if (!viewport) return;
       const vpW = viewport.clientWidth;
       const vpH = viewport.clientHeight;
-      if (vpW < 8 || vpH < 8 || bounds.width <= 0) return;
+      if (vpW < 8 || vpH < 8 || hexBounds.width <= 0) return;
 
-      const measured = measureMapViewport(vpW, vpH, bounds);
+      const measured = measureMapViewport(vpW, vpH, hexBounds);
       mapContentSizeRef.current = measured.content;
       setMapContentSize(measured.content);
       setFitZoom(measured.fitZoom);
@@ -410,7 +429,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
         ),
       );
     });
-  }, [bounds.height, bounds.minX, bounds.minY, bounds.width]);
+  }, [hexBounds.height, hexBounds.minX, hexBounds.minY, hexBounds.width]);
 
   function setPanClamped(
     next: { x: number; y: number },
@@ -477,7 +496,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
   useEffect(() => {
     measureFitZoom();
-  }, [measureFitZoom, bounds.width, bounds.height, cells.length]);
+  }, [measureFitZoom, hexBounds.width, hexBounds.height, cells.length]);
 
   useEffect(() => {
     mapContentSizeRef.current = mapContentSize;
@@ -533,13 +552,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
   function focusOnMainOffice() {
     const viewport = mapViewportRef.current;
-    if (!viewport || bounds.width <= 0) return;
+    if (!viewport || hexBounds.width <= 0) return;
 
     const vpW = viewport.clientWidth;
     const vpH = viewport.clientHeight;
     if (vpW <= 0 || vpH <= 0) return;
 
-    const measured = measureMapViewport(vpW, vpH, bounds);
+    const measured = measureMapViewport(vpW, vpH, hexBounds);
     const content = measured.content;
     if (content.width <= 1 || content.height <= 1) return;
 
@@ -558,7 +577,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       if (!vp) return;
 
       const vpRect = vp.getBoundingClientRect();
-      const zoom = fitZoomRef.current * mapZoomRelRef.current;
+      const fade = mapZ1Z2CrossfadeWeights(mapZoomRelRef.current);
+      const svgBounds = worldMapPlayerSvgViewBounds(hexBounds, {
+        isDev: isDevRef.current,
+        usePlateMargin: !isDevRef.current && fade.z1 > 0,
+      });
+      const zoomFactor = mapZ1ViewBoxZoomFactor(hexBounds, svgBounds);
+      const zoom = fitZoomRef.current * mapZoomRelRef.current * zoomFactor;
       const hexEl = svgEl ? findMapHexElement(svgEl, focusCoord) : null;
 
       let nextPan = mapPanRef.current;
@@ -571,7 +596,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       } else {
         const officePoint = worldMapCoordToContentPixel(
           focusCoord,
-          bounds,
+          hexBounds,
           mapContentSizeRef.current,
           state.settings,
         );
@@ -1066,7 +1091,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
               >
             <svg
               ref={mapSvgRef}
-              viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
+              viewBox={`${svgViewBounds.minX} ${svgViewBounds.minY} ${svgViewBounds.width} ${svgViewBounds.height}`}
               width="100%"
               height="100%"
               preserveAspectRatio="xMidYMid meet"
@@ -1075,7 +1100,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
               aria-label="World map"
             >
               <WorldMapBaseArt
-                bounds={bounds}
+                bounds={hexBounds}
                 zoomRel={mapZoomRel}
                 z1LayerVisibility={state.settings.mapZ1LayerFilters}
                 z1RasterAlign={z1RasterAlign}
@@ -1190,7 +1215,11 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                             .join(" ")}
                           style={{ cursor: "pointer" }}
                         />
-                        {isLandmark && landmark ? (
+                        {isLandmark &&
+                        landmark &&
+                        (!strategicPinZoom ||
+                          landmark === "gov" ||
+                          (landmark === "hq" && isPlayerMainOffice)) ? (
                           <MapLandmarkIcon
                             x={x}
                             y={y}
@@ -1218,7 +1247,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
               {z1AlignDragActive ? (
                 <WorldMapZ1AlignDragLayer
-                  bounds={bounds}
+                  bounds={hexBounds}
                   alignment={z1RasterAlign}
                   showAlignGuide={state.settings.mapZ1AlignGuide === true}
                   onAlignmentChange={(next) =>

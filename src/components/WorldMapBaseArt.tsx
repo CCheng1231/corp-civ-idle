@@ -1,6 +1,10 @@
 import { useMemo } from "react";
-import type { MapBounds, WorldMapV01ZoomBand } from "../game/worldMapV01";
-import { worldMapV01ZoomBand } from "../game/worldMapV01";
+import {
+  worldMapV01ZoomBand,
+  type MapBounds,
+  type WorldMapV01ZoomBand,
+} from "../game/worldMapV01";
+import { mapZ1Z2CrossfadeWeights } from "../game/mapViewport";
 import {
   MAP_Z1_LAYER_DEFAULTS,
   mapArtHubPixel,
@@ -348,6 +352,27 @@ export function WorldMapBaseArt({
   const band = worldMapV01ZoomBand(zoomRel);
   const visibility = resolveZ1Visibility(z1LayerVisibility);
   const alignment = resolveZ1RasterAlignment(z1RasterAlign);
+  const z1z2 = mapZ1Z2CrossfadeWeights(zoomRel);
+
+  if (z1z2.z1 > 0 && z1z2.z2 > 0) {
+    return (
+      <g className="map-v01-z1-z2-blend" pointerEvents="none" aria-hidden>
+        <g opacity={z1z2.z2}>
+          <WorldMapRasterBand bounds={bounds} band={2} />
+        </g>
+        <g opacity={z1z2.z1}>
+          <WorldMapZ1Player
+            bounds={bounds}
+            visibility={visibility}
+            alignment={alignment}
+            z1OmitBakedLayer={z1OmitBakedLayer}
+            z1ShowAlignGuide={z1ShowAlignGuide}
+            z1ShowEngineHubDots={z1ShowEngineHubDots}
+          />
+        </g>
+      </g>
+    );
+  }
 
   if (band === 1) {
     return (
@@ -362,5 +387,10 @@ export function WorldMapBaseArt({
     );
   }
 
-  return <WorldMapRasterBand bounds={bounds} band={band} />;
+  return (
+    <WorldMapRasterBand
+      bounds={bounds}
+      band={band as Exclude<WorldMapV01ZoomBand, 1>}
+    />
+  );
 }

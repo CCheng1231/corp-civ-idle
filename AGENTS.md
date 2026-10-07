@@ -22,10 +22,12 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
-**Recent state (Sep 24, 2026 — Z1 world plate):**
+**Recent state (Oct 7, 2026 — Z1 frame + Z2 + plate v2):**
 
 - **Z1 in-game base:** `world-map-z1-hybrid-soft-pass1-v5.png` + `src/assets/z1-layout-canonical.json`. Dev: drag bake, hex edit (non-locked sites), per-hex nudge, export JSON (`WorldMapDevToolbar`).
-- **Z1 world plate (margin underlay):** `world-map-z1-hybrid-soft-world-plate.png` under v5 in `WorldMapBaseArt` (`worldMapZ1WorldPlate.ts`, pad **2600** viewBox/side). Regen: `npx tsx scripts/composite-z1-world-plate.mjs` (v5 center + rim feather; `--tier=ship` for 1:1). Hex/hub/viewBox unchanged.
+- **Z1 player frame:** plate `viewBox` while `mapZ1Z2CrossfadeWeights().z1 > 0`; fit/pan on hex cornerstone; map-haze letterbox; tilt 0°→18°; pins ≤35% = Gov + player HQ.
+- **Z1→Z2:** smooth crossfade **100%–120%** rel; `MAP_V01_ZOOM_Z2_MIN` **1.2**. In-game Z2: `world-map-z2-hybrid-soft.png` (from v5-aligned draft).
+- **Z1 world plate:** `world-map-z1-hybrid-soft-world-plate.png` = v5 + **AI rim v2** (`world-extend-ai-rim-v2.jpg`). Regen: `npx tsx scripts/composite-z1-world-plate.mjs --rim=... --tier=production|ship`.
 - **Hub lock:** Gov + six majors — dev **cannot move** them (`src/game/mapLayoutLock.ts`). Saved `mapDevLandmarkCoords` / hex nudges for hubs **still apply** (freeze-in-place; not reset to canon on load). Canon defaults in `z1-layout-canonical.json`.
 - **Reverted (do not re-apply without Chris):** Rim terrain hexes, viewBox `MAP_VISUAL_HEX_RADIUS`, old undercoat layer — moved layout; user asked full revert.
 - **Spec / margins:** [`docs/z1-world-extend-gen-spec.md`](docs/z1-world-extend-gen-spec.md); `npx tsx scripts/compute-z1-world-extend-margin.mjs`.

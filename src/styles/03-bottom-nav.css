@@ -682,7 +682,7 @@
 }
 
 .map-presentation-player.world-view {
-  background: #f7f3ec;
+  background: #465042;
 }
 
 .map-presentation-player .hex-map {
@@ -690,5 +690,10 @@
 }
 
 .map-presentation-player .map-zoom-viewport {
-  background: #3d4540;
+  background: linear-gradient(
+    165deg,
+    #4e5c52 0%,
+    #465042 45%,
+    #3a423c 100%
+  );
 }

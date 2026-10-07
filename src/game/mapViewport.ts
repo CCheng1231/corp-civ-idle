@@ -31,7 +31,7 @@ export const MAP_ZOOM_REL_DEFAULT = 1;
 export const MAP_HQ_FOCUS_ZOOM_REL = 1;
 
 /** Keep in sync with `MAP_V01_ZOOM_Z2_MIN` in worldMapV01.ts */
-export const MAP_V01_ZOOM_Z2_MIN_TILT = 1.12;
+export const MAP_V01_ZOOM_Z2_MIN_TILT = 1.2;
 
 /**
  * v0.1 — oblique tilt (never fully flat). Z1 band uses stronger tilt (hybrid-soft ref).
@@ -48,8 +48,8 @@ export function mapPresentationTiltDeg(
   if (zoomBand === 1) {
     const z1Span = MAP_V01_ZOOM_Z2_MIN_TILT - MAP_ZOOM_REL_MIN;
     const t1 =
-      z1Span <= 0 ? 1 : Math.min(1, (z - MAP_ZOOM_REL_MIN) / z1Span);
-    return 13 + t1 * 5;
+      z1Span <= 0 ? 1 : Math.min(1, Math.max(0, (z - MAP_ZOOM_REL_MIN) / z1Span));
+    return t1 * 18;
   }
 
   const t = (z - MAP_ZOOM_REL_MIN) / span;
@@ -64,6 +64,32 @@ export const MAP_WHEEL_ZOOM_SENSITIVITY = 0.00115;
 export const MAP_FIT_BLEED = 2.65;
 /** Extra pan slack (per side) so edge sites can center; grey viewport may show at margins. */
 export const MAP_PAN_OVERSCROLL_RATIO = 0.2;
+
+/** Below this relative zoom, player sees Gov + own HQ pins only. */
+export const MAP_STRATEGIC_ZOOM_PIN_MAX_REL = 0.35;
+
+/** Z1→Z2 raster crossfade (continuous zoomRel; band Z2 starts at HI). */
+export const MAP_Z1_Z2_CROSSFADE_LO = 1;
+export const MAP_Z1_Z2_CROSSFADE_HI = 1.2;
+
+function smoothstep01(t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+}
+
+export function mapZ1Z2CrossfadeWeights(zoomRel: number): {
+  z1: number;
+  z2: number;
+} {
+  const z = clampMapZoomRel(zoomRel, { snapStep: false });
+  if (z <= MAP_Z1_Z2_CROSSFADE_LO) return { z1: 1, z2: 0 };
+  if (z >= MAP_Z1_Z2_CROSSFADE_HI) return { z1: 0, z2: 1 };
+  const t = smoothstep01(
+    (z - MAP_Z1_Z2_CROSSFADE_LO) /
+      (MAP_Z1_Z2_CROSSFADE_HI - MAP_Z1_Z2_CROSSFADE_LO),
+  );
+  return { z1: 1 - t, z2: t };
+}
 
 export function clampMapZoomRel(
   zoomRel: number,

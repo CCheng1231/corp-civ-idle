@@ -18,7 +18,8 @@ export interface MapBounds {
 export type WorldMapV01ZoomBand = 1 | 2 | 3 | 4;
 
 /** Relative zoom at or above these thresholds steps up Z2 → Z4. Default 100% stays Z1. */
-export const MAP_V01_ZOOM_Z2_MIN = 1.12;
+/** Z2 raster after Z1→Z2 crossfade completes (see mapZ1Z2CrossfadeWeights). */
+export const MAP_V01_ZOOM_Z2_MIN = 1.2;
 export const MAP_V01_ZOOM_Z3_MIN = 1.32;
 export const MAP_V01_ZOOM_Z4_MIN = 1.52;
 

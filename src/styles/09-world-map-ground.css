@@ -659,7 +659,16 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  background: #2a3a4c;
+  background: #465042;
+}
+
+.map-presentation-player .map-zoom-viewport {
+  background: linear-gradient(
+    165deg,
+    #4e5c52 0%,
+    #465042 45%,
+    #3a423c 100%
+  );
 }
 
 .map-zoom-viewport.is-panning {

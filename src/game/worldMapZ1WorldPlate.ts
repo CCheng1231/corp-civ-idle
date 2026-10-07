@@ -16,3 +16,23 @@ export function z1WorldPlateBounds(cornerstone: MapBounds): MapBounds {
     height: cornerstone.height + pad * 2,
   };
 }
+
+/** Player SVG viewBox — plate margin through Z1 / Z1→Z2 crossfade; hex coords unchanged. */
+export function worldMapPlayerSvgViewBounds(
+  cornerstone: MapBounds,
+  options: { isDev: boolean; usePlateMargin: boolean },
+): MapBounds {
+  if (!options.isDev && options.usePlateMargin) {
+    return z1WorldPlateBounds(cornerstone);
+  }
+  return cornerstone;
+}
+
+/** Scale map zoom so cornerstone fill matches pre-plate 100% baseline. */
+export function mapZ1ViewBoxZoomFactor(
+  cornerstone: MapBounds,
+  svgViewBounds: MapBounds,
+): number {
+  if (cornerstone.width <= 0) return 1;
+  return svgViewBounds.width / cornerstone.width;
+}
