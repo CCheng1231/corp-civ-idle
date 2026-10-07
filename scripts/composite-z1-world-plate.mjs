@@ -2,7 +2,8 @@
  * Composite v5 center + rim into Z1 world plate PNGs (visual-only margin art).
  *
  *   npx tsx scripts/composite-z1-world-plate.mjs
- *   npx tsx scripts/composite-z1-world-plate.mjs --tier ship
+ *   npx tsx scripts/composite-z1-world-plate.mjs --tier=ship
+ *   npx tsx scripts/composite-z1-world-plate.mjs --tier=draft --rim=path/to/rim-or-extend.png
  *
  * Outputs (under src/assets/reference/zoom-levels/):
  *   world-map-z1-hybrid-soft-world-plate.png      (production tier, in-game underlay)
@@ -20,7 +21,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = resolve(__dirname, "../src/assets/reference/zoom-levels");
 
 const V5 = resolve(outDir, "world-map-z1-hybrid-soft-pass1-v5.png");
-const RIM = resolve(outDir, "world-map-z1-outside-option-b-rim.png");
+const rimArg = process.argv.find((a) => a.startsWith("--rim="));
+const RIM = rimArg
+  ? resolve(process.cwd(), rimArg.split("=").slice(1).join("="))
+  : resolve(outDir, "world-map-z1-outside-option-b-rim.png");
 
 const TIERS = {
   draft: { masterW: 2048, outFile: "world-map-z1-hybrid-soft-world-extend-draft.png" },
