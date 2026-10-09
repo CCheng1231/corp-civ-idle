@@ -546,12 +546,21 @@ export interface GameSettings {
       boolean
     >
   >;
+  /** Z1 pass-1 raster: locked v5 (ship) or engine-aligned v6 draft (try). */
+  mapZ1BakeVariant?: "v5" | "v6-draft";
   /** Dev: overlay pass-2 align guide on Z1 bake. */
   mapZ1AlignGuide?: boolean;
   /** Dev: drag Z1 bake over hex grid to tune alignment. */
   mapZ1AlignDrag?: boolean;
   /** Persisted Z1 bake transform (dev tuning → player view). */
   mapZ1RasterAlign?: Partial<{
+    offsetX: number;
+    offsetY: number;
+    scale: number;
+    rotationDeg: number;
+  }>;
+  /** v6 draft bake tuning (separate from v5 `mapZ1RasterAlign`). */
+  mapZ1RasterAlignV6?: Partial<{
     offsetX: number;
     offsetY: number;
     scale: number;
@@ -566,8 +575,12 @@ export interface GameSettings {
   mapDevExtraHexes?: Array<{ q: number; r: number }>;
   /** Dev: landmark id → axial coord (see mapDevLayout.ts keys). */
   mapDevLandmarkCoords?: Record<string, { q: number; r: number }>;
-  /** Dev: move landmark | create hex */
-  mapDevHexEditMode?: "move" | "create";
+  /** Dev: move landmark | create hex | paint region */
+  mapDevHexEditMode?: "move" | "create" | "region";
+  /** Dev: region brush for paint mode */
+  mapDevRegionBrush?: MapRegion;
+  /** Dev: axialKey → region override (paint tool) */
+  mapDevRegionOverrides?: Record<string, MapRegion>;
   /** Dev: selected landmark key for move mode. */
   mapDevHexEditLandmark?: string;
   /** Dev: shift entire hex grid vs Z1 bake (viewBox px). */

@@ -60,6 +60,7 @@ Playtester flow:
 | `worlds/dev/bindings/{firebaseUid}` | This browser → `accountId` (auto-resume) |
 | `worlds/dev/companies/{accountId}/private/state` | Private company save |
 | `worlds/dev/jobPostings/*` | Shared job board |
+| `worlds/dev/shared/mapLayout` | Shared playtest hex map (dev publish → all players read) |
 
 Account ids: `tim`, `chris`, or `guest-<random>`.
 
@@ -87,7 +88,7 @@ Keys are unguessable UUIDs. Treat them like passwords — send privately.
 
 | Symptom | Fix |
 |---------|-----|
-| `Missing or insufficient permissions` | Publish rules; enable Anonymous auth |
+| `Missing or insufficient permissions` | Publish rules; enable Anonymous auth. **Map push** needs the `shared/mapLayout` block in `firestore.rules` deployed (`firebase deploy --only firestore:rules`) and a Tim/Chris browser binding. |
 | `Invalid access key` | Key typo, deleted doc, or wrong Firebase project |
 | `Already linked to another browser` | Old rules/key doc — republish rules; keys are reusable now |
 | Devs can't create keys in Settings | Redeem a Tim/Chris dev key first (bootstrap) |

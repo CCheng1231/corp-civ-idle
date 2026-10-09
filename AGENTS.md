@@ -22,15 +22,13 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
-**Recent state (Oct 7, 2026 — Z1 frame + Z2 + plate v2):**
+**Recent state (Oct 9, 2026 — player map 3D towers):**
 
-- **Z1 in-game base:** `world-map-z1-hybrid-soft-pass1-v5.png` + `src/assets/z1-layout-canonical.json`. Dev: drag bake, hex edit (non-locked sites), per-hex nudge, export JSON (`WorldMapDevToolbar`).
-- **Z1 player frame:** plate `viewBox` while `mapZ1Z2CrossfadeWeights().z1 > 0`; fit/pan on hex cornerstone; map-haze letterbox; tilt 0°→18°; pins ≤35% = Gov + player HQ.
-- **Z1→Z2:** smooth crossfade **100%–120%** rel; `MAP_V01_ZOOM_Z2_MIN` **1.2**. In-game Z2: `world-map-z2-hybrid-soft.png` (from v5-aligned draft).
-- **Z1 world plate:** `world-map-z1-hybrid-soft-world-plate.png` = v5 + **AI rim v2** (`world-extend-ai-rim-v2.jpg`). Regen: `npx tsx scripts/composite-z1-world-plate.mjs --rim=... --tier=production|ship`.
-- **Hub lock:** Gov + six majors — dev **cannot move** them (`src/game/mapLayoutLock.ts`). Saved `mapDevLandmarkCoords` / hex nudges for hubs **still apply** (freeze-in-place; not reset to canon on load). Canon defaults in `z1-layout-canonical.json`.
-- **Reverted (do not re-apply without Chris):** Rim terrain hexes, viewBox `MAP_VISUAL_HEX_RADIUS`, old undercoat layer — moved layout; user asked full revert.
-- **Spec / margins:** [`docs/z1-world-extend-gen-spec.md`](docs/z1-world-extend-gen-spec.md); `npx tsx scripts/compute-z1-world-extend-margin.mjs`.
-- **Online / map (older):** Chris HQ `{-2,-4}`; HQ focus via `mapViewport.ts`; online saves / browser lease — see bullets in prior sessions.
+- **Player HQ 3D:** `MapPlayerHqTower3D.tsx` — solarpunk **canopy A** (glass core + garden pods); `variant` mine (green) / peer (blue); overlay in `map-hq-towers-layer-untilted` (counter-tilt vs map tilt); hex HQ/branch fill hidden on player view at authored HQ coords.
+- **Office towers 3D:** `MapOfficeTower3D.tsx` — **Crossroads rural** sketch for **all four** `OFFICE_TOWERS`; coords via `officeTowerMapSites(settings)`; same overlay layer; `hex-tile-tower` hidden on player view at tower hexes. **Not done:** per-tower styles (metro/suburban/hillside) — pick from `src/assets/reference/hq-tower-solarpunk-demos.html` when ready.
+- **Sizing / tilt:** `mapHqTowerDimensionsFromHexScreenPx`, `mapHqTowerPresentationTiltDeg` in `mapViewport.ts`.
+- **Dev map:** schematic hex colors + `MapPlayerHq3DMarker` SVG; no HTML office/HQ extrusion overlay.
+
+**Prior (Oct 7 — Z1 frame + Z2 + plate v2):** Z1 base v5 + `z1-layout-canonical.json`; Z1 plate viewBox + haze; Z1→Z2 crossfade 100–120%; world-plate AI rim v2; hub lock in `mapLayoutLock.ts`. See `docs/z1-world-extend-gen-spec.md`.
 
 Before large UI reads, check `git status` / `git diff` — this repo often has in-progress work on `main`.

@@ -7,6 +7,12 @@
     "scale": 1,
     "rotationDeg": 0
   },
+  "rasterAlignV6Draft": {
+    "offsetX": 0,
+    "offsetY": 0,
+    "scale": 1.8101,
+    "rotationDeg": 0
+  },
   "majorHubMarkers": [
     {
       "x": -272.8,

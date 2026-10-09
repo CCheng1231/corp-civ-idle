@@ -41,7 +41,7 @@ import type {
   ResourceCost,
   TowerId,
 } from "./types";
-import { effectiveLandmarkCoord } from "./mapDevLayout";
+import { devRegionAtCoord, effectiveLandmarkCoord } from "./mapDevLayout";
 import {
   canAffordAtOffice,
   formatNumber,
@@ -335,6 +335,23 @@ function towerCoord(
   );
 }
 
+/** Effective map hex for an office tower (respects dev landmark nudges). */
+export function officeTowerCoord(
+  towerId: TowerId,
+  settings?: GameSettings,
+): AxialCoord {
+  return towerCoord(towerById(towerId), settings);
+}
+
+export function officeTowerMapSites(
+  settings?: GameSettings,
+): Array<{ id: TowerId; coord: AxialCoord }> {
+  return OFFICE_TOWERS.map((tower) => ({
+    id: tower.id,
+    coord: towerCoord(tower, settings),
+  }));
+}
+
 export function towerAtCoord(
   coord: AxialCoord,
   settings?: GameSettings,
@@ -442,7 +459,13 @@ export function isAvailableCommercialLot(
   return Boolean(commercialSiteAt(coord, state.settings));
 }
 
-export function regionAtCoord(coord: AxialCoord): MapRegion {
+export function regionAtCoord(
+  coord: AxialCoord,
+  settings?: GameSettings,
+): MapRegion {
+  const painted = devRegionAtCoord(coord, settings);
+  if (painted) return painted;
+
   // Company HQs are authored as countryside for starts / future creation.
   if (axialEquals(coord, MAP_HQ) || axialEquals(coord, CHRIS_HQ)) return HQ_REGION;
 
@@ -451,41 +474,46 @@ export function regionAtCoord(coord: AxialCoord): MapRegion {
     0,
     Math.min(MAP_RADIUS, d + regionDistanceJitter(coord, d)),
   );
-  if (effective <= 2) return "metropolis";
-  if (effective <= 4) return "suburban";
-  if (effective <= 6) return "rural";
+  if (effective <= 4) return "metropolis";
+  if (effective <= 8) return "suburban";
+  if (effective <= 12) return "rural";
   return "countryside";
 }
 
-/** Radial stretch from Gov for world-map layout (hex logic stays unscaled). */
+/** World map render size — same as logic `HEX_RADIUS` for a uniform tessellated grid. */
+export const MAP_PRESENTATION_HEX_SCALE = 1;
+
+export function worldMapPresentationHexSize(): number {
+  return HEX_RADIUS * MAP_PRESENTATION_HEX_SCALE;
+}
+
+/** @deprecated Art-era radial stretch; kept at 1 for uniform hex layout. */
 export const WORLD_MAP_REGION_LAYOUT_SCALE: Record<MapRegion, number> = {
-  metropolis: 1.25,
-  suburban: 1.5,
-  rural: 2,
-  countryside: 2,
+  metropolis: 1,
+  suburban: 1,
+  rural: 1,
+  countryside: 1,
 };
 
-export function worldMapLayoutScale(coord: AxialCoord): number {
-  return WORLD_MAP_REGION_LAYOUT_SCALE[regionAtCoord(coord)];
+export function worldMapLayoutScale(_coord: AxialCoord): number {
+  return 1;
+}
+
+export function worldMapHexTileRadius(_coord: AxialCoord): number {
+  return worldMapPresentationHexSize();
 }
 
 export function worldMapAxialToPixel(
   coord: AxialCoord,
-  size: number = HEX_RADIUS,
+  size: number = worldMapPresentationHexSize(),
 ): { x: number; y: number } {
-  const scale = worldMapLayoutScale(coord);
-  const base = axialToPixel(coord.q, coord.r, size);
-  const gov = axialToPixel(MAP_GOV.q, MAP_GOV.r, size);
-  return {
-    x: gov.x + (base.x - gov.x) * scale,
-    y: gov.y + (base.y - gov.y) * scale,
-  };
+  return axialToPixel(coord.q, coord.r, size);
 }
 
 /**
  * Painted forest greenbelt sits on this hex ring (Z1 v5 bake); playable hexes may extend past it.
  */
-export const MAP_GREENBELT_HEX_RADIUS = 7;
+export const MAP_GREENBELT_HEX_RADIUS = 14;
 
 /** Extra viewBox margin beyond outermost hexes (Z1 bake bleed). */
 export const MAP_VIEWBOX_PAD = HEX_RADIUS * 4;
@@ -496,7 +524,7 @@ export const Z1_MAJOR_HUB_OUTSIDE_BELT_PX = 340;
 /** Greenbelt stroke radius — outer edge of the playable hex ring (presentation pixels). */
 export function worldMapOuterGreenbeltRadiusPx(
   beltRingRadius: number = MAP_GREENBELT_HEX_RADIUS,
-  size: number = HEX_RADIUS,
+  size: number = worldMapPresentationHexSize(),
 ): number {
   const gov = worldMapAxialToPixel(MAP_GOV, size);
   let maxDist = 0;
@@ -508,9 +536,11 @@ export function worldMapOuterGreenbeltRadiusPx(
   return maxDist - size * 0.22;
 }
 
+/** @param pad Extra viewBox margin beyond outer hexes (dev/scripts only; player uses 0). */
 export function worldMapHexBounds(
   cells: AxialCoord[],
-  size: number = HEX_RADIUS,
+  size: number = worldMapPresentationHexSize(),
+  pad: number = 0,
 ) {
   let minX = Infinity;
   let minY = Infinity;
@@ -519,13 +549,13 @@ export function worldMapHexBounds(
 
   for (const coord of cells) {
     const { x, y } = worldMapAxialToPixel(coord, size);
-    minX = Math.min(minX, x - size);
-    minY = Math.min(minY, y - size);
-    maxX = Math.max(maxX, x + size);
-    maxY = Math.max(maxY, y + size);
+    const r = worldMapHexTileRadius(coord);
+    minX = Math.min(minX, x - r);
+    minY = Math.min(minY, y - r);
+    maxX = Math.max(maxX, x + r);
+    maxY = Math.max(maxY, y + r);
   }
 
-  const pad = MAP_VIEWBOX_PAD;
   return {
     minX: minX - pad,
     minY: minY - pad,
@@ -536,7 +566,7 @@ export function worldMapHexBounds(
 
 export function worldMapHexPathPixels(
   path: AxialCoord[],
-  size: number = HEX_RADIUS,
+  size: number = worldMapPresentationHexSize(),
 ): { x: number; y: number }[] {
   return path.map((coord) => worldMapAxialToPixel(coord, size));
 }

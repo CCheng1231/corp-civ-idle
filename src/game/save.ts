@@ -67,9 +67,22 @@ import {
   serializePrivateState,
 } from "../multiplayer/companySave";
 import { MAP_Z1_LAYER_DEFAULTS, type MapZ1FilterGroup } from "./worldMapLayout";
-import { resolveZ1RasterAlignment } from "./worldMapZ1Align";
+import {
+  resolveZ1RasterAlignment,
+  resolveZ1RasterAlignmentForBake,
+} from "./worldMapZ1Align";
+import {
+  applyDevMapZ1AlignToGameState,
+  applyDevMapZ1AlignToSettings,
+  syncDevMapZ1AlignFromSettings,
+} from "./worldMapZ1AlignDevStore";
+import {
+  applyWorldMapDevLayoutToGameState,
+  applyWorldMapDevLayoutToSettings,
+  syncWorldMapDevLayoutFromSettings,
+} from "./worldMapDevLayoutStore";
 import { parseMapZ1MajorHubMarkers } from "./worldMapZ1Markers";
-import type { GameSettings } from "./types";
+import type { GameSettings, MapRegion } from "./types";
 
 function parseMapZ1LayerFilters(
   raw: unknown,
@@ -87,14 +100,17 @@ function parseMapZ1RasterAlign(
   raw: unknown,
 ): GameSettings["mapZ1RasterAlign"] {
   if (!raw || typeof raw !== "object") return undefined;
-  const resolved = resolveZ1RasterAlignment(raw as Record<string, unknown>);
-  const defaults = resolveZ1RasterAlignment(null);
-  const changed =
-    resolved.offsetX !== defaults.offsetX ||
-    resolved.offsetY !== defaults.offsetY ||
-    resolved.scale !== defaults.scale ||
-    resolved.rotationDeg !== defaults.rotationDeg;
-  return changed ? resolved : undefined;
+  return resolveZ1RasterAlignment(raw as Record<string, unknown>);
+}
+
+function parseMapZ1RasterAlignV6(
+  raw: unknown,
+): GameSettings["mapZ1RasterAlignV6"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  return resolveZ1RasterAlignmentForBake(
+    "v6-draft",
+    raw as Record<string, unknown>,
+  );
 }
 
 export const ALERT_AUTO_DISMISS_SEC_MIN = 2;
@@ -634,6 +650,9 @@ function normalizeSave(
       mapZ1AlignDrag:
         parsed.settings?.mapZ1AlignDrag === true ? true : undefined,
       mapZ1RasterAlign: parseMapZ1RasterAlign(parsed.settings?.mapZ1RasterAlign),
+      mapZ1RasterAlignV6: parseMapZ1RasterAlignV6(
+        parsed.settings?.mapZ1RasterAlignV6,
+      ),
       mapZ1PlaceMajorHubs:
         parsed.settings?.mapZ1PlaceMajorHubs === true ? true : undefined,
       mapZ1MajorHubMarkers: (() => {
@@ -644,12 +663,38 @@ function normalizeSave(
         parsed.settings?.mapDevHexEdit === true ? true : undefined,
       mapDevHexEditMode:
         parsed.settings?.mapDevHexEditMode === "create" ||
-        parsed.settings?.mapDevHexEditMode === "move"
+        parsed.settings?.mapDevHexEditMode === "move" ||
+        parsed.settings?.mapDevHexEditMode === "region"
           ? parsed.settings.mapDevHexEditMode
           : undefined,
+      mapDevRegionBrush: (() => {
+        const b = parsed.settings?.mapDevRegionBrush;
+        return b === "metropolis" ||
+          b === "suburban" ||
+          b === "rural" ||
+          b === "countryside"
+          ? b
+          : undefined;
+      })(),
+      mapDevRegionOverrides: (() => {
+        const raw = parsed.settings?.mapDevRegionOverrides;
+        if (!raw || typeof raw !== "object") return undefined;
+        const out: Record<string, MapRegion> = {};
+        for (const [key, value] of Object.entries(raw)) {
+          if (
+            value === "metropolis" ||
+            value === "suburban" ||
+            value === "rural" ||
+            value === "countryside"
+          ) {
+            out[key] = value;
+          }
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+      })(),
       mapDevHexEditLandmark: (() => {
         const k = parsed.settings?.mapDevHexEditLandmark;
-        if (typeof k !== "string" || isMapDevLandmarkKeyLocked(k)) {
+        if (typeof k !== "string" || k === "gov") {
           return undefined;
         }
         return k;
@@ -709,6 +754,12 @@ function normalizeSave(
       mapZ1LayerFilters: parseMapZ1LayerFilters(
         parsed.settings?.mapZ1LayerFilters,
       ),
+      mapZ1BakeVariant:
+        parsed.settings?.mapZ1BakeVariant === "v6-draft"
+          ? "v6-draft"
+          : parsed.settings?.mapZ1BakeVariant === "v5"
+            ? "v5"
+            : undefined,
     },
     structureLevelsByLocation,
     structureQueues: migrateStructureQueues(parsed, structureLevelsByLocation),
@@ -884,6 +935,10 @@ function normalizeSave(
     delete merged.contractorsByLocation.branch;
   }
 
+  merged.settings = applyWorldMapDevLayoutToSettings(
+    applyDevMapZ1AlignToSettings(merged.settings),
+  );
+
   const trimmed = trimSecretaryJobReports(merged);
   if (options?.skipFinalize) return trimmed;
   return finalizeLoadedState(trimmed, Date.now());
@@ -926,7 +981,13 @@ export function loadOnlineStateFromRemote(
   merged.onlineSaveSessionId =
     typeof remoteSessionId === "string" ? remoteSessionId : expectedSessionId;
   const sanitized = sanitizeOnlineMapAnchors(merged);
-  return applyOnlineDevRestrictions(finalizeOnlineSyncState(sanitized, Date.now()));
+  return applyWorldMapDevLayoutToGameState(
+    applyDevMapZ1AlignToGameState(
+      applyOnlineDevRestrictions(
+        finalizeOnlineSyncState(sanitized, Date.now()),
+      ),
+    ),
+  );
 }
 
 /** Drop off-grid branch anchors and force HQ focus when saves predate HQ coord fixes. */
@@ -985,9 +1046,13 @@ export function loadGameState(session?: OnlineSession | null): GameState {
   if (session?.playMode === "online") {
     // Firestore bootstrap is authoritative — avoid stale economy cache on first paint.
     // Navigation (view / hub panels) hydrates from local cache until bootstrap completes.
-    return hydrateOnlineNavigationFromCache(
-      createFreshOnlineState(session),
-      session,
+    return applyWorldMapDevLayoutToGameState(
+      applyDevMapZ1AlignToGameState(
+        hydrateOnlineNavigationFromCache(
+          createFreshOnlineState(session),
+          session,
+        ),
+      ),
     );
   }
 
@@ -996,16 +1061,22 @@ export function loadGameState(session?: OnlineSession | null): GameState {
     if (!raw) {
       const fresh = createInitialState();
       if (session) fresh.onlineSession = session;
-      return fresh;
+      return applyWorldMapDevLayoutToGameState(
+        applyDevMapZ1AlignToGameState(fresh),
+      );
     }
     const parsed = JSON.parse(raw) as LegacySave;
     const normalized = normalizeSave(parsed);
     if (session) normalized.onlineSession = session;
-    return normalized;
+    return applyWorldMapDevLayoutToGameState(
+      applyDevMapZ1AlignToGameState(normalized),
+    );
   } catch {
     const fresh = createInitialState();
     if (session) fresh.onlineSession = session;
-    return fresh;
+    return applyWorldMapDevLayoutToGameState(
+      applyDevMapZ1AlignToGameState(fresh),
+    );
   }
 }
 
@@ -1042,6 +1113,8 @@ export function saveGameState(
   state: GameState,
   sessionOverride?: OnlineSession | null,
 ): void {
+  syncDevMapZ1AlignFromSettings(state.settings);
+  syncWorldMapDevLayoutFromSettings(state.settings);
   const session = sessionOverride ?? state.onlineSession;
   if (session?.playMode === "online") {
     const cacheKey = onlineCacheKey(session);

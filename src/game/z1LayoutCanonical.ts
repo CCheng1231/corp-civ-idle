@@ -77,6 +77,17 @@ export function z1CanonicalRasterAlign(): Z1RasterAlignment {
   return { ...Z1_LAYOUT_CANONICAL.rasterAlign };
 }
 
+export function z1CanonicalRasterAlignV6Draft(): Z1RasterAlignment {
+  const raw = (parsed as { rasterAlignV6Draft?: Z1RasterAlignment })
+    .rasterAlignV6Draft;
+  return {
+    offsetX: Number(raw?.offsetX) || 0,
+    offsetY: Number(raw?.offsetY) || 0,
+    scale: Number(raw?.scale) || 1,
+    rotationDeg: Number(raw?.rotationDeg) || 0,
+  };
+}
+
 export function z1CanonicalMajorHubMarkers(): MapZ1MajorHubMarker[] {
   return Z1_LAYOUT_CANONICAL.majorHubMarkers.slice(0, Z1_MAJOR_HUB_MARKER_COUNT);
 }

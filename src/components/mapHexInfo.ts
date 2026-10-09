@@ -1,5 +1,7 @@
 import { MAP_GOV, axialEquals } from "../game/hexLayout";
-import { officeAtForState } from "../multiplayer/playerHq";
+import { officeAtForState, playerHqSiteAt } from "../multiplayer/playerHq";
+import type { PlayerId } from "../multiplayer/types";
+import { PLAYER_LABELS } from "../multiplayer/types";
 import {
   hexDistanceFromMainOfficeForState,
   REGION_LABELS,
@@ -47,10 +49,16 @@ export type MapHexInfo =
       label: string;
       region: ReturnType<typeof regionAtCoord>;
     }
+  | {
+      kind: "player-hq";
+      coord: AxialCoord;
+      playerId: PlayerId;
+      region: ReturnType<typeof regionAtCoord>;
+    }
   | { kind: "terrain"; coord: AxialCoord; region: ReturnType<typeof regionAtCoord> };
 
 export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
-  const region = regionAtCoord(coord);
+  const region = regionAtCoord(coord, state.settings);
 
   if (axialEquals(coord, MAP_GOV)) {
     return { kind: "gov", coord, region };
@@ -59,6 +67,16 @@ export function mapHexInfo(coord: AxialCoord, state: GameState): MapHexInfo {
   const officeId = officeAtForState(coord, state);
   if (officeId) {
     return { kind: "office", coord, officeId, region };
+  }
+
+  const playerHq = playerHqSiteAt(coord, state.settings);
+  if (playerHq) {
+    return {
+      kind: "player-hq",
+      coord,
+      playerId: playerHq.id,
+      region,
+    };
   }
 
   const towerId = towerAtCoord(coord, state.settings);
@@ -108,6 +126,8 @@ export function mapHexTitle(info: MapHexInfo, state?: GameState): string {
       return info.label;
     case "major-hub":
       return info.label;
+    case "player-hq":
+      return `${PLAYER_LABELS[info.playerId]} HQ`;
     case "terrain":
       return REGION_LABELS[info.region];
   }
@@ -125,6 +145,8 @@ export function mapHexKindLabel(info: MapHexInfo): string {
       return "Commercial lot";
     case "major-hub":
       return "Major hub";
+    case "player-hq":
+      return "Player headquarters";
     case "terrain":
       return "Open region";
   }

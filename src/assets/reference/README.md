@@ -31,6 +31,8 @@ Muted natural terrain + gentle teal/amber glow (not sharp neon); airy layout, il
 | `world-map-z1-pass1-v5-pin-layout.png` | v5 pins **numbered** (for you); regen `npx tsx scripts/render-z1-v5-pin-layout.mjs` |
 | `world-map-z1-pass1-v5-pin-layout-bake-guide.png` | v5 **bake constraint** — dots only, no text (use for image gen, not numbered layout) |
 | `world-map-z1-hybrid-soft-pass1-v5.png` | Z1 pass-1 v5 — **in-game Z1 base** (layout locked; align canon + pins next) |
+| `world-map-z1-hybrid-soft-pass1-v6-draft.png` | Z1 pass-1 **v6 draft** — engine hub layout; dev toggle (see `docs/z1-pass1-v6-gen.md`) |
+| `world-map-z1-pass1-v6-engine-bake-guide.png` | v6 image-gen constraint (dots only) — `render-z1-v6-engine-bake-guide.mjs` |
 | `world-map-z1-hybrid-soft-world-plate.png` | Z1 **world plate** — margin underlay (regen `npx tsx scripts/composite-z1-world-plate.mjs`) |
 | `world-map-z1-hybrid-soft-world-extend-draft.png` | Z1 world plate **draft** tier (`--tier=draft`; see `docs/z1-world-extend-gen-spec.md`) |
 | `world-map-z1-hybrid-soft-pass2-guide.png` | Z1 pass-2 align guide (dev overlay) |

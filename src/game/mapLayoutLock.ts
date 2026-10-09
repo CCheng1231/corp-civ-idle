@@ -1,8 +1,4 @@
-/**
- * Gov + six major hubs: dev toolbar cannot move them.
- * Positions still come from save overrides (if any) then z1-layout-canonical.json.
- */
+/** Regional Gov is fixed at 0,0; other landmarks are movable in dev. */
 export function isMapDevLandmarkKeyLocked(key: string): boolean {
-  if (key === "gov") return true;
-  return /^major-\d+$/.test(key);
+  return key === "gov";
 }

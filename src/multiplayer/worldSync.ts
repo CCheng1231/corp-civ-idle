@@ -39,3 +39,8 @@ export {
   resetOnlineSharedWorldPreserveAccounts,
   resetOnlineDatabase,
 } from "./worldReset";
+export {
+  publishWorldMapDevLayout,
+  loadWorldMapDevLayout,
+  subscribeWorldMapDevLayout,
+} from "./worldMapLayoutSync";

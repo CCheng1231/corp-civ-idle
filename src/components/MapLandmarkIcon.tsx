@@ -24,7 +24,7 @@ const PIN_COLORS: Record<
 > = {
   gov: { fill: "#e37400", glyph: "#1a1a1a" },
   tower: { fill: "#1a73e8", glyph: "#ffffff" },
-  "major-hub": { fill: "#149aaa", glyph: "#ffffff" },
+  "major-hub": { fill: "#ffffff", glyph: "#1a1a1a" },
   commercial: { fill: "#f9ab00", glyph: "#1a1a1a" },
   active: { fill: "#34a853", glyph: "#ffffff" },
 };

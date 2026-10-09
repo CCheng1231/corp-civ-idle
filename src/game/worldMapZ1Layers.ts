@@ -22,6 +22,7 @@ import {
 } from "./worldMapLayout";
 import {
   worldMapAxialToPixel,
+  worldMapHexTileRadius,
   worldMapOuterGreenbeltRadiusPx,
 } from "./mapWorld";
 
@@ -74,7 +75,7 @@ const Z1_RIVER_HEXES: AxialCoord[] = [
 
 function hexPathD(coord: AxialCoord): string {
   const { x, y } = worldMapAxialToPixel(coord);
-  const pts = hexPolygonPoints(x, y);
+  const pts = hexPolygonPoints(x, y, worldMapHexTileRadius(coord));
   return `M ${pts.split(" ").join(" L ")} Z`;
 }
 

@@ -2,7 +2,7 @@
 
 export const HEX_RADIUS = 42;
 export const MAP_GOV = { q: 0, r: 0 };
-export const MAP_RADIUS = 9;
+export const MAP_RADIUS = 18;
 export const VIEWBOX_PAD = HEX_RADIUS * 0.95;
 
 export const REGION_SCALE = {

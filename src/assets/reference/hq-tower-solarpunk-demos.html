@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HQ tower — solarpunk demos (preview only)</title>
+    <style>
+      :root {
+        --map-bg: #465042;
+        --hex-span: 52px;
+        --hq-height: calc(var(--hex-span) * 0.58);
+        --hq-width: calc(var(--hex-span) * 0.26);
+        --hq-depth: calc(var(--hex-span) * 0.19);
+        --hq-half-w: calc(var(--hq-width) / 2);
+        --hq-half-d: calc(var(--hq-depth) / 2);
+        --shadow-w: calc(var(--hex-span) * 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, Segoe UI, sans-serif;
+        background: #1a1f24;
+        color: #e8eef5;
+        line-height: 1.45;
+      }
+
+      header {
+        padding: 1.25rem 1.5rem 0.5rem;
+        max-width: 1100px;
+      }
+
+      header h1 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 0.35rem;
+      }
+
+      header p {
+        margin: 0;
+        font-size: 0.88rem;
+        color: #9aa8b5;
+        max-width: 52rem;
+      }
+
+      .refs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+
+      .refs img {
+        width: 72px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #3a4550;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        padding: 1rem 1.5rem 2rem;
+        max-width: 1280px;
+      }
+
+      .section-break {
+        grid-column: 1 / -1;
+        margin: 0.5rem 0 0;
+        padding-top: 0.5rem;
+        border-top: 1px solid #3a4550;
+      }
+
+      .section-break h2 {
+        margin: 0 0 0.25rem;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .section-break p {
+        margin: 0;
+        font-size: 0.82rem;
+        color: #9aa8b5;
+        max-width: 52rem;
+      }
+
+      .card {
+        background: #242b33;
+        border: 1px solid #3a4550;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .card.card-wide {
+        overflow: visible;
+      }
+
+      .card-head {
+        padding: 0.85rem 1rem 0.5rem;
+      }
+
+      .card-head h2 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .card-head p {
+        margin: 0.35rem 0 0;
+        font-size: 0.78rem;
+        color: #9aa8b5;
+      }
+
+      .stage {
+        position: relative;
+        height: 220px;
+        background: var(--map-bg);
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 28px;
+      }
+
+      .hex-foot {
+        position: absolute;
+        bottom: 18px;
+        width: calc(var(--hex-span) * 1.05);
+        height: calc(var(--hex-span) * 0.91);
+        background: #528048;
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        opacity: 0.85;
+      }
+
+      /* —— shared tower rig (matches in-game) —— */
+      .tower-anchor {
+        position: relative;
+        width: 0;
+        height: 0;
+        z-index: 2;
+        margin-bottom: 6px;
+      }
+
+      .tower-shadow {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: var(--shadow-w);
+        height: calc(var(--shadow-w) * 0.32);
+        margin-left: calc(var(--shadow-w) / -2);
+        margin-top: calc(var(--shadow-w) * -0.12);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.35);
+        filter: blur(0.8px);
+      }
+
+      .tower-rig {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate3d(-50%, 0, 0);
+        perspective: calc(var(--hq-height) * 5.2);
+        transform-style: preserve-3d;
+      }
+
+      .tower-body {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: var(--hq-width);
+        height: var(--hq-height);
+        margin-left: calc(var(--hq-width) / -2);
+        margin-top: calc(var(--hq-height) * -1);
+        transform-style: preserve-3d;
+        transform: rotateX(-20deg) rotateY(36deg);
+        transform-origin: 50% 100%;
+      }
+
+      .face {
+        position: absolute;
+        box-sizing: border-box;
+        backface-visibility: hidden;
+      }
+
+      /* —— A: Canopy pods (ref 01) —— */
+      .v-canopy .core-front,
+      .v-canopy .core-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+      }
+
+      .v-canopy .core-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(
+          180deg,
+          rgba(236, 240, 244, 0.96) 0%,
+          rgba(214, 222, 230, 0.93) 55%,
+          rgba(196, 206, 216, 0.9) 100%
+        );
+      }
+
+      .v-canopy .core-front::after,
+      .v-canopy .core-right::after {
+        content: "";
+        position: absolute;
+        inset: 2px 3px;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(255, 248, 220, 0.78) 0 2px,
+          rgba(64, 74, 84, 0.06) 2px 3px,
+          rgba(152, 164, 176, 0.28) 3px 5px
+        );
+        opacity: 0.78;
+        pointer-events: none;
+      }
+
+      .v-canopy .core-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #c4ced6, #a8b6c2);
+      }
+
+      .v-canopy .core-left,
+      .v-canopy .core-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      .v-canopy .core-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+        background: linear-gradient(180deg, #d8e0e6, #b8c6d0);
+      }
+
+      .v-canopy .core-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+        background: linear-gradient(180deg, #e2e8ee, #c8d4de);
+      }
+
+      .v-canopy .core-left::after {
+        content: "";
+        position: absolute;
+        inset: 2px 2px;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(255, 248, 220, 0.65) 0 2px,
+          rgba(152, 164, 176, 0.28) 2px 5px
+        );
+        opacity: 0.72;
+        pointer-events: none;
+      }
+
+      .v-canopy .pod {
+        position: absolute;
+        left: 50%;
+        width: calc(var(--hq-width) * 1.15);
+        height: calc(var(--hq-height) * 0.22);
+        margin-left: calc(var(--hq-width) * -0.575);
+        border-radius: 45% 45% 40% 40%;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.35);
+        transform: rotateX(20deg) translateZ(calc(var(--hq-half-d) + 1px))
+          translateX(calc(var(--hq-width) * -0.1));
+        transform-origin: 50% 100%;
+      }
+
+      .v-canopy .pod-1 {
+        top: calc(var(--hq-height) * -0.92);
+      }
+      .v-canopy .pod-2 {
+        top: calc(var(--hq-height) * -0.62);
+        width: calc(var(--hq-width) * 1.05);
+        margin-left: calc(var(--hq-width) * -0.525);
+      }
+      .v-canopy .pod-3 {
+        top: calc(var(--hq-height) * -0.32);
+      }
+
+      .v-canopy.tim .pod {
+        background: linear-gradient(
+          180deg,
+          rgba(110, 195, 130, 0.95),
+          rgba(55, 130, 75, 0.92)
+        );
+      }
+      .v-canopy.chris .pod {
+        background: linear-gradient(
+          180deg,
+          rgba(100, 175, 230, 0.95),
+          rgba(45, 110, 175, 0.92)
+        );
+      }
+
+      /* —— B: White terraces (ref 02) —— */
+      .v-terrace .t-front,
+      .v-terrace .t-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        background: linear-gradient(180deg, #f4f7f6 0%, #dfe8e4 100%);
+        border: 1px solid rgba(40, 60, 55, 0.35);
+      }
+
+      .v-terrace .t-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+      }
+
+      .v-terrace .t-front-slab-layer::after {
+        content: "";
+        position: absolute;
+        inset: 3px 4px;
+        background: repeating-linear-gradient(
+            180deg,
+            rgba(255, 244, 210, 0.5) 0 2px,
+            transparent 2px 6px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            rgba(200, 220, 235, 0.35) 0 1px,
+            transparent 1px 5px
+          );
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .v-terrace .t-front-slab-layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .v-terrace .t-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #d8e3de, #c5d4cc);
+      }
+
+      .v-terrace .t-left,
+      .v-terrace .t-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #eef3f1, #cfdcd6);
+        border: 1px solid rgba(40, 60, 55, 0.3);
+      }
+
+      .v-terrace .t-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .v-terrace .t-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .v-terrace .t-left::before,
+      .v-terrace .t-right::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #ffffff;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        top: 18%;
+      }
+
+      .v-terrace .t-left::after,
+      .v-terrace .t-right::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #ffffff;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        top: 66%;
+      }
+
+      .v-terrace .slab {
+        position: absolute;
+        left: -12%;
+        width: 124%;
+        height: 3px;
+        background: #ffffff;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+      }
+
+      .v-terrace .garden {
+        position: absolute;
+        left: 8%;
+        width: 84%;
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #3d8f5a, #6bc48a, #3d8f5a);
+        opacity: 0.9;
+      }
+
+      .v-terrace .slab-1 {
+        top: 18%;
+      }
+      .v-terrace .garden-1 {
+        top: calc(18% + 4px);
+      }
+      .v-terrace .slab-2 {
+        top: 42%;
+      }
+      .v-terrace .garden-2 {
+        top: calc(42% + 4px);
+      }
+      .v-terrace .slab-3 {
+        top: 66%;
+      }
+      .v-terrace .garden-3 {
+        top: calc(66% + 4px);
+      }
+
+      .v-terrace.tim .t-front {
+        box-shadow: inset -3px 0 0 rgba(0, 114, 178, 0.35);
+      }
+      .v-terrace.chris .t-front {
+        box-shadow: inset -3px 0 0 rgba(155, 89, 200, 0.4);
+      }
+
+      /* —— C: Vertical forest (ref 03–04) —— */
+      .v-forest .f-front,
+      .v-forest .f-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        background: linear-gradient(180deg, #3a4548 0%, #2a3236 100%);
+        border: 1px solid #1a2226;
+      }
+
+      .v-forest .f-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        overflow: hidden;
+      }
+
+      .v-forest .f-front::before {
+        content: "";
+        position: absolute;
+        inset: 4px 22%;
+        z-index: 0;
+        background: repeating-linear-gradient(
+            180deg,
+            rgba(200, 228, 248, 0.55) 0 2px,
+            rgba(40, 52, 58, 0.35) 2px 5px
+          ),
+          linear-gradient(180deg, #4a5a62, #2e383c);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .v-forest .f-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+      }
+
+      .v-forest .f-left,
+      .v-forest .f-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #353e42, #252c30);
+        border: 1px solid #1a2226;
+        overflow: hidden;
+      }
+
+      .v-forest .f-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .v-forest .f-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .v-forest .f-left::before,
+      .v-forest .f-right::before {
+        content: "";
+        position: absolute;
+        top: 10%;
+        bottom: 12%;
+        left: 28%;
+        width: 44%;
+        z-index: 0;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(200, 228, 248, 0.5) 0 2px,
+          rgba(40, 52, 58, 0.4) 2px 5px
+        );
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .v-forest .balcony {
+        position: absolute;
+        left: 8%;
+        width: 84%;
+        height: 5px;
+        z-index: 2;
+        background: #f2f4f3;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+      }
+
+      .v-forest .bal-plant {
+        position: absolute;
+        left: 18%;
+        top: -3px;
+        width: 64%;
+        height: 4px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #3d8f5a, #6bc48a, #3d8f5a);
+        opacity: 0.95;
+      }
+
+      .v-forest .vine {
+        position: absolute;
+        pointer-events: none;
+        z-index: 1;
+        border-radius: 40% 60% 55% 45%;
+        background: linear-gradient(
+          180deg,
+          #8ed67a 0%,
+          #4a8f42 45%,
+          #3d7340 100%
+        );
+        opacity: 0.9;
+        box-shadow: inset -1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .v-forest .vine-left {
+        left: -8%;
+        top: 10%;
+        width: 22%;
+        height: 76%;
+        transform: rotate(-8deg);
+      }
+
+      .v-forest .vine-right {
+        right: -6%;
+        left: auto;
+        top: 16%;
+        width: 20%;
+        height: 72%;
+        transform: rotate(10deg);
+      }
+
+      .v-forest .bal-1 {
+        top: 12%;
+      }
+      .v-forest .bal-2 {
+        top: 38%;
+      }
+      .v-forest .bal-3 {
+        top: 64%;
+      }
+
+      .pair {
+        display: flex;
+        gap: 2.5rem;
+        justify-content: center;
+        align-items: flex-end;
+        width: 100%;
+        padding-bottom: 4px;
+      }
+
+      .pair label {
+        position: absolute;
+        bottom: 4px;
+        font-size: 0.65rem;
+        color: #8a98a5;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .pair .unit {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .pair .unit.tim label {
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .solo-tower {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        padding-bottom: 4px;
+      }
+
+      .solo-tower .tower-label {
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.65rem;
+        color: #8a98a5;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      /* —— Office: Central Exchange (lattice hourglass, ref 01) —— */
+      .o-metro .o-front,
+      .o-metro .o-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        border: 1px solid rgba(120, 80, 50, 0.35);
+      }
+
+      .o-metro .o-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(
+            135deg,
+            rgba(180, 120, 75, 0.35) 0 3px,
+            transparent 3px 7px
+          ),
+          linear-gradient(
+            225deg,
+            rgba(180, 120, 75, 0.35) 0 3px,
+            transparent 3px 7px
+          ),
+          linear-gradient(180deg, #e8d4c0, #c9a882);
+      }
+
+      .o-metro .o-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #c4a67a, #a8845c);
+      }
+
+      .o-metro .o-left,
+      .o-metro .o-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #dcc4a8, #b8926e);
+        border: 1px solid rgba(120, 80, 50, 0.3);
+      }
+
+      .o-metro .o-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .o-metro .o-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .o-metro .o-slab {
+        position: absolute;
+        left: -14%;
+        width: 128%;
+        height: 4px;
+        background: #f7f5f2;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+      }
+
+      .o-metro .o-slab-1 {
+        top: 8%;
+      }
+      .o-metro .o-slab-2 {
+        top: 38%;
+      }
+      .o-metro .o-slab-3 {
+        top: 68%;
+      }
+
+      .o-metro .o-rim {
+        position: absolute;
+        left: -10%;
+        width: 120%;
+        height: 3px;
+        border-radius: 50%;
+        background: linear-gradient(90deg, #3d8f5a, #7dce8a, #3d8f5a);
+        opacity: 0.85;
+      }
+
+      .o-metro .o-rim-1 {
+        top: calc(8% + 5px);
+      }
+      .o-metro .o-rim-2 {
+        top: calc(38% + 5px);
+      }
+
+      .o-metro .o-crown {
+        position: absolute;
+        left: 10%;
+        top: -12%;
+        width: 80%;
+        height: 14%;
+        border-radius: 50% 50% 35% 35%;
+        background: linear-gradient(180deg, #f5f2ee, #e8e2da);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+
+      /* —— Office: Parkview (park terraces, ref jpg01) —— */
+      .o-suburban .p-front,
+      .o-suburban .p-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+      }
+
+      .o-suburban .p-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #eef3f8, #d4e2ef);
+      }
+
+      .o-suburban .p-front::after {
+        content: "";
+        position: absolute;
+        inset: 3px 5px;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(210, 235, 255, 0.7) 0 2px,
+          rgba(140, 160, 175, 0.25) 2px 5px
+        );
+        opacity: 0.75;
+      }
+
+      .o-suburban .p-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #c8d6e4, #a8b8c8);
+      }
+
+      .o-suburban .p-left,
+      .o-suburban .p-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #e6eef6, #c2d2e2);
+      }
+
+      .o-suburban .p-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .o-suburban .p-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .o-suburban .p-ribbon {
+        position: absolute;
+        left: -8%;
+        width: 116%;
+        height: 5px;
+        border-radius: 4px;
+        background: #fafcfd;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      .o-suburban .p-garden {
+        position: absolute;
+        left: 5%;
+        width: 90%;
+        height: 3px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #4a9f62, #8ed67a, #4a9f62);
+      }
+
+      .o-suburban .p-ribbon-1 {
+        top: 22%;
+      }
+      .o-suburban .p-garden-1 {
+        top: calc(22% + 6px);
+      }
+      .o-suburban .p-ribbon-2 {
+        top: 52%;
+      }
+      .o-suburban .p-garden-2 {
+        top: calc(52% + 6px);
+      }
+
+      /* —— Office: Crossroads (sandstone facets, ref 02) —— */
+      .o-rural .r-front,
+      .o-rural .r-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+        border: 1px solid rgba(90, 60, 40, 0.35);
+      }
+
+      .o-rural .r-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #e8c4a8, #c9956e);
+      }
+
+      .o-rural .r-slot {
+        position: absolute;
+        top: 12%;
+        bottom: 18%;
+        width: 14%;
+        background: linear-gradient(
+          180deg,
+          rgba(55, 65, 72, 0.85),
+          rgba(25, 30, 34, 0.95)
+        );
+        box-shadow: inset 0 0 0 1px rgba(255, 220, 180, 0.15);
+      }
+
+      .o-rural .r-slot-1 {
+        left: 18%;
+      }
+      .o-rural .r-slot-2 {
+        left: 43%;
+      }
+      .o-rural .r-slot-3 {
+        left: 68%;
+      }
+
+      .o-rural .r-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #b88462, #9a6f4e);
+      }
+
+      .o-rural .r-left,
+      .o-rural .r-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #d4a882, #b07852);
+      }
+
+      .o-rural .r-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .o-rural .r-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .o-rural .r-crown {
+        position: absolute;
+        left: 5%;
+        width: 90%;
+        height: 22%;
+        top: -18%;
+        clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+        background: linear-gradient(180deg, #f0d4bc, #c9956e);
+        opacity: 0.95;
+      }
+
+      /* —— Office: Hillside (lattice over garden, ref jpg02) —— */
+      .o-country .h-front,
+      .o-country .h-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+      }
+
+      .o-country .h-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        overflow: hidden;
+        border: 1px solid rgba(40, 60, 55, 0.35);
+      }
+
+      .o-country .h-garden {
+        position: absolute;
+        inset: 8% 10%;
+        background: linear-gradient(180deg, #5cb86a, #2d7a45 55%, #3d8f5a);
+        opacity: 0.92;
+      }
+
+      .o-country .h-lattice {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            62deg,
+            rgba(255, 255, 255, 0.95) 0 2px,
+            transparent 2px 9px
+          ),
+          repeating-linear-gradient(
+            -62deg,
+            rgba(255, 255, 255, 0.9) 0 2px,
+            transparent 2px 11px
+          );
+        opacity: 0.88;
+        pointer-events: none;
+      }
+
+      .o-country .h-glass {
+        position: absolute;
+        right: 0;
+        top: 10%;
+        width: 22%;
+        height: 80%;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(180, 215, 240, 0.65) 0 2px,
+          rgba(60, 80, 95, 0.4) 2px 5px
+        );
+        border-left: 1px solid rgba(255, 255, 255, 0.35);
+      }
+
+      .o-country .h-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+        background: linear-gradient(180deg, #8fbf96, #5a8a62);
+      }
+
+      .o-country .h-left,
+      .o-country .h-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+        background: linear-gradient(180deg, #a8d4ae, #6a9e72);
+      }
+
+      .o-country .h-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+      .o-country .h-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      /* —— Shared material / glass office boxes —— */
+      .mat-tower .m-front,
+      .mat-tower .m-back {
+        width: var(--hq-width);
+        height: var(--hq-height);
+        left: 0;
+        top: 0;
+      }
+
+      .mat-tower .m-left,
+      .mat-tower .m-right {
+        width: var(--hq-depth);
+        height: var(--hq-height);
+        left: calc(var(--hq-width) / 2 - var(--hq-depth) / 2);
+        top: 0;
+      }
+
+      .mat-tower .m-front {
+        transform: rotateY(0deg) translateZ(var(--hq-half-d));
+        overflow: hidden;
+      }
+
+      .mat-tower .m-back {
+        transform: rotateY(180deg) translateZ(var(--hq-half-d));
+      }
+
+      .mat-tower .m-left {
+        transform: rotateY(-90deg) translateZ(var(--hq-half-w));
+      }
+
+      .mat-tower .m-right {
+        transform: rotateY(90deg) translateZ(var(--hq-half-w));
+      }
+
+      .mat-tower .m-floor {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+      }
+
+      .mat-tower .m-floor-1 {
+        top: 22%;
+      }
+      .mat-tower .m-floor-2 {
+        top: 48%;
+      }
+      .mat-tower .m-floor-3 {
+        top: 74%;
+      }
+
+      .mat-win {
+        position: absolute;
+        inset: 4px 5px;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(220, 240, 255, 0.75) 0 2px,
+          rgba(90, 110, 125, 0.35) 2px 5px
+        );
+        opacity: 0.85;
+      }
+
+      /* Glass exterior set (4 regions) */
+      .g-metro .m-front,
+      .g-metro .m-back,
+      .g-metro .m-left,
+      .g-metro .m-right {
+        border: 1px solid rgba(180, 220, 255, 0.45);
+      }
+
+      .g-metro .m-front {
+        background: linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.5) 0%,
+            transparent 40%
+          ),
+          linear-gradient(180deg, #8ec8e8 0%, #4a8ab0 55%, #3a6d8f 100%);
+      }
+
+      .g-metro .m-back {
+        background: linear-gradient(180deg, #6a9cb8, #456a82);
+      }
+      .g-metro .m-left,
+      .g-metro .m-right {
+        background: linear-gradient(180deg, #7eb8d4, #5088a8);
+      }
+
+      .g-metro .m-crown {
+        position: absolute;
+        left: 8%;
+        top: -10%;
+        width: 84%;
+        height: 12%;
+        border-radius: 40% 40% 30% 30%;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.85),
+          rgba(180, 220, 245, 0.5)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.7);
+      }
+
+      .g-suburban .m-front,
+      .g-suburban .m-back,
+      .g-suburban .m-left,
+      .g-suburban .m-right {
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .g-suburban .m-front {
+        background: linear-gradient(
+            180deg,
+            rgba(200, 235, 210, 0.45) 0%,
+            transparent 28%
+          ),
+          linear-gradient(180deg, #d8eaf8, #a8c8e0 100%);
+      }
+
+      .g-suburban .m-back {
+        background: linear-gradient(180deg, #b8d0e4, #90b0c8);
+      }
+      .g-suburban .m-left,
+      .g-suburban .m-right {
+        background: linear-gradient(180deg, #cce0f0, #a0bdd4);
+      }
+
+      .g-suburban .m-terrace {
+        position: absolute;
+        left: -6%;
+        width: 112%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 2px;
+      }
+
+      .g-suburban .m-terrace-1 {
+        top: 30%;
+      }
+      .g-suburban .m-terrace-2 {
+        top: 58%;
+      }
+
+      .g-suburban .m-terrace-g {
+        position: absolute;
+        left: 10%;
+        width: 80%;
+        height: 3px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #4a9f62, #8ed67a, #4a9f62);
+      }
+
+      .g-suburban .m-terrace-g-1 {
+        top: calc(30% + 5px);
+      }
+      .g-suburban .m-terrace-g-2 {
+        top: calc(58% + 5px);
+      }
+
+      .g-rural .m-front {
+        background: linear-gradient(180deg, #c8dce8, #88b0c8);
+        border: 3px solid #c9a882;
+        box-sizing: border-box;
+      }
+
+      .g-rural .m-back {
+        background: linear-gradient(180deg, #a8c0d0, #7898a8);
+        border: 1px solid #a8845c;
+      }
+
+      .g-rural .m-left,
+      .g-rural .m-right {
+        background: linear-gradient(180deg, #b8d0e0, #88a8b8);
+        border: 1px solid #b8926e;
+      }
+
+      .g-rural .m-mullion {
+        position: absolute;
+        top: 8%;
+        bottom: 10%;
+        width: 18%;
+        background: linear-gradient(180deg, #e8c8a8, #c9956e);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+      }
+
+      .g-rural .m-mullion-1 {
+        left: 6%;
+      }
+      .g-rural .m-mullion-2 {
+        left: 41%;
+      }
+      .g-rural .m-mullion-3 {
+        left: 76%;
+      }
+
+      .g-rural .m-pane {
+        position: absolute;
+        top: 10%;
+        bottom: 12%;
+        width: 20%;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(210, 235, 255, 0.8) 0 2px,
+          rgba(70, 90, 105, 0.35) 2px 5px
+        );
+      }
+
+      .g-rural .m-pane-1 {
+        left: 20%;
+      }
+      .g-rural .m-pane-2 {
+        left: 55%;
+      }
+
+      .g-country .m-front {
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.35),
+            transparent 35%
+          ),
+          linear-gradient(180deg, #b8e0c8 0%, #78b890 100%);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+      }
+
+      .g-country .m-back {
+        background: linear-gradient(180deg, #88b898, #5a8868);
+      }
+      .g-country .m-left,
+      .g-country .m-right {
+        background: linear-gradient(180deg, #98c8a8, #68a078);
+      }
+
+      .g-country .m-frame {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.75) 0 2px,
+            transparent 2px 7px
+          ),
+          repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.65) 0 2px,
+            transparent 2px 9px
+          );
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      /* Material palette (generic tower) */
+      .mat-concrete .m-front,
+      .mat-concrete .m-back,
+      .mat-concrete .m-left,
+      .mat-concrete .m-right {
+        border: 1px solid rgba(60, 65, 70, 0.35);
+        background: linear-gradient(180deg, #b8bcc2 0%, #8a9098 100%);
+      }
+
+      .mat-concrete .m-front {
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.12),
+            transparent 30%
+          ),
+          repeating-linear-gradient(
+            180deg,
+            #a8adb4 0 6px,
+            #949aa2 6px 7px,
+            #b0b5bc 7px 14px
+          );
+      }
+
+      .mat-concrete .m-moss {
+        position: absolute;
+        left: 5%;
+        width: 90%;
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #5a8a5a, #8fbc8f, #5a8a5a);
+      }
+
+      .mat-concrete .m-moss-1 {
+        top: 26%;
+      }
+      .mat-concrete .m-moss-2 {
+        top: 54%;
+      }
+
+      .mat-grass .m-front,
+      .mat-grass .m-back,
+      .mat-grass .m-left,
+      .mat-grass .m-right {
+        border: 1px solid rgba(40, 80, 50, 0.4);
+      }
+
+      .mat-grass .m-front {
+        background: linear-gradient(
+          180deg,
+          #6ec878 0%,
+          #3d9a52 40%,
+          #2d7a42 100%
+        );
+      }
+
+      .mat-grass .m-back {
+        background: linear-gradient(180deg, #5ab868, #358848);
+      }
+      .mat-grass .m-left,
+      .mat-grass .m-right {
+        background: linear-gradient(180deg, #62c072, #3a9050);
+      }
+
+      .mat-grass .m-front::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.35;
+        background: repeating-linear-gradient(
+          92deg,
+          transparent 0 3px,
+          rgba(20, 60, 30, 0.25) 3px 4px
+        );
+        pointer-events: none;
+      }
+
+      .mat-grass .m-tuft {
+        position: absolute;
+        left: 12%;
+        width: 76%;
+        height: 5px;
+        border-radius: 50% 50% 40% 40%;
+        background: linear-gradient(180deg, #9ee8a0, #4a9f52);
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+      }
+
+      .mat-grass .m-tuft-1 {
+        top: 18%;
+      }
+      .mat-grass .m-tuft-2 {
+        top: 44%;
+      }
+      .mat-grass .m-tuft-3 {
+        top: 70%;
+      }
+
+      .mat-wood .m-front,
+      .mat-wood .m-back,
+      .mat-wood .m-left,
+      .mat-wood .m-right {
+        border: 1px solid rgba(80, 50, 30, 0.45);
+      }
+
+      .mat-wood .m-front {
+        background: repeating-linear-gradient(
+            90deg,
+            #c4a574 0 3px,
+            #a8845a 3px 4px,
+            #d4b888 4px 7px
+          ),
+          linear-gradient(180deg, #b89262, #8a6844);
+      }
+
+      .mat-wood .m-back {
+        background: linear-gradient(180deg, #9a7048, #6e5034);
+      }
+      .mat-wood .m-left,
+      .mat-wood .m-right {
+        background: linear-gradient(180deg, #a87850, #785838);
+      }
+
+      .mat-wood .m-balcony {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #5c4030;
+        opacity: 0.85;
+      }
+
+      .mat-wood .m-balcony-1 {
+        top: 32%;
+      }
+      .mat-wood .m-balcony-2 {
+        top: 62%;
+      }
+
+      .mat-ceramic .m-front,
+      .mat-ceramic .m-back,
+      .mat-ceramic .m-left,
+      .mat-ceramic .m-right {
+        border: 1px solid rgba(160, 90, 60, 0.35);
+      }
+
+      .mat-ceramic .m-front {
+        background: linear-gradient(
+            180deg,
+            rgba(255, 240, 220, 0.4),
+            transparent 25%
+          ),
+          repeating-linear-gradient(
+            0deg,
+            #e8c8a8 0 5px,
+            #d4a882 5px 6px,
+            #f0dcc8 6px 11px
+          );
+      }
+
+      .mat-ceramic .m-back {
+        background: linear-gradient(180deg, #c9a078, #a88058);
+      }
+      .mat-ceramic .m-left,
+      .mat-ceramic .m-right {
+        background: linear-gradient(180deg, #dcb898, #b88868);
+      }
+
+      .mat-ceramic .m-arch {
+        position: absolute;
+        left: 15%;
+        width: 70%;
+        height: 16%;
+        top: 6%;
+        border-radius: 50% 50% 0 0;
+        border: 2px solid rgba(255, 248, 240, 0.65);
+        border-bottom: none;
+        opacity: 0.9;
+      }
+
+      .mat-bronze .m-front,
+      .mat-bronze .m-back,
+      .mat-bronze .m-left,
+      .mat-bronze .m-right {
+        border: 1px solid rgba(60, 45, 30, 0.4);
+      }
+
+      .mat-bronze .m-front {
+        background: linear-gradient(180deg, #4a4038, #2e2824);
+      }
+
+      .mat-bronze .m-front::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            55deg,
+            rgba(200, 150, 90, 0.55) 0 2px,
+            transparent 2px 8px
+          ),
+          repeating-linear-gradient(
+            -55deg,
+            rgba(180, 130, 75, 0.45) 0 2px,
+            transparent 2px 9px
+          );
+        pointer-events: none;
+      }
+
+      .mat-bronze .m-back {
+        background: linear-gradient(180deg, #3a3430, #242018);
+      }
+      .mat-bronze .m-left,
+      .mat-bronze .m-right {
+        background: linear-gradient(180deg, #403830, #2a2420);
+      }
+
+      .mat-stone .m-front,
+      .mat-stone .m-back,
+      .mat-stone .m-left,
+      .mat-stone .m-right {
+        border: 1px solid rgba(70, 65, 60, 0.35);
+        background: linear-gradient(180deg, #a8a49c, #787470);
+      }
+
+      .mat-stone .m-front {
+        background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.08) 0 40%,
+            transparent 40%
+          ),
+          linear-gradient(180deg, #9c9890, #6e6a64);
+      }
+
+      .mat-stone .m-slot {
+        position: absolute;
+        top: 14%;
+        bottom: 16%;
+        width: 12%;
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(190, 220, 240, 0.5) 0 2px,
+          rgba(40, 48, 52, 0.5) 2px 5px
+        );
+      }
+
+      .mat-stone .m-slot-1 {
+        left: 22%;
+      }
+      .mat-stone .m-slot-2 {
+        left: 44%;
+      }
+      .mat-stone .m-slot-3 {
+        left: 66%;
+      }
+
+      footer {
+        padding: 0 1.5rem 2rem;
+        font-size: 0.8rem;
+        color: #7a8896;
+        max-width: 52rem;
+      }
+
+      code {
+        font-size: 0.85em;
+        color: #b8c5d0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>HQ tower — solarpunk previews (not in-game yet)</h1>
+      <p>
+        Same footprint as the live map (<code>~58%</code> of hex height).
+        <strong>A (canopy)</strong> is in-game: <strong>green</strong> = your HQ,
+        <strong>blue</strong> = other players (custom colors later). B and C are
+        saved for branches / upgrades — preview only.
+      </p>
+      <p style="font-size: 0.82rem; color: #b8c5d0; margin-top: 0.5rem">
+        Open in a <strong>browser</strong> (not the code editor). A–C: Tim vs Chris
+        tint side by side. Office sections below are preview-only — not the live
+        game map.
+      </p>
+      <div class="refs" aria-hidden="true">
+        <img src="../World Map/HQ/01.jpeg" alt="" />
+        <img src="../World Map/HQ/02.jpg" alt="" />
+        <img src="../World Map/HQ/03.jpg" alt="" />
+        <img src="../World Map/HQ/04.jpg" alt="" />
+        <img src="../World Map/Office Tower/01.webp" alt="" />
+        <img src="../World Map/Office Tower/02.webp" alt="" />
+        <img src="../World Map/Office Tower/jpg01.jpg" alt="" />
+        <img src="../World Map/Office Tower/jpg02.jpg" alt="" />
+      </div>
+    </header>
+
+    <main>
+      <article class="card">
+        <div class="card-head">
+          <h2>A — Canopy pods</h2>
+          <p>Glass core + green pebble bands (in-game). Green = yours, blue = peer.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="pair">
+            <div class="unit tim">
+              <div class="tower-anchor v-canopy tim">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face core-front"></div>
+                    <div class="face core-back"></div>
+                    <div class="face core-left"></div>
+                    <div class="face core-right"></div>
+                    <div class="pod pod-1"></div>
+                    <div class="pod pod-2"></div>
+                    <div class="pod pod-3"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Your HQ (green)</label>
+            </div>
+            <div class="unit chris">
+              <div class="tower-anchor v-canopy chris">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face core-front"></div>
+                    <div class="face core-back"></div>
+                    <div class="face core-left"></div>
+                    <div class="face core-right"></div>
+                    <div class="pod pod-1"></div>
+                    <div class="pod pod-2"></div>
+                    <div class="pod pod-3"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Peer HQ (blue)</label>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>B — Terrace garden</h2>
+          <p>White massing + green slab gardens (ref 02).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="pair">
+            <div class="unit tim">
+              <div class="tower-anchor v-terrace tim">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face t-front">
+                      <div class="t-front-slab-layer">
+                        <span class="slab slab-1"></span>
+                        <span class="garden garden-1"></span>
+                        <span class="slab slab-2"></span>
+                        <span class="garden garden-2"></span>
+                        <span class="slab slab-3"></span>
+                        <span class="garden garden-3"></span>
+                      </div>
+                    </div>
+                    <div class="face t-back"></div>
+                    <div class="face t-left"></div>
+                    <div class="face t-right"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Tim accent</label>
+            </div>
+            <div class="unit chris">
+              <div class="tower-anchor v-terrace chris">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face t-front">
+                      <div class="t-front-slab-layer">
+                        <span class="slab slab-1"></span>
+                        <span class="garden garden-1"></span>
+                        <span class="slab slab-2"></span>
+                        <span class="garden garden-2"></span>
+                        <span class="slab slab-3"></span>
+                        <span class="garden garden-3"></span>
+                      </div>
+                    </div>
+                    <div class="face t-back"></div>
+                    <div class="face t-left"></div>
+                    <div class="face t-right"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Chris accent</label>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>C — Vertical forest</h2>
+          <p>Glass core, side vines, plants on balconies only (ref 03–04).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="pair">
+            <div class="unit tim">
+              <div class="tower-anchor v-forest tim">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face f-front">
+                      <span class="vine vine-left"></span>
+                      <span class="vine vine-right"></span>
+                      <span class="balcony bal-1"><span class="bal-plant"></span></span>
+                      <span class="balcony bal-2"><span class="bal-plant"></span></span>
+                      <span class="balcony bal-3"><span class="bal-plant"></span></span>
+                    </div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Tim</label>
+            </div>
+            <div class="unit chris">
+              <div class="tower-anchor v-forest chris">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face f-front">
+                      <span class="vine vine-left"></span>
+                      <span class="vine vine-right"></span>
+                      <span class="balcony bal-1"><span class="bal-plant"></span></span>
+                      <span class="balcony bal-2"><span class="bal-plant"></span></span>
+                      <span class="balcony bal-3"><span class="bal-plant"></span></span>
+                    </div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                  </div>
+                </div>
+              </div>
+              <label>Chris</label>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <div class="section-break">
+        <h2>Office towers (map landmarks)</h2>
+        <p>
+          CSS sketches for the four regional towers — Al-Andalus / Seville
+          solarpunk cues (white slabs, lattice, courtyards) plus refs in
+          <code>World Map/Office Tower/</code>. Preview only; not on the live map
+          yet.
+        </p>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Central Exchange · metropolis</h2>
+          <p>Hourglass lattice + white tiers + green rims (ref 01).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor o-metro">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face o-front">
+                      <span class="o-crown"></span>
+                      <span class="o-slab o-slab-1"></span>
+                      <span class="o-rim o-rim-1"></span>
+                      <span class="o-slab o-slab-2"></span>
+                      <span class="o-rim o-rim-2"></span>
+                      <span class="o-slab o-slab-3"></span>
+                    </div>
+                    <div class="face o-back"></div>
+                    <div class="face o-left"></div>
+                    <div class="face o-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">metro_central</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Parkview · suburban</h2>
+          <p>Light glass + white ribbon terraces and park bands (jpg01).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor o-suburban">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face p-front">
+                      <span class="p-ribbon p-ribbon-1"></span>
+                      <span class="p-garden p-garden-1"></span>
+                      <span class="p-ribbon p-ribbon-2"></span>
+                      <span class="p-garden p-garden-2"></span>
+                    </div>
+                    <div class="face p-back"></div>
+                    <div class="face p-left"></div>
+                    <div class="face p-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">suburban_park</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- In-game: all four office towers use the Crossroads (o-rural) sketch — see MapOfficeTower3D.tsx -->
+      <article class="card">
+        <div class="card-head">
+          <h2>Crossroads · rural</h2>
+          <p>Warm sandstone mass + vertical slots + crown (02.webp). <strong>Shipped in-game</strong> for every office tower until per-site styles return.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor o-rural">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face r-front">
+                      <span class="r-crown"></span>
+                      <span class="r-slot r-slot-1"></span>
+                      <span class="r-slot r-slot-2"></span>
+                      <span class="r-slot r-slot-3"></span>
+                    </div>
+                    <div class="face r-back"></div>
+                    <div class="face r-left"></div>
+                    <div class="face r-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">rural_crossing</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Hillside · countryside</h2>
+          <p>Green wall + white lattice exoskeleton + glass edge (jpg02).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor o-country">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face h-front">
+                      <span class="h-garden"></span>
+                      <span class="h-lattice"></span>
+                      <span class="h-glass"></span>
+                    </div>
+                    <div class="face h-back"></div>
+                    <div class="face h-left"></div>
+                    <div class="face h-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">country_estate</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <div class="section-break">
+        <h2>Office towers — glass exterior set</h2>
+        <p>
+          Same four sites with <strong>curtain-wall</strong> massing (mullions,
+          terraces, or greenhouse frames). Pair with the themed set above when
+          picking a map look.
+        </p>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Central Exchange · glass</h2>
+          <p>Blue curtain wall + lit crown (metro skyline).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower g-metro">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="mat-win"></span>
+                      <span class="m-crown"></span>
+                      <span class="m-floor m-floor-1"></span>
+                      <span class="m-floor m-floor-2"></span>
+                      <span class="m-floor m-floor-3"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">metro · glass</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Parkview · glass</h2>
+          <p>Pale glazing + terrace planters (suburban park).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower g-suburban">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="mat-win"></span>
+                      <span class="m-terrace m-terrace-1"></span>
+                      <span class="m-terrace-g m-terrace-g-1"></span>
+                      <span class="m-terrace m-terrace-2"></span>
+                      <span class="m-terrace-g m-terrace-g-2"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">suburban · glass</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Crossroads · glass</h2>
+          <p>Sandstone mullions + glass infill slots (rural).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower g-rural">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-mullion m-mullion-1"></span>
+                      <span class="m-pane m-pane-1"></span>
+                      <span class="m-mullion m-mullion-2"></span>
+                      <span class="m-pane m-pane-2"></span>
+                      <span class="m-mullion m-mullion-3"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">rural · glass</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Hillside · glass</h2>
+          <p>Greenhouse glazing + white frame grid (countryside).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower g-country">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-frame"></span>
+                      <span class="mat-win"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">country · glass</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <div class="section-break">
+        <h2>Exterior material palette</h2>
+        <p>
+          Generic tower footprint — swap cladding for branches, biomes, or era
+          upgrades (concrete brutalist, living wall, timber, Seville ceramic,
+          bronze mesh, limestone).
+        </p>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Concrete</h2>
+          <p>Board-formed grey + moss terrace bands.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-concrete">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-moss m-moss-1"></span>
+                      <span class="m-moss m-moss-2"></span>
+                      <span class="m-floor m-floor-1"></span>
+                      <span class="m-floor m-floor-2"></span>
+                      <span class="m-floor m-floor-3"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">concrete</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Grass / living facade</h2>
+          <p>Full green wall + tufted terrace volumes.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-grass">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-tuft m-tuft-1"></span>
+                      <span class="m-tuft m-tuft-2"></span>
+                      <span class="m-tuft m-tuft-3"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">grass</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Wood</h2>
+          <p>Vertical timber cladding + dark balcony rails.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-wood">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-balcony m-balcony-1"></span>
+                      <span class="m-balcony m-balcony-2"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">wood</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Ceramic tile</h2>
+          <p>Al-Andalus / Seville warm bands + crown arch.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-ceramic">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-arch"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">ceramic</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Bronze mesh</h2>
+          <p>Shaded screen over dark core (solar shade).</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-bronze">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front"></div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">bronze mesh</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Limestone</h2>
+          <p>Pale stone mass + narrow glazed slots.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot"></div>
+          <div class="solo-tower">
+            <div class="unit" style="position: relative">
+              <div class="tower-anchor mat-tower mat-stone">
+                <div class="tower-shadow"></div>
+                <div class="tower-rig">
+                  <div class="tower-body">
+                    <div class="face m-front">
+                      <span class="m-slot m-slot-1"></span>
+                      <span class="m-slot m-slot-2"></span>
+                      <span class="m-slot m-slot-3"></span>
+                    </div>
+                    <div class="face m-back"></div>
+                    <div class="face m-left"></div>
+                    <div class="face m-right"></div>
+                  </div>
+                </div>
+              </div>
+              <span class="tower-label">limestone</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <strong>In game:</strong> A canopy · green = your HQ · blue = peers.
+      <strong>Later:</strong> B terrace (branch upgrades), C vine-wrapped tower,
+      office tower CSS → map markers; glass + material palettes above are
+      pick-one references; player-chosen accent colors TBD.
+    </footer>
+  </body>
+</html>

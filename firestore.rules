@@ -116,5 +116,11 @@ service cloud.firestore {
         && isValidAccountId(accountId)
         && (boundAccountId(worldId) == accountId || isDevAccount(boundAccountId(worldId)));
     }
+
+    match /worlds/{worldId}/shared/mapLayout {
+      allow read: if isBoundToWorld(worldId);
+      allow write: if isBoundToWorld(worldId)
+        && isDevAccount(boundAccountId(worldId));
+    }
   }
 }

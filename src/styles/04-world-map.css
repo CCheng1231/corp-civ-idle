@@ -203,19 +203,19 @@
 }
 
 .map-z1-major-hub-marker-halo {
-  fill: rgba(62, 203, 212, 0.22);
+  fill: rgba(255, 255, 255, 0.28);
   stroke: none;
 }
 
 .map-z1-major-hub-marker-ring {
-  fill: rgba(72, 200, 210, 0.55);
-  stroke: #ffffff;
+  fill: rgba(255, 255, 255, 0.65);
+  stroke: #0a0e12;
   stroke-width: 3;
 }
 
 .map-z1-major-hub-marker-core {
-  fill: #149aaa;
-  stroke: #fff;
+  fill: #ffffff;
+  stroke: #0a0e12;
   stroke-width: 1.5;
 }
 
@@ -328,6 +328,20 @@
 
 .map-presentation-player .map-zoom-scale-layer-tilt {
   transform-origin: 50% 55%;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.map-presentation-player .map-zoom-map-stack {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.map-presentation-player .map-hq-towers-layer-untilted {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .map-schematic-land {

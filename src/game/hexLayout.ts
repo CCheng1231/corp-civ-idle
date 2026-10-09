@@ -10,7 +10,7 @@ import {
 export const HEX_RADIUS = 42;
 
 /** Axial hexagon patch radius (map extent from Gov). */
-export const MAP_RADIUS = 9;
+export const MAP_RADIUS = 18;
 
 export type { AxialCoord } from "./types";
 

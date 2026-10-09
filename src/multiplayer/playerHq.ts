@@ -1,8 +1,8 @@
 import { effectiveLandmarkCoord } from "../game/mapDevLayout";
-import { MAP_HQ, officeAtCoord } from "../game/hexLayout";
+import { MAP_HQ, axialEquals, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
 import type { CompanyPresence, OnlineSession, PlayerId } from "./types";
-import { isDevAccount } from "./types";
+import { isDevAccount, PLAYER_IDS, type PlayerId } from "./types";
 
 export function resolveOnlineSession(
   state: GameState,
@@ -78,6 +78,14 @@ export function canonicalCompanyPresenceMap(
   return next;
 }
 
+function sessionAccountId(
+  state: GameState,
+  session?: OnlineSession | null,
+): string | null {
+  const resolved = session ?? state.onlineSession;
+  return resolved?.accountId ?? null;
+}
+
 export function hqCoordForState(
   state: GameState,
   session?: OnlineSession | null,
@@ -86,7 +94,37 @@ export function hqCoordForState(
   if (onlineSession) {
     return playerHqCoord(onlineSession.accountId, state.settings);
   }
+  const accountId = sessionAccountId(state, session);
+  if (accountId && PLAYER_IDS.includes(accountId as PlayerId)) {
+    return playerHqCoord(accountId, state.settings);
+  }
   return effectiveLandmarkCoord("hq:tim", state.settings) ?? MAP_HQ;
+}
+
+/** Tim + Chris HQ hexes on the shared playtest map (respects dev landmark moves). */
+export function authoredPlayerHqSites(
+  settings?: GameState["settings"],
+): { id: PlayerId; coord: AxialCoord }[] {
+  return [
+    {
+      id: "tim",
+      coord: effectiveLandmarkCoord("hq:tim", settings) ?? MAP_HQ,
+    },
+    {
+      id: "chris",
+      coord: effectiveLandmarkCoord("hq:chris", settings) ?? CHRIS_HQ,
+    },
+  ];
+}
+
+export function playerHqSiteAt(
+  coord: AxialCoord,
+  settings?: GameState["settings"],
+): { id: PlayerId; coord: AxialCoord } | null {
+  for (const site of authoredPlayerHqSites(settings)) {
+    if (axialEquals(site.coord, coord)) return site;
+  }
+  return null;
 }
 
 export function isOnlineMode(state: GameState): boolean {

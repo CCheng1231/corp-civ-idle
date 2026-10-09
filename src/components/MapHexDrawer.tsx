@@ -46,6 +46,7 @@ import type {
   ResourceCost,
   TowerId,
 } from "../game/types";
+import { PLAYER_LABELS, type PlayerId } from "../multiplayer/types";
 import {
   mapHexDistanceLabel,
   mapHexInfo,
@@ -97,6 +98,38 @@ function CompletionBandTip({
         ))}
       </span>
     </span>
+  );
+}
+
+function PlayerHqDrawerSection({
+  state,
+  playerId,
+}: {
+  state: GameState;
+  playerId: PlayerId;
+}) {
+  const presence = state.companyPresence?.[playerId];
+  const label = presence?.displayName ?? PLAYER_LABELS[playerId];
+  const branchCount = presence?.branchSites?.length ?? 0;
+
+  return (
+    <>
+      <p className="map-hex-desc">
+        {label}&apos;s company headquarters on the shared world map.
+      </p>
+      {presence ? (
+        <dl className="map-hex-facts">
+          <div>
+            <dt>Branches</dt>
+            <dd>{branchCount}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="map-hex-desc muted">
+          No live presence data — offline or not in this world session.
+        </p>
+      )}
+    </>
   );
 }
 
@@ -648,6 +681,10 @@ export function MapHexDrawer({
           <p className="map-hex-desc muted">
             Strategic major hub — regional anchor on the world map (Z1 ring).
           </p>
+        )}
+
+        {info.kind === "player-hq" && (
+          <PlayerHqDrawerSection state={state} playerId={info.playerId} />
         )}
 
         {info.kind === "commercial" && (

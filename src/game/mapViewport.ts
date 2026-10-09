@@ -8,6 +8,7 @@
 
 import type { AxialCoord, GameSettings } from "./types";
 import { worldMapPresentationPixel } from "./mapDevLayout";
+import { mapAbsoluteZoomScale } from "./worldMapZ1WorldPlate";
 
 export type MapViewBounds = {
   minX: number;
@@ -55,6 +56,52 @@ export function mapPresentationTiltDeg(
   const t = (z - MAP_ZOOM_REL_MIN) / span;
   return 8 + t * 12;
 }
+
+/** Must match `.map-presentation-player .map-zoom-scale-layer-tilt` transform-origin Y. */
+export const MAP_PRESENTATION_TILT_ORIGIN_Y_RATIO = 0.55;
+
+/**
+ * Content-pixel position after rotateX(tilt) about (50%, 55%) — aligns markers with tilted hexes.
+ */
+export function mapContentPointAfterTilt(
+  point: { x: number; y: number },
+  content: MapContentSize,
+  tiltDeg: number,
+  originYRatio = MAP_PRESENTATION_TILT_ORIGIN_Y_RATIO,
+): { x: number; y: number } {
+  if (content.width <= 0 || content.height <= 0 || tiltDeg <= 0) {
+    return point;
+  }
+  const oy = content.height * originYRatio;
+  const rad = (tiltDeg * Math.PI) / 180;
+  const dy = point.y - oy;
+  return {
+    x: point.x,
+    y: oy + dy * Math.cos(rad),
+  };
+}
+
+/** Tower footprint + height scaled to rendered hex size (stable silhouette at any zoom). */
+export function mapHqTowerDimensionsFromHexScreenPx(hexSpanPx: number): {
+  width: number;
+  depth: number;
+  height: number;
+} {
+  const span = Math.max(hexSpanPx, 1);
+  return {
+    height: Math.min(140, Math.max(10, span * 0.58)),
+    width: Math.min(52, Math.max(8, span * 0.26)),
+    depth: Math.min(38, Math.max(6, span * 0.19)),
+  };
+}
+
+/** Body rotateX for HQ tower; eases toward upright as on-screen tower grows (zoom-in). */
+export function mapHqTowerPresentationTiltDeg(towerHeightPx: number): number {
+  const h = Math.min(140, Math.max(10, towerHeightPx));
+  const t = (h - 10) / 130;
+  return -20 + t * 9;
+}
+
 /** Exponential wheel zoom — higher = faster scroll zoom. */
 export const MAP_WHEEL_ZOOM_SENSITIVITY = 0.00115;
 /**
@@ -62,8 +109,126 @@ export const MAP_WHEEL_ZOOM_SENSITIVITY = 0.00115;
  * (Previously MAP_FIT_BLEED ≈ 1.32 with rel max 2.0.)
  */
 export const MAP_FIT_BLEED = 2.65;
-/** Extra pan slack (per side) so edge sites can center; grey viewport may show at margins. */
+/** Dev-only pan slack so edge sites can center past the art edge. */
 export const MAP_PAN_OVERSCROLL_RATIO = 0.2;
+
+export function mapPanOverscrollRatio(isDevPresentation: boolean): number {
+  return isDevPresentation ? MAP_PAN_OVERSCROLL_RATIO : 0;
+}
+
+/** Minimum CSS scale so map content fully covers the viewport (no letterbox). */
+export function minAbsoluteZoomToCoverViewport(
+  viewportW: number,
+  viewportH: number,
+  content: MapContentSize,
+): number {
+  if (content.width <= 0 || content.height <= 0) return 1;
+  return Math.max(
+    viewportW / content.width,
+    viewportH / content.height,
+  );
+}
+
+/**
+ * Lowest zoomRel that still covers the panel (replaces fixed 20% floor when higher).
+ */
+export function minMapZoomRelForCover(
+  fitZoom: number,
+  cornerstone: MapViewBounds,
+  viewportW: number,
+  viewportH: number,
+  content: MapContentSize,
+): number {
+  const minAbs = minAbsoluteZoomToCoverViewport(viewportW, viewportH, content);
+  if (fitZoom <= 0) return MAP_ZOOM_REL_MIN;
+
+  let zLo = MAP_ZOOM_REL_MIN;
+  let zHi = MAP_ZOOM_REL_MAX;
+  for (let i = 0; i < 40; i++) {
+    const mid = (zLo + zHi) / 2;
+    const abs = mapAbsoluteZoomScale(fitZoom, mid, cornerstone);
+    if (abs >= minAbs) {
+      zHi = mid;
+    } else {
+      zLo = mid;
+    }
+  }
+  return clampMapZoomRel(zHi, { snapStep: false });
+}
+
+export function clampMapZoomRelForCover(
+  zoomRel: number,
+  fitZoom: number,
+  cornerstone: MapViewBounds,
+  viewportW: number,
+  viewportH: number,
+  content: MapContentSize,
+): number {
+  const floor = minMapZoomRelForCover(
+    fitZoom,
+    cornerstone,
+    viewportW,
+    viewportH,
+    content,
+  );
+  return clampMapZoomRel(Math.max(zoomRel, floor), { snapStep: false });
+}
+
+/** Inset at max zoom-out (1 = edge-to-edge contain). */
+export const MAP_SHOWCASE_FIT_PADDING = 1;
+
+/**
+ * Max zoom-out: entire map visible in the panel (contain), not cover-crop.
+ * Replaces cover floor for player/dev min zoom.
+ */
+export function mapZoomRelForFullFit(
+  fitZoom: number,
+  viewportW: number,
+  viewportH: number,
+  content: MapContentSize,
+  padding: number = MAP_SHOWCASE_FIT_PADDING,
+): number {
+  if (fitZoom <= 0 || content.width <= 0 || content.height <= 0) {
+    return MAP_ZOOM_REL_MIN;
+  }
+  const containAbs =
+    Math.min(viewportW / content.width, viewportH / content.height) / padding;
+  const rel = containAbs / fitZoom;
+  return clampMapZoomRel(
+    Math.max(MAP_ZOOM_REL_MIN, Math.min(MAP_ZOOM_REL_MAX, rel)),
+    { snapStep: false },
+  );
+}
+
+export function clampMapZoomRelForPlayer(
+  zoomRel: number,
+  fitZoom: number,
+  viewportW: number,
+  viewportH: number,
+  content: MapContentSize,
+): number {
+  const floor = mapZoomRelForFullFit(
+    fitZoom,
+    viewportW,
+    viewportH,
+    content,
+  );
+  return clampMapZoomRel(Math.max(zoomRel, floor), { snapStep: false });
+}
+
+/** SVG uses meet (full art) at or below this rel; slice when zoomed in. */
+export const MAP_SHOWCASE_PRESERVE_MEET_MAX_REL = 0.72;
+
+export function mapSvgPreserveAspectRatio(
+  zoomRel: number,
+  showcaseFloorRel: number = MAP_ZOOM_REL_MIN,
+): string {
+  const meetUntil = Math.max(
+    MAP_SHOWCASE_PRESERVE_MEET_MAX_REL,
+    showcaseFloorRel * 1.08,
+  );
+  return zoomRel <= meetUntil ? "xMidYMid meet" : "xMidYMid slice";
+}
 
 /** Below this relative zoom, player sees Gov + own HQ pins only. */
 export const MAP_STRATEGIC_ZOOM_PIN_MAX_REL = 0.35;
@@ -161,6 +326,8 @@ export function applyMapWheelZoom(input: {
   zoomRel: number;
   pan: { x: number; y: number };
   content: MapContentSize;
+  resolveAbsoluteZoom?: (zoomRel: number) => number;
+  panOverscrollRatio?: number;
 }): { zoomRel: number; pan: { x: number; y: number } } {
   const {
     deltaY,
@@ -173,12 +340,17 @@ export function applyMapWheelZoom(input: {
     zoomRel,
     pan,
     content,
+    resolveAbsoluteZoom,
+    panOverscrollRatio,
   } = input;
   if (fitZoom <= 0 || content.width <= 0 || content.height <= 0) {
     return { zoomRel, pan };
   }
 
-  const zoomBefore = fitZoom * zoomRel;
+  const absZoom = (zRel: number) =>
+    resolveAbsoluteZoom?.(zRel) ?? fitZoom * zRel;
+
+  const zoomBefore = absZoom(zoomRel);
   const anchor = contentPointAtViewportPixel(
     viewportX,
     viewportY,
@@ -192,7 +364,7 @@ export function applyMapWheelZoom(input: {
     zoomRel * wheelZoomFactor(deltaY, deltaMode),
     { snapStep: false },
   );
-  const zoomAfter = fitZoom * zoomRelAfter;
+  const zoomAfter = absZoom(zoomRelAfter);
   const panAfter = clampMapPan(
     panForViewportAnchor(
       anchor,
@@ -207,6 +379,7 @@ export function applyMapWheelZoom(input: {
     viewportW,
     viewportH,
     content,
+    panOverscrollRatio ?? MAP_PAN_OVERSCROLL_RATIO,
   );
   return { zoomRel: zoomRelAfter, pan: panAfter };
 }
@@ -301,6 +474,26 @@ export function panToCenterContentPoint(
     x: -(point.x - content.width / 2) * zoom,
     y: -(point.y - content.height / 2) * zoom,
   };
+}
+
+/** Pan so the map viewBox center sits in the viewport (full-map / showcase framing). */
+export function panToCenterMapView(
+  bounds: MapViewBounds,
+  content: MapContentSize,
+  zoom: number,
+): { x: number; y: number } {
+  return panToCenterContentPoint(
+    viewBoxPointToContentPixel(
+      {
+        x: bounds.minX + bounds.width / 2,
+        y: bounds.minY + bounds.height / 2,
+      },
+      bounds,
+      content,
+    ),
+    content,
+    zoom,
+  );
 }
 
 /**

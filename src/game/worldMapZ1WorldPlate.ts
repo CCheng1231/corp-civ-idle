@@ -3,7 +3,6 @@
  * Does not change hex grid, hubs, or v5 raster alignment (see docs/z1-world-extend-gen-spec.md).
  */
 import type { MapBounds } from "./worldMapV01";
-
 /** ViewBox pad per side (from scripts/compute-z1-world-extend-margin.mjs). */
 export const MAP_Z1_WORLD_PLATE_PAD = 2600;
 
@@ -17,12 +16,12 @@ export function z1WorldPlateBounds(cornerstone: MapBounds): MapBounds {
   };
 }
 
-/** Player SVG viewBox — plate margin through Z1 / Z1→Z2 crossfade; hex coords unchanged. */
+/** SVG viewBox — plate margin through Z1 / Z1→Z2 crossfade; hex coords unchanged. */
 export function worldMapPlayerSvgViewBounds(
   cornerstone: MapBounds,
-  options: { isDev: boolean; usePlateMargin: boolean },
+  usePlateMargin: boolean,
 ): MapBounds {
-  if (!options.isDev && options.usePlateMargin) {
+  if (usePlateMargin) {
     return z1WorldPlateBounds(cornerstone);
   }
   return cornerstone;
@@ -35,4 +34,14 @@ export function mapZ1ViewBoxZoomFactor(
 ): number {
   if (cornerstone.width <= 0) return 1;
   return svgViewBounds.width / cornerstone.width;
+}
+
+/** CSS scale on map content (`fitZoom * zoomRel` × plate viewBox factor). */
+/** CSS scale on map content (`fitZoom * zoomRel`). */
+export function mapAbsoluteZoomScale(
+  fitZoom: number,
+  zoomRel: number,
+  _cornerstone?: MapBounds,
+): number {
+  return fitZoom * zoomRel;
 }

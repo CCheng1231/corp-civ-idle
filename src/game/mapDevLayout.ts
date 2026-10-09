@@ -8,7 +8,7 @@ import {
   axialKey,
   generateHexagonMap,
 } from "./hexLayout";
-import type { AxialCoord, GameSettings } from "./types";
+import type { AxialCoord, GameSettings, MapRegion } from "./types";
 import {
   COMMERCIAL_REAL_ESTATE,
   OFFICE_TOWERS,
@@ -36,8 +36,7 @@ export function mapDevLandmarkOptions(): {
     { key: "gov", label: "Gov (locked)", locked: true },
     ...Array.from({ length: Z1_MAJOR_HUB_MARKER_COUNT }, (_, i) => ({
       key: `major-${i + 1}`,
-      label: `Major hub ${i + 1} (locked)`,
-      locked: true,
+      label: `Major hub ${i + 1}`,
     })),
     ...OFFICE_TOWERS.map((t) => ({
       key: `tower:${t.id}`,
@@ -54,7 +53,47 @@ export function mapDevLandmarkOptions(): {
 
 export function defaultMapDevMovableLandmarkKey(): MapDevLandmarkKey {
   const opt = mapDevLandmarkOptions().find((o) => !o.locked);
-  return opt?.key ?? "hq:chris";
+  return opt?.key ?? "major-1";
+}
+
+const MAP_DEV_REGIONS: MapRegion[] = [
+  "metropolis",
+  "suburban",
+  "rural",
+  "countryside",
+];
+
+export function mapDevRegionBrushOptions(): {
+  value: MapRegion;
+  label: string;
+}[] {
+  return [
+    { value: "metropolis", label: "Core" },
+    { value: "suburban", label: "Metro fringe" },
+    { value: "rural", label: "County" },
+    { value: "countryside", label: "Greenbelt" },
+  ];
+}
+
+export function mapDevRegionOverrides(
+  settings?: GameSettings,
+): Record<string, MapRegion> {
+  const raw = settings?.mapDevRegionOverrides;
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, MapRegion> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (MAP_DEV_REGIONS.includes(value as MapRegion)) {
+      out[key] = value as MapRegion;
+    }
+  }
+  return out;
+}
+
+export function devRegionAtCoord(
+  coord: AxialCoord,
+  settings?: GameSettings,
+): MapRegion | undefined {
+  return mapDevRegionOverrides(settings)[axialKey(coord)];
 }
 
 function parseCoord(raw: unknown): AxialCoord | null {
@@ -169,28 +208,12 @@ export function landmarkKeyForCoord(
   return null;
 }
 
-/** Presentation pixel for hex tiles and markers (grid + per-cell nudge in dev). */
+/** Presentation pixel for hex tiles and markers. */
 export function worldMapPresentationPixel(
   coord: AxialCoord,
-  settings?: GameSettings,
+  _settings?: GameSettings,
 ): { x: number; y: number } {
-  const base = worldMapAxialToPixel(coord);
-  if (!settings) return base;
-  let dx = settings.mapDevGridNudge?.dx ?? 0;
-  let dy = settings.mapDevGridNudge?.dy ?? 0;
-  const hex = settings.mapDevHexNudges?.[axialKey(coord)];
-  if (hex) {
-    dx += hex.dx;
-    dy += hex.dy;
-  }
-  const siteKey = landmarkKeyForCoord(coord, settings);
-  const site = siteKey ? settings.mapDevSiteNudges?.[siteKey] : undefined;
-  if (site) {
-    dx += site.dx;
-    dy += site.dy;
-  }
-  if (dx === 0 && dy === 0) return base;
-  return { x: base.x + dx, y: base.y + dy };
+  return worldMapAxialToPixel(coord);
 }
 
 export function nearestAxialFromViewBox(
@@ -231,8 +254,6 @@ export function mapDevLayoutExportPayload(
     majorHubHexes,
     mapDevLandmarkCoords: moves,
     mapDevExtraHexes: mapDevExtraHexes(settings),
-    mapDevGridNudge: settings.mapDevGridNudge,
-    mapDevHexNudges: settings.mapDevHexNudges,
-    mapDevSiteNudges: settings.mapDevSiteNudges,
+    mapDevRegionOverrides: settings.mapDevRegionOverrides,
   };
 }

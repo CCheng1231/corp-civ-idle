@@ -689,11 +689,12 @@
   background: #465042;
 }
 
-.map-presentation-player .map-zoom-viewport {
-  background: linear-gradient(
-    165deg,
-    #4e5c52 0%,
-    #465042 45%,
-    #3a423c 100%
+.map-presentation-player .map-zoom-viewport,
+.map-presentation-dev .map-zoom-viewport {
+  background: radial-gradient(
+    ellipse 120% 95% at 50% 48%,
+    #3d4a42 0%,
+    #2c342e 55%,
+    #252b28 100%
   );
 }

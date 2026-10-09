@@ -14,6 +14,7 @@ import { useGameLoop } from "./hooks/useGameLoop";
 import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
 import { useOnlineBrowserLease } from "./hooks/useOnlineBrowserLease";
 import { useOnlineWorld } from "./hooks/useOnlineWorld";
+import { useWorldMapDevLayoutSync } from "./hooks/useWorldMapDevLayoutSync";
 import { ONLINE_KICKED_MESSAGE } from "./multiplayer/browserLease";
 import { clearSession, readSession, writeSession } from "./multiplayer/session";
 import type { OnlineSession } from "./multiplayer/types";
@@ -52,6 +53,8 @@ function GameShell({
     dispatch,
     enabled: online,
   });
+
+  useWorldMapDevLayoutSync(dispatch, session.worldId);
 
   useGameLoop(dispatch);
   useBgm(state.settings.masterVolume, state.settings.musicMuted);

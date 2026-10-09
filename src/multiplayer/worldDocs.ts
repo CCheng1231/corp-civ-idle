@@ -35,3 +35,8 @@ export function privateStateRef(accountId: string, worldId: WorldId = WORLD_ID) 
 export function companiesCol(worldId: WorldId = WORLD_ID) {
   return collection(getDb(), "worlds", worldId, "companies");
 }
+
+/** Shared playtest hex layout (dev publish → all players). */
+export function mapLayoutRef(worldId: WorldId = WORLD_ID) {
+  return doc(getDb(), "worlds", worldId, "shared", "mapLayout");
+}
