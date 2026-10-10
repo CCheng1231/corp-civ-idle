@@ -1,19 +1,18 @@
 /**
- * Reads Research + Research Cost tabs → src/game/researchData.ts
- * Run: node scripts/build-research-data.mjs
+ * Optional dev import: Research + Research Cost tabs → researchData.ts
+ * Prefer: node scripts/import-balance-from-workbook.mjs
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as XLSXNS from "xlsx";
-import { resolveWorkbookPath } from "./workbook-path.mjs";
+import { resolveBalanceWorkbookFromArgs } from "./lib/resolve-balance-workbook.mjs";
 
 const XLSX = XLSXNS.default ?? XLSXNS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const workbookPath = resolveWorkbookPath();
-
 const outTs = join(__dirname, "..", "src", "game", "researchData.ts");
+const BALANCE_TS_HEADER = `/** Game balance source of truth — edit in repo. Optional sync: node scripts/import-balance-from-workbook.mjs */`;
 
 /** v1 scope — Option-type unlocks deferred; Discover (#15–19) included. */
 const V1_SHEET_NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21]);
@@ -115,48 +114,6 @@ function effectFromRow(type, effectText, name, sheetNumber) {
   return {};
 }
 
-const wb = XLSX.read(readFileSync(workbookPath), { type: "buffer" });
-const researchRows = XLSX.utils.sheet_to_json(wb.Sheets.Research, {
-  header: 1,
-  defval: "",
-});
-const costRows = XLSX.utils.sheet_to_json(wb.Sheets["Research Cost"], {
-  header: 1,
-  defval: "",
-});
-
-const metaByNum = {};
-for (const r of researchRows) {
-  const n = num(r[0]);
-  if (n < 1 || !ID_BY_NUMBER[n]) continue;
-  metaByNum[n] = {
-    sheetNumber: n,
-    id: ID_BY_NUMBER[n],
-    name: String(r[1] ?? "").trim(),
-    maxLevel: num(r[2]) || 1,
-    type: String(r[3] ?? "").trim(),
-    preReqText: String(r[4] ?? "").trim(),
-    rndLevelRequired: num(r[5]) || 0,
-    effectText: String(r[6] ?? "").trim(),
-  };
-}
-
-const costByNum = {};
-for (const r of costRows) {
-  const n = num(r[0]);
-  if (n < 1 || !metaByNum[n]) continue;
-  costByNum[n] = {
-    timeHours: excelTimeToHours(num(r[4])),
-    cash: num(r[5]),
-    supply: num(r[6]),
-    connection: num(r[7]),
-    mood: num(r[8]),
-    reputation: num(r[9]),
-    govReputation: num(r[10]),
-    costScale: num(r[11]) || 1.1,
-  };
-}
-
 function excelTimeToHours(v) {
   return v * 24;
 }
@@ -233,47 +190,109 @@ function playerDescription(id, name, maxLevel, effects) {
   return name;
 }
 
-const nodes = [];
-for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
-  const meta = metaByNum[n];
-  const cost = costByNum[n];
-  if (!meta || !cost) {
-    console.warn(`Skipping research #${n} — missing meta or cost`);
-    continue;
-  }
-  const requires = parsePreReq(meta.preReqText);
-  const effects = effectFromRow(meta.type, meta.effectText, meta.name, n);
-  nodes.push({
-    id: meta.id,
-    name: meta.name,
-    description: playerDescription(meta.id, meta.name, meta.maxLevel, effects),
-    category: researchCategory(n, meta.type),
-    maxLevel: meta.maxLevel,
-    rndLevelRequired: meta.rndLevelRequired,
-    baseCost: {
-      cash: cost.cash,
-      supply: cost.supply,
-      connection: cost.connection,
-      mood: cost.mood,
-      reputation: cost.reputation,
-      govReputation: cost.govReputation,
-    },
-    costScale: cost.costScale,
-    buildTimeHoursPerLevel: Array.from(
-      { length: meta.maxLevel },
-      () => cost.timeHours,
-    ),
-    requires: requires.length ? requires : undefined,
-    effects,
+function buildResearchNodes(wb) {
+  const researchRows = XLSX.utils.sheet_to_json(wb.Sheets.Research, {
+    header: 1,
+    defval: "",
   });
+  const costRows = XLSX.utils.sheet_to_json(wb.Sheets["Research Cost"], {
+    header: 1,
+    defval: "",
+  });
+
+  const metaByNum = {};
+  for (const r of researchRows) {
+    const n = num(r[0]);
+    if (n < 1 || !ID_BY_NUMBER[n]) continue;
+    metaByNum[n] = {
+      sheetNumber: n,
+      id: ID_BY_NUMBER[n],
+      name: String(r[1] ?? "").trim(),
+      maxLevel: num(r[2]) || 1,
+      type: String(r[3] ?? "").trim(),
+      preReqText: String(r[4] ?? "").trim(),
+      rndLevelRequired: num(r[5]) || 0,
+      effectText: String(r[6] ?? "").trim(),
+    };
+  }
+
+  const costByNum = {};
+  for (const r of costRows) {
+    const n = num(r[0]);
+    if (n < 1 || !metaByNum[n]) continue;
+    costByNum[n] = {
+      timeHours: excelTimeToHours(num(r[4])),
+      cash: num(r[5]),
+      supply: num(r[6]),
+      connection: num(r[7]),
+      mood: num(r[8]),
+      reputation: num(r[9]),
+      govReputation: num(r[10]),
+      costScale: num(r[11]) || 1.1,
+    };
+  }
+
+  const nodes = [];
+  for (const n of [...V1_SHEET_NUMBERS].sort((a, b) => a - b)) {
+    const meta = metaByNum[n];
+    const cost = costByNum[n];
+    if (!meta || !cost) {
+      console.warn(`Skipping research #${n} — missing meta or cost`);
+      continue;
+    }
+    const requires = parsePreReq(meta.preReqText);
+    const effects = effectFromRow(meta.type, meta.effectText, meta.name, n);
+    nodes.push({
+      id: meta.id,
+      name: meta.name,
+      description: playerDescription(meta.id, meta.name, meta.maxLevel, effects),
+      category: researchCategory(n, meta.type),
+      maxLevel: meta.maxLevel,
+      rndLevelRequired: meta.rndLevelRequired,
+      baseCost: {
+        cash: cost.cash,
+        supply: cost.supply,
+        connection: cost.connection,
+        mood: cost.mood,
+        reputation: cost.reputation,
+        govReputation: cost.govReputation,
+      },
+      costScale: cost.costScale,
+      buildTimeHoursPerLevel: Array.from(
+        { length: meta.maxLevel },
+        () => cost.timeHours,
+      ),
+      requires: requires.length ? requires : undefined,
+      effects,
+    });
+  }
+  return nodes;
 }
 
-const body = `/** Auto-generated by scripts/build-research-data.mjs — do not edit. */
+export function writeResearchBalanceTs(nodes) {
+  const body = `${BALANCE_TS_HEADER}
 
 import type { ResearchDefinition } from "./types";
 
 export const RESEARCH_DEFINITIONS: ResearchDefinition[] = ${JSON.stringify(nodes, null, 2)};
 `;
+  writeFileSync(outTs, body, "utf8");
+  return nodes.length;
+}
 
-writeFileSync(outTs, body, "utf8");
-console.log(`Wrote ${outTs} (${nodes.length} v1 research nodes)`);
+export function importResearchBalanceFromWorkbook(workbookPath) {
+  const wb = XLSX.read(readFileSync(workbookPath), { type: "buffer" });
+  const nodes = buildResearchNodes(wb);
+  const count = writeResearchBalanceTs(nodes);
+  return { count, nodes };
+}
+
+if (process.argv[1]?.includes("build-research-data.mjs")) {
+  const workbookPath = resolveBalanceWorkbookFromArgs();
+  if (!workbookPath) {
+    console.error("No reference workbook. Pass --workbook path or set BALANCE_WORKBOOK_PATH.");
+    process.exit(1);
+  }
+  const { count } = importResearchBalanceFromWorkbook(workbookPath);
+  console.log(`Wrote ${outTs} (${count} v1 research nodes)`);
+}

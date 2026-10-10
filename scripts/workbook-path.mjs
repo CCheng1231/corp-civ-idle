@@ -22,13 +22,17 @@ export const WORKBOOK_CANDIDATES = [
   join(ROOT, "Corp-Civ-Balance-Reference.xlsx"),
 ];
 
+/** @returns {string | null} First existing candidate, or null if none (game build does not need a workbook). */
+export function findWorkbookPath() {
+  return WORKBOOK_CANDIDATES.find((p) => existsSync(p)) ?? null;
+}
+
+/** Legacy scripts: exits 1 if no reference workbook is present. */
 export function resolveWorkbookPath() {
-  const path = WORKBOOK_CANDIDATES.find((p) => existsSync(p));
+  const path = findWorkbookPath();
   if (!path) {
     console.error("No balance workbook found. Expected one of:", WORKBOOK_CANDIDATES);
     process.exit(1);
   }
   return path;
 }
-
-export const workbookPath = resolveWorkbookPath();
