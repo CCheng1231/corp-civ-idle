@@ -8,11 +8,9 @@ import {
 import type { GameSettings, MapRegion } from "../game/types";
 import {
   type WorldMapDevLayoutStore,
-  syncWorldMapDevLayoutFromSettings,
   writeWorldMapDevLayoutStore,
 } from "../game/worldMapDevLayoutStore";
 import { stripUndefinedDeep } from "./companySave";
-import { getDb } from "./firebase";
 import {
   ensureFirebaseUser,
   loadBrowserBinding,

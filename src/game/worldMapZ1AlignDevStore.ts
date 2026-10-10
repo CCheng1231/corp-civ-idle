@@ -1,5 +1,8 @@
 import type { GameSettings, GameState } from "./types";
-import type { Z1RasterAlignment } from "./worldMapZ1Align";
+import {
+  resolveZ1RasterAlignmentForBake,
+  type Z1RasterAlignment,
+} from "./worldMapZ1Align";
 
 const STORAGE_KEY = "corp-civ-idle.devMapZ1Align";
 
@@ -35,11 +38,12 @@ export function devMapZ1AlignFromSettings(
   settings: GameSettings,
 ): DevMapZ1AlignStore | null {
   const variant = settings.mapZ1BakeVariant ?? "v5";
-  const align =
+  const partial =
     variant === "v6-draft"
       ? settings.mapZ1RasterAlignV6
       : settings.mapZ1RasterAlign;
-  if (!align) return null;
+  if (!partial) return null;
+  const align = resolveZ1RasterAlignmentForBake(variant, partial);
   return {
     mapZ1BakeVariant: variant,
     ...(variant === "v6-draft"

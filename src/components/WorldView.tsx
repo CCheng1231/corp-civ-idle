@@ -59,6 +59,7 @@ import {
 } from "../game/worldMapViewportCache";
 import { worldMapV01ZoomBand } from "../game/worldMapV01";
 import {
+  HEX_RADIUS,
   MAP_GOV,
   axialEquals,
   axialKey,
@@ -137,6 +138,7 @@ type LandmarkKind =
   | "active";
 
 const PAN_DRAG_THRESHOLD = 3;
+const PLAYER_HIT_RADIUS = HEX_RADIUS * 0.62;
 
 function coordFromEventTarget(target: EventTarget | null): AxialCoord | null {
   if (!(target instanceof Element)) return null;

@@ -1,8 +1,13 @@
 import { effectiveLandmarkCoord } from "../game/mapDevLayout";
 import { MAP_HQ, axialEquals, officeAtCoord } from "../game/hexLayout";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
-import type { CompanyPresence, OnlineSession, PlayerId } from "./types";
-import { isDevAccount, PLAYER_IDS, type PlayerId } from "./types";
+import {
+  isDevAccount,
+  PLAYER_IDS,
+  type CompanyPresence,
+  type OnlineSession,
+  type PlayerId,
+} from "./types";
 
 export function resolveOnlineSession(
   state: GameState,

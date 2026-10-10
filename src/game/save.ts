@@ -25,7 +25,6 @@ import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById } from "./jobs";
 import { branchSiteCoord, isEstablishedBranchSiteOnMap } from "./branchSites";
 import { isCoordOnMapGrid, MAP_BRANCH } from "./hexLayout";
-import { isMapDevLandmarkKeyLocked } from "./mapLayoutLock";
 import {
   commercialSiteAt,
   defaultBranchSiteName,
