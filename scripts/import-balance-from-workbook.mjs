@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node scripts/import-balance-from-workbook.mjs
- *   node scripts/import-balance-from-workbook.mjs --workbook "path/to/20260905 Corp Idle Working.xlsx"
+ *   node scripts/import-balance-from-workbook.mjs --workbook "path/to/Corp Idle Working.xlsx"
  *   BALANCE_WORKBOOK_PATH=... node scripts/import-balance-from-workbook.mjs
  */
 import { resolveBalanceWorkbookFromArgs } from "./lib/resolve-balance-workbook.mjs";
@@ -17,7 +17,7 @@ if (!workbookPath) {
   console.error(
     "No reference workbook found. Pass --workbook or set BALANCE_WORKBOOK_PATH.",
   );
-  console.error("Expected file name: 20260905 Corp Idle Working.xlsx (Structure cost and rate, Research Cost, Job Hub tabs).");
+  console.error("Expected: Corp Idle Working.xlsx (Structure cost and rate, Research Cost, Job Hub tabs).");
   process.exit(1);
 }
 

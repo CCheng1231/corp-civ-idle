@@ -9,7 +9,11 @@ credentials/
 firebase-admin-sa.json
 .DS_Store
 
-# Local backup / reference workbooks (live file is 20260905 Corp Idle Working.xlsx)
+# Excel lock files
+~$*.xlsx
+
+# Local backup / reference workbooks (live file is Corp Idle Working.xlsx)
+/20260905 Corp Idle Working.xlsx
 /20260803 Corp Idle Working - original.xlsx
 /20260807 Corp Idle Working.xlsx
 /Corp-Civ-Balance-engine-sync.xlsx

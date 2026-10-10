@@ -11,12 +11,8 @@ const ROOT = join(__dirname, "..");
 
 /** First existing path wins. */
 export const WORKBOOK_CANDIDATES = [
+  join(ROOT, "Corp Idle Working.xlsx"),
   join(ROOT, "20260905 Corp Idle Working.xlsx"),
-  join(ROOT, "20260827 Corp Idle Working.xlsx"),
-  join(ROOT, "20260804 Corp Idle Working.xlsx"),
-  join(ROOT, "20260803 Corp Idle Working.xlsx"),
-  join(ROOT, "20270802 Corp Idle Working.xlsx"),
-  join(ROOT, "20260731 Corp Idle Working.xlsx"),
   join(ROOT, "..", "Corp-Civ-Balance-Reference-working.xlsx"),
   join(ROOT, "..", "Corp-Civ-Balance-Reference.xlsx"),
   join(ROOT, "Corp-Civ-Balance-Reference.xlsx"),

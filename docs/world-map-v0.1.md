@@ -10,7 +10,7 @@
 
 | Artifact | Location |
 |----------|----------|
-| Image prompts + notes | Excel tab **`world map`** in `20260905 Corp Idle Working.xlsx` |
+| Image prompts + notes | Excel tab **`world map`** in `Corp Idle Working.xlsx` |
 | Reference PNGs (Z1–Z4) | `src/assets/reference/zoom-levels/world-map-z{1-4}-hybrid-soft.png` |
 | Folder index | `src/assets/reference/README.md` |
 | Re-apply Excel tab from repo | `node scripts/patch-world-map-sheet.mjs` |

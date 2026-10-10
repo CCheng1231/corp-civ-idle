@@ -7,9 +7,9 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 3. [`.cursor/rules/cross-platform-layout.mdc`](.cursor/rules/cross-platform-layout.mdc) — Android / iOS / PC scaling, safe areas, 48px touch targets
 4. **World map layout / zoom** — [`.cursor/rules/world-map-viewport.mdc`](.cursor/rules/world-map-viewport.mdc) when editing `WorldView`, `mapWorld`, or `mapViewport`; art direction **v0.1** — [`docs/world-map-v0.1.md`](docs/world-map-v0.1.md)
 
-**Balance numbers:** Committed in `src/game/structureBalanceData.ts`, `researchData.ts`, `jobHubData.ts` (code is source of truth). Optional reference sync: `node scripts/import-balance-from-workbook.mjs --workbook "…/20260905 Corp Idle Working.xlsx"`. Metrics: `node scripts/balance-report.mjs` → `docs/balance-report.md`. See [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc).
+**Balance numbers:** Committed in `src/game/structureBalanceData.ts`, `researchData.ts`, `jobHubData.ts` (code is source of truth). Optional reference sync: `node scripts/import-balance-from-workbook.mjs` (workbook: `Corp Idle Working.xlsx`). Metrics: `node scripts/balance-report.mjs` → `docs/balance-report.md`. See [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc).
 
-**Session changelog:** **ChangeLog** tab in the balance workbook (`20260905 Corp Idle Working.xlsx`). Append via `scripts/append-changelog-*.mjs` (e.g. `append-changelog-aug31-online-save-lease.mjs`; close Excel first if EBUSY).
+**Session changelog:** **ChangeLog** tab in [`Corp Idle Working.xlsx`](Corp%20Idle%20Working.xlsx). Append via `scripts/append-changelog-*.mjs` (close Excel first if EBUSY).
 
 **Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Access via **access keys** (`src/multiplayer/onlineAccess.ts`) — playtester enters key once; browser binds via Anonymous Auth + `worlds/dev/bindings/{uid}`. Devs create keys in Settings or `scripts/create-access-key.mjs`. Read `useOnlineWorld.ts`, `worldSync.ts`, `browserLease.ts` before changing sync. **Firestore rules:** `firestore.rules` + [`docs/firestore-security.md`](docs/firestore-security.md). One browser tab per online account (lease on world meta).
 

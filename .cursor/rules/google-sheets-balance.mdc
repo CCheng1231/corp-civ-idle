@@ -15,12 +15,12 @@ Edit these files directly when tuning economy. Regenerate metrics: `node scripts
 
 ## Optional reference workbook
 
-`20260905 Corp Idle Working.xlsx` (tabs: **Structure cost and rate**, **Research Cost**, **Research**, **Job Hub**) is a design reference—not read by the game build.
+[`Corp Idle Working.xlsx`](../Corp%20Idle%20Working.xlsx) (tabs: **Structure cost and rate**, **Research Cost**, **Research**, **Job Hub**) is a design reference—not read by the game build.
 
 Bulk copy reference → code (dev only):
 
 ```bash
-node scripts/import-balance-from-workbook.mjs --workbook "path/to/20260905 Corp Idle Working.xlsx"
+node scripts/import-balance-from-workbook.mjs
 ```
 
 Legacy per-domain scripts (also optional): `build-structure-balance.mjs`, `build-research-data.mjs`, `build-job-data.mjs`.
