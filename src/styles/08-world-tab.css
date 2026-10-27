@@ -11,7 +11,30 @@
 
 .layout-mobile-nav .main-panel:has(.world-view),
 .app-shell.viewport-preview-mobile .main-panel:has(.world-view) {
-  padding-bottom: max(0.75rem, var(--mobile-bottom-nav-space, 0px));
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  padding-bottom: var(--mobile-bottom-nav-space, 0px);
+}
+
+.layout-mobile-nav .world-view .world-header,
+.app-shell.viewport-preview-mobile .world-view .world-header {
+  flex-shrink: 0;
+  padding: 0.35rem 0.55rem 0;
+}
+
+.layout-mobile-nav .world-view .world-map-stage,
+.app-shell.viewport-preview-mobile .world-view .world-map-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0.25rem;
+}
+
+.layout-mobile-nav .world-view .hex-map svg,
+.app-shell.viewport-preview-mobile .world-view .hex-map svg {
+  max-height: none;
+  height: 100%;
 }
 
 .layout-mobile-nav .main-panel:has(.secretary-view:not(.hub-synced-tab-view)),

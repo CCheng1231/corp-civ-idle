@@ -31,18 +31,32 @@ export function postingsForTower(
   state: GameState,
   towerId: TowerId,
 ): JobPosting[] {
-  return state.jobPostings.filter(
-    (p) => p.towerId === towerId && p.status === "open",
-  );
+  return state.jobPostings.filter((p) => {
+    if (p.status !== "open") return false;
+    if (p.towerId === towerId) return true;
+    try {
+      const def = jobDefinitionForPosting(p);
+      return def.towerId === towerId && !p.commercialLotId;
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function postingsForCommercialLot(
   state: GameState,
   commercialLotId: CommercialLotId,
 ): JobPosting[] {
-  return state.jobPostings.filter(
-    (p) => p.commercialLotId === commercialLotId && p.status === "open",
-  );
+  return state.jobPostings.filter((p) => {
+    if (p.status !== "open") return false;
+    if (p.commercialLotId === commercialLotId) return true;
+    try {
+      const def = jobDefinitionForPosting(p);
+      return def.commercialLotId === commercialLotId;
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function postingById(

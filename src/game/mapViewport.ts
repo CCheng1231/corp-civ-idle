@@ -39,22 +39,11 @@ export const MAP_V01_ZOOM_Z2_MIN_TILT = 1.2;
  * @param zoomBand — from `worldMapV01ZoomBand(zoomRel)`; omit for Z2+ style ramp only.
  */
 export function mapPresentationTiltDeg(
-  zoomRel: number,
-  zoomBand?: 1 | 2 | 3 | 4,
+  _zoomRel: number,
+  _zoomBand?: 1 | 2 | 3 | 4,
 ): number {
-  const z = clampMapZoomRel(zoomRel, { snapStep: false });
-  const span = MAP_ZOOM_REL_MAX - MAP_ZOOM_REL_MIN;
-  if (span <= 0) return 12;
-
-  if (zoomBand === 1) {
-    const z1Span = MAP_V01_ZOOM_Z2_MIN_TILT - MAP_ZOOM_REL_MIN;
-    const t1 =
-      z1Span <= 0 ? 1 : Math.min(1, Math.max(0, (z - MAP_ZOOM_REL_MIN) / z1Span));
-    return t1 * 18;
-  }
-
-  const t = (z - MAP_ZOOM_REL_MIN) / span;
-  return 8 + t * 12;
+  /** Map oblique tilt paused — flat top-down zoom until art/UI revisit. */
+  return 0;
 }
 
 /** Must match `.map-presentation-player .map-zoom-scale-layer-tilt` transform-origin Y. */
@@ -88,18 +77,21 @@ export function mapHqTowerDimensionsFromHexScreenPx(hexSpanPx: number): {
   height: number;
 } {
   const span = Math.max(hexSpanPx, 1);
+  /** On-phone hexes are smaller on screen — keep towers inside the cell. */
+  const tight =
+    span < 56 ? 0.78 : span < 72 ? 0.88 : span < 96 ? 0.94 : 1;
   return {
-    height: Math.min(140, Math.max(10, span * 0.58)),
-    width: Math.min(52, Math.max(8, span * 0.26)),
-    depth: Math.min(38, Math.max(6, span * 0.19)),
+    height: Math.min(140, Math.max(10, span * 0.52 * tight)),
+    width: Math.min(52, Math.max(8, span * 0.23 * tight)),
+    depth: Math.min(38, Math.max(6, span * 0.17 * tight)),
   };
 }
 
-/** Body rotateX for HQ tower; eases toward upright as on-screen tower grows (zoom-in). */
+/** Body rotateX for HQ tower — stay closer to upright at all zoom levels. */
 export function mapHqTowerPresentationTiltDeg(towerHeightPx: number): number {
   const h = Math.min(140, Math.max(10, towerHeightPx));
   const t = (h - 10) / 130;
-  return -20 + t * 9;
+  return -10 + t * 4;
 }
 
 /** Exponential wheel zoom — higher = faster scroll zoom. */
@@ -228,6 +220,44 @@ export function mapSvgPreserveAspectRatio(
     showcaseFloorRel * 1.08,
   );
   return zoomRel <= meetUntil ? "xMidYMid meet" : "xMidYMid slice";
+}
+
+export type MapSvgAspectFit = "meet" | "slice";
+
+export function mapSvgAspectFit(
+  zoomRel: number,
+  showcaseFloorRel: number = MAP_ZOOM_REL_MIN,
+): MapSvgAspectFit {
+  return mapSvgPreserveAspectRatio(zoomRel, showcaseFloorRel).includes("meet")
+    ? "meet"
+    : "slice";
+}
+
+/** viewBox → layout content px (matches SVG xMidYMid meet / slice). */
+export function viewBoxToContentPixelScale(
+  bounds: MapViewBounds,
+  content: MapContentSize,
+  fit: MapSvgAspectFit,
+): number {
+  if (bounds.width <= 0 || bounds.height <= 0) return 1;
+  return fit === "meet"
+    ? Math.min(content.width / bounds.width, content.height / bounds.height)
+    : Math.max(content.width / bounds.width, content.height / bounds.height);
+}
+
+export function viewBoxPointToContentPixelWithAspect(
+  point: { x: number; y: number },
+  bounds: MapViewBounds,
+  content: MapContentSize,
+  fit: MapSvgAspectFit,
+): { x: number; y: number } {
+  const scale = viewBoxToContentPixelScale(bounds, content, fit);
+  const offsetX = (content.width - bounds.width * scale) / 2;
+  const offsetY = (content.height - bounds.height * scale) / 2;
+  return {
+    x: (point.x - bounds.minX) * scale + offsetX,
+    y: (point.y - bounds.minY) * scale + offsetY,
+  };
 }
 
 /** Below this relative zoom, player sees Gov + own HQ pins only. */

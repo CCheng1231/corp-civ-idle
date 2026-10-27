@@ -154,7 +154,7 @@ export function mapHexKindLabel(info: MapHexInfo): string {
 
 export function mapHexDistanceLabel(state: GameState, coord: AxialCoord): string {
   const steps = hexDistanceFromMainOfficeForState(state, coord);
-  return `${steps} hex${steps === 1 ? "" : "es"}`;
+  return `${steps} Hx`;
 }
 
 export function towerEngagementCount(state: GameState, towerId: TowerId): number {

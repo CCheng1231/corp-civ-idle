@@ -194,10 +194,6 @@
   .main-view-panel {
     max-width: none;
   }
-
-  .hex-map svg {
-    max-height: 55vh;
-  }
 }
 
 /* Mobile layout preview / bottom nav — compact resource bar at any width */

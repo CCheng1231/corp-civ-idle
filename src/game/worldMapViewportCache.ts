@@ -5,7 +5,8 @@ export type WorldMapViewportCache = {
   mapZoomRel: number;
   mapPan: { x: number; y: number };
   inspectedCoord: AxialCoord | null;
-  legendOpen: boolean;
+  jobFilterOpen: boolean;
+  jobFilterExpanded: boolean;
   hasSession: boolean;
 };
 
@@ -13,7 +14,8 @@ let cache: WorldMapViewportCache = {
   mapZoomRel: MAP_ZOOM_REL_DEFAULT,
   mapPan: { x: 0, y: 0 },
   inspectedCoord: null,
-  legendOpen: false,
+  jobFilterOpen: true,
+  jobFilterExpanded: false,
   hasSession: false,
 };
 

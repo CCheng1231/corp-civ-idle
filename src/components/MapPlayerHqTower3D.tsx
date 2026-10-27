@@ -9,6 +9,8 @@ interface MapPlayerHqTower3DProps {
   depthPx: number;
   heightPx: number;
   hexSpanPx: number;
+  /** Parent `.map-zoom-scale-layer` scale — counter-scaled for crisp CSS 3D */
+  mapContentScale: number;
   flashing?: boolean;
   /** Own HQ vs another player's HQ (player color prefs later). */
   variant?: "mine" | "peer";
@@ -21,9 +23,11 @@ export function MapPlayerHqTower3D({
   depthPx,
   heightPx,
   hexSpanPx,
+  mapContentScale,
   flashing,
   variant = "mine",
 }: MapPlayerHqTower3DProps) {
+  const zoomInv = 1 / Math.max(mapContentScale, 0.05);
   const halfW = widthPx / 2;
   const halfD = depthPx / 2;
   const shadowW = Math.max(12, hexSpanPx * 0.42);
@@ -51,6 +55,7 @@ export function MapPlayerHqTower3D({
         ["--hq-tilt-x" as string]: `${tiltDeg}deg`,
         ["--hq-pod-tilt-x" as string]: `${-tiltDeg}deg`,
         ["--hq-perspective" as string]: `${heightPx * 4.2}px`,
+        ["--hq-map-zoom-inv" as string]: String(zoomInv),
       }}
       aria-hidden
     >

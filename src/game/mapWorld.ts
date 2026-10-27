@@ -151,6 +151,25 @@ export const TOWER_HEX_LABELS: Record<TowerId, string> = {
   country_estate: "Hillside",
 };
 
+/** CSS 3D sketch per office tower (hq-tower-solarpunk-demos.html). */
+export type OfficeTowerVisualStyle =
+  | "metro"
+  | "suburban"
+  | "rural"
+  | "countryside";
+
+export const OFFICE_TOWER_VISUAL_STYLE: Record<TowerId, OfficeTowerVisualStyle> =
+  {
+    metro_central: "metro",
+    suburban_park: "suburban",
+    rural_crossing: "rural",
+    country_estate: "countryside",
+  };
+
+export function officeTowerVisualStyle(towerId: TowerId): OfficeTowerVisualStyle {
+  return OFFICE_TOWER_VISUAL_STYLE[towerId];
+}
+
 export const COMMERCIAL_BRANCH_SLOT_TEMPLATES: CommercialLotBranchSlot[] = [
   branchPadFromCatalog("compact"),
   branchPadFromCatalog("standard"),
@@ -374,12 +393,20 @@ export function commercialLotAtCoord(coord: AxialCoord): CommercialLotId | null 
   return site?.id ?? null;
 }
 
-export function jobSiteCoordForDefinition(def: JobDefinition): AxialCoord {
+export function jobSiteCoordForDefinition(
+  def: JobDefinition,
+  settings?: GameSettings,
+): AxialCoord {
   if (def.commercialLotId) {
-    return { ...commercialLotById(def.commercialLotId).coord };
+    const lot = commercialLotById(def.commercialLotId);
+    return (
+      effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? {
+        ...lot.coord,
+      }
+    );
   }
   if (def.towerId) {
-    return { ...towerById(def.towerId).coord };
+    return officeTowerCoord(def.towerId, settings);
   }
   throw new Error(`Job ${def.id} has no map site`);
 }
@@ -397,14 +424,20 @@ export function jobSiteLabelForDefinition(def: JobDefinition): string {
 export function jobSiteCoordForPosting(
   posting: Pick<JobPosting, "towerId" | "commercialLotId">,
   def: JobDefinition,
+  settings?: GameSettings,
 ): AxialCoord {
   if (posting.commercialLotId) {
-    return { ...commercialLotById(posting.commercialLotId).coord };
+    const lot = commercialLotById(posting.commercialLotId);
+    return (
+      effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? {
+        ...lot.coord,
+      }
+    );
   }
   if (posting.towerId) {
-    return { ...towerById(posting.towerId).coord };
+    return officeTowerCoord(posting.towerId, settings);
   }
-  return jobSiteCoordForDefinition(def);
+  return jobSiteCoordForDefinition(def, settings);
 }
 
 export function jobSiteRegionForDefinition(def: JobDefinition): MapRegion {

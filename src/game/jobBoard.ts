@@ -225,6 +225,32 @@ export function formatJobDurationSec(sec: number): string {
   return `${sec}s`;
 }
 
+/** Whole hours until posting expires; "<1hr" when under one hour. */
+export function formatJobPostingExpiresHours(
+  expiresAt: number,
+  now = Date.now(),
+): string {
+  const msLeft = Math.max(0, expiresAt - now);
+  const hours = msLeft / 3_600_000;
+  if (hours < 1) return "<1hr";
+  return `${Math.floor(hours)}hr`;
+}
+
+/** Expires label for tight map rows — "remain" or "rm" when title is long. */
+export function formatJobPostingExpiresLabel(
+  expiresAt: number,
+  now = Date.now(),
+  context?: { titleLength?: number },
+): string {
+  const hoursPart = formatJobPostingExpiresHours(expiresAt, now);
+  const titleLength = context?.titleLength ?? 0;
+  const withRemain = `${hoursPart} remain`;
+  const withRm = `${hoursPart} rm`;
+  const compact =
+    titleLength > 26 || titleLength + withRemain.length > 46;
+  return compact ? withRm : withRemain;
+}
+
 /** Preview payout per hour for one unit on this job. */
 export function jobPayoutPerHour(posting: JobPosting): number {
   return returnPerHour(jobDefinitionForPosting(posting), 1);

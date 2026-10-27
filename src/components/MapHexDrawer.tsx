@@ -1,4 +1,10 @@
-import { type Dispatch, useEffect, useState } from "react";
+import {
+  forwardRef,
+  type Dispatch,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import {
   establishedBranchAtPad,
@@ -10,10 +16,14 @@ import {
   branchManagementResearched,
   branchOpeningCostForPad,
   canEstablishBranchPad,
+  commercialLotById,
   commercialSiteAt,
   formatSiteRateBonusPercent,
+  isAvailableCommercialLot,
+  jobSiteLabelForPosting,
   officeDisplayName,
   siteRateBonusForRegion,
+  towerAtCoord,
   siteRateBonusesForState,
 } from "../game/mapWorld";
 import {
@@ -23,6 +33,7 @@ import {
 } from "../game/constants";
 import {
   formatJobDurationSec,
+  formatJobPostingExpiresLabel,
   jobPayoutPerHour,
 } from "../game/jobBoard";
 import {
@@ -35,9 +46,9 @@ import {
   postingsForCommercialLot,
   postingsForTower,
 } from "../game/jobs";
-import { formatTimerRemainingCompact } from "../game/timers";
 import type {
   AxialCoord,
+  CommercialLotId,
   CompletionBand,
   GameAction,
   GameState,
@@ -52,6 +63,7 @@ import {
   mapHexInfo,
   mapHexKindLabel,
   mapHexTitle,
+  type MapHexInfo,
 } from "./mapHexInfo";
 
 interface MapHexDrawerProps {
@@ -60,6 +72,54 @@ interface MapHexDrawerProps {
   coord: AxialCoord;
   side: "left" | "right";
   onClose: () => void;
+  /** From map job filter — open Contracts and highlight this posting */
+  highlightPostingId?: string | null;
+}
+
+type MapContractSite =
+  | { mode: "tower"; towerId: TowerId }
+  | { mode: "commercial"; commercialLotId: CommercialLotId };
+
+function contractSiteForDrawer(
+  state: GameState,
+  coord: AxialCoord,
+  info: MapHexInfo,
+  highlightPostingId: string | null,
+): MapContractSite | null {
+  if (info.kind === "tower") {
+    return { mode: "tower", towerId: info.towerId };
+  }
+  if (info.kind === "commercial") {
+    return { mode: "commercial", commercialLotId: info.commercialLotId };
+  }
+
+  const towerId = towerAtCoord(coord, state.settings);
+  if (towerId) {
+    return { mode: "tower", towerId };
+  }
+
+  const commercial = commercialSiteAt(coord, state.settings);
+  if (commercial) {
+    return { mode: "commercial", commercialLotId: commercial.id };
+  }
+
+  if (!highlightPostingId) return null;
+  const posting = state.jobPostings.find((p) => p.id === highlightPostingId);
+  if (!posting) return null;
+  try {
+    const def = jobDefinitionForPosting(posting);
+    const lotId = posting.commercialLotId ?? def.commercialLotId ?? null;
+    if (lotId) {
+      return { mode: "commercial", commercialLotId: lotId };
+    }
+    const resolvedTower = posting.towerId ?? def.towerId ?? null;
+    if (resolvedTower) {
+      return { mode: "tower", towerId: resolvedTower };
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function CompletionBandTip({
@@ -193,24 +253,36 @@ function OfficeDrawerSection({
 }
 
 function HexContractsSection({
-  state,
   coord,
   postings,
   isEngaged,
   onSend,
+  highlightPostingId,
 }: {
-  state: GameState;
   coord: AxialCoord;
   postings: JobPosting[];
   isEngaged: (postingId: string) => boolean;
   onSend: (postingId: string) => void;
+  highlightPostingId?: string | null;
 }) {
   const [contractsOpen, setContractsOpen] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
   const now = Date.now();
+  const highlightHere =
+    highlightPostingId != null &&
+    postings.some((p) => p.id === highlightPostingId);
 
   useEffect(() => {
-    setContractsOpen(false);
-  }, [coord.q, coord.r, postings.length]);
+    setContractsOpen(highlightHere);
+  }, [coord.q, coord.r, highlightHere, highlightPostingId]);
+
+  useEffect(() => {
+    if (!highlightHere || !contractsOpen || !highlightPostingId) return;
+    const row = listRef.current?.querySelector(
+      `[data-map-hex-job-id="${highlightPostingId}"]`,
+    );
+    row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [highlightHere, contractsOpen, highlightPostingId, coord.q, coord.r]);
 
   return (
     <section className="map-hex-contracts-section" aria-label="Contracts">
@@ -230,13 +302,11 @@ function HexContractsSection({
         <div className="map-hex-contracts-body">
           {postings.length > 0 ? (
             <>
-              <h4 className="map-hex-section-title map-hex-section-title-sub">
-                Open postings
-              </h4>
-              <ul className="map-hex-job-list">
+              <ul className="map-hex-job-list" ref={listRef}>
                 {postings.map((posting) => {
                   const def = jobDefinitionForPosting(posting);
                   const engaged = isEngaged(posting.id);
+                  const selected = posting.id === highlightPostingId;
                   const band = completionBand(
                     posting.unitHoursCompleted,
                     def.unitHoursTotal,
@@ -244,14 +314,23 @@ function HexContractsSection({
                   return (
                     <li
                       key={posting.id}
+                      data-map-hex-job-id={posting.id}
                       className={`map-hex-job-row${
-                        engaged ? " map-hex-job-row-engaged" : ""
-                      }`}
+                        selected ? " map-hex-job-row-active" : ""
+                      }${engaged ? " map-hex-job-row-engaged" : ""}`}
                     >
                       <div className="map-hex-job-info">
                         <div className="map-hex-job-line map-hex-job-line-title">
                           <span className="map-hex-job-title">
                             {def.title}
+                            <span className="map-hex-job-expires-hr">
+                              ·{" "}
+                              {formatJobPostingExpiresLabel(
+                                posting.expiresAt,
+                                now,
+                                { titleLength: def.title.length },
+                              )}
+                            </span>
                             {engaged ? (
                               <span className="map-hex-job-badge">Active</span>
                             ) : null}
@@ -264,17 +343,11 @@ function HexContractsSection({
                               {BUSINESS_TYPE_LABELS[def.businessType]}
                             </span>
                             <span className="map-hex-job-meta">
-                              {formatJobDurationSec(def.durationSec)} ·{" "}
+                              Dur: {formatJobDurationSec(def.durationSec)} ·{" "}
                               <CompletionBandTip
                                 postingId={posting.id}
                                 band={band}
                               />{" "}
-                              ·{" "}
-                              {formatTimerRemainingCompact(
-                                state,
-                                posting.expiresAt,
-                                now,
-                              )}{" "}
                               · ${formatNumber(jobPayoutPerHour(posting))}/hr
                             </span>
                           </div>
@@ -306,11 +379,13 @@ function TowerContractsSection({
   dispatch,
   towerId,
   coord,
+  highlightPostingId,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   towerId: TowerId;
   coord: AxialCoord;
+  highlightPostingId?: string | null;
 }) {
   const postings = postingsForTower(state, towerId);
   const activePostingIds = new Set(
@@ -330,11 +405,11 @@ function TowerContractsSection({
 
   return (
     <HexContractsSection
-      state={state}
       coord={coord}
       postings={postings}
       isEngaged={(postingId) => activePostingIds.has(postingId)}
       onSend={sendToSecretary}
+      highlightPostingId={highlightPostingId}
     />
   );
 }
@@ -381,11 +456,13 @@ function CommercialLotSection({
   dispatch,
   coord,
   info,
+  highlightPostingId,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   coord: AxialCoord;
   info: Extract<ReturnType<typeof mapHexInfo>, { kind: "commercial" }>;
+  highlightPostingId?: string | null;
 }) {
   const site = commercialSiteAt(coord);
   const [branchOpen, setBranchOpen] = useState(false);
@@ -600,37 +677,99 @@ function CommercialLotSection({
       ) : null}
 
       <HexContractsSection
-        state={state}
         coord={coord}
         postings={postings}
         isEngaged={(postingId) => activePostingIds.has(postingId)}
         onSend={sendToSecretary}
+        highlightPostingId={highlightPostingId}
       />
     </>
   );
 }
 
-export function MapHexDrawer({
-  state,
-  dispatch,
-  coord,
-  side,
-  onClose,
-}: MapHexDrawerProps) {
+export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
+  function MapHexDrawer(
+    {
+      state,
+      dispatch,
+      coord,
+      side,
+      onClose,
+      highlightPostingId = null,
+    },
+    ref,
+  ) {
   const info = mapHexInfo(coord, state);
-  const title = mapHexTitle(info, state);
-  const kindLabel = mapHexKindLabel(info);
+  const contractSite = contractSiteForDrawer(
+    state,
+    coord,
+    info,
+    highlightPostingId,
+  );
+  const defaultTitle = mapHexTitle(info, state);
+  const defaultKind = mapHexKindLabel(info);
   const distanceLabel = mapHexDistanceLabel(state, coord);
+
+  let displayTitle = defaultTitle;
+  let displayKind = defaultKind;
+  let kindIsJobTitle = false;
+
+  if (highlightPostingId) {
+    const posting = state.jobPostings.find((p) => p.id === highlightPostingId);
+    if (posting) {
+      try {
+        const def = jobDefinitionForPosting(posting);
+        displayTitle = jobSiteLabelForPosting(posting, def);
+        displayKind = def.title;
+        kindIsJobTitle = true;
+      } catch {
+        /* keep hex defaults */
+      }
+    }
+  }
+
+  let commercialInfo: Extract<MapHexInfo, { kind: "commercial" }> | null =
+    info.kind === "commercial" ? info : null;
+  if (!commercialInfo && contractSite?.mode === "commercial") {
+    const site = commercialSiteAt(coord, state.settings);
+    if (site) {
+      commercialInfo = {
+        kind: "commercial",
+        coord,
+        commercialLotId: site.id,
+        label: site.label,
+        region: site.region,
+        available: isAvailableCommercialLot(coord, state),
+      };
+    } else {
+      const lot = commercialLotById(contractSite.commercialLotId);
+      commercialInfo = {
+        kind: "commercial",
+        coord,
+        commercialLotId: lot.id,
+        label: lot.label,
+        region: lot.region,
+        available: isAvailableCommercialLot(coord, state),
+      };
+    }
+  }
 
   return (
     <aside
+      ref={ref}
       className={`map-hex-drawer is-open map-hex-drawer-side-${side}`}
       aria-label="Map location details"
     >
       <header className="map-hex-drawer-head">
         <div className="map-hex-drawer-head-text">
-          <span className="map-hex-drawer-kind">{kindLabel}</span>
-          <h3 className="map-hex-drawer-title">{title}</h3>
+          <span
+            className={`map-hex-drawer-kind${
+              kindIsJobTitle ? " map-hex-drawer-kind-posting" : ""
+            }`}
+          >
+            {displayKind}
+          </span>
+          <h3 className="map-hex-drawer-title">{displayTitle}</h3>
         </div>
         <button
           type="button"
@@ -643,16 +782,17 @@ export function MapHexDrawer({
       </header>
 
       <div className="map-hex-drawer-body">
-        <dl className="map-hex-facts">
-          <div>
-            <dt>Region</dt>
-            <dd>{REGION_LABELS[info.region]}</dd>
-          </div>
-          <div>
-            <dt>Distance</dt>
-            <dd>{distanceLabel}</dd>
-          </div>
-        </dl>
+        <div className="map-hex-facts map-hex-facts-compact">
+          <span
+            className={`map-hex-region-pill map-hex-region-pill-${info.region}`}
+            title={REGION_LABELS[info.region]}
+          >
+            {REGION_LABELS[info.region]}
+          </span>
+          <span className="map-hex-distance-pill" title="Distance from main office">
+            {distanceLabel}
+          </span>
+        </div>
 
         {info.kind === "gov" && (
           <p className="map-hex-desc muted">
@@ -668,14 +808,15 @@ export function MapHexDrawer({
           />
         )}
 
-        {info.kind === "tower" && (
+        {contractSite?.mode === "tower" ? (
           <TowerContractsSection
             state={state}
             dispatch={dispatch}
-            towerId={info.towerId}
+            towerId={contractSite.towerId}
             coord={coord}
+            highlightPostingId={highlightPostingId}
           />
-        )}
+        ) : null}
 
         {info.kind === "major-hub" && (
           <p className="map-hex-desc muted">
@@ -687,21 +828,23 @@ export function MapHexDrawer({
           <PlayerHqDrawerSection state={state} playerId={info.playerId} />
         )}
 
-        {info.kind === "commercial" && (
+        {commercialInfo ? (
           <CommercialLotSection
             state={state}
             dispatch={dispatch}
             coord={coord}
-            info={info}
+            info={commercialInfo}
+            highlightPostingId={highlightPostingId}
           />
-        )}
+        ) : null}
 
-        {info.kind === "terrain" && (
+        {info.kind === "terrain" && !contractSite ? (
           <p className="map-hex-desc muted">
             Open {REGION_LABELS[info.region].toLowerCase()} hex.
           </p>
-        )}
+        ) : null}
       </div>
     </aside>
   );
-}
+},
+);

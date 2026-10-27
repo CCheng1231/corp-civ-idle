@@ -243,10 +243,6 @@ html.viewport-preview-galaxy-s24 .main-view-panel {
   max-width: none;
 }
 
-html.viewport-preview-galaxy-s24 .hex-map svg {
-  max-height: 55%;
-}
-
 html.viewport-preview-galaxy-s24 .secretary-hero-row,
 html.viewport-preview-galaxy-s24 .office-scene.tab-portrait-hire-stretch .secretary-hero-row,
 html.viewport-preview-galaxy-s24 .office-scene.office-portrait-hire-stretch .secretary-hero-row,

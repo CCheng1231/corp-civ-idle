@@ -89,7 +89,7 @@ export function jobTravelDurationMsForDefinition(
   return jobTravelDurationMsToCoord(
     state,
     officeId,
-    jobSiteCoordForDefinition(def),
+    jobSiteCoordForDefinition(def, state.settings),
   );
 }
 
@@ -148,8 +148,8 @@ export function jobSiteCoordsForEngagement(
   const posting = state.jobPostings.find((p) => p.id === engagement.postingId);
   const def = jobDefinitionById(engagement.definitionId);
   const target = posting
-    ? jobSiteCoordForPosting(posting, def)
-    : jobSiteCoordForDefinition(def);
+    ? jobSiteCoordForPosting(posting, def, state.settings)
+    : jobSiteCoordForDefinition(def, state.settings);
   return jobSiteCoords(state, engagement.officeId, target);
 }
 
@@ -162,7 +162,7 @@ export function jobSiteCoordsForPosting(
   return jobSiteCoords(
     state,
     officeId,
-    jobSiteCoordForPosting(posting, def),
+    jobSiteCoordForPosting(posting, def, state.settings),
   );
 }
 

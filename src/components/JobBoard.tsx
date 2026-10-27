@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useState, type Dispatch } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+} from "react";
 import { createPortal } from "react-dom";
 import { rosterAt } from "../game/constants";
 import { resolveOfficeLocation } from "../game/officeSelection";
@@ -100,6 +107,8 @@ export function JobBoard({
   const [crewByPosting, setCrewByPosting] = useState<
     Record<string, ReturnType<typeof emptyAssignmentForJob>>
   >({});
+  /** Map/secretary handoff — apply focus once; job tick updates must not reopen drawer. */
+  const appliedJobFocusIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -148,13 +157,22 @@ export function JobBoard({
 
   useEffect(() => {
     const focusId = state.jobFocusPostingId;
-    if (!focusId) return;
+    if (!focusId) {
+      appliedJobFocusIdRef.current = null;
+      return;
+    }
 
     const posting = state.jobPostings.find((p) => p.id === focusId);
     if (!posting || posting.status !== "open") {
+      appliedJobFocusIdRef.current = null;
       dispatch({ type: "CLEAR_JOB_FOCUS" });
       return;
     }
+
+    if (appliedJobFocusIdRef.current === focusId) {
+      return;
+    }
+    appliedJobFocusIdRef.current = focusId;
 
     const def = jobDefinitionForPosting(posting);
     const region = jobSiteRegionForPosting(posting, def);
@@ -249,6 +267,10 @@ export function JobBoard({
 
   function closePostingDetail() {
     setSelectedPostingId(null);
+    if (state.jobFocusPostingId) {
+      appliedJobFocusIdRef.current = null;
+      dispatch({ type: "CLEAR_JOB_FOCUS" });
+    }
   }
 
   function handlePostingRowClick(postingId: string) {

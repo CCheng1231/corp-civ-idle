@@ -25,7 +25,7 @@ Task: [specific tab or change]
 **Recent state (Oct 9, 2026 — player map 3D towers):**
 
 - **Player HQ 3D:** `MapPlayerHqTower3D.tsx` — solarpunk **canopy A** (glass core + garden pods); `variant` mine (green) / peer (blue); overlay in `map-hq-towers-layer-untilted` (counter-tilt vs map tilt); hex HQ/branch fill hidden on player view at authored HQ coords.
-- **Office towers 3D:** `MapOfficeTower3D.tsx` — **Crossroads rural** sketch for **all four** `OFFICE_TOWERS`; coords via `officeTowerMapSites(settings)`; same overlay layer; `hex-tile-tower` hidden on player view at tower hexes. **Not done:** per-tower styles (metro/suburban/hillside) — pick from `src/assets/reference/hq-tower-solarpunk-demos.html` when ready.
+- **Office towers 3D:** `MapOfficeTower3D.tsx` — per-tower styles from `hq-tower-solarpunk-demos.html` (`officeTowerVisualStyle` / `OFFICE_TOWER_VISUAL_STYLE` in `mapWorld.ts`); coords via `officeTowerMapSites(settings)`; same overlay layer; `hex-tile-tower` hidden on player view at tower hexes.
 - **Sizing / tilt:** `mapHqTowerDimensionsFromHexScreenPx`, `mapHqTowerPresentationTiltDeg` in `mapViewport.ts`.
 - **Dev map:** schematic hex colors + `MapPlayerHq3DMarker` SVG; no HTML office/HQ extrusion overlay.
 
