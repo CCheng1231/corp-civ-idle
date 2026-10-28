@@ -27,6 +27,23 @@
   filter: brightness(1.22) saturate(1.14);
 }
 
+.map-presentation-player .hex-tile.hex-tile-major-hub-site {
+  stroke: #f7f3ec;
+  stroke-width: 5px;
+  paint-order: stroke fill;
+}
+
+.map-presentation-player .hex-tile.hex-tile-gov-site {
+  stroke: #f7f3ec;
+  stroke-width: 5px;
+  paint-order: stroke fill;
+}
+
+.map-presentation-player .map-gov-capitol-bake {
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
 .map-presentation-player .map-hex-selection-ring {
   fill: none;
   stroke: #f7f3ec;
@@ -807,6 +824,12 @@
 .map-presentation-player .map-hq-tower-3d-anchor {
   transform: scale(var(--hq-map-zoom-inv, 1));
   transform-origin: 0 0;
+}
+
+/* Z1 major hubs — supertall art embedded in map SVG */
+.map-major-hub-supertall-marker {
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
 }
 
 .map-hq-tower-3d-ground-shadow {

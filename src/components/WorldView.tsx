@@ -10,7 +10,10 @@ import {
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { majorHubAtCoord } from "../game/worldMapMajorHubs";
+import {
+  majorHubAtCoord,
+  resolveZ1MajorHubs,
+} from "../game/worldMapMajorHubs";
 import {
   isAvailableCommercialLot,
   hqMapCoordForFocus,
@@ -103,6 +106,8 @@ import {
 import { MapPlayerHq3DMarker } from "./MapPlayerHq3DMarker";
 import { MapPlayerHqTower3D } from "./MapPlayerHqTower3D";
 import { MapOfficeTower3D } from "./MapOfficeTower3D";
+import { MapGovCapitolMarker } from "./MapGovCapitolMarker";
+import { MapMajorHubSupertallMarker } from "./MapMajorHubSupertallMarker";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
 import {
   defaultMapDevMovableLandmarkKey,
@@ -380,6 +385,16 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   const officeTowerCoordKeys = useMemo(
     () => new Set(officeTowerSites.map((site) => axialKey(site.coord))),
     [officeTowerSites],
+  );
+
+  const majorHubSites = useMemo(
+    () => resolveZ1MajorHubs(state.settings),
+    [state.settings],
+  );
+
+  const majorHubCoordKeys = useMemo(
+    () => new Set(majorHubSites.map((h) => axialKey(h.coord))),
+    [majorHubSites],
   );
 
   const mapSvgAspect = mapSvgAspectFit(mapZoomRel, playerMinZoomRel);
@@ -1380,6 +1395,10 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 const isAuthoredOfficeTowerHex = officeTowerCoordKeys.has(
                   axialKey(coord),
                 );
+                const isAuthoredMajorHubHex = majorHubCoordKeys.has(
+                  axialKey(coord),
+                );
+                const isAuthoredGovHex = axialEquals(coord, MAP_GOV);
                 const displayVariant =
                   !isDev &&
                   isAuthoredHqHex &&
@@ -1387,7 +1406,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                     ? "default"
                     : !isDev && isAuthoredOfficeTowerHex && variant === "tower"
                       ? "default"
-                      : variant;
+                      : !isDev &&
+                          isAuthoredMajorHubHex &&
+                          variant === "major-hub"
+                        ? "default"
+                        : !isDev && isAuthoredGovHex && variant === "gov"
+                          ? "default"
+                          : variant;
                 const isDefault = displayVariant === "default";
                 const officeId = officeAtForState(coord, state, session);
                 const isInspected =
@@ -1455,6 +1480,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                         hqFlashing ? "hex-tile-hq-flash" : "",
                         jobHot ? "hex-tile-job-hot" : "",
                         jobDim ? "is-job-hex-dim" : "",
+                        !isDev && isAuthoredMajorHubHex
+                          ? "hex-tile-major-hub-site"
+                          : "",
+                        !isDev && isAuthoredGovHex
+                          ? "hex-tile-gov-site"
+                          : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -1482,6 +1513,42 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                   </g>
                 );
               })}
+
+              {!isDev
+                ? majorHubSites.map((hub) => {
+                    const { x, y } = worldMapPresentationPixel(
+                      hub.coord,
+                      state.settings,
+                    );
+                    const hexTileR = worldMapHexTileRadius(hub.coord);
+                    return (
+                      <MapMajorHubSupertallMarker
+                        key={hub.id}
+                        hubId={hub.id}
+                        x={x}
+                        y={y}
+                        hexRadius={hexTileR}
+                      />
+                    );
+                  })
+                : null}
+
+              {!isDev
+                ? (() => {
+                    const hexTileR = worldMapHexTileRadius(MAP_GOV);
+                    const { x, y } = worldMapPresentationPixel(
+                      MAP_GOV,
+                      state.settings,
+                    );
+                    return (
+                      <MapGovCapitolMarker
+                        x={x}
+                        y={y}
+                        hexRadius={hexTileR}
+                      />
+                    );
+                  })()
+                : null}
 
               {isDev
                 ? authoredHqMarkers.map((site) => {

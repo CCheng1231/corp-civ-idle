@@ -22,7 +22,12 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
-**Recent state (Oct 9, 2026 — player map 3D towers):**
+**Recent state (Oct 27, 2026 — major hub + Gov capitol on map):**
+
+- **Major hubs (player map):** `MapMajorHubSupertallMarker.tsx` — supertall SVG **inside the map SVG** on all six Z1 coords; white `hex-tile-major-hub` hidden on player view at hub hexes.
+- **Gov (player map):** `MapGovCapitolMarker.tsx` — baked capitol PNG at `MAP_GOV`; amber gov fill hidden under art; `hex-tile-gov-site` ring. Asset: `src/assets/map/gov-capitol-isometric-bake.png` (`scripts/key-gov-capitol-bake.mjs`). Reference: `gov-landmark-isometric-demos.html`.
+
+**Prior (Oct 9 — player map 3D towers):**
 
 - **Player HQ 3D:** `MapPlayerHqTower3D.tsx` — solarpunk **canopy A** (glass core + garden pods); `variant` mine (green) / peer (blue); overlay in `map-hq-towers-layer-untilted` (counter-tilt vs map tilt); hex HQ/branch fill hidden on player view at authored HQ coords.
 - **Office towers 3D:** `MapOfficeTower3D.tsx` — per-tower styles from `hq-tower-solarpunk-demos.html` (`officeTowerVisualStyle` / `OFFICE_TOWER_VISUAL_STYLE` in `mapWorld.ts`); coords via `officeTowerMapSites(settings)`; same overlay layer; `hex-tile-tower` hidden on player view at tower hexes.

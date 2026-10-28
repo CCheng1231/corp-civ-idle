@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gov landmark — pro bar + illustrated pass (v4)</title>
+    <style>
+      :root {
+        --map-bg: #465042;
+        --ink: #e8eef5;
+        --muted: #9aa8b5;
+        --card: #242b33;
+        --border: #3a4550;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, Segoe UI, sans-serif;
+        background: #1a1f24;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      header,
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem 2rem;
+      }
+      header h1 {
+        font-size: 1.15rem;
+        margin: 0 0 0.5rem;
+      }
+      header p,
+      li {
+        font-size: 0.86rem;
+        color: var(--muted);
+      }
+      .pro-bar {
+        margin: 1rem 0;
+        padding: 1rem 1.1rem;
+        background: #1e2830;
+        border: 1px solid #3a5060;
+        border-radius: 8px;
+      }
+      .pro-bar h2 {
+        margin: 0 0 0.5rem;
+        font-size: 0.92rem;
+        color: var(--ink);
+      }
+      .pro-bar ul {
+        margin: 0.35rem 0 0;
+        padding-left: 1.2rem;
+      }
+      .pro-bar a {
+        color: #8ec8ff;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 0.85rem 1rem 0.35rem;
+      }
+      .card-head h2 {
+        margin: 0;
+        font-size: 0.94rem;
+      }
+      .card-head p {
+        margin: 0.3rem 0 0;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+      .stage {
+        position: relative;
+        height: 400px;
+        background: var(--map-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage svg {
+        width: min(100%, 380px);
+        display: block;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+      }
+      .hex-foot {
+        position: absolute;
+        bottom: 36px;
+        width: 152px;
+        height: 132px;
+        background: #528048;
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        opacity: 0.38;
+      }
+      .label {
+        text-align: center;
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #8a98a5;
+        padding-bottom: 0.55rem;
+      }
+      .pipeline {
+        grid-column: 1 / -1;
+        padding: 1rem;
+        background: #2a323c;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 0.84rem;
+        color: #c5d0da;
+      }
+      .bake-img {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 420px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Gov landmarks — v4 (pro bar + illustrated isometric)</h1>
+      <p>
+        Your Google results show <strong>authored 3D</strong> (PBR, UVs, 8K stone, modeled
+        domes) — not flat fills. v4 SVGs mimic that with multi-pass faces, enframed windows,
+        dome ribs, and <strong>zero</strong> decorative shapes detached from the mesh. For
+        in-game ship quality at zoom-in, the path is: pick silhouette here → Blender blockout →
+        bake PNG (normal + color) like commercial assets.
+      </p>
+      <div class="pro-bar">
+        <h2>What “professional government 3D” actually includes</h2>
+        <ul>
+          <li>
+            <a href="https://www.cgtrader.com/3d-models/exterior/other/administrative-government-building"
+              >Administrative Government Building (CGTrader)</a
+            >
+            — symmetrical facade, 8K PBR, close-up render ready
+          </li>
+          <li>
+            <a
+              href="https://www.cgtrader.com/3d-models/exterior/cityscape/san-francisco-city-hall-ultrarealistic-3d-model"
+              >San Francisco City Hall</a
+            >
+            — Beaux-Arts dome, sculpted stonework, ornate columns
+          </li>
+          <li>
+            <a href="https://www.fab.com/listings/0b7a1a66-5dd2-492a-b6b6-a5c8edd92116"
+              >US Capitol (Fab, game-ready PBR)</a
+            >
+          </li>
+          <li>
+            Hand-painted isometric packs (City Hall / Town Hall tiles) —
+            <a href="https://gamevision.artstation.com/projects/AqRbgV">GameVision isometric</a>
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <main class="grid">
+      <article class="card pipeline">
+        <div class="card-head">
+          <h2>Shipped on player map — baked capitol (PBR-style)</h2>
+          <p>
+            <code>MapGovCapitolMarker</code> uses
+            <code>src/assets/map/gov-capitol-isometric-bake.png</code> (preview copy in this folder
+            for local HTML). Keyed via <code>scripts/key-gov-capitol-bake.mjs</code>. Same anchor as
+            major hubs: region hex under art, white site ring at <code>MAP_GOV</code>.
+          </p>
+        </div>
+        <div class="stage" style="height: auto; padding: 1.25rem 1rem 1.5rem">
+          <div class="hex-foot" aria-hidden="true"></div>
+          <img
+            class="bake-img"
+            src="gov-capitol-isometric-bake.png"
+            alt="Baked isometric US-style capitol with copper dome"
+            width="420"
+            height="560"
+          />
+        </div>
+        <div class="label">gov-capitol-isometric-bake · player map</div>
+      </article>
+
+      <!-- ===== CAPITOL (hero — most detail) ===== -->
+      <article class="card">
+        <div class="card-head">
+          <h2>3 — Capitol (hero detail)</h2>
+          <p>
+            Rusticated base, pediment, colonnade, drum colonnettes, ribbed dome shell, lantern
+            stack — all welded.
+          </p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot" aria-hidden="true"></div>
+          <svg id="gov-iso-capitol-art" viewBox="0 0 400 420" aria-label="Capitol">
+            <defs>
+              <linearGradient id="c-base-s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c4bcb0" />
+                <stop offset="100%" stop-color="#4a443c" />
+              </linearGradient>
+              <linearGradient id="c-base-f" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#faf6ee" />
+                <stop offset="40%" stop-color="#e8e0d4" />
+                <stop offset="100%" stop-color="#9a9084" />
+              </linearGradient>
+              <linearGradient id="c-base-t" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#f5f0e8" />
+                <stop offset="100%" stop-color="#d0c8bc" />
+              </linearGradient>
+              <pattern id="c-rustic" width="12" height="8" patternUnits="userSpaceOnUse">
+                <rect width="12" height="8" fill="#d8d0c4" />
+                <rect x="1" y="1" width="10" height="6" rx="1" fill="#c8c0b4" stroke="#a89888" stroke-width="0.4" />
+              </pattern>
+              <pattern id="c-smooth" width="8" height="6" patternUnits="userSpaceOnUse">
+                <rect width="8" height="6" fill="#ece6dc" />
+                <path d="M0 3h8" stroke="#d0c8bc" stroke-width="0.3" opacity="0.5" />
+              </pattern>
+              <linearGradient id="c-dome-l" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#3a5848" />
+                <stop offset="100%" stop-color="#6a9888" />
+              </linearGradient>
+              <linearGradient id="c-dome-r" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#8ab8a8" />
+                <stop offset="100%" stop-color="#3a5048" />
+              </linearGradient>
+              <pattern id="c-granite" width="10" height="5" patternUnits="userSpaceOnUse">
+                <rect width="10" height="5" fill="#9a9490" />
+                <path d="M0 2.5h10M5 0v5" stroke="#6a6460" stroke-width="0.35" />
+              </pattern>
+            </defs>
+            <ellipse cx="200" cy="388" rx="138" ry="28" fill="rgba(0,0,0,0.52)" />
+            <path d="M24 362 L376 362 L388 374 L12 374 Z" fill="#5a7048" />
+            <!-- steps -->
+            <path d="M68 362 L332 362 L320 352 L80 352 Z" fill="url(#c-granite)" stroke="#5a5448" />
+            <path d="M80 352 L320 352 L308 344 L92 344 Z" fill="#c8c2bc" />
+            <path d="M92 344 L308 344 L296 338 L104 338 Z" fill="#ddd8d2" />
+            <path d="M80 352 L320 352 L308 344 L92 344 Z" fill="url(#c-base-t)" opacity="0.25" />
+            <!-- rusticated lower -->
+            <path d="M104 338 L296 338 L296 268 L104 268 Z" fill="url(#c-rustic)" stroke="#6a6258" />
+            <path d="M92 338 L104 268 L104 338 Z" fill="url(#c-base-s)" stroke="#5a5248" />
+            <!-- upper marble -->
+            <path d="M104 268 L296 268 L296 228 L104 228 Z" fill="url(#c-smooth)" stroke="#7a7268" />
+            <path d="M104 228 L296 228 L284 214 L116 214 Z" fill="url(#c-base-t)" stroke="#8a8278" />
+            <!-- pediment -->
+            <path d="M112 214 L288 214 L200 168 Z" fill="url(#c-base-f)" stroke="#6a6258" stroke-width="0.9" />
+            <path d="M128 214 L272 214 L200 178 Z" fill="#2a3830" opacity="0.08" />
+            <!-- tympanum radial -->
+            <g stroke="#b8b0a4" stroke-width="0.35" opacity="0.5">
+              <path d="M200 178 L200 214" />
+              <path d="M200 178 L160 210" />
+              <path d="M200 178 L240 210" />
+            </g>
+            <!-- colonnade -->
+            <g>
+              <rect x="118" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="117" y="228" width="10" height="5" fill="#fffef8" stroke="#8a8278" stroke-width="0.35" />
+              <rect x="116" y="266" width="12" height="3" fill="#e8e0d4" />
+              <rect x="134" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="150" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="166" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="182" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="198" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="214" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="230" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="246" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+              <rect x="262" y="232" width="8" height="36" fill="url(#c-base-f)" stroke="#9a9288" stroke-width="0.5" />
+            </g>
+            <!-- entablature + modillions -->
+            <path d="M108 228 L292 228 L288 222 L112 222 Z" fill="#f8f4ec" stroke="#8a8278" />
+            <g fill="#d8d0c4" stroke="#9a9288" stroke-width="0.25">
+              <rect x="114" y="222" width="4" height="4" />
+              <rect x="126" y="222" width="4" height="4" />
+              <rect x="138" y="222" width="4" height="4" />
+              <rect x="150" y="222" width="4" height="4" />
+              <rect x="162" y="222" width="4" height="4" />
+              <rect x="174" y="222" width="4" height="4" />
+              <rect x="186" y="222" width="4" height="4" />
+              <rect x="198" y="222" width="4" height="4" />
+              <rect x="210" y="222" width="4" height="4" />
+              <rect x="222" y="222" width="4" height="4" />
+              <rect x="234" y="222" width="4" height="4" />
+              <rect x="246" y="222" width="4" height="4" />
+              <rect x="258" y="222" width="4" height="4" />
+              <rect x="270" y="222" width="4" height="4" />
+            </g>
+            <!-- DRUM -->
+            <path d="M112 222 L288 222 L288 188 L112 188 Z" fill="url(#c-base-s)" stroke="#5a5248" />
+            <path d="M112 188 L288 188 L276 176 L124 176 Z" fill="url(#c-base-t)" stroke="#7a7268" />
+            <!-- drum colonnettes -->
+            <g fill="url(#c-base-f)" stroke="#8a8278" stroke-width="0.35">
+              <rect x="128" y="192" width="4" height="26" />
+              <rect x="148" y="192" width="4" height="26" />
+              <rect x="168" y="192" width="4" height="26" />
+              <rect x="188" y="192" width="4" height="26" />
+              <rect x="208" y="192" width="4" height="26" />
+              <rect x="228" y="192" width="4" height="26" />
+              <rect x="248" y="192" width="4" height="26" />
+              <rect x="268" y="192" width="4" height="26" />
+            </g>
+            <path d="M124 176 L276 176 L274 180 L126 180 Z" fill="#1a2820" opacity="0.7" />
+            <!-- DOME — smooth bezier shell, base edge y=180 -->
+            <path
+              d="M126 180 C126 180 132 95 200 62 C268 95 274 180 274 180 Z"
+              fill="url(#c-dome-r)"
+              stroke="#2a4038"
+              stroke-width="0.85"
+            />
+            <path
+              d="M126 180 C126 180 132 95 200 62 L200 180 Z"
+              fill="url(#c-dome-l)"
+              stroke="none"
+            />
+            <!-- dome ribs (meridians) -->
+            <g stroke="#2a4838" stroke-width="0.45" fill="none" opacity="0.55">
+              <path d="M200 62 C168 100 140 140 126 180" />
+              <path d="M200 62 C232 100 260 140 274 180" />
+              <path d="M200 62 L200 180" />
+              <path d="M200 62 C185 120 175 150 170 180" />
+              <path d="M200 62 C215 120 225 150 230 180" />
+            </g>
+            <path d="M126 180 L274 180 L272 183 L128 183 Z" fill="#3a5848" opacity="0.9" />
+            <!-- lantern stack on apex -->
+            <path d="M184 62 L216 62 L210 48 L190 48 Z" fill="url(#c-base-t)" stroke="#6a6258" />
+            <path d="M190 48 L210 48 L206 40 L194 40 Z" fill="url(#c-dome-l)" stroke="#2a4038" />
+            <rect x="196" y="28" width="12" height="14" fill="#f5f0e8" stroke="#6a6258" stroke-width="0.5" />
+            <rect x="200" y="18" width="4" height="12" fill="#ffb01a" stroke="#8a6018" stroke-width="0.4" />
+            <!-- side building returns -->
+            <path d="M92 338 L104 338 L104 268 L92 280 Z" fill="url(#c-base-s)" opacity="0.85" />
+            <path d="M296 338 L308 338 L308 268 L296 280 Z" fill="url(#c-base-s)" opacity="0.85" />
+            <!-- windows lower -->
+            <g>
+              <rect x="118" y="288" width="14" height="18" fill="#2a3840" stroke="#8a8278" stroke-width="0.5" />
+              <rect x="118" y="286" width="14" height="3" fill="#f0ece4" />
+              <rect x="148" y="288" width="14" height="18" fill="#324850" stroke="#8a8278" stroke-width="0.5" />
+              <rect x="238" y="288" width="14" height="18" fill="#2a3840" stroke="#8a8278" stroke-width="0.5" />
+              <rect x="268" y="288" width="14" height="18" fill="#324850" stroke="#8a8278" stroke-width="0.5" />
+            </g>
+            <path d="M104 338 L296 338 L296 342 L104 342 Z" fill="#000" opacity="0.2" />
+          </svg>
+        </div>
+        <div class="label">gov-iso-capitol</div>
+      </article>
+
+      <!-- Executive (shorter but multi-pass) -->
+      <article class="card">
+        <div class="card-head">
+          <h2>1 — Executive mansion</h2>
+          <p>Enframed bays, portico recess, wing roof caps.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot" aria-hidden="true"></div>
+          <svg viewBox="0 0 400 420" aria-label="Executive">
+            <defs>
+              <linearGradient id="e-l" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#b0a898" />
+                <stop offset="100%" stop-color="#4a443c" />
+              </linearGradient>
+              <linearGradient id="e-f" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#fffdf8" />
+                <stop offset="100%" stop-color="#b8b0a4" />
+              </linearGradient>
+              <pattern id="e-brick" width="7" height="5" patternUnits="userSpaceOnUse">
+                <rect width="7" height="5" fill="#ebe4da" />
+                <path d="M0 2.5h7" stroke="#ccc4b8" stroke-width="0.35" />
+              </pattern>
+            </defs>
+            <ellipse cx="200" cy="386" rx="136" ry="28" fill="rgba(0,0,0,0.5)" />
+            <path d="M32 358 L368 358 L378 368 L22 368 Z" fill="#5a7848" />
+            <path d="M52 358 L348 358 L338 344 L62 344 Z" fill="#6a9458" />
+            <path d="M52 344 L118 304 L118 228 L52 268 Z" fill="url(#e-l)" stroke="#4a443c" />
+            <path d="M52 268 L118 228 L110 222 L44 262 Z" fill="url(#e-f)" />
+            <path d="M282 344 L348 304 L348 228 L282 268 Z" fill="url(#e-l)" />
+            <path d="M282 268 L348 228 L340 222 L274 262 Z" fill="#d0c8bc" />
+            <path d="M118 344 L282 344 L282 216 L118 216 Z" fill="url(#e-brick)" stroke="#6a6258" />
+            <path d="M118 216 L282 216 L270 202 L130 202 Z" fill="url(#e-f)" stroke="#8a8278" />
+            <path d="M132 344 L268 344 L268 252 L132 252 Z" fill="#2a3028" opacity="0.28" />
+            <g>
+              <rect x="142" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="141" y="264" width="11" height="5" fill="#faf6f0" />
+              <rect x="158" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="174" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="190" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="206" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="222" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+              <rect x="238" y="268" width="9" height="76" fill="url(#e-f)" stroke="#8a8278" stroke-width="0.45" />
+            </g>
+            <path d="M128 252 L272 252 L200 198 Z" fill="url(#e-f)" stroke="#6a6258" />
+            <path d="M126 202 L274 202 L270 196 L130 196 Z" fill="#faf6f0" stroke="#8a8278" />
+            <rect x="192" y="178" width="16" height="22" fill="#ffb01a" stroke="#8a6018" stroke-width="0.55" />
+            <g>
+              <rect x="68" y="278" width="12" height="16" fill="#2a3840" stroke="#7a7268" stroke-width="0.45" />
+              <rect x="68" y="276" width="12" height="2" fill="#f0ece4" />
+              <rect x="320" y="278" width="12" height="16" fill="#2a3840" stroke="#7a7268" stroke-width="0.45" />
+            </g>
+          </svg>
+        </div>
+        <div class="label">gov-iso-executive</div>
+      </article>
+
+      <!-- Parliament -->
+      <article class="card">
+        <div class="card-head">
+          <h2>2 — Parliament</h2>
+          <p>Buttressed hall, layered slate, tower fused at eaves.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot" aria-hidden="true"></div>
+          <svg viewBox="0 0 400 420" aria-label="Parliament">
+            <defs>
+              <pattern id="p-slate" width="6" height="4" patternUnits="userSpaceOnUse">
+                <rect width="6" height="4" fill="#3a4248" />
+                <path d="M0 2h6" stroke="#2a3038" stroke-width="0.4" />
+              </pattern>
+              <linearGradient id="p-stone" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#c8c4c0" />
+                <stop offset="100%" stop-color="#686460" />
+              </linearGradient>
+            </defs>
+            <ellipse cx="200" cy="384" rx="138" ry="28" fill="rgba(0,0,0,0.5)" />
+            <path d="M28 356 L372 356 L382 366 L18 366 Z" fill="#586848" />
+            <path d="M48 356 L352 356 L342 342 L58 342 Z" fill="url(#p-stone)" stroke="#4a4848" />
+            <path d="M58 342 L280 342 L280 218 L58 218 Z" fill="#7a7874" stroke="#3a3838" />
+            <path d="M58 218 L280 218 L268 200 L70 200 Z" fill="url(#p-slate)" stroke="#2a2830" />
+            <path d="M70 200 L268 200 L200 148 L70 200 Z" fill="#454d54" stroke="#2a2830" />
+            <path d="M58 342 L70 200 L58 218 Z" fill="#9a9692" opacity="0.7" />
+            <g fill="#1a2028" stroke="#3a4048" stroke-width="0.4">
+              <rect x="78" y="278" width="10" height="22" />
+              <rect x="78" y="276" width="10" height="2" fill="#b8b4b0" />
+              <rect x="98" y="278" width="10" height="22" />
+              <rect x="118" y="278" width="10" height="22" />
+              <rect x="138" y="278" width="10" height="22" />
+            </g>
+            <path d="M280 342 L328 316 L328 118 L280 144 Z" fill="#6a6864" stroke="#3a3838" />
+            <path d="M280 144 L328 118 L320 110 L272 136 Z" fill="#8a8884" />
+            <path d="M272 136 L320 110 L312 94 L264 120 Z" fill="url(#p-slate)" />
+            <path d="M264 120 L312 94 L304 78 L268 104 Z" fill="#424850" />
+            <rect x="300" y="188" width="22" height="28" rx="1" fill="#2a2830" />
+            <circle cx="311" cy="202" r="11" fill="#f4f0e8" stroke="#3a3838" stroke-width="1" />
+            <path d="M280 342 L328 316 L324 320 L276 346 Z" fill="#000" opacity="0.15" />
+          </svg>
+        </div>
+        <div class="label">gov-iso-parliament</div>
+      </article>
+
+      <!-- Civic modern -->
+      <article class="card">
+        <div class="card-head">
+          <h2>4 — Civic modern</h2>
+          <p>Podium mass; vault inset in roof plane; towers from slab.</p>
+        </div>
+        <div class="stage">
+          <div class="hex-foot" aria-hidden="true"></div>
+          <svg viewBox="0 0 400 420" aria-label="Civic modern">
+            <defs>
+              <linearGradient id="v-f" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#eef2f8" />
+                <stop offset="100%" stop-color="#9098a4" />
+              </linearGradient>
+              <linearGradient id="v-l" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#b0b4bc" />
+                <stop offset="100%" stop-color="#4a4e56" />
+              </linearGradient>
+              <linearGradient id="v-g" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c8e4f8" />
+                <stop offset="100%" stop-color="#4878a0" />
+              </linearGradient>
+            </defs>
+            <ellipse cx="200" cy="382" rx="136" ry="28" fill="rgba(0,0,0,0.5)" />
+            <path d="M30 354 L370 354 L380 364 L20 364 Z" fill="#6a8060" />
+            <path d="M48 354 L352 354 L352 248 L48 248 Z" fill="url(#v-f)" stroke="#6a7078" />
+            <path d="M32 354 L48 248 L48 354 Z" fill="url(#v-l)" stroke="#5a5e66" />
+            <path d="M48 248 L352 248 L340 236 L60 236 Z" fill="#dce0e8" stroke="#8a9098" />
+            <path d="M72 236 L328 236 L200 196 L72 236 Z" fill="url(#v-g)" opacity="0.45" stroke="#5a7888" />
+            <path d="M72 236 L328 236 L324 240 L76 240 Z" fill="#000" opacity="0.12" />
+            <path d="M48 354 L88 328 L104 108 L64 134 Z" fill="url(#v-f)" stroke="#5a6068" />
+            <path d="M40 354 L48 354 L64 134 L56 134 Z" fill="url(#v-l)" />
+            <path d="M64 134 L104 108 L98 102 L58 128 Z" fill="#e8ecf4" />
+            <path d="M352 354 L312 328 L296 96 L336 122 Z" fill="url(#v-l)" stroke="#5a6068" />
+            <path d="M336 122 L296 96 L302 90 L342 116 Z" fill="#dce4ec" />
+            <path d="M76 260 L92 248 L92 180 L76 192 Z" fill="url(#v-g)" opacity="0.6" stroke="#4a6880" />
+            <path d="M308 252 L324 240 L324 172 L308 184 Z" fill="url(#v-g)" opacity="0.55" />
+            <path d="M48 354 L352 354 L348 358 L52 358 Z" fill="#000" opacity="0.14" />
+          </svg>
+        </div>
+        <div class="label">gov-iso-civic-modern</div>
+      </article>
+
+      <div class="pipeline">
+        <strong>Ship-quality path (matches your Google results):</strong> Choose silhouette ID →
+        model in Blender with PBR stone/metal/copper (base color + roughness + normal) → render
+        or bake orthographic/isometric sprite @2× → drop into
+        <code>MapGovLandmarkMarker</code> like major hubs. These SVGs remain the
+        <strong>layout + art-direction contract</strong>, not a substitute for 8K PBR meshes.
+      </div>
+    </main>
+  </body>
+</html>

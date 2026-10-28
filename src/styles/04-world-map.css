@@ -332,6 +332,11 @@
   position: relative;
 }
 
+.map-presentation-player .map-zoom-scale-layer-tilt > svg {
+  position: relative;
+  z-index: 1;
+}
+
 .map-presentation-player .map-zoom-map-stack {
   position: relative;
   flex-shrink: 0;
@@ -343,6 +348,7 @@
   pointer-events: none;
   overflow: visible;
   transform-style: preserve-3d;
+  z-index: 2;
 }
 
 .map-schematic-land {
