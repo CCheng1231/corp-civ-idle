@@ -753,6 +753,8 @@ function normalizeSave(
       mapZ1LayerFilters: parseMapZ1LayerFilters(
         parsed.settings?.mapZ1LayerFilters,
       ),
+      mapShowWorldLandmarkArt:
+        parsed.settings?.mapShowWorldLandmarkArt === false ? false : undefined,
       mapZ1BakeVariant:
         parsed.settings?.mapZ1BakeVariant === "v6-draft"
           ? "v6-draft"

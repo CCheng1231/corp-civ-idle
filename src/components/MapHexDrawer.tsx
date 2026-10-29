@@ -65,6 +65,9 @@ import {
   mapHexTitle,
   type MapHexInfo,
 } from "./mapHexInfo";
+import type { MapLandmarkArtInstance } from "../game/mapLandmarkInstances";
+import { mapLandmarkArtDisplayName } from "../game/mapLandmarkArtRegistry";
+import { axialKey } from "../game/hexLayout";
 
 interface MapHexDrawerProps {
   state: GameState;
@@ -74,11 +77,60 @@ interface MapHexDrawerProps {
   onClose: () => void;
   /** From map job filter — open Contracts and highlight this posting */
   highlightPostingId?: string | null;
+  /** Canon landmark site covering this hex (player map). */
+  landmarkInstance?: MapLandmarkArtInstance | null;
 }
 
 type MapContractSite =
   | { mode: "tower"; towerId: TowerId }
   | { mode: "commercial"; commercialLotId: CommercialLotId };
+
+function MapLandmarkSiteDrawerSection({
+  instance,
+  coord,
+}: {
+  instance: MapLandmarkArtInstance;
+  coord: AxialCoord;
+}) {
+  const multi = instance.footprint.length > 1;
+  const onAnchor = instance.footprint.some(
+    (c) => c.q === coord.q && c.r === coord.r,
+  );
+
+  return (
+    <>
+      <dl className="map-hex-facts">
+        <div>
+          <dt>Site id</dt>
+          <dd>{instance.siteId}</dd>
+        </div>
+        <div>
+          <dt>Landmark</dt>
+          <dd>{mapLandmarkArtDisplayName(String(instance.artId))}</dd>
+        </div>
+        {multi ? (
+          <div>
+            <dt>Footprint</dt>
+            <dd>{instance.footprint.length} hexes</dd>
+          </div>
+        ) : null}
+      </dl>
+      {multi ? (
+        <p className="map-hex-desc muted">
+          Part of a multi-hex world landmark
+          {onAnchor ? " (primary anchor hex)." : "."}
+          {" "}
+          Hexes:{" "}
+          {instance.footprint.map((c) => axialKey(c)).join(", ")}
+        </p>
+      ) : (
+        <p className="map-hex-desc muted">
+          Shared world landmark — same geography for every player.
+        </p>
+      )}
+    </>
+  );
+}
 
 function contractSiteForDrawer(
   state: GameState,
@@ -696,6 +748,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
       side,
       onClose,
       highlightPostingId = null,
+      landmarkInstance = null,
     },
     ref,
   ) {
@@ -799,6 +852,13 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             Capital hex. Distance rings start here.
           </p>
         )}
+
+        {landmarkInstance ? (
+          <MapLandmarkSiteDrawerSection
+            instance={landmarkInstance}
+            coord={coord}
+          />
+        ) : null}
 
         {info.kind === "office" && (
           <OfficeDrawerSection

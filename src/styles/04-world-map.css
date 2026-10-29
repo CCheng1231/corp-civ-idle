@@ -342,7 +342,8 @@
   flex-shrink: 0;
 }
 
-.map-presentation-player .map-hq-towers-layer-untilted {
+.map-presentation-player .map-hq-towers-layer-untilted,
+.map-presentation-player .map-landmark-overlay-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;

@@ -546,6 +546,8 @@ export interface GameSettings {
       boolean
     >
   >;
+  /** Player map: show canon world landmark art (Gov, hubs). Per-account only — does not affect other players. Default on. */
+  mapShowWorldLandmarkArt?: boolean;
   /** Z1 pass-1 raster: locked v5 (ship) or engine-aligned v6 draft (try). */
   mapZ1BakeVariant?: "v5" | "v6-draft";
   /** Dev: overlay pass-2 align guide on Z1 bake. */

@@ -39,9 +39,22 @@
   paint-order: stroke fill;
 }
 
-.map-presentation-player .map-gov-capitol-bake {
+.map-presentation-player .hex-tile.hex-tile-landmark-site {
+  stroke: #f7f3ec;
+  stroke-width: 5px;
+  paint-order: stroke fill;
+}
+
+.map-presentation-player .map-baked-landmark-svg-image {
   pointer-events: none;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+.map-presentation-player .map-gov-capitol-bake {
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.4));
+}
+
+.map-presentation-player .map-commercial-lot-bake {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
 }
 
 .map-presentation-player .map-hex-selection-ring {
@@ -788,11 +801,19 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
-.map-hq-btn {
+.map-top-right-controls {
   position: absolute;
   top: 0.45rem;
   right: 0.45rem;
   z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  max-width: min(11rem, calc(100% - 0.9rem));
+}
+
+.map-hq-btn {
   margin: 0;
   padding: 0.16rem 0.5rem;
   min-height: 1.5rem;
@@ -810,6 +831,135 @@
 
 .map-hq-btn:hover {
   background: rgba(86, 180, 233, 0.16);
+}
+
+/* Player map — top-right chrome matches bottom job filter strip */
+.map-presentation-player .map-hq-btn,
+.map-presentation-player .map-world-landmark-filter-toggle {
+  min-height: 1.35rem;
+  padding: 0.12rem 0.38rem;
+  border: 1px solid rgba(26, 26, 26, 0.16);
+  border-radius: 0.4rem;
+  background: rgba(247, 243, 236, 0.82);
+  box-shadow:
+    0 2px 6px rgba(26, 26, 26, 0.08),
+    0 6px 16px rgba(26, 26, 26, 0.07);
+  backdrop-filter: blur(6px);
+  color: #1a1a1a;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.map-presentation-player .map-hq-btn:hover,
+.map-presentation-player .map-world-landmark-filter-toggle:hover,
+.map-presentation-player .map-world-landmark-filter.is-open .map-world-landmark-filter-toggle {
+  background: rgba(235, 228, 218, 0.95);
+}
+
+.map-world-landmark-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.map-world-landmark-filter-toggle {
+  margin: 0;
+  padding: 0.16rem 0.5rem;
+  min-height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: rgba(23, 30, 39, 0.92);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 650;
+  line-height: 1.15;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.map-world-landmark-filter-toggle:hover,
+.map-world-landmark-filter.is-open .map-world-landmark-filter-toggle {
+  background: rgba(86, 180, 233, 0.16);
+}
+
+.map-presentation-player .map-world-landmark-filter.is-filtered-off .map-world-landmark-filter-toggle {
+  color: rgba(26, 26, 26, 0.62);
+}
+
+.map-world-landmark-filter-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.02rem 0.28rem;
+  border-radius: 0.2rem;
+  background: rgba(45, 106, 74, 0.14);
+  color: #2d6a4a;
+}
+
+.map-presentation-player .map-world-landmark-filter.is-filtered-off .map-world-landmark-filter-badge {
+  background: rgba(192, 84, 58, 0.16);
+  color: #9c4228;
+}
+
+.map-world-landmark-filter-panel {
+  padding: 0.28rem 0.38rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(26, 26, 26, 0.16);
+  background: rgba(247, 243, 236, 0.92);
+  box-shadow:
+    0 2px 6px rgba(26, 26, 26, 0.08),
+    0 6px 16px rgba(26, 26, 26, 0.07);
+  backdrop-filter: blur(6px);
+}
+
+.map-world-landmark-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  cursor: pointer;
+  min-height: 0;
+  padding: 0.08rem 0;
+}
+
+.map-world-landmark-filter-row input {
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+}
+
+.map-world-landmark-filter-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+  min-width: 0;
+}
+
+.map-world-landmark-filter-row-title {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: #1a1a1a;
+}
+
+.map-world-landmark-filter-row-hint {
+  font-size: 0.55rem;
+  line-height: 1.25;
+}
+
+.map-world-landmark-filter-section-label {
+  margin: 0.2rem 0 0.08rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(26, 26, 26, 0.48);
+}
+
+.map-world-landmark-filter-section-label:first-child {
+  margin-top: 0;
 }
 
 /* —— Player HQ: CSS 3D extruded towers (overlay on tilt layer) —— */
@@ -1907,7 +2057,7 @@
   right: 0.45rem;
   bottom: 0.45rem;
   z-index: 5;
-  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
+  width: min(11rem, calc(100% - 5.5rem));
   max-height: min(40vh, 16.5rem);
   border-radius: 0.4rem;
   border: 1px solid rgba(26, 26, 26, 0.16);

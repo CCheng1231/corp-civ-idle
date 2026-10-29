@@ -22,10 +22,29 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
+**World map landmark art (player view):** Mixed art — **baked PNG** (unique/heroes) + **inline SVG** (simple repeats); HQ/office **CSS 3D** stays overlay. Registry `mapLandmarkArtRegistry.ts`, sites `mapLandmarkInstances.ts`, policy `mapLandmarkPolicy.ts`.
+
+**World landmark policy (Chris, Oct 2026):**
+- **Canon world-building** — Gov, hubs, multi-hex structures: fixed map geography for **everyone** (layout/canonical JSON + providers), not per-player save.
+- **Same canon art** — Gov/hubs/uniques: one shared asset set for the world (not per-save builds).
+- **Per-player show/hide** — `settings.mapShowWorldLandmarkArt` in **private save only** (Tim off ≠ Chris off; online = follows that account's devices). **Filter** below HQ. When off, hide landmark art + site rings on that client.
+- **Future cosmetics** — world landmarks stay shared; player skins (e.g. own HQ/office) affect **only that player's view** of their assets, not what others see on the map.
+- **Agent habit:** if unsure canon vs player-owned or shared vs private visibility, **ask Chris** before wiring coords to `GameState`.
+
+**Recent state (Oct 28, 2026 — map filter + landmark pipeline):**
+
+- **Multi-hex (dormant):** enable sites in `mapLandmarkCanonSites.ts` (`canonMultiHexLandmarkProviders`); helpers `landmarkArtInstanceMultiHex`, `playerLandmarkArtInstanceAtCoord`.
+- **Top-right Filter:** world landmarks only (`MapWorldLandmarkFilterControl.tsx`). Z1 overlay code remains (`WorldMapZ1ProceduralOverlay`, `mapZ1LayerFilters` in settings) for later — no player UI yet.
+- **Gov bake:** lazy chunk `mapLandmarkBakedAssets.ts`; regen via `node scripts/key-gov-capitol-bake.mjs` (`--master` PNG when ready).
+- **Inspect:** hex drawer shows landmark site id / footprint when landmark art is on.
+
+**Recent state (Oct 28, 2026 — map landmark art registry):**
+
+- **Gov + major hubs** drawn through `MapLandmarkArtLayer` (not one-off markers in `WorldView`).
+
 **Recent state (Oct 27, 2026 — major hub + Gov capitol on map):**
 
-- **Major hubs (player map):** `MapMajorHubSupertallMarker.tsx` — supertall SVG **inside the map SVG** on all six Z1 coords; white `hex-tile-major-hub` hidden on player view at hub hexes.
-- **Gov (player map):** `MapGovCapitolMarker.tsx` — baked capitol PNG at `MAP_GOV`; amber gov fill hidden under art; `hex-tile-gov-site` ring. Asset: `src/assets/map/gov-capitol-isometric-bake.png` (`scripts/key-gov-capitol-bake.mjs`). Reference: `gov-landmark-isometric-demos.html`.
+- **Major hubs + Gov:** site providers in `mapLandmarkInstances.ts`; art via `MapLandmarkArtLayer` (`major-hub-supertall` vector, `gov-capitol` baked `@2x`).
 
 **Prior (Oct 9 — player map 3D towers):**
 

@@ -12,7 +12,6 @@ import {
 } from "react";
 import {
   majorHubAtCoord,
-  resolveZ1MajorHubs,
 } from "../game/worldMapMajorHubs";
 import {
   isAvailableCommercialLot,
@@ -97,6 +96,7 @@ import type {
 } from "../game/types";
 import { MapHexDrawer } from "./MapHexDrawer";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
+import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
   DEFAULT_JOB_BOARD_FILTERS,
   filterAndSortJobPostings,
@@ -105,9 +105,14 @@ import {
 } from "../game/jobBoard";
 import { MapPlayerHq3DMarker } from "./MapPlayerHq3DMarker";
 import { MapPlayerHqTower3D } from "./MapPlayerHqTower3D";
+import {
+  buildPlayerMapLandmarkHexSiteIndex,
+  playerLandmarkArtInstanceAtCoord,
+  resolvePlayerMapLandmarkArtInstances,
+} from "../game/mapLandmarkInstances";
+import { MapLandmarkArtLayer } from "./MapLandmarkArtLayer";
+import { WorldMapZ1ProceduralOverlay } from "./WorldMapZ1ProceduralOverlay";
 import { MapOfficeTower3D } from "./MapOfficeTower3D";
-import { MapGovCapitolMarker } from "./MapGovCapitolMarker";
-import { MapMajorHubSupertallMarker } from "./MapMajorHubSupertallMarker";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
 import {
   defaultMapDevMovableLandmarkKey,
@@ -387,14 +392,21 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     [officeTowerSites],
   );
 
-  const majorHubSites = useMemo(
-    () => resolveZ1MajorHubs(state.settings),
-    [state.settings],
+  const playerLandmarkArtInstances = useMemo(
+    () => (isDev ? [] : resolvePlayerMapLandmarkArtInstances(state.settings)),
+    [isDev, state.settings],
   );
+  const inspectedLandmarkInstance = useMemo(() => {
+    if (!inspectedCoord || isDev) return null;
+    return playerLandmarkArtInstanceAtCoord(
+      playerLandmarkArtInstances,
+      inspectedCoord,
+    );
+  }, [inspectedCoord, isDev, playerLandmarkArtInstances]);
 
-  const majorHubCoordKeys = useMemo(
-    () => new Set(majorHubSites.map((h) => axialKey(h.coord))),
-    [majorHubSites],
+  const playerLandmarkHexSites = useMemo(
+    () => buildPlayerMapLandmarkHexSiteIndex(playerLandmarkArtInstances),
+    [playerLandmarkArtInstances],
   );
 
   const mapSvgAspect = mapSvgAspectFit(mapZoomRel, playerMinZoomRel);
@@ -1277,18 +1289,26 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
           />
         ) : null}
 
-        <button
-          type="button"
-          className="map-hq-btn"
-          aria-label={`Center map on ${officeDisplayName(state, mainOfficeLocationId)} at 100% zoom`}
-          onClick={focusOnMainOffice}
-        >
-          {session?.playMode === "online"
-            ? "HQ"
-            : mainOfficeId === "branch"
-              ? officeDisplayName(state, mainOfficeLocationId)
-              : "HQ"}
-        </button>
+        <div className="map-top-right-controls">
+          <button
+            type="button"
+            className="map-hq-btn"
+            aria-label={`Center map on ${officeDisplayName(state, mainOfficeLocationId)} at 100% zoom`}
+            onClick={focusOnMainOffice}
+          >
+            {session?.playMode === "online"
+              ? "HQ"
+              : mainOfficeId === "branch"
+                ? officeDisplayName(state, mainOfficeLocationId)
+                : "HQ"}
+          </button>
+          {!isDev ? (
+            <MapWorldLandmarkFilterControl
+              settings={state.settings}
+              dispatch={dispatch}
+            />
+          ) : null}
+        </div>
 
         <div className="map-zoom-controls" role="group" aria-label="Map zoom">
           <button
@@ -1385,6 +1405,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 pointerEvents="none"
               />
 
+              {!isDev ? (
+                <WorldMapZ1ProceduralOverlay
+                  bounds={mapViewBounds}
+                  settings={state.settings}
+                />
+              ) : null}
+
               {cells.map((coord) => {
                 const { x, y } = worldMapPresentationPixel(
                   coord,
@@ -1395,10 +1422,8 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 const isAuthoredOfficeTowerHex = officeTowerCoordKeys.has(
                   axialKey(coord),
                 );
-                const isAuthoredMajorHubHex = majorHubCoordKeys.has(
-                  axialKey(coord),
-                );
-                const isAuthoredGovHex = axialEquals(coord, MAP_GOV);
+                const landmarkHexSite = playerLandmarkHexSites.get(axialKey(coord));
+                const hasLandmarkArtHex = !isDev && landmarkHexSite != null;
                 const displayVariant =
                   !isDev &&
                   isAuthoredHqHex &&
@@ -1406,13 +1431,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                     ? "default"
                     : !isDev && isAuthoredOfficeTowerHex && variant === "tower"
                       ? "default"
-                      : !isDev &&
-                          isAuthoredMajorHubHex &&
-                          variant === "major-hub"
+                      : hasLandmarkArtHex
                         ? "default"
-                        : !isDev && isAuthoredGovHex && variant === "gov"
-                          ? "default"
-                          : variant;
+                        : variant;
                 const isDefault = displayVariant === "default";
                 const officeId = officeAtForState(coord, state, session);
                 const isInspected =
@@ -1480,11 +1501,18 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                         hqFlashing ? "hex-tile-hq-flash" : "",
                         jobHot ? "hex-tile-job-hot" : "",
                         jobDim ? "is-job-hex-dim" : "",
-                        !isDev && isAuthoredMajorHubHex
+                        !isDev && landmarkHexSite?.siteKind === "major-hub"
                           ? "hex-tile-major-hub-site"
                           : "",
-                        !isDev && isAuthoredGovHex
+                        !isDev && landmarkHexSite?.siteKind === "gov"
                           ? "hex-tile-gov-site"
+                          : "",
+                        !isDev && landmarkHexSite?.siteKind === "commercial-lot"
+                          ? "hex-tile-landmark-site hex-tile-commercial-lot-site"
+                          : "",
+                        !isDev &&
+                        landmarkHexSite?.siteKind === "unique"
+                          ? "hex-tile-landmark-site"
                           : "",
                       ]
                         .filter(Boolean)
@@ -1514,41 +1542,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 );
               })}
 
-              {!isDev
-                ? majorHubSites.map((hub) => {
-                    const { x, y } = worldMapPresentationPixel(
-                      hub.coord,
-                      state.settings,
-                    );
-                    const hexTileR = worldMapHexTileRadius(hub.coord);
-                    return (
-                      <MapMajorHubSupertallMarker
-                        key={hub.id}
-                        hubId={hub.id}
-                        x={x}
-                        y={y}
-                        hexRadius={hexTileR}
-                      />
-                    );
-                  })
-                : null}
-
-              {!isDev
-                ? (() => {
-                    const hexTileR = worldMapHexTileRadius(MAP_GOV);
-                    const { x, y } = worldMapPresentationPixel(
-                      MAP_GOV,
-                      state.settings,
-                    );
-                    return (
-                      <MapGovCapitolMarker
-                        x={x}
-                        y={y}
-                        hexRadius={hexTileR}
-                      />
-                    );
-                  })()
-                : null}
+              {!isDev ? (
+                <MapLandmarkArtLayer
+                  settings={state.settings}
+                  instances={playerLandmarkArtInstances}
+                />
+              ) : null}
 
               {isDev
                 ? authoredHqMarkers.map((site) => {
@@ -1648,7 +1647,10 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
               </g>
             </svg>
             {!isDev ? (
-              <div className="map-hq-towers-layer-untilted" aria-hidden>
+              <div
+                className="map-hq-towers-layer-untilted map-landmark-overlay-layer"
+                aria-hidden
+              >
                 {hqTowerAnchors.map((anchor) => {
                   const isMyHq = axialEquals(anchor.coord, myHqCoord);
                   const hexSpanScreen = anchor.hexSpan * mapZoom;
@@ -1706,6 +1708,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
             side="right"
             onClose={closeDrawer}
             highlightPostingId={selectedMapPostingId}
+            landmarkInstance={inspectedLandmarkInstance}
           />
         )}
       </div>

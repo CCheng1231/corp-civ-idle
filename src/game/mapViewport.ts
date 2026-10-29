@@ -99,18 +99,6 @@ export function mapMajorHubArtSizeFromHexScreenPx(hexSpanPx: number): {
   return { width, height: width * (320 / 300) };
 }
 
-/** Baked gov capitol PNG (864×1152) — wide wings; keep art inside one hex tile. */
-export function mapGovCapitolArtSizeFromHexRadius(hexRadius: number): {
-  width: number;
-  height: number;
-} {
-  const span = Math.max(hexRadius * 2, 1);
-  const tight =
-    span < 56 ? 0.74 : span < 72 ? 0.8 : span < 96 ? 0.86 : 0.9;
-  const width = Math.min(112, Math.max(40, span * 0.68 * tight));
-  return { width, height: width * (1152 / 864) };
-}
-
 /** Body rotateX for HQ tower — stay closer to upright at all zoom levels. */
 export function mapHqTowerPresentationTiltDeg(towerHeightPx: number): number {
   const h = Math.min(140, Math.max(10, towerHeightPx));
