@@ -49,11 +49,37 @@
   pointer-events: none;
 }
 
-.map-presentation-player .map-gov-capitol-bake {
+.map-baked-landmark-overlay-anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.map-presentation-player .map-baked-landmark-overlay-anchor {
+  transform: scale(var(--map-baked-zoom-inv, 1));
+  transform-origin: 50% 100%;
+}
+
+.map-baked-landmark-overlay-img {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: block;
+  object-fit: contain;
+  object-position: bottom center;
+  max-width: none;
+  pointer-events: none;
+}
+
+.map-presentation-player .map-gov-capitol-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-gov-capitol-bake {
   filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.4));
 }
 
-.map-presentation-player .map-commercial-lot-bake {
+.map-presentation-player .map-commercial-lot-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-commercial-lot-bake {
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
 }
 

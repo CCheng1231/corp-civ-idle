@@ -111,6 +111,7 @@ import {
   resolvePlayerMapLandmarkArtInstances,
 } from "../game/mapLandmarkInstances";
 import { MapLandmarkArtLayer } from "./MapLandmarkArtLayer";
+import { MapBakedLandmarkOverlayLayer } from "./MapBakedLandmarkOverlayLayer";
 import { WorldMapZ1ProceduralOverlay } from "./WorldMapZ1ProceduralOverlay";
 import { MapOfficeTower3D } from "./MapOfficeTower3D";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
@@ -1691,6 +1692,14 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                     />
                   );
                 })}
+                <MapBakedLandmarkOverlayLayer
+                  settings={state.settings}
+                  mapViewBounds={mapViewBounds}
+                  mapContentSize={mapContentSize}
+                  mapSvgAspect={mapSvgAspect}
+                  mapContentScale={mapZoom}
+                  instances={playerLandmarkArtInstances}
+                />
               </div>
             ) : null}
               </div>

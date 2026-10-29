@@ -5,7 +5,6 @@ import {
   type MapLandmarkArtInstance,
 } from "../game/mapLandmarkInstances";
 import { mapLandmarkViewBoxAnchor } from "../game/mapLandmarkPresentation";
-import { MapBakedLandmarkSvgImageLazy } from "./MapBakedLandmarkSvgImageLazy";
 import { MapMajorHubSupertallMarker } from "./MapMajorHubSupertallMarker";
 
 interface MapLandmarkArtLayerProps {
@@ -29,20 +28,6 @@ export function MapLandmarkArtLayer({
 
         const anchor = mapLandmarkViewBoxAnchor(inst.footprint, settings);
         const layoutRadius = anchor.layoutSpan / 2;
-
-        if (art.kind === "baked-raster") {
-          return (
-            <MapBakedLandmarkSvgImageLazy
-              key={inst.instanceKey}
-              x={anchor.x}
-              y={anchor.y}
-              hexRadius={layoutRadius}
-              preset={art.preset}
-              loadHref={art.loadHref}
-              className={art.className}
-            />
-          );
-        }
 
         if (art.kind === "vector-inline" && art.template === "major-hub-supertall") {
           return (

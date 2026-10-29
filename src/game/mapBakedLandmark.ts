@@ -1,8 +1,8 @@
 /**
  * Baked raster landmarks on the player world map (Gov capitol, future structures).
  *
- * **SVG `<image>` in viewBox units** — same transform chain as hex polygons (scales with zoom).
- * HTML overlay + counter-scale fights `preserveAspectRatio` meet/slice and min-width clamps.
+ * **Player map:** HTML overlay + zoom counter-scale (see `MapBakedLandmarkOverlayImage`) for crisp @2x rasters.
+ * **SVG `<image>`** (`MapBakedLandmarkSvgImage`) — preview HTML and dev parity only.
  *
  * Sharpness: ship `@2x` PNG; optional canvas overlay later for extreme zoom.
  */
@@ -115,6 +115,34 @@ export function mapBakedLandmarkPreviewViewBox(
   const minY = Math.min(cy - hexRadius, layout.y) - pad;
   const maxY = Math.max(cy + hexRadius, layout.footY) + pad;
   return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
+}
+
+/** Content-pixel layout for HTML overlay (same preset math × viewBox→content scale). */
+export function mapBakedLandmarkOverlayLayout(
+  hexCenterContentX: number,
+  hexCenterContentY: number,
+  hexRadiusViewBox: number,
+  vbScale: number,
+  preset: MapBakedLandmarkPreset,
+): {
+  footCenterXContent: number;
+  footYContent: number;
+  widthContent: number;
+  heightContent: number;
+} {
+  const vb = mapBakedLandmarkSvgImageLayout(
+    0,
+    0,
+    hexRadiusViewBox,
+    preset,
+  );
+  const s = vbScale;
+  return {
+    footCenterXContent: hexCenterContentX,
+    footYContent: hexCenterContentY + vb.footOffsetY * s,
+    widthContent: vb.width * s,
+    heightContent: vb.height * s,
+  };
 }
 
 /**
