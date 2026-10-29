@@ -16,7 +16,8 @@ import type { MapLandmarkFootprint } from "./mapLandmarkPresentation";
 import { resolveZ1MajorHubs } from "./worldMapMajorHubs";
 import { playerWorldLandmarkArtVisible } from "./mapLandmarkPolicy";
 import { canonMultiHexLandmarkProviders } from "./mapLandmarkCanonSites";
-import { COMMERCIAL_REAL_ESTATE } from "./mapWorld";
+import { COMMERCIAL_REAL_ESTATE, OFFICE_TOWERS, officeTowerCoord } from "./mapWorld";
+import type { TowerId } from "./types";
 import { effectiveLandmarkCoord } from "./mapDevLayout";
 import type { CommercialLotId } from "./types";
 
@@ -152,6 +153,32 @@ const commercialLotLandmarkProvider: MapLandmarkSiteProvider = (settings) =>
       siteKind: "commercial-lot",
     });
   });
+
+const OFFICE_TOWER_ART_ID: Record<TowerId, MapLandmarkArtId> = {
+  metro_central: "office-tower-metro-central",
+  suburban_park: "office-tower-suburban-park",
+  rural_crossing: "office-tower-rural-crossing",
+  country_estate: "office-tower-country-estate",
+};
+
+const officeTowerLandmarkProvider: MapLandmarkSiteProvider = (settings) =>
+  OFFICE_TOWERS.map((tower) => {
+    const coord = officeTowerCoord(tower.id, settings);
+    return landmarkArtInstanceSingleHex({
+      instanceKey: `office-tower-${tower.id}`,
+      siteId: tower.id,
+      artId: OFFICE_TOWER_ART_ID[tower.id],
+      coord,
+      siteKind: "office-tower",
+    });
+  });
+
+/** Job-hub towers — always drawn (not gated by world landmark filter). */
+export function resolveOfficeTowerLandmarkInstances(
+  settings: GameSettings,
+): MapLandmarkArtInstance[] {
+  return officeTowerLandmarkProvider(settings);
+}
 
 const PLAYER_MAP_LANDMARK_PROVIDERS: MapLandmarkSiteProvider[] = [
   govCapitolProvider,

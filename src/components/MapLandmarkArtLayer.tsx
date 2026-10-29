@@ -4,45 +4,29 @@ import {
   resolvePlayerMapLandmarkArtInstances,
   type MapLandmarkArtInstance,
 } from "../game/mapLandmarkInstances";
-import { mapLandmarkViewBoxAnchor } from "../game/mapLandmarkPresentation";
-import { MapMajorHubSupertallMarker } from "./MapMajorHubSupertallMarker";
 
 interface MapLandmarkArtLayerProps {
   settings: GameSettings;
   instances?: MapLandmarkArtInstance[];
 }
 
-/** All SVG-plane landmark art for the player map (single render pass). */
-export function MapLandmarkArtLayer({
-  settings,
-  instances: instancesProp,
-}: MapLandmarkArtLayerProps) {
-  const instances =
-    instancesProp ?? resolvePlayerMapLandmarkArtInstances(settings);
+/** Reserved for future inline SVG landmarks (major hubs are baked overlay now). */
+export function MapLandmarkArtLayer(_props: MapLandmarkArtLayerProps) {
+  return null;
+}
 
-  return (
-    <>
-      {instances.map((inst) => {
-        const art = getMapLandmarkArt(String(inst.artId));
-        if (!art || art.plane !== "svg") return null;
+export function resolveMapLandmarkOverlayInstances(
+  settings: GameSettings,
+  extra?: MapLandmarkArtInstance[],
+): MapLandmarkArtInstance[] {
+  return [
+    ...resolvePlayerMapLandmarkArtInstances(settings),
+    ...(extra ?? []),
+  ];
+}
 
-        const anchor = mapLandmarkViewBoxAnchor(inst.footprint, settings);
-        const layoutRadius = anchor.layoutSpan / 2;
-
-        if (art.kind === "vector-inline" && art.template === "major-hub-supertall") {
-          return (
-            <MapMajorHubSupertallMarker
-              key={inst.instanceKey}
-              hubId={inst.variant ?? inst.siteId}
-              x={anchor.x}
-              y={anchor.y}
-              hexRadius={layoutRadius}
-            />
-          );
-        }
-
-        return null;
-      })}
-    </>
-  );
+export function overlayArtForInstance(
+  inst: MapLandmarkArtInstance,
+): ReturnType<typeof getMapLandmarkArt> {
+  return getMapLandmarkArt(String(inst.artId));
 }

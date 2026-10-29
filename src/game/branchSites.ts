@@ -5,19 +5,15 @@ import type {
   GameState,
   OfficeLocationId,
 } from "./types";
+import { commercialLotById } from "./mapWorld";
+import { effectiveLandmarkCoord } from "./mapDevLayout";
 
 export type BranchOfficeId = `branch:${string}`;
 
-const COMMERCIAL_LOT_COORDS: Record<CommercialLotId, AxialCoord> = {
-  suburban_strip: { q: 6, r: -3 },
-  rural_highway: { q: -5, r: 4 },
-  countryside_lot: { q: -2, r: 6 },
-};
-
 export function isEstablishedBranchSiteOnMap(
-  site: EstablishedBranchSite,
+  _site: EstablishedBranchSite,
 ): boolean {
-  return site.commercialLotId in COMMERCIAL_LOT_COORDS;
+  return true;
 }
 
 
@@ -103,8 +99,14 @@ export function hasBranchOffices(state: GameState): boolean {
   return state.branchSites.length > 0;
 }
 
-export function branchSiteCoord(site: EstablishedBranchSite): AxialCoord {
-  return { ...COMMERCIAL_LOT_COORDS[site.commercialLotId] };
+export function branchSiteCoord(
+  site: EstablishedBranchSite,
+  settings?: GameState["settings"],
+): AxialCoord {
+  const lot = commercialLotById(site.commercialLotId);
+  return (
+    effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? { ...lot.coord }
+  );
 }
 
 export function branchSiteCoordForOffice(
@@ -112,7 +114,7 @@ export function branchSiteCoordForOffice(
   officeId: OfficeLocationId,
 ): AxialCoord | null {
   const site = branchSiteForOfficeId(state, officeId);
-  return site ? branchSiteCoord(site) : null;
+  return site ? branchSiteCoord(site, state.settings) : null;
 }
 
 export function defaultBranchSiteName(

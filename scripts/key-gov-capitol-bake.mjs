@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
+import { applyGreenScreenKey } from "./bake-green-key.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -46,16 +47,7 @@ let pipeline = sharp(input).ensureAlpha();
 if (!isPngMaster) {
   const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
   const px = Buffer.from(data);
-  for (let i = 0; i < px.length; i += 4) {
-    const r = px[i];
-    const g = px[i + 1];
-    const b = px[i + 2];
-    if (g > 140 && g > r + 35 && g > b + 35) {
-      px[i + 3] = 0;
-    } else if (g > 100 && g > r + 20 && g > b + 20) {
-      px[i + 3] = Math.min(px[i + 3], Math.max(0, 255 - (g - 100) * 4));
-    }
-  }
+  applyGreenScreenKey(px);
   pipeline = sharp(px, {
     raw: { width: info.width, height: info.height, channels: 4 },
   });

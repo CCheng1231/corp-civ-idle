@@ -6,6 +6,7 @@ import {
   filterAndSortJobPostings,
   jobBoardFilterOptions,
   openJobPostings,
+  sortJobPostingsByDistanceFromMainOffice,
   type JobBoardFilters,
 } from "../game/jobBoard";
 import { jobDefinitionForPosting } from "../game/jobs";
@@ -43,10 +44,10 @@ export function MapJobFilterPanel({
 }: MapJobFilterPanelProps) {
   const options = jobBoardFilterOptions();
   const allOpen = openJobPostings(state);
-  const visible = useMemo(
-    () => filterAndSortJobPostings(allOpen, filters, "expires_soon"),
-    [allOpen, filters],
-  );
+  const visible = useMemo(() => {
+    const filtered = filterAndSortJobPostings(allOpen, filters, "expires_soon");
+    return sortJobPostingsByDistanceFromMainOffice(state, filtered);
+  }, [allOpen, filters, state]);
   const activeCount = countActiveJobBoardFilters(filters);
   const activeSummaries = activeJobBoardFilterSummaries(filters);
 

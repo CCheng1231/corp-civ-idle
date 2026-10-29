@@ -4,7 +4,14 @@ import {
   jobDefinitionForPosting,
   returnPerHour,
 } from "./jobs";
-import { OFFICE_TOWERS, REGION_LABELS, jobSiteRegionForPosting, towerById } from "./mapWorld";
+import {
+  OFFICE_TOWERS,
+  REGION_LABELS,
+  hexDistanceFromMainOfficeForState,
+  jobSiteCoordForPosting,
+  jobSiteRegionForPosting,
+  towerById,
+} from "./mapWorld";
 import type {
   BusinessType,
   ContractorCategoryId,
@@ -194,6 +201,33 @@ export function filterAndSortJobPostings(
   });
 
   return filtered;
+}
+
+/** Nearest main-office hex first; ties by soonest expiry. */
+export function sortJobPostingsByDistanceFromMainOffice(
+  state: GameState,
+  postings: JobPosting[],
+): JobPosting[] {
+  const distanceById = new Map<string, number>();
+  for (const posting of postings) {
+    try {
+      const def = jobDefinitionForPosting(posting);
+      distanceById.set(
+        posting.id,
+        hexDistanceFromMainOfficeForState(
+          state,
+          jobSiteCoordForPosting(posting, def, state.settings),
+        ),
+      );
+    } catch {
+      distanceById.set(posting.id, Number.MAX_SAFE_INTEGER);
+    }
+  }
+  return [...postings].sort((a, b) => {
+    const distA = distanceById.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const distB = distanceById.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    return distA - distB || a.expiresAt - b.expiresAt;
+  });
 }
 
 export function jobBoardFilterOptions() {

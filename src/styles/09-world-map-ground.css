@@ -83,6 +83,26 @@
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
 }
 
+.map-presentation-player .map-major-hub-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-major-hub-bake {
+  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.42));
+}
+
+.map-presentation-player .map-office-tower-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-office-tower-bake {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.map-presentation-player .map-player-hq-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-player-hq-bake {
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.38));
+}
+
+.map-presentation-player .map-branch-pad-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-branch-pad-bake {
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+}
+
 .map-presentation-player .map-hex-selection-ring {
   fill: none;
   stroke: #f7f3ec;
@@ -836,7 +856,8 @@
   flex-direction: column;
   align-items: stretch;
   gap: 0.2rem;
-  max-width: min(11rem, calc(100% - 0.9rem));
+  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
+  max-width: calc(100% - 0.9rem);
 }
 
 .map-hq-btn {
@@ -2083,7 +2104,8 @@
   right: 0.45rem;
   bottom: 0.45rem;
   z-index: 5;
-  width: min(11rem, calc(100% - 5.5rem));
+  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
+  max-width: calc(100% - 0.9rem);
   max-height: min(40vh, 16.5rem);
   border-radius: 0.4rem;
   border: 1px solid rgba(26, 26, 26, 0.16);

@@ -197,3 +197,128 @@ export const MAP_BAKED_LANDMARK_COMMERCIAL_COUNTRYSIDE_LOT: MapBakedLandmarkPres
     maxWidthViewBox: 68,
     minWidthViewBox: 22,
   };
+
+/** Shared isometric foot tuning for tower / office bakes (update HW after key script). */
+function mapBakedLandmarkIsometricBuildingPreset(
+  id: string,
+  widthSpanRatio: number,
+  heightWidthRatio: number,
+  footAnchorHeightRatio: number | undefined,
+  maxWidthViewBox: number,
+  footOffsetSpanRatio = 0.46,
+): MapBakedLandmarkPreset {
+  return {
+    id,
+    widthSpanRatio,
+    heightWidthRatio,
+    footOffsetSpanRatio,
+    ...(footAnchorHeightRatio != null
+      ? {
+          footAnchorHeightRatio,
+          footContactSpanRatio: 0.055,
+        }
+      : {}),
+    maxWidthViewBox,
+    minWidthViewBox: 20,
+  };
+}
+
+export const MAP_BAKED_LANDMARK_MAJOR_HUB_SUPERTALL: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "major-hub-supertall",
+    0.92,
+    1072 / 642,
+    0.166,
+    100,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_OFFICE_TOWER_METRO: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "office-tower-metro-central",
+    0.78,
+    977 / 820,
+    0.232,
+    82,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_OFFICE_TOWER_SUBURBAN: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "office-tower-suburban-park",
+    0.72,
+    838 / 848,
+    0.302,
+    76,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_OFFICE_TOWER_RURAL: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "office-tower-rural-crossing",
+    0.68,
+    876 / 864,
+    0.468,
+    72,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_OFFICE_TOWER_COUNTRYSIDE: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "office-tower-country-estate",
+    0.66,
+    829 / 853,
+    0.332,
+    70,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_PLAYER_HQ_MINE: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "player-hq-mine",
+    0.62,
+    552 / 827,
+    0.335,
+    68,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_PLAYER_HQ_PEER: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "player-hq-peer",
+    0.62,
+    629 / 854,
+    0.382,
+    68,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_BRANCH_PAD_COMPACT: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "branch-pad-compact",
+    0.52,
+    697 / 846,
+    0.402,
+    54,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_BRANCH_PAD_STANDARD: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "branch-pad-standard",
+    0.56,
+    1133 / 864,
+    0.42,
+    58,
+    0.34,
+  );
+
+export const MAP_BAKED_LANDMARK_BRANCH_PAD_CAMPUS: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "branch-pad-campus",
+    0.6,
+    603 / 858,
+    0.388,
+    64,
+    0.34,
+  );

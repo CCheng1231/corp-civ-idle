@@ -47,12 +47,10 @@ import {
   MAP_ZOOM_REL_MAX,
   MAP_ZOOM_REL_MIN,
   MAP_ZOOM_REL_STEP,
-  mapHqTowerDimensionsFromHexScreenPx,
   mapSvgAspectFit,
   measureMapViewport,
   viewBoxPointToContentPixel,
   viewBoxPointToContentPixelWithAspect,
-  viewBoxToContentPixelScale,
   panToCenterContentPoint,
   panToCenterMapView,
   panToCenterViewportRect,
@@ -100,20 +98,21 @@ import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
   DEFAULT_JOB_BOARD_FILTERS,
   filterAndSortJobPostings,
+  sortJobPostingsByDistanceFromMainOffice,
   openJobPostings,
   type JobBoardFilters,
 } from "../game/jobBoard";
 import { MapPlayerHq3DMarker } from "./MapPlayerHq3DMarker";
-import { MapPlayerHqTower3D } from "./MapPlayerHqTower3D";
 import {
   buildPlayerMapLandmarkHexSiteIndex,
   playerLandmarkArtInstanceAtCoord,
   resolvePlayerMapLandmarkArtInstances,
+  resolveOfficeTowerLandmarkInstances,
 } from "../game/mapLandmarkInstances";
 import { MapLandmarkArtLayer } from "./MapLandmarkArtLayer";
 import { MapBakedLandmarkOverlayLayer } from "./MapBakedLandmarkOverlayLayer";
+import { resolvePlayerBuildingLandmarkInstances } from "../game/mapPlayerBuildingLandmarks";
 import { WorldMapZ1ProceduralOverlay } from "./WorldMapZ1ProceduralOverlay";
-import { MapOfficeTower3D } from "./MapOfficeTower3D";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
 import {
   defaultMapDevMovableLandmarkKey,
@@ -397,6 +396,30 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     () => (isDev ? [] : resolvePlayerMapLandmarkArtInstances(state.settings)),
     [isDev, state.settings],
   );
+
+  const playerBuildingLandmarkInstances = useMemo(
+    () =>
+      isDev ? [] : resolvePlayerBuildingLandmarkInstances(state, session),
+    [isDev, state, session],
+  );
+
+  const officeTowerLandmarkInstances = useMemo(
+    () => (isDev ? [] : resolveOfficeTowerLandmarkInstances(state.settings)),
+    [isDev, state.settings],
+  );
+
+  const mapOverlayLandmarkInstances = useMemo(
+    () => [
+      ...playerLandmarkArtInstances,
+      ...officeTowerLandmarkInstances,
+      ...playerBuildingLandmarkInstances,
+    ],
+    [
+      playerLandmarkArtInstances,
+      officeTowerLandmarkInstances,
+      playerBuildingLandmarkInstances,
+    ],
+  );
   const inspectedLandmarkInstance = useMemo(() => {
     if (!inspectedCoord || isDev) return null;
     return playerLandmarkArtInstanceAtCoord(
@@ -406,52 +429,11 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   }, [inspectedCoord, isDev, playerLandmarkArtInstances]);
 
   const playerLandmarkHexSites = useMemo(
-    () => buildPlayerMapLandmarkHexSiteIndex(playerLandmarkArtInstances),
-    [playerLandmarkArtInstances],
+    () => buildPlayerMapLandmarkHexSiteIndex(mapOverlayLandmarkInstances),
+    [mapOverlayLandmarkInstances],
   );
 
   const mapSvgAspect = mapSvgAspectFit(mapZoomRel, playerMinZoomRel);
-
-  const towerAnchorForCoord = useCallback(
-    (coord: AxialCoord) => {
-      const viewPoint = worldMapPresentationPixel(coord, state.settings);
-      const { x, y } = viewBoxPointToContentPixelWithAspect(
-        viewPoint,
-        mapViewBounds,
-        mapContentSize,
-        mapSvgAspect,
-      );
-      const vbScale = viewBoxToContentPixelScale(
-        mapViewBounds,
-        mapContentSize,
-        mapSvgAspect,
-      );
-      const hexSpan = worldMapHexTileRadius(coord) * 2 * vbScale;
-      return { coord, anchorX: x, anchorY: y, hexSpan };
-    },
-    [
-      mapContentSize,
-      mapSvgAspect,
-      mapViewBounds,
-      state.settings,
-    ],
-  );
-
-  const hqTowerAnchors = useMemo(() => {
-    if (isDev) return [];
-    return authoredHqMarkers.map((site) => ({
-      id: site.id,
-      ...towerAnchorForCoord(site.coord),
-    }));
-  }, [isDev, authoredHqMarkers, towerAnchorForCoord]);
-
-  const officeTowerAnchors = useMemo(() => {
-    if (isDev) return [];
-    return officeTowerSites.map((site) => ({
-      id: site.id,
-      ...towerAnchorForCoord(site.coord),
-    }));
-  }, [isDev, officeTowerSites, towerAnchorForCoord]);
 
   function viewportSize(): { width: number; height: number } {
     const el = mapViewportRef.current;
@@ -1093,16 +1075,15 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     return coords;
   }, [activeEngagements, state.jobPostings]);
 
-  const mapVisibleJobPostings = useMemo(
-    () =>
-      filterAndSortJobPostings(
-        openJobPostings(state),
-        mapJobFilters,
-        "expires_soon",
-        now,
-      ),
-    [state.jobPostings, mapJobFilters, now],
-  );
+  const mapVisibleJobPostings = useMemo(() => {
+    const filtered = filterAndSortJobPostings(
+      openJobPostings(state),
+      mapJobFilters,
+      "expires_soon",
+      now,
+    );
+    return sortJobPostingsByDistanceFromMainOffice(state, filtered);
+  }, [state, mapJobFilters, now]);
 
   const jobSiteCoordKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -1543,12 +1524,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 );
               })}
 
-              {!isDev ? (
+              {!isDev ? null : (
                 <MapLandmarkArtLayer
                   settings={state.settings}
                   instances={playerLandmarkArtInstances}
                 />
-              ) : null}
+              )}
 
               {isDev
                 ? authoredHqMarkers.map((site) => {
@@ -1652,53 +1633,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 className="map-hq-towers-layer-untilted map-landmark-overlay-layer"
                 aria-hidden
               >
-                {hqTowerAnchors.map((anchor) => {
-                  const isMyHq = axialEquals(anchor.coord, myHqCoord);
-                  const hexSpanScreen = anchor.hexSpan * mapZoom;
-                  const towerDims = mapHqTowerDimensionsFromHexScreenPx(
-                    hexSpanScreen,
-                  );
-                  return (
-                    <MapPlayerHqTower3D
-                      key={`hq-tower-${anchor.id}`}
-                      anchorX={anchor.anchorX}
-                      anchorY={anchor.anchorY}
-                      widthPx={towerDims.width}
-                      depthPx={towerDims.depth}
-                      heightPx={towerDims.height}
-                      hexSpanPx={hexSpanScreen}
-                      mapContentScale={mapZoom}
-                      variant={isMyHq ? "mine" : "peer"}
-                      flashing={hqFlashActive && isMyHq}
-                    />
-                  );
-                })}
-                {officeTowerAnchors.map((anchor) => {
-                  const hexSpanScreen = anchor.hexSpan * mapZoom;
-                  const towerDims = mapHqTowerDimensionsFromHexScreenPx(
-                    hexSpanScreen,
-                  );
-                  return (
-                    <MapOfficeTower3D
-                      key={`office-tower-${anchor.id}`}
-                      towerId={anchor.id}
-                      anchorX={anchor.anchorX}
-                      anchorY={anchor.anchorY}
-                      widthPx={towerDims.width}
-                      depthPx={towerDims.depth}
-                      heightPx={towerDims.height}
-                      hexSpanPx={hexSpanScreen}
-                      mapContentScale={mapZoom}
-                    />
-                  );
-                })}
                 <MapBakedLandmarkOverlayLayer
                   settings={state.settings}
                   mapViewBounds={mapViewBounds}
                   mapContentSize={mapContentSize}
                   mapSvgAspect={mapSvgAspect}
                   mapContentScale={mapZoom}
-                  instances={playerLandmarkArtInstances}
+                  instances={mapOverlayLandmarkInstances}
                 />
               </div>
             ) : null}
