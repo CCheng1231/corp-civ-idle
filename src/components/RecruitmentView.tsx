@@ -255,7 +255,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
       <li
         key={unit.id}
         id={`recruit-unit-${unit.id}`}
-        className={`structure-card structure-card-upgrade recruitment-card-compact${
+        className={`structure-card structure-card-upgrade recruitment-card-compact recruitment-card-unit-${unit.id}${
           portraitSrc ? " recruitment-card-with-portrait" : ""
         }${focused ? " recruit-unit-focused" : ""}${
           researchLocked ? " progression-locked" : ""

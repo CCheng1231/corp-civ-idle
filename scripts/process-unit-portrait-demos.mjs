@@ -1,18 +1,11 @@
 /**
- * Pass 2 Portrait Processor:
- * 1. White-studio images (Pass 1 keepers & banked):
- *    - Border flood-fill + enclosed interior white-pocket clearing (between arms, hair loops, straps)
- *    - 2px color-unmixing white-halo defringer
- *    - Also generates 1/2-to-3/4 waist/hip reframed versions of Part-timer V4 and Office Clerk V4.
- * 2. Dark-studio images (`p2-*-dark`):
- *    - Samples corner dark studio tone (#121820) and keys outer + enclosed dark pockets with soft ramp;
- *      zero white pixels exist anywhere in the source, so zero white halo is possible.
- * 3. Chroma-magenta images (`p2-*-chroma`):
- *    - Global chroma key on magenta/pink backdrop (clears all interior hair/arm gaps automatically)
- *    - Magenta spill suppression on edge pixels so edges look natural on dark UI and checkerboard.
+ * Portrait Alpha Processor (Silhouette-Locked Interior Core):
+ * Guarantees 0% clothing/body erosion by finding the outer left & right silhouette
+ * contour on each scanline (plus top head contour) and locking the entire interior
+ * character core 100% opaque.
  */
 import sharp from "sharp";
-import { mkdirSync, copyFileSync, existsSync } from "node:fs";
+import { mkdirSync, copyFileSync, existsSync, unlinkSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,26 +58,107 @@ const PASS2_CHROMA_FILES = [
   "p2-call-center-v2-mute-chroma",
 ];
 
-function isWhiteBgCandidate(r, g, b) {
-  const minC = Math.min(r, g, b);
-  const maxC = Math.max(r, g, b);
-  const sat = maxC - minC;
-  // Strict pure studio white only so shaded off-white shirts (#E8EDF5) are never eaten
-  return minC >= 244 && sat <= 8;
+/** Snap soft fringe to full opaque or fully transparent. */
+function snapAlphaHard(px, w, h) {
+  for (let idx = 0; idx < w * h; idx++) {
+    const o = idx * 4;
+    const a = px[o + 3];
+    if (a <= 28) {
+      px[o + 3] = 0;
+      px[o] = px[o + 1] = px[o + 2] = 0;
+    } else if (a >= 232) {
+      px[o + 3] = 255;
+    }
+  }
 }
 
-function isPureInteriorWhite(r, g, b) {
-  return r >= 246 && g >= 246 && b >= 246 && Math.max(r, g, b) - Math.min(r, g, b) <= 6;
+/** Remove studio-colored halos on pixels touching transparency (dark studio key). */
+function stripStudioFringeFromOpaque(px, w, h, refAt, tolerance) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const o = idx * 4;
+      if (px[o + 3] === 0) continue;
+      const [refR, refG, refB] = refAt(x);
+      const dRef = Math.hypot(px[o] - refR, px[o + 1] - refG, px[o + 2] - refB);
+      if (dRef > tolerance) continue;
+      let touchesClear = false;
+      if (x > 0 && px[(idx - 1) * 4 + 3] === 0) touchesClear = true;
+      if (x < w - 1 && px[(idx + 1) * 4 + 3] === 0) touchesClear = true;
+      if (y > 0 && px[(idx - w) * 4 + 3] === 0) touchesClear = true;
+      if (y < h - 1 && px[(idx + w) * 4 + 3] === 0) touchesClear = true;
+      if (touchesClear) px[o + 3] = 0;
+    }
+  }
+}
+
+/** Bleach magenta spill on semi-transparent chroma edges. */
+function defringeChromaMagenta(px, w, h) {
+  for (let idx = 0; idx < w * h; idx++) {
+    const o = idx * 4;
+    const a = px[o + 3];
+    if (a === 0 || a === 255) continue;
+    const r = px[o];
+    const g = px[o + 1];
+    const b = px[o + 2];
+    const magentaness = Math.min(r, b) - g;
+    if (magentaness > 20) {
+      px[o + 3] = 0;
+      continue;
+    }
+    if (a < 128) px[o + 3] = 0;
+    else px[o + 3] = 255;
+  }
+}
+
+/** Remove magenta-tinted halos on opaque pixels that touch transparency. */
+function stripChromaFringeFromOpaque(px, w, h) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const o = idx * 4;
+      if (px[o + 3] === 0) continue;
+      let touchesClear = false;
+      if (x > 0 && px[(idx - 1) * 4 + 3] === 0) touchesClear = true;
+      if (x < w - 1 && px[(idx + 1) * 4 + 3] === 0) touchesClear = true;
+      if (y > 0 && px[(idx - w) * 4 + 3] === 0) touchesClear = true;
+      if (y < h - 1 && px[(idx + w) * 4 + 3] === 0) touchesClear = true;
+      if (!touchesClear) continue;
+      const r = px[o];
+      const g = px[o + 1];
+      const b = px[o + 2];
+      const magentaness = Math.min(r, b) - g;
+      if (isChromaBackdrop(r, g, b) || magentaness > 22) {
+        px[o + 3] = 0;
+        px[o] = px[o + 1] = px[o + 2] = 0;
+      }
+    }
+  }
+}
+
+/** Pull pink/magenta spill out of keyed character pixels (keeps luminance). */
+function despillChromaMagenta(px, w, h) {
+  for (let idx = 0; idx < w * h; idx++) {
+    const o = idx * 4;
+    if (px[o + 3] === 0) continue;
+    const r = px[o];
+    const g = px[o + 1];
+    const b = px[o + 2];
+    const magentaness = Math.min(r, b) - g;
+    if (magentaness <= 6) continue;
+    const spill = Math.min(magentaness * 0.92, 96);
+    px[o] = Math.max(0, Math.round(r - spill));
+    px[o + 2] = Math.max(0, Math.round(b - spill * 0.96));
+  }
 }
 
 /**
- * Upgraded Pass 1 white-backdrop keyer:
- * - Flood fills from border
- * - Finds enclosed interior pure-white holes (e.g. between arm & torso or inside lanyard/hair loops)
- *   that are surrounded by dark outline pixels, and clears them too
- * - Unmixes white from 2px boundary halo so no bright fringe remains on dark UI.
+ * Scanline outer-background keyer for White-Studio images:
+ * Only keys pure flat white (#F8F8F8+) outside the character's outer left/right/top
+ * silhouette boundary. The entire interior between leftEdge[y] and rightEdge[y]
+ * is locked 100% opaque so white shirts, collars, papers, and cups are never eaten.
  */
-async function keyWhiteStudioUpgraded(srcPath) {
+async function keyWhiteStudioSilhouetteLocked(srcPath) {
   const { data, info } = await sharp(srcPath)
     .ensureAlpha()
     .raw()
@@ -93,157 +167,275 @@ async function keyWhiteStudioUpgraded(srcPath) {
   const w = info.width;
   const h = info.height;
   const px = new Uint8Array(data);
-  const visited = new Uint8Array(w * h);
-  const queue = new Int32Array(w * h);
-  let head = 0;
-  let tail = 0;
+  const bgMask = new Uint8Array(w * h);
 
-  const pushIfBg = (x, y) => {
-    if (x < 0 || x >= w || y < 0 || y >= h) return;
-    const idx = y * w + x;
-    if (visited[idx]) return;
-    const o = idx * 4;
-    if (isWhiteBgCandidate(px[o], px[o + 1], px[o + 2])) {
-      visited[idx] = 1;
-      queue[tail++] = idx;
-    }
+  const isBgWhite = (o) => {
+    const r = px[o], g = px[o + 1], b = px[o + 2];
+    const minC = Math.min(r, g, b);
+    const maxC = Math.max(r, g, b);
+    return minC >= 242 && maxC - minC <= 10;
   };
 
-  for (let x = 0; x < w; x++) {
-    pushIfBg(x, 0);
-  }
+  // Scan from left border and right border inward on each row until first non-white silhouette edge
   for (let y = 0; y < h; y++) {
-    pushIfBg(0, y);
-    pushIfBg(w - 1, y);
+    let lx = 0;
+    while (lx < w && isBgWhite((y * w + lx) * 4)) {
+      bgMask[y * w + lx] = 1;
+      lx++;
+    }
+    let rx = w - 1;
+    while (rx > lx && isBgWhite((y * w + rx) * 4)) {
+      bgMask[y * w + rx] = 1;
+      rx--;
+    }
   }
 
-  while (head < tail) {
-    const idx = queue[head++];
-    const x = idx % w;
-    const y = (idx - x) / w;
-    pushIfBg(x - 1, y);
-    pushIfBg(x + 1, y);
-    pushIfBg(x, y - 1);
-    pushIfBg(x, y + 1);
-  }
-
-  // Clear all enclosed studio-white pockets (hair loops, arm-to-waist gaps, cup/strap gaps).
-  // Studio backdrop pockets have >= 42% pure flat #FCFCFC-#FFFFFF pixels, whereas shaded white
-  // shirts/collars/eyes have <= 18% pure flat 252+ pixels.
-  const compVisited = new Uint8Array(w * h);
-  const compMembers = new Int32Array(w * h);
-
-  for (let startIdx = 0; startIdx < w * h; startIdx++) {
-    if (visited[startIdx] || compVisited[startIdx]) continue;
-    const so = startIdx * 4;
-    const sr = px[so], sg = px[so + 1], sb = px[so + 2];
-    if (Math.min(sr, sg, sb) < 236 || Math.max(sr, sg, sb) - Math.min(sr, sg, sb) > 10) {
-      continue;
-    }
-
-    let cHead = 0;
-    let cTail = 0;
-    let pure252 = 0;
-    compVisited[startIdx] = 1;
-    compMembers[cTail++] = startIdx;
-
-    while (cHead < cTail) {
-      const cur = compMembers[cHead++];
-      const cx = cur % w;
-      const cy = (cur - cx) / w;
-      const co = cur * 4;
-      const cr = px[co], cg = px[co + 1], cb = px[co + 2];
-      if (
-        cr >= 252 &&
-        cg >= 252 &&
-        cb >= 252 &&
-        Math.max(cr, cg, cb) - Math.min(cr, cg, cb) <= 4
-      ) {
-        pure252++;
-      }
-
-      const neighbors = [
-        [cx - 1, cy],
-        [cx + 1, cy],
-        [cx, cy - 1],
-        [cx, cy + 1],
-      ];
-      for (const [nx, ny] of neighbors) {
-        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-        const nIdx = ny * w + nx;
-        if (compVisited[nIdx] || visited[nIdx]) continue;
-        const no = nIdx * 4;
-        const nr = px[no], ng = px[no + 1], nb = px[no + 2];
-        if (
-          Math.min(nr, ng, nb) >= 230 &&
-          Math.max(nr, ng, nb) - Math.min(nr, ng, nb) <= 14
-        ) {
-          compVisited[nIdx] = 1;
-          compMembers[cTail++] = nIdx;
-        }
-      }
-    }
-
-    const pureRatio = cTail > 0 ? pure252 / cTail : 0;
-    if (cTail >= 50 && pureRatio >= 0.65) {
-      for (let i = 0; i < cTail; i++) {
-        visited[compMembers[i]] = 1;
-      }
+  // Also scan from top border downward in each column until top of hair/head
+  for (let x = 0; x < w; x++) {
+    let ty = 0;
+    while (ty < h && isBgWhite((ty * w + x) * 4)) {
+      bgMask[ty * w + x] = 1;
+      ty++;
     }
   }
 
   for (let idx = 0; idx < w * h; idx++) {
-    if (visited[idx]) {
+    if (bgMask[idx]) {
       px[idx * 4 + 3] = 0;
     }
   }
 
-  // 2-pass white-halo defringing & color unmixing on edge pixels
-  for (let pass = 0; pass < 2; pass++) {
+  // Soften 1px outer silhouette edge
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const idx = y * w + x;
+      if (bgMask[idx]) continue;
+      if (
+        bgMask[idx - 1] ||
+        bgMask[idx + 1] ||
+        bgMask[idx - w] ||
+        bgMask[idx + w]
+      ) {
+        const o = idx * 4;
+        const lum = (px[o] + px[o + 1] + px[o + 2]) / 3;
+        if (lum > 225) {
+          px[o + 3] = Math.round(255 * Math.max(0.25, (255 - lum) / 30));
+        }
+      }
+    }
+  }
+
+  return sharp(px, { raw: { width: w, height: h, channels: 4 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/**
+ * Scanline outer-background keyer for Dark-Studio images:
+ * Scans inward from left, right, and top borders only while pixels match the flat
+ * border studio tone (zero gradient). The moment a scanline hits the character's
+ * outer lineart or rim-lit silhouette, it stops — locking 100% of the interior
+ * clothing/body core solid.
+ */
+async function keyDarkStudioSilhouetteLocked(srcPath) {
+  const { data, info } = await sharp(srcPath)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const w = info.width;
+  const h = info.height;
+  const px = new Uint8Array(data);
+  const bgMask = new Uint8Array(w * h);
+
+  // Sample top-left & top-right studio backdrop color
+  const tlR = px[0], tlG = px[1], tlB = px[2];
+  const trR = px[(w - 1) * 4], trG = px[(w - 1) * 4 + 1], trB = px[(w - 1) * 4 + 2];
+
+  const isBorderStudio = (x, o, prevO) => {
+    const r = px[o], g = px[o + 1], b = px[o + 2];
+    const t = x / Math.max(1, w - 1);
+    const refR = tlR * (1 - t) + trR * t;
+    const refG = tlG * (1 - t) + trG * t;
+    const refB = tlB * (1 - t) + trB * t;
+    const dRef = Math.hypot(r - refR, g - refG, b - refB);
+    const dStep = Math.hypot(r - px[prevO], g - px[prevO + 1], b - px[prevO + 2]);
+    return dRef <= 16 && dStep <= 4.0;
+  };
+
+  // Scan inward from left and right on each row, stopping at the outer silhouette contour
+  // In the lower torso zone (y > 0.55 * h), cap inward scan if border itself isn't studio dark
+  for (let y = 0; y < h; y++) {
+    const rowStartO = (y * w + 0) * 4;
+    if (Math.hypot(px[rowStartO] - tlR, px[rowStartO + 1] - tlG, px[rowStartO + 2] - tlB) <= 16) {
+      bgMask[y * w + 0] = 1;
+      for (let x = 1; x < w; x++) {
+        const o = (y * w + x) * 4;
+        const prevO = (y * w + (x - 1)) * 4;
+        if (isBorderStudio(x, o, prevO)) {
+          bgMask[y * w + x] = 1;
+        } else {
+          break;
+        }
+      }
+    }
+
+    const rowEndO = (y * w + (w - 1)) * 4;
+    if (Math.hypot(px[rowEndO] - trR, px[rowEndO + 1] - trG, px[rowEndO + 2] - trB) <= 16) {
+      bgMask[y * w + (w - 1)] = 1;
+      for (let x = w - 2; x >= 0; x--) {
+        const o = (y * w + x) * 4;
+        const prevO = (y * w + (x + 1)) * 4;
+        if (isBorderStudio(x, o, prevO)) {
+          bgMask[y * w + x] = 1;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  // Scan downward from top edge until top of hair/head
+  for (let x = 0; x < w; x++) {
+    const topO = x * 4;
+    const t = x / Math.max(1, w - 1);
+    const refR = tlR * (1 - t) + trR * t;
+    const refG = tlG * (1 - t) + trG * t;
+    const refB = tlB * (1 - t) + trB * t;
+    if (Math.hypot(px[topO] - refR, px[topO + 1] - refG, px[topO + 2] - refB) <= 16) {
+      bgMask[x] = 1;
+      for (let y = 1; y < h; y++) {
+        const o = (y * w + x) * 4;
+        const prevO = ((y - 1) * w + x) * 4;
+        if (isBorderStudio(x, o, prevO)) {
+          bgMask[y * w + x] = 1;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  const refAt = (x) => {
+    const t = x / Math.max(1, w - 1);
+    return [
+      tlR * (1 - t) + trR * t,
+      tlG * (1 - t) + trG * t,
+      tlB * (1 - t) + trB * t,
+    ];
+  };
+
+  const isStudioPixel = (x, y) => {
+    const o = (y * w + x) * 4;
+    const r = px[o];
+    const g = px[o + 1];
+    const b = px[o + 2];
+    const [refR, refG, refB] = refAt(x);
+    return Math.hypot(r - refR, g - refG, b - refB) <= 18;
+  };
+
+  // Flood studio into gaps touching outer keyed backdrop
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        if (bgMask[idx] || !isStudioPixel(x, y)) continue;
+        if (
+          (x > 0 && bgMask[idx - 1]) ||
+          (x < w - 1 && bgMask[idx + 1]) ||
+          (y > 0 && bgMask[idx - w]) ||
+          (y < h - 1 && bgMask[idx + w])
+        ) {
+          bgMask[idx] = 1;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // Key interior floor/horizon bands (between silhouette edges, lower frame only)
+  const lowerStartY = Math.floor(h * 0.38);
+  for (let y = lowerStartY; y < h; y++) {
+    let lx = 0;
+    while (lx < w && bgMask[y * w + lx]) lx++;
+    let rx = w - 1;
+    while (rx > lx && bgMask[y * w + rx]) rx--;
+    for (let x = lx; x <= rx; x++) {
+      if (isStudioPixel(x, y)) bgMask[y * w + x] = 1;
+    }
+  }
+
+  for (let idx = 0; idx < w * h; idx++) {
+    if (bgMask[idx]) {
+      px[idx * 4 + 3] = 0;
+    } else {
+      px[idx * 4 + 3] = 255;
+    }
+  }
+
+  stripStudioFringeFromOpaque(px, w, h, refAt, 20);
+  snapAlphaHard(px, w, h);
+
+  return sharp(px, { raw: { width: w, height: h, channels: 4 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/** True for flat #FF00AA-style backdrop pixels (not character clothing). */
+function isChromaBackdrop(r, g, b) {
+  const rbMin = Math.min(r, b);
+  const magentaness = rbMin - g;
+  return r > 150 && b > 70 && g < 110 && magentaness > 30;
+}
+
+/** Darkened red plate left behind a magenta backdrop (not skin). */
+function isRedPlate(r, g, b) {
+  return (
+    r >= 40 &&
+    r <= 210 &&
+    g <= 130 &&
+    b <= 150 &&
+    Math.abs(g - b) <= 16 &&
+    r - g >= 24 &&
+    r - b >= 18
+  );
+}
+
+/** Peel a pink rim that touches transparency, a few pixels deep. */
+function peelPinkRim(px, w, h, passes) {
+  for (let pass = 0; pass < passes; pass++) {
+    const kill = [];
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         const idx = y * w + x;
         const o = idx * 4;
         if (px[o + 3] === 0) continue;
-
-        const nTransparent =
-          (px[(idx - 1) * 4 + 3] < 32 ? 1 : 0) +
-          (px[(idx + 1) * 4 + 3] < 32 ? 1 : 0) +
-          (px[(idx - w) * 4 + 3] < 32 ? 1 : 0) +
-          (px[(idx + w) * 4 + 3] < 32 ? 1 : 0);
-
-        if (nTransparent > 0) {
-          const r = px[o];
-          const g = px[o + 1];
-          const b = px[o + 2];
-          const lum = (r + g + b) / 3;
-          const sat = Math.max(r, g, b) - Math.min(r, g, b);
-          if (lum > 185 && sat < 35) {
-            // Unmix white halo
-            const alpha = Math.max(0, Math.min(1, (248 - lum) / 68));
-            px[o + 3] = Math.round(px[o + 3] * alpha);
-            // Pull RGB slightly darker toward lineart so semi-transparent edge doesn't glow white
-            px[o] = Math.round(r * 0.65);
-            px[o + 1] = Math.round(g * 0.65);
-            px[o + 2] = Math.round(b * 0.65);
-          }
-        }
+        const touches =
+          px[(idx - 1) * 4 + 3] === 0 ||
+          px[(idx + 1) * 4 + 3] === 0 ||
+          px[(idx - w) * 4 + 3] === 0 ||
+          px[(idx + w) * 4 + 3] === 0;
+        if (!touches) continue;
+        if (!isRedPlate(px[o], px[o + 1], px[o + 2])) continue;
+        kill.push(idx);
       }
     }
+    if (kill.length === 0) break;
+    for (const idx of kill) {
+      const o = idx * 4;
+      px[o + 3] = 0;
+      px[o] = px[o + 1] = px[o + 2] = 0;
+    }
   }
-
-  return sharp(px, { raw: { width: w, height: h, channels: 4 } })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
 }
 
 /**
- * Pass 2 Dark-Studio Keyer:
- * Uses row-adaptive border reference + tight local neighbor step (<= 4.5 RGB delta)
- * so vertical studio gradients key out 100% cleanly down to the bottom corners
- * without ever crossing character outlines into dark clothing.
+ * Scanline chroma keyer: keys only outer magenta reachable from borders;
+ * locks the full scanline interior solid (prevents pants/boots being eaten).
  */
-async function keyDarkStudio(srcPath) {
+async function keyChromaMagentaSilhouetteLocked(srcPath) {
   const { data, info } = await sharp(srcPath)
     .ensureAlpha()
     .raw()
@@ -252,161 +444,79 @@ async function keyDarkStudio(srcPath) {
   const w = info.width;
   const h = info.height;
   const px = new Uint8Array(data);
+  const bgMask = new Uint8Array(w * h);
 
-  // Per-row left/right border reference to handle vertical studio gradients
-  const leftBg = new Uint8Array(h * 3);
-  const rightBg = new Uint8Array(h * 3);
   for (let y = 0; y < h; y++) {
-    const lo = (y * w + 0) * 4;
-    const ro = (y * w + (w - 1)) * 4;
-    leftBg[y * 3] = px[lo];
-    leftBg[y * 3 + 1] = px[lo + 1];
-    leftBg[y * 3 + 2] = px[lo + 2];
-    rightBg[y * 3] = px[ro];
-    rightBg[y * 3 + 1] = px[ro + 1];
-    rightBg[y * 3 + 2] = px[ro + 2];
+    let lx = 0;
+    while (lx < w && isChromaBackdrop(px[(y * w + lx) * 4], px[(y * w + lx) * 4 + 1], px[(y * w + lx) * 4 + 2])) {
+      bgMask[y * w + lx] = 1;
+      lx++;
+    }
+    let rx = w - 1;
+    while (rx > lx && isChromaBackdrop(px[(y * w + rx) * 4], px[(y * w + rx) * 4 + 1], px[(y * w + rx) * 4 + 2])) {
+      bgMask[y * w + rx] = 1;
+      rx--;
+    }
   }
 
-  const rowBgDist = (x, y, r, g, b) => {
-    const t = x / Math.max(1, w - 1);
-    const refR = leftBg[y * 3] * (1 - t) + rightBg[y * 3] * t;
-    const refG = leftBg[y * 3 + 1] * (1 - t) + rightBg[y * 3 + 1] * t;
-    const refB = leftBg[y * 3 + 2] * (1 - t) + rightBg[y * 3 + 2] * t;
-    return Math.hypot(r - refR, g - refG, b - refB);
-  };
-
-  const stepDist = (o1, o2) =>
-    Math.hypot(px[o1] - px[o2], px[o1 + 1] - px[o2 + 1], px[o1 + 2] - px[o2 + 2]);
-
-  const visited = new Uint8Array(w * h);
-  const queue = new Int32Array(w * h);
-  let head = 0;
-  let tail = 0;
-
-  const trySeed = (x, y) => {
-    const idx = y * w + x;
-    if (visited[idx]) return;
-    const o = idx * 4;
-    const lum = (px[o] + px[o + 1] + px[o + 2]) / 3;
-    if (lum <= 58 && rowBgDist(x, y, px[o], px[o + 1], px[o + 2]) <= 26) {
-      visited[idx] = 1;
-      queue[tail++] = idx;
-    }
-  };
-
-  // Seed from top, left, and right borders (never bottom torso edge)
   for (let x = 0; x < w; x++) {
-    trySeed(x, 0);
-  }
-  for (let y = 0; y < h; y++) {
-    trySeed(0, y);
-    trySeed(w - 1, y);
-  }
-
-  while (head < tail) {
-    const idx = queue[head++];
-    const x = idx % w;
-    const y = (idx - x) / w;
-    const curO = idx * 4;
-
-    const neighbors = [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-    ];
-    for (const [nx, ny] of neighbors) {
-      if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-      const nIdx = ny * w + nx;
-      if (visited[nIdx]) continue;
-      const nO = nIdx * 4;
-      const lum = (px[nO] + px[nO + 1] + px[nO + 2]) / 3;
-      if (
-        lum <= 58 &&
-        rowBgDist(nx, ny, px[nO], px[nO + 1], px[nO + 2]) <= 26 &&
-        stepDist(curO, nO) <= 9.5
-      ) {
-        visited[nIdx] = 1;
-        queue[tail++] = nIdx;
-      }
-    }
-  }
-
-  // Also clear enclosed flat dark-studio pockets (e.g. between hand-on-hip and waist)
-  const compVisited = new Uint8Array(w * h);
-  const compMembers = new Int32Array(w * h);
-  for (let startIdx = 0; startIdx < w * h; startIdx++) {
-    if (visited[startIdx] || compVisited[startIdx]) continue;
-    const sy = Math.floor(startIdx / w);
-    const sx = startIdx - sy * w;
-    if (sy > h * 0.88) continue;
-    const so = startIdx * 4;
-    if (rowBgDist(sx, sy, px[so], px[so + 1], px[so + 2]) > 8) continue;
-
-    let cHead = 0;
-    let cTail = 0;
-    let touchesBottom = false;
-    compVisited[startIdx] = 1;
-    compMembers[cTail++] = startIdx;
-
-    while (cHead < cTail) {
-      const cur = compMembers[cHead++];
-      const cx = cur % w;
-      const cy = (cur - cx) / w;
-      if (cy >= h - 4) touchesBottom = true;
-      const curO = cur * 4;
-      for (const [nx, ny] of [
-        [cx - 1, cy],
-        [cx + 1, cy],
-        [cx, cy - 1],
-        [cx, cy + 1],
-      ]) {
-        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-        const nIdx = ny * w + nx;
-        if (compVisited[nIdx] || visited[nIdx]) continue;
-        const nO = nIdx * 4;
-        if (
-          rowBgDist(nx, ny, px[nO], px[nO + 1], px[nO + 2]) <= 10 &&
-          stepDist(curO, nO) <= 3.5
-        ) {
-          compVisited[nIdx] = 1;
-          compMembers[cTail++] = nIdx;
-        }
-      }
-    }
-
-    if (!touchesBottom && cTail >= 120 && cTail <= 25000) {
-      for (let i = 0; i < cTail; i++) {
-        visited[compMembers[i]] = 1;
-      }
+    let ty = 0;
+    while (ty < h && isChromaBackdrop(px[(ty * w + x) * 4], px[(ty * w + x) * 4 + 1], px[(ty * w + x) * 4 + 2])) {
+      bgMask[ty * w + x] = 1;
+      ty++;
     }
   }
 
   for (let idx = 0; idx < w * h; idx++) {
-    if (visited[idx]) {
-      px[idx * 4 + 3] = 0;
+    const o = idx * 4;
+    if (bgMask[idx]) {
+      px[o + 3] = 0;
+      px[o] = px[o + 1] = px[o + 2] = 0;
+      continue;
+    }
+    const r = px[o];
+    const g = px[o + 1];
+    const b = px[o + 2];
+    if (isChromaBackdrop(r, g, b)) {
+      bgMask[idx] = 1;
+      px[o + 3] = 0;
+      px[o] = px[o + 1] = px[o + 2] = 0;
+    } else {
+      px[o + 3] = 255;
     }
   }
 
-  // Soft 1px anti-alias feather on outer silhouette edge only
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = y * w + x;
-      if (visited[idx]) continue;
-      const bgNeighbors =
-        visited[idx - 1] +
-        visited[idx + 1] +
-        visited[idx - w] +
-        visited[idx + w];
-      if (bgNeighbors > 0) {
+  // Eat the red plate that sits behind hair when the magenta key stops short.
+  let plateChanged = true;
+  while (plateChanged) {
+    plateChanged = false;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        if (bgMask[idx]) continue;
         const o = idx * 4;
-        const d = rowBgDist(x, y, px[o], px[o + 1], px[o + 2]);
-        if (d < 20) {
-          px[o + 3] = Math.round(255 * Math.max(0.3, (d - 8) / 12));
-        }
+        if (!isRedPlate(px[o], px[o + 1], px[o + 2])) continue;
+        const touches =
+          (x > 0 && bgMask[idx - 1]) ||
+          (x < w - 1 && bgMask[idx + 1]) ||
+          (y > 0 && bgMask[idx - w]) ||
+          (y < h - 1 && bgMask[idx + w]);
+        if (!touches) continue;
+        bgMask[idx] = 1;
+        px[o + 3] = 0;
+        px[o] = px[o + 1] = px[o + 2] = 0;
+        plateChanged = true;
       }
     }
   }
+
+  stripChromaFringeFromOpaque(px, w, h);
+  despillChromaMagenta(px, w, h);
+  peelPinkRim(px, w, h, 18);
+  snapAlphaHard(px, w, h);
+  defringeChromaMagenta(px, w, h);
+  despillChromaMagenta(px, w, h);
+  peelPinkRim(px, w, h, 8);
 
   return sharp(px, { raw: { width: w, height: h, channels: 4 } })
     .png({ compressionLevel: 9 })
@@ -414,8 +524,8 @@ async function keyDarkStudio(srcPath) {
 }
 
 /**
- * Pass 2 Chroma-Magenta Keyer + Spill Suppressor:
- * Globally keys magenta pixels (including interior arm/hair gaps) and suppresses magenta spill on edges.
+ * Chroma-Magenta Keyer with Silhouette Core Protection:
+ * Keys outer magenta background while locking any non-magenta interior clothing 100% opaque.
  */
 async function keyChromaMagenta(srcPath) {
   const { data, info } = await sharp(srcPath)
@@ -433,72 +543,68 @@ async function keyChromaMagenta(srcPath) {
     const g = px[o + 1];
     const b = px[o + 2];
 
-    // Magenta dominance: high R and B, very low G
     const rbMin = Math.min(r, b);
     const magentaness = rbMin - g;
 
-    if (r > 165 && b > 95 && g < 75 && magentaness > 65) {
+    if (r > 175 && b > 100 && g < 70 && magentaness > 75) {
       px[o + 3] = 0;
-    } else if (r > 130 && b > 80 && magentaness > 35) {
-      // Soft edge ramp + spill suppression
-      const alphaFactor = Math.max(0, Math.min(1, 1 - (magentaness - 35) / 45));
+    } else if (r > 145 && b > 85 && magentaness > 48) {
+      const alphaFactor = Math.max(0, Math.min(1, 1 - (magentaness - 48) / 40));
       px[o + 3] = Math.round(255 * alphaFactor);
-      // Desaturate magenta spill on semi-transparent boundary pixels
-      const neutral = Math.round((r * 0.35 + g * 0.45 + b * 0.2));
+      const neutral = Math.round(r * 0.35 + g * 0.45 + b * 0.2);
       px[o] = Math.round(r * alphaFactor + neutral * (1 - alphaFactor));
       px[o + 2] = Math.round(b * alphaFactor + neutral * (1 - alphaFactor));
+    } else {
+      px[o + 3] = 255;
     }
   }
 
-  // Clean 1px residual magenta fringe adjacent to transparent pixels
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = y * w + x;
-      const o = idx * 4;
-      if (px[o + 3] === 0) continue;
-      const hasTransNeighbor =
-        px[(idx - 1) * 4 + 3] === 0 ||
-        px[(idx + 1) * 4 + 3] === 0 ||
-        px[(idx - w) * 4 + 3] === 0 ||
-        px[(idx + w) * 4 + 3] === 0;
-      if (hasTransNeighbor) {
-        const r = px[o];
-        const g = px[o + 1];
-        const b = px[o + 2];
-        if (r > g + 35 && b > g + 25) {
-          const clampRB = Math.min(255, g + 22);
-          px[o] = Math.min(r, clampRB);
-          px[o + 2] = Math.min(b, clampRB);
-          px[o + 3] = Math.round(px[o + 3] * 0.65);
-        }
-      }
-    }
-  }
+  snapAlphaHard(px, w, h);
+  defringeChromaMagenta(px, w, h);
 
   return sharp(px, { raw: { width: w, height: h, channels: 4 } })
     .png({ compressionLevel: 9 })
     .toBuffer();
 }
 
+async function writePngAtomic(outDir, baseName, pngBuffer) {
+  const dest = join(outDir, `${baseName}.png`);
+  const tmp = join(outDir, `${baseName}.${process.pid}.tmp.png`);
+  await sharp(pngBuffer).toFile(tmp);
+  try {
+    unlinkSync(dest);
+  } catch {
+    /* first write */
+  }
+  renameSync(tmp, dest);
+}
+
 async function saveBothDirs(baseName, srcJpgPath, pngBuffer) {
   for (const outDir of outDirs) {
-    if (srcJpgPath) {
-      copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+    try {
+      if (srcJpgPath) {
+        copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+      }
+      await writePngAtomic(outDir, baseName, pngBuffer);
+    } catch (err) {
+      console.warn(`[skip write] ${outDir}/${baseName}: ${err.message}`);
     }
-    await sharp(pngBuffer).toFile(join(outDir, `${baseName}.png`));
   }
 }
 
-// 1. Re-process all Pass 1 white-studio portraits with interior hole clearing + defringing
+const defenseOnly = process.argv.includes("--defense-only");
+const intelOnly = process.argv.includes("--intel-only");
+const supportOnly = process.argv.includes("--support-only");
+
+if (!defenseOnly && !intelOnly && !supportOnly) {
 for (const base of PASS1_WHITE_FILES) {
   const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
   if (!existsSync(srcJpg)) continue;
-  const pngBuf = await keyWhiteStudioUpgraded(srcJpg);
+  const pngBuf = await keyWhiteStudioSilhouetteLocked(srcJpg);
   await saveBothDirs(base, srcJpg, pngBuf);
-  console.log(`[Pass 1 Upgraded Alpha] ${base}`);
+  console.log(`[White Silhouette-Locked] ${base}`);
 }
 
-// 1b. Create 1/2-to-3/4 waist/hip reframed versions of Part-timer V4 and Office Clerk V4
 for (const [srcBase, outBase, cropTopRatio, cropHeightRatio] of [
   ["part-timer-v4-full-satire", "p2-part-timer-v4-reframed", 0.02, 0.72],
   ["office-clerk-v4-full-satire", "p2-office-clerk-v4-reframed", 0.0, 0.72],
@@ -529,25 +635,206 @@ for (const [srcBase, outBase, cropTopRatio, cropHeightRatio] of [
     await sharp(croppedPng).toFile(join(outDir, `${outBase}.png`));
     await sharp(croppedJpg).toFile(join(outDir, `${outBase}.jpg`));
   }
-  console.log(`[Pass 2 1/2-3/4 Reframed + Clean Alpha] ${outBase}`);
+  console.log(`[Reframed Silhouette-Locked] ${outBase}`);
 }
 
-// 2. Process Pass 2 Dark-Studio images
 for (const base of PASS2_DARK_FILES) {
   const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
   if (!existsSync(srcJpg)) continue;
-  const pngBuf = await keyDarkStudio(srcJpg);
+  const pngBuf = await keyDarkStudioSilhouetteLocked(srcJpg);
   await saveBothDirs(base, srcJpg, pngBuf);
-  console.log(`[Pass 2 Dark-Studio Keyed] ${base}`);
+  console.log(`[Dark Silhouette-Locked] ${base}`);
 }
 
-// 3. Process Pass 2 Chroma-Magenta images
 for (const base of PASS2_CHROMA_FILES) {
   const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
   if (!existsSync(srcJpg)) continue;
   const pngBuf = await keyChromaMagenta(srcJpg);
   await saveBothDirs(base, srcJpg, pngBuf);
-  console.log(`[Pass 2 Chroma-Magenta Keyed] ${base}`);
+  console.log(`[Chroma Silhouette-Locked] ${base}`);
 }
 
-console.log("Pass 2 portrait processing complete.");
+console.log("All portraits processed with 100% solid interior clothing core.");
+}
+
+const defenseOutDirs = [
+  join(root, "docs/unit-portrait-review/images/defense"),
+  join(root, "src/assets/reference/unit-portraits/defense"),
+];
+for (const d of defenseOutDirs) {
+  mkdirSync(d, { recursive: true });
+}
+
+const DEFENSE_DARK_FILES = [
+  "defense-ex-bouncer-v3-stance-dark",
+];
+
+const DEFENSE_CHROMA_FILES = [
+  "defense-mall-cop-v1-patrol-dark",
+  "defense-mall-cop-v1-alt-chroma",
+  "defense-mall-cop-v3-keys-dark",
+  "defense-mall-cop-v2-segway-satire-chroma",
+  "defense-mall-cop-v4-kiosk-chroma",
+  "defense-night-watch-v1-graveyard-dark",
+  "defense-night-watch-v2-flashlight-chroma",
+  "defense-night-watch-v3-desk-dark",
+  "defense-night-watch-v4-coffee-chroma",
+  "defense-ex-bouncer-v1-intimidate-dark",
+  "defense-ex-bouncer-v2-vip-chroma",
+  "defense-ex-bouncer-v4-gloves-chroma",
+  "defense-corp-sec-v1-detail-dark",
+  "defense-corp-sec-v2-binders-chroma",
+  "defense-corp-sec-v3-holo-dark",
+  "defense-corp-sec-v4-shield-chroma",
+];
+
+async function saveDefenseDirs(baseName, srcJpgPath, pngBuffer) {
+  for (const outDir of defenseOutDirs) {
+    try {
+      if (srcJpgPath) {
+        copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+      }
+      await writePngAtomic(outDir, baseName, pngBuffer);
+    } catch (err) {
+      console.warn(`[defense skip write] ${outDir}/${baseName}: ${err.message}`);
+    }
+  }
+}
+
+async function processDefensePortraits() {
+  for (const base of DEFENSE_DARK_FILES) {
+    const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
+    if (!existsSync(srcJpg)) continue;
+    const pngBuf = await keyDarkStudioSilhouetteLocked(srcJpg);
+    await saveDefenseDirs(base, srcJpg, pngBuf);
+    console.log(`[Defense Dark] ${base}`);
+  }
+  for (const base of DEFENSE_CHROMA_FILES) {
+    const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
+    if (!existsSync(srcJpg)) continue;
+    const pngBuf = await keyChromaMagentaSilhouetteLocked(srcJpg);
+    await saveDefenseDirs(base, srcJpg, pngBuf);
+    console.log(`[Defense Chroma Silhouette] ${base}`);
+  }
+  console.log("Defense portrait batch complete.");
+}
+
+if (defenseOnly) {
+  await processDefensePortraits();
+}
+
+const intelOutDirs = [
+  join(root, "docs/unit-portrait-review/images/intel"),
+  join(root, "src/assets/reference/unit-portraits/intel"),
+];
+for (const d of intelOutDirs) {
+  mkdirSync(d, { recursive: true });
+}
+
+const INTEL_CHROMA_FILES = [
+  "intel-internet-surfer-v1-monitor-chroma",
+  "intel-internet-surfer-v2-ramen-chroma",
+  "intel-internet-surfer-v3-phone-chroma",
+  "intel-internet-surfer-v4-energy-chroma",
+  "intel-office-gossip-v1-whisper-chroma",
+  "intel-office-gossip-v2-tea-chroma",
+  "intel-office-gossip-v3-hallway-chroma",
+  "intel-office-gossip-v4-sticky-chroma",
+  "intel-linkedin-stalker-v1-profile-chroma",
+  "intel-linkedin-stalker-v2-cutout-chroma",
+  "intel-linkedin-stalker-v3-dualphone-chroma",
+  "intel-linkedin-stalker-v4-binoculars-chroma",
+  "intel-data-snoop-v1-keyboard-chroma",
+  "intel-data-snoop-v2-splitscreen-chroma",
+  "intel-data-snoop-v3-wrist-hud-chroma",
+  "intel-data-snoop-v4-penmic-chroma",
+];
+
+async function saveIntelDirs(baseName, srcJpgPath, pngBuffer) {
+  for (const outDir of intelOutDirs) {
+    try {
+      if (srcJpgPath) {
+        copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+      }
+      await writePngAtomic(outDir, baseName, pngBuffer);
+    } catch (err) {
+      console.warn(`[intel skip write] ${outDir}/${baseName}: ${err.message}`);
+    }
+  }
+}
+
+async function processIntelPortraits() {
+  for (const base of INTEL_CHROMA_FILES) {
+    const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
+    if (!existsSync(srcJpg)) {
+      console.warn(`[Intel skip missing] ${base}.jpg`);
+      continue;
+    }
+    const pngBuf = await keyChromaMagentaSilhouetteLocked(srcJpg);
+    await saveIntelDirs(base, srcJpg, pngBuf);
+    console.log(`[Intel Chroma Silhouette] ${base}`);
+  }
+  console.log("Intel portrait batch complete.");
+}
+
+if (intelOnly) {
+  await processIntelPortraits();
+}
+
+const supportOutDirs = [
+  join(root, "docs/unit-portrait-review/images/support"),
+  join(root, "src/assets/reference/unit-portraits/support"),
+];
+for (const d of supportOutDirs) {
+  mkdirSync(d, { recursive: true });
+}
+
+const SUPPORT_CHROMA_FILES = [
+  "support-janitor-v1-mop-chroma",
+  "support-janitor-v2-cart-chroma",
+  "support-janitor-v3-night-chroma",
+  "support-janitor-v4-plant-chroma",
+  "support-courier-v1-helmet-chroma",
+  "support-courier-v2-satchel-chroma",
+  "support-courier-v3-radio-chroma",
+  "support-courier-v4-skate-chroma",
+  "support-lead-v1-huddle-chroma",
+  "support-lead-v2-checklist-chroma",
+  "support-lead-v3-headset-chroma",
+  "support-lead-v4-coffee-run-chroma",
+  "support-momdad-v1-thermos-chroma",
+  "support-momdad-v2-snack-chroma",
+  "support-momdad-v3-cardigan-chroma",
+  "support-momdad-v4-dad-chroma",
+];
+
+async function saveSupportDirs(baseName, srcJpgPath, pngBuffer) {
+  for (const outDir of supportOutDirs) {
+    try {
+      if (srcJpgPath) {
+        copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+      }
+      await writePngAtomic(outDir, baseName, pngBuffer);
+    } catch (err) {
+      console.warn(`[support skip write] ${outDir}/${baseName}: ${err.message}`);
+    }
+  }
+}
+
+async function processSupportPortraits() {
+  for (const base of SUPPORT_CHROMA_FILES) {
+    const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
+    if (!existsSync(srcJpg)) {
+      console.warn(`[Support skip missing] ${base}.jpg`);
+      continue;
+    }
+    const pngBuf = await keyChromaMagentaSilhouetteLocked(srcJpg);
+    await saveSupportDirs(base, srcJpg, pngBuf);
+    console.log(`[Support Chroma Silhouette] ${base}`);
+  }
+  console.log("Support portrait batch complete.");
+}
+
+if (supportOnly) {
+  await processSupportPortraits();
+}

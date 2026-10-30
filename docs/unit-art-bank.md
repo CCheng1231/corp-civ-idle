@@ -20,6 +20,35 @@ Configured in `src/game/unitPortraitAssets.ts` (switchable in **Secretary → Ro
 | `office_clerk` (T2) | `p2-v1` | `p2-office-clerk-v1-chill-dark.png` | Chill asymmetric bob, cropped blazer, color-coded dossiers |
 | `call_center_veteran` (T2) | `p2-v1` | `p2-call-center-v1-operator-dark.png` | Two-tone hair, dual retro-futuristic headset, iced coffee |
 
+### Protection & defense (Oct 29, 2026)
+
+| Unit (`UnitId`) | Default Skin ID | Asset File | Notes |
+|---|---|---|---|
+| `mall_cop` (T1) | `p1-v4` | `defense/defense-mall-cop-v4-kiosk-chroma.png` | Pass 1 kiosk bubble tea keeper |
+| `night_watchman` (T1) | `p1-v2` | `defense/defense-night-watch-v2-flashlight-chroma.png` | Pass 1 onigiri spotlight keeper |
+| `ex_bouncer` (T2) | `p2f-v1` | `defense/defense-ex-bouncer-v1-intimidate-dark.png` | Aviators + rope loop (between V2/V4) |
+| `corporate_security` (T2) | `p2c-v3` | `defense/defense-corp-sec-v3-holo-dark.png` | Peaked cap clasped hands |
+
+### Intel & scouting (Oct 29, 2026)
+
+| Unit (`UnitId`) | Default Skin ID | Asset File | Notes |
+|---|---|---|---|
+| `internet_surfer` (T1) | `p1-v2` | `intel/intel-internet-surfer-v2-ramen-chroma.png` | Ramen + headset keeper |
+| `office_gossip` (T1) | `p1-v4` | `intel/intel-office-gossip-v4-sticky-chroma.png` | Short bob, clipboard heart |
+| `linkedin_stalker` (T2) | `p1-v1` | `intel/intel-linkedin-stalker-v1-profile-chroma.png` | Holographic profile |
+| `data_entry_snoop` (T2) | `p1-v4` | `intel/intel-data-snoop-v4-penmic-chroma.png` | Pen and printouts keeper |
+
+### Support (Oct 29, 2026)
+
+| Unit (`UnitId`) | Default Skin ID | Asset File | Notes |
+|---|---|---|---|
+| `janitor` (T1) | `p1-v1` | `support/support-janitor-v1-mop-chroma.png` | Slate coveralls, mop and bucket |
+| `bike_courier` (T1) | `p1-v1` | `support/support-courier-v1-helmet-chroma.png` | Helmet, blue jacket, heather shirt |
+| `junior_team_lead` (T2) | `p1-v1` | `support/support-lead-v1-huddle-chroma.png` | Clipboard, clip on top, empty boxes |
+| `office_mom_dad` (T2) | `p1-v1` | `support/support-momdad-v1-thermos-chroma.png` | Cream cardigan, travel mug |
+
+Skins switchable in **Secretary → Roaster → Unit skins** (`src/game/unitPortraitAssets.ts`).
+
 ---
 
 ## Banked Designs for Future Units
