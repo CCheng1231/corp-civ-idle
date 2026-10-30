@@ -1246,6 +1246,15 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   gap: 0.5rem;
 }
 
+.overview-structure-row {
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+
+.overview-structure-row:active {
+  background: rgba(124, 156, 255, 0.1);
+}
+
 .overview-research-note,
 .overview-units-total {
   margin: 0.5rem 0 0;

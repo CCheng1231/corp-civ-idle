@@ -40,6 +40,7 @@ import {
   resolveOfficeLocation,
   totalStaffAcrossOffices,
 } from "../game/officeSelection";
+import { unitPortraitSrc } from "../game/unitPortraitAssets";
 
 interface RecruitmentViewProps {
   state: GameState;
@@ -185,75 +186,111 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     const blocker = recruitmentBlockerMessage(researchLocked);
 
     const focused = focusUnitId === unit.id;
+    const portraitSrc = unitPortraitSrc(unit.id, state.settings);
+
+    const headBlock = (
+      <div className="structure-head">
+        <strong>{unit.name}</strong>
+        <span className="recruitment-tier-badge">Tier {unit.tier}</span>
+      </div>
+    );
+
+    const hireMetaBlock = (
+      <div className="recruitment-hire-meta">
+        <div className="recruitment-hire-meta-cost">
+          <StructureCostLine
+            state={state}
+            officeId={officeId}
+            cost={cost}
+            layout="line"
+            prefix=""
+            inline
+          />
+          {orderHours > 0 ? (
+            <>
+              <span className="structure-cost-sep">·</span>
+              <span className="recruitment-time-inline">
+                {formatQueueTimeHours(orderHours)}
+              </span>
+            </>
+          ) : null}
+        </div>
+        <div className="recruitment-hire-actions">
+          <label className="recruit-count-field recruit-count-inline">
+            <span className="recruit-count-label">Qty</span>
+            <input
+              type="number"
+              min={1}
+              max={MAX_RECRUIT_BATCH}
+              value={count}
+              disabled={actionsLocked || queueFull || researchLocked}
+              onChange={(e) => {
+                const n = Math.max(
+                  1,
+                  Math.min(MAX_RECRUIT_BATCH, Number(e.target.value) || 1),
+                );
+                setCounts((prev) => ({ ...prev, [unit.id]: n }));
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn primary recruitment-queue-btn"
+            disabled={!affordable || queueFull || researchLocked}
+            onClick={() => hire(unit.id)}
+          >
+            {actionsLocked
+              ? "Pick an office"
+              : researchLocked
+              ? "Locked"
+              : queueFull
+                ? "Queue full"
+                : "Queue order"}
+          </button>
+        </div>
+      </div>
+    );
+
     return (
       <li
         key={unit.id}
         id={`recruit-unit-${unit.id}`}
         className={`structure-card structure-card-upgrade recruitment-card-compact${
-          focused ? " recruit-unit-focused" : ""
-        }${researchLocked ? " progression-locked" : ""}`}
+          portraitSrc ? " recruitment-card-with-portrait" : ""
+        }${focused ? " recruit-unit-focused" : ""}${
+          researchLocked ? " progression-locked" : ""
+        }`}
       >
-        <div className="structure-head">
-          <strong>{unit.name}</strong>
-          <span className="recruitment-tier-badge">Tier {unit.tier}</span>
-        </div>
-        <p className="structure-desc muted recruitment-role" title={unit.proposedRole}>
-          {unit.proposedRole}
-        </p>
-        <div className="recruitment-hire-meta">
-          <div className="recruitment-hire-meta-cost">
-            <StructureCostLine
-              state={state}
-              officeId={officeId}
-              cost={cost}
-              layout="line"
-              prefix=""
-              inline
-            />
-            {orderHours > 0 ? (
-              <>
-                <span className="structure-cost-sep">·</span>
-                <span className="recruitment-time-inline">
-                  {formatQueueTimeHours(orderHours)}
-                </span>
-              </>
-            ) : null}
+        {portraitSrc ? (
+          <div className="recruitment-card-split">
+            <div className="recruitment-card-portrait" aria-hidden="true">
+              <img src={portraitSrc} alt="" loading="lazy" />
+            </div>
+            <div className="recruitment-card-main">
+              {headBlock}
+              {hireMetaBlock}
+              <p
+                className="structure-desc muted recruitment-role recruitment-role-footer"
+                title={unit.proposedRole}
+              >
+                {unit.proposedRole}
+              </p>
+              {blocker && <p className="structure-blocker">{blocker}</p>}
+            </div>
           </div>
-          <div className="recruitment-hire-actions">
-            <label className="recruit-count-field recruit-count-inline">
-              <span className="recruit-count-label">Qty</span>
-              <input
-                type="number"
-                min={1}
-                max={MAX_RECRUIT_BATCH}
-                value={count}
-                disabled={actionsLocked || queueFull || researchLocked}
-                onChange={(e) => {
-                  const n = Math.max(
-                    1,
-                    Math.min(MAX_RECRUIT_BATCH, Number(e.target.value) || 1),
-                  );
-                  setCounts((prev) => ({ ...prev, [unit.id]: n }));
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn primary recruitment-queue-btn"
-              disabled={!affordable || queueFull || researchLocked}
-              onClick={() => hire(unit.id)}
+        ) : (
+          <>
+            {headBlock}
+            <p
+              className="structure-desc muted recruitment-role"
+              title={unit.proposedRole}
             >
-              {actionsLocked
-                ? "Pick an office"
-                : researchLocked
-                ? "Locked"
-                : queueFull
-                  ? "Queue full"
-                  : "Queue order"}
-            </button>
-          </div>
-        </div>
-        {blocker && <p className="structure-blocker">{blocker}</p>}
+              {unit.proposedRole}
+            </p>
+            {hireMetaBlock}
+            {blocker && <p className="structure-blocker">{blocker}</p>}
+          </>
+        )}
       </li>
     );
   }
@@ -363,16 +400,13 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         );
         if (units.length === 0) return null;
 
-        const fallbackOpen = units.some(
-          (unit) => !isRecruitmentUnitLocked(state, unit),
-        );
-        const open = categoryOpen[category] ?? fallbackOpen;
+        const open = categoryOpen[category] ?? false;
 
         return (
           <ProgressionCategorySection
             key={category}
             title={CATEGORY_LABELS[category]}
-            defaultOpen={fallbackOpen}
+            defaultOpen={false}
             open={open}
             onOpenChange={(next) => {
               if (next === open) return;

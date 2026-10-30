@@ -856,7 +856,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 0.2rem;
-  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
+  width: max-content;
   max-width: calc(100% - 0.9rem);
 }
 
@@ -966,15 +966,16 @@
 
 .map-world-landmark-filter-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.35rem;
   cursor: pointer;
   min-height: 0;
   padding: 0.08rem 0;
+  white-space: nowrap;
 }
 
 .map-world-landmark-filter-row input {
-  margin-top: 0.12rem;
+  margin: 0;
   flex-shrink: 0;
 }
 
@@ -2057,12 +2058,14 @@
 }
 
 .map-presentation-player .map-hex-drawer {
+  --map-hex-label: #3a3a3a;
+  --map-hex-body: #1a1a1a;
   width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
   min-width: 0;
   max-width: calc(100% - 0.9rem);
   background: rgba(247, 243, 236, 0.82);
   border: 1px solid rgba(26, 26, 26, 0.16);
-  color: #1a1a1a;
+  color: var(--map-hex-body);
   box-shadow:
     0 2px 6px rgba(26, 26, 26, 0.08),
     0 6px 16px rgba(26, 26, 26, 0.07);
@@ -2104,7 +2107,7 @@
   right: 0.45rem;
   bottom: 0.45rem;
   z-index: 5;
-  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
+  width: max-content;
   max-width: calc(100% - 0.9rem);
   max-height: min(40vh, 16.5rem);
   border-radius: 0.4rem;
@@ -2117,6 +2120,10 @@
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(6px);
+}
+
+.map-presentation-player .map-job-filter-panel.is-open {
+  width: var(--map-side-panel-width, min(14.5rem, calc(100% - 5.5rem)));
 }
 
 /* Collapsed bar — match map zoom control strip height */
@@ -2141,6 +2148,14 @@
 .map-presentation-player .map-job-filter-panel:not(.is-open) .map-job-filter-toggle-count.is-filtered {
   padding: 0.02rem 0.28rem;
   font-size: 0.58rem;
+}
+
+.map-presentation-player .map-job-filter-head {
+  min-height: 0;
+}
+
+.map-presentation-player .map-job-filter-toggle-meta {
+  min-height: 0;
 }
 
 .map-job-filter-panel.is-expanded {
@@ -2499,7 +2514,7 @@
 
 .map-presentation-player .map-hex-job-tier,
 .map-presentation-player .map-hex-job-meta {
-  color: #5a5a5a;
+  color: var(--map-hex-label);
 }
 
 .map-presentation-player .map-hex-job-send {
@@ -2518,8 +2533,10 @@
   box-shadow: inset 0 0 0 1px rgba(45, 106, 74, 0.28);
 }
 
-.map-presentation-player .map-hex-contracts-toggle {
-  color: #5a5a5a;
+.map-presentation-player .map-hex-contracts-toggle,
+.map-presentation-player .map-hex-contracts-toggle-label,
+.map-presentation-player .map-hex-contracts-toggle-caret {
+  color: var(--map-hex-body);
 }
 
 .map-presentation-player .map-hex-contracts-toggle:hover {
@@ -2528,12 +2545,45 @@
 
 .map-presentation-player .map-hex-section-title,
 .map-presentation-player .map-hex-section-title-sub {
-  color: #5a5a5a;
+  color: var(--map-hex-body);
 }
 
 .map-presentation-player .map-hex-desc,
 .map-presentation-player .map-hex-empty {
-  color: #5a5a5a;
+  color: var(--map-hex-label);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-facts dt {
+  color: var(--map-hex-label);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-facts dd {
+  color: var(--map-hex-body);
+}
+
+.map-presentation-player .map-hex-drawer .cost-line,
+.map-presentation-player .map-hex-drawer .cost-line.muted {
+  color: var(--map-hex-label);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-commercial-lead,
+.map-presentation-player .map-hex-drawer .map-hex-commercial-label,
+.map-presentation-player .map-hex-drawer .map-hex-commercial-value,
+.map-presentation-player .map-hex-drawer .map-hex-commercial-value.muted {
+  color: var(--map-hex-label);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-commercial-value.map-hex-cost-underline {
+  color: var(--map-hex-body);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-commercial-facts {
+  border-color: rgba(26, 26, 26, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-commercial-row + .map-hex-commercial-row {
+  border-top-color: rgba(26, 26, 26, 0.08);
 }
 
 .map-hex-facts-compact {
@@ -2858,7 +2908,7 @@
 }
 
 .map-presentation-player .map-hex-job-expires-hr {
-  color: #5a5a5a;
+  color: var(--map-hex-label);
 }
 
 .map-hex-job-send {

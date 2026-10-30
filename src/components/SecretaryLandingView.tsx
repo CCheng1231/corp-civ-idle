@@ -14,7 +14,7 @@ interface SecretaryLandingViewProps {
 }
 
 const SECRETARY_DESTINATIONS = [
-  { id: "roaster" as const, label: "Roster" },
+  { id: "roaster" as const, label: "Roaster" },
   { id: "job" as const, label: "Job" },
   { id: "log" as const, label: "Log" },
 ];

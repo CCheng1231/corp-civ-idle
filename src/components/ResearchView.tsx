@@ -379,18 +379,13 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         const maxedCount = items.filter((research) =>
           isResearchCompleted(state, research),
         ).length;
-        const fallbackOpen = items.some(
-          (research) =>
-            !isResearchCompleted(state, research) ||
-            isResearchQueued(state, research.id),
-        );
-        const open = categoryOpen[category] ?? fallbackOpen;
+        const open = categoryOpen[category] ?? false;
 
         return (
           <ProgressionCategorySection
             key={category}
             title={RESEARCH_CATEGORY_LABELS[category]}
-            defaultOpen={fallbackOpen}
+            defaultOpen={false}
             open={open}
             onOpenChange={(next) => {
               if (next === open) return;

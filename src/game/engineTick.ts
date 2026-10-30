@@ -134,7 +134,9 @@ export function mergeOnlineRemoteState(
     ...incoming,
     view: current.view,
     homePanel: current.homePanel,
+    homeHubResume: current.homeHubResume,
     secretaryPanel: current.secretaryPanel,
+    secretaryHubResume: current.secretaryHubResume,
     settings: {
       ...incoming.settings,
       viewportPreview:

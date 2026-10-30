@@ -6,6 +6,7 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 2. [`.cursor/rules/player-view-ui.mdc`](.cursor/rules/player-view-ui.mdc) — auto-applied on `src/components/**` and `src/App.css`
 3. [`.cursor/rules/cross-platform-layout.mdc`](.cursor/rules/cross-platform-layout.mdc) — Android / iOS / PC scaling, safe areas, 48px touch targets
 4. **World map layout / zoom** — [`.cursor/rules/world-map-viewport.mdc`](.cursor/rules/world-map-viewport.mdc) when editing `WorldView`, `mapWorld`, or `mapViewport`; art direction **v0.1** — [`docs/world-map-v0.1.md`](docs/world-map-v0.1.md)
+5. **Unit portrait art bank & skins** — [`docs/unit-art-bank.md`](docs/unit-art-bank.md) for banked higher-tier/Intel/Support contractor portraits (`src/game/unitPortraitAssets.ts`, switchable in **Secretary → Roaster → Unit skins**).
 
 **Balance numbers:** Committed in `src/game/structureBalanceData.ts`, `researchData.ts`, `jobHubData.ts` (code is source of truth). Optional reference sync: `node scripts/import-balance-from-workbook.mjs` (workbook: `Corp Idle Working.xlsx`). Metrics: `node scripts/balance-report.mjs` → `docs/balance-report.md`. See [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc).
 

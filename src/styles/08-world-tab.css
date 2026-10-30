@@ -785,9 +785,11 @@ body.logbook-col-resizing {
 }
 
 .world-map-controls-compact .tab {
-  padding: 0.16rem 0.42rem;
-  min-height: 1.5rem;
-  font-size: 0.62rem;
+  padding: 0.12rem 0.38rem;
+  min-height: 1.35rem;
+  border-radius: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 650;
   line-height: 1.15;
   white-space: nowrap;
 }
@@ -800,8 +802,8 @@ body.logbook-col-resizing {
 
 .world-map-main-office {
   margin: 0;
-  padding: 0.16rem 0.35rem;
-  min-height: 1.5rem;
+  padding: 0.12rem 0.35rem;
+  min-height: 1.35rem;
   max-width: 7.5rem;
   border: 1px solid var(--border);
   border-radius: 0.4rem;

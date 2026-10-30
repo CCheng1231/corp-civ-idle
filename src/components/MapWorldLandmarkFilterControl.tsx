@@ -55,13 +55,8 @@ export function MapWorldLandmarkFilterControl({
               checked={landmarksOn}
               onChange={(e) => setLandmarksOn(e.target.checked)}
             />
-            <span className="map-world-landmark-filter-row-text">
-              <span className="map-world-landmark-filter-row-title">
-                World landmarks
-              </span>
-              <span className="map-world-landmark-filter-row-hint muted">
-                Gov, hubs, commercial parcels — your view only
-              </span>
+            <span className="map-world-landmark-filter-row-title">
+              Landmark icon
             </span>
           </label>
         </div>

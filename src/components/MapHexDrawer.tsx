@@ -67,8 +67,6 @@ import {
 } from "./mapHexInfo";
 import type { MapLandmarkArtInstance } from "../game/mapLandmarkInstances";
 import { mapLandmarkArtDisplayName } from "../game/mapLandmarkArtRegistry";
-import { axialKey } from "../game/hexLayout";
-
 interface MapHexDrawerProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -87,48 +85,28 @@ type MapContractSite =
 
 function MapLandmarkSiteDrawerSection({
   instance,
-  coord,
 }: {
   instance: MapLandmarkArtInstance;
-  coord: AxialCoord;
 }) {
   const multi = instance.footprint.length > 1;
-  const onAnchor = instance.footprint.some(
-    (c) => c.q === coord.q && c.r === coord.r,
-  );
 
   return (
-    <>
-      <dl className="map-hex-facts">
-        <div>
-          <dt>Site id</dt>
-          <dd>{instance.siteId}</dd>
-        </div>
-        <div>
-          <dt>Landmark</dt>
-          <dd>{mapLandmarkArtDisplayName(String(instance.artId))}</dd>
-        </div>
-        {multi ? (
-          <div>
-            <dt>Footprint</dt>
-            <dd>{instance.footprint.length} hexes</dd>
-          </div>
-        ) : null}
-      </dl>
+    <dl className="map-hex-facts">
+      <div>
+        <dt>Site id</dt>
+        <dd>{instance.siteId}</dd>
+      </div>
+      <div>
+        <dt>Landmark</dt>
+        <dd>{mapLandmarkArtDisplayName(String(instance.artId))}</dd>
+      </div>
       {multi ? (
-        <p className="map-hex-desc muted">
-          Part of a multi-hex world landmark
-          {onAnchor ? " (primary anchor hex)." : "."}
-          {" "}
-          Hexes:{" "}
-          {instance.footprint.map((c) => axialKey(c)).join(", ")}
-        </p>
-      ) : (
-        <p className="map-hex-desc muted">
-          Shared world landmark — same geography for every player.
-        </p>
-      )}
-    </>
+        <div>
+          <dt>Footprint</dt>
+          <dd>{instance.footprint.length} hexes</dd>
+        </div>
+      ) : null}
+    </dl>
   );
 }
 
@@ -854,10 +832,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
         )}
 
         {landmarkInstance ? (
-          <MapLandmarkSiteDrawerSection
-            instance={landmarkInstance}
-            coord={coord}
-          />
+          <MapLandmarkSiteDrawerSection instance={landmarkInstance} />
         ) : null}
 
         {info.kind === "office" && (
@@ -877,12 +852,6 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             highlightPostingId={highlightPostingId}
           />
         ) : null}
-
-        {info.kind === "major-hub" && (
-          <p className="map-hex-desc muted">
-            Strategic major hub — regional anchor on the world map (Z1 ring).
-          </p>
-        )}
 
         {info.kind === "player-hq" && (
           <PlayerHqDrawerSection state={state} playerId={info.playerId} />

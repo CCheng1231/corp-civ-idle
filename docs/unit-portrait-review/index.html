@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Farming Unit Portrait Review (Pass 2 + Banked Vault)</title>
+  <style>
+    :root {
+      --bg: #0f141b;
+      --panel: #171e27;
+      --panel-2: #1d2632;
+      --border: rgba(147, 161, 181, 0.22);
+      --border-strong: rgba(124, 156, 255, 0.45);
+      --text: #e8eef7;
+      --muted: #93a1b5;
+      --accent: #38b27b;
+      --accent-2: #7c9cff;
+      --gold: #e6b450;
+      --card-min-w: 225px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 1.25rem clamp(0.85rem, 2.5vw, 2rem) 3rem;
+      background: radial-gradient(circle at 20% 0%, #182230 0%, #0d1218 70%);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.4;
+    }
+
+    .page-wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header.hero {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+      padding: 1rem 1.2rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      background: rgba(23, 30, 39, 0.88);
+      backdrop-filter: blur(8px);
+    }
+
+    header.hero h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    header.hero p {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--muted);
+      max-width: 78ch;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+
+    .pill-green {
+      border-color: rgba(56, 178, 123, 0.45);
+      background: rgba(56, 178, 123, 0.14);
+      color: #84e6b8;
+    }
+
+    .pill-blue {
+      border-color: rgba(124, 156, 255, 0.45);
+      background: rgba(124, 156, 255, 0.14);
+      color: #b4c6ff;
+    }
+
+    .pill-amber {
+      border-color: rgba(230, 180, 80, 0.45);
+      background: rgba(230, 180, 80, 0.14);
+      color: #f6d586;
+    }
+
+    .section-card {
+      padding: 1rem 1.15rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      background: rgba(23, 30, 39, 0.86);
+    }
+
+    .section-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 650;
+    }
+
+    .section-head .sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.9rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.55rem;
+      background: rgba(15, 20, 27, 0.75);
+      border: 1px solid var(--border);
+      margin-bottom: 0.9rem;
+      font-size: 0.78rem;
+    }
+
+    .control-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .control-group label {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .btn-chip {
+      padding: 0.24rem 0.58rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--border);
+      background: #1b2430;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-chip:hover {
+      border-color: var(--accent-2);
+    }
+
+    .btn-chip.active {
+      border-color: var(--accent-2);
+      background: rgba(124, 156, 255, 0.2);
+      color: #fff;
+    }
+
+    /* —— Live Recruitment Card Sandbox (Full-Left 5.4rem Portrait Layout) —— */
+    .recruitment-sandbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-min-w), 1fr));
+      gap: 0.65rem;
+    }
+
+    .recruit-card-demo {
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      background: var(--panel);
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      transition: border-color 0.15s ease;
+    }
+
+    .recruit-card-demo:hover {
+      border-color: rgba(124, 156, 255, 0.45);
+    }
+
+    .recruit-thumb-box {
+      width: 5.4rem;
+      flex-shrink: 0;
+      align-self: stretch;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bg-mode-checker .recruit-thumb-box,
+    .bg-mode-checker .variant-img-wrap {
+      background-image:
+        linear-gradient(45deg, #1d242e 25%, transparent 25%),
+        linear-gradient(-45deg, #1d242e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1d242e 75%),
+        linear-gradient(-45deg, transparent 75%, #1d242e 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-color: #12171e;
+    }
+
+    .bg-mode-dark .recruit-thumb-box,
+    .bg-mode-dark .variant-img-wrap {
+      background: radial-gradient(circle at 50% 30%, #222f40 0%, #11161e 85%);
+    }
+
+    .bg-mode-glow .recruit-thumb-box,
+    .bg-mode-glow .variant-img-wrap {
+      background: radial-gradient(circle at 50% 28%, rgba(56, 178, 123, 0.28) 0%, rgba(15, 20, 27, 0.95) 85%);
+    }
+
+    .bg-mode-studio .recruit-thumb-box,
+    .bg-mode-studio .variant-img-wrap {
+      background: #141920;
+    }
+
+    .recruit-thumb-box img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 10%;
+      display: block;
+    }
+
+    .recruit-card-right {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.42rem 0.52rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.22rem;
+    }
+
+    .recruit-head-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.3rem;
+    }
+
+    .recruit-unit-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recruit-tier-tag {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .recruit-cost-under {
+      font-size: 0.72rem;
+      color: #6ee7b7;
+      font-weight: 600;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.22rem;
+    }
+
+    .recruit-cost-under .time {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .recruit-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.28rem;
+    }
+
+    .recruit-qty-mini {
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.26rem;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .recruit-qty-mini input {
+      width: 2.3rem;
+      min-height: 1.45rem;
+      padding: 0.1rem 0.22rem;
+      border-radius: 0.3rem;
+      border: 1px solid var(--border);
+      background: #10161d;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.7rem;
+      text-align: center;
+    }
+
+    .recruit-hire-btn {
+      width: auto;
+      min-height: 1.45rem;
+      padding: 0.14rem 0.48rem;
+      border-radius: 0.36rem;
+      border: 1px solid rgba(124, 156, 255, 0.45);
+      background: rgba(124, 156, 255, 0.18);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.68rem;
+      font-weight: 650;
+      line-height: 1.15;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .recruit-role-bottom {
+      margin: 0;
+      padding-top: 0.2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.71rem;
+      color: var(--muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.3;
+    }
+
+    /* —— Galleries —— */
+    .unit-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .unit-header-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .unit-header-bar h3 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .variant-card {
+      border-radius: 0.65rem;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .variant-card.is-equipped {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 178, 123, 0.35);
+    }
+
+    .variant-img-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      cursor: zoom-in;
+    }
+
+    .variant-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .variant-badges {
+      position: absolute;
+      top: 0.45rem;
+      left: 0.45rem;
+      right: 0.45rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      pointer-events: none;
+    }
+
+    .variant-badge {
+      padding: 0.13rem 0.4rem;
+      border-radius: 0.3rem;
+      font-size: 0.63rem;
+      font-weight: 700;
+      background: rgba(15, 20, 27, 0.86);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #fff;
+      backdrop-filter: blur(4px);
+    }
+
+    .variant-badge.badge-dark-key {
+      border-color: rgba(124, 156, 255, 0.5);
+      color: #bfd0ff;
+    }
+
+    .variant-badge.badge-chroma-key {
+      border-color: rgba(236, 114, 210, 0.5);
+      color: #f9b8ec;
+    }
+
+    .variant-badge.badge-clean-p1 {
+      border-color: rgba(56, 178, 123, 0.5);
+      color: #9ef0c8;
+    }
+
+    .variant-body {
+      padding: 0.6rem 0.7rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex: 1;
+    }
+
+    .variant-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .variant-desc {
+      margin: 0;
+      font-size: 0.72rem;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .variant-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+
+    .variant-actions button {
+      flex: 1;
+      padding: 0.3rem 0.5rem;
+      border-radius: 0.38rem;
+      border: 1px solid var(--border);
+      background: #141c26;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .variant-actions button.primary {
+      border-color: rgba(56, 178, 123, 0.5);
+      background: rgba(56, 178, 123, 0.18);
+      color: #9ef0c8;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 11, 16, 0.88);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1.5rem;
+    }
+
+    .lightbox.open {
+      display: flex;
+    }
+
+    .lightbox-inner {
+      max-width: min(92vw, 760px);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .lightbox-inner img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 0.65rem;
+      border: 1px solid var(--border);
+      background-image:
+        linear-gradient(45deg, #1d242e 25%, transparent 25%),
+        linear-gradient(-45deg, #1d242e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1d242e 75%),
+        linear-gradient(-45deg, transparent 75%, #1d242e 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-color: #12171e;
+    }
+
+    .lightbox-caption {
+      font-size: 0.85rem;
+      color: var(--text);
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="bg-mode-checker">
+  <div class="page-wrap">
+    <header class="hero">
+      <div>
+        <h1>Pass 2 — Farming Unit Portraits (1/2–3/4 Framing, Clean Alpha, Tier-Accurate Vibes)</h1>
+        <p>
+          <strong>Pass 2 Fixes Applied:</strong> (1) All enclosed white holes between arms/hair/straps removed + edge halo defringed;
+          (2) Side-by-side comparison of <strong>Dark-Studio Keyed (#121820)</strong> vs <strong>Chroma-Magenta Keyed</strong>;
+          (3) Locked to <strong>1/2 (Waist-Up) to 3/4 (Mid-Hip)</strong> framing;
+          (4) <strong>Fresh Graduate</strong> redesigned as entry-level goofy/relatable rookies (zero Secretary overlap);
+          (5) <strong>Banked Vault</strong> below preserves your favorite higher-tier/Intel designs + the reworked non-Secretary V4 outfit.
+        </p>
+      </div>
+      <div class="badge-row">
+        <span class="pill pill-green">Default View: Alpha Checkerboard</span>
+        <span class="pill pill-blue">1/2 to 3/4 Framing</span>
+        <span class="pill pill-amber">5 Banked Designs Saved</span>
+      </div>
+    </header>
+
+    <!-- 1. LIVE RECRUITMENT CARD SANDBOX -->
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>1. Live In-Game Card Preview (Full-Left 5.4rem Portrait · Inline Qty · Compact Button)</h2>
+          <div class="sub">
+            Matches the exact layout now running in <code>RecruitmentView.tsx</code>. Click <strong>"Equip in Card"</strong> on any variant below to test it live.
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <div class="control-group">
+          <label>Backdrop:</label>
+          <button type="button" class="btn-chip active" data-bg="bg-mode-checker">Alpha Checkerboard</button>
+          <button type="button" class="btn-chip" data-bg="bg-mode-dark">Dark Card Well</button>
+          <button type="button" class="btn-chip" data-bg="bg-mode-glow">Emerald Card Glow</button>
+          <button type="button" class="btn-chip" data-bg="bg-mode-studio">Unkeyed Source (JPG)</button>
+        </div>
+        <div class="control-group">
+          <label>Card Min Width:</label>
+          <input type="range" id="cardWidthSlider" min="200" max="280" value="225" />
+          <span id="cardWidthVal">225px</span>
+        </div>
+      </div>
+
+      <div class="recruitment-sandbox-grid" id="liveCardGrid"></div>
+    </section>
+
+    <!-- 2. PASS 2 GALLERY -->
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>2. Pass 2 Candidates + Cleaned Pass 1 Winners (4 Units)</h2>
+          <div class="sub">
+            Compare <strong>Dark-Studio Keyed</strong> (zero white fringe), <strong>Chroma-Keyed</strong> (clean interior cutouts), and <strong>Hole-Cleaned + Reframed Pass 1 Winners</strong>.
+          </div>
+        </div>
+        <div class="control-group">
+          <button type="button" class="btn-chip active" data-filter="all">Show All Pass 2 (17)</button>
+          <button type="button" class="btn-chip" data-filter="dark-key">Dark-Studio Keyed</button>
+          <button type="button" class="btn-chip" data-filter="chroma-key">Chroma-Magenta Keyed</button>
+          <button type="button" class="btn-chip" data-filter="clean-p1">Cleaned Pass 1 Winners</button>
+        </div>
+      </div>
+
+      <div id="unitsGallery" style="display: flex; flex-direction: column; gap: 1.6rem;"></div>
+    </section>
+
+    <!-- 3. BANKED VAULT -->
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>3. Banked Artwork Vault (Saved for Higher-Tier / Intel / Support Units)</h2>
+          <div class="sub">
+            All white interior gaps cleaned! Includes <strong>Office Clerk V1</strong> (silver hair + blouse), <strong>Office Clerk V3</strong> (sci-fi ledger), <strong>Call Center Vet V1</strong> (classy comms), <strong>Call Center Vet V3</strong> (male Intel candidate), and the <strong>Reworked Non-Secretary V4 Outfit</strong>.
+          </div>
+        </div>
+      </div>
+      <div class="variants-grid" id="bankedVaultGrid"></div>
+    </section>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-inner">
+      <img id="lightboxImg" src="" alt="" />
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <script>
+    const IMG_BASE = window.__UNIT_PORTRAIT_IMG_BASE__ || "./images/";
+
+    const UNITS = [
+      {
+        id: "fresh_graduate",
+        name: "Fresh Graduate",
+        tier: 1,
+        costText: "$20 · Rep 1",
+        timeText: "15m",
+        proposedRole: "Cheapest crew. -15% payout on jobs unless crew size is above optimal. Low commitment cost; good filler unit.",
+        variants: [
+          {
+            file: "p2-fresh-grad-v1-clumsy-dark",
+            label: "P2-V1 · Clumsy New-Hire Rookie",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Entry-level rookie: off-the-rack shirt, crooked clip-on tie, backpack strap & dropping sticky note; cute goofy day-1 energy."
+          },
+          {
+            file: "p2-fresh-grad-v2-sleepy-chroma",
+            label: "P2-V2 · Sleepy Hoodie Intern",
+            keyType: "chroma-key",
+            keyBadge: "Chroma Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Zip-up college hoodie under cheap blazer, tangled lanyard, clutching giant iced coffee with two hands & sticky note on sleeve."
+          },
+          {
+            file: "p2-fresh-grad-v3-tryhard-dark",
+            label: "P2-V3 · Over-Prepared Day-1 Tryhard",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Twin braids, entry cardigan, three pens clipped to pocket + pen behind ear, hugging orientation manual with earnest salute."
+          },
+          {
+            file: "p2-fresh-grad-v4-coffee-runner-chroma",
+            label: "P2-V4 · Panicked Coffee Runner",
+            keyType: "chroma-key",
+            keyBadge: "Chroma Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Cheek bandage, loosened tie, carrying a 4-cup coffee tray for the bosses & mail envelopes tucked under his chin."
+          }
+        ]
+      },
+      {
+        id: "part_timer",
+        name: "Part-timer",
+        tier: 1,
+        costText: "$25 · Rep 2",
+        timeText: "15m",
+        proposedRole: "-10% contract duration on short jobs (below median duration). No bonus on long or awkward-hour jobs.",
+        variants: [
+          {
+            file: "p2-part-timer-v4-reframed",
+            label: "P1-V4 Cleaned + 3/4 Reframed (Your Favorite)",
+            keyType: "clean-p1",
+            keyBadge: "White Holes Removed + Reframed",
+            framingLabel: "3/4 Reframed",
+            desc: "Your favorite Pass 1 V4 carefree courier-jacket design with all interior white pockets stripped and reframed closer."
+          },
+          {
+            file: "p2-part-timer-v1-carefree-dark",
+            label: "P2-V1 · Carefree Sibling (Dark Key)",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Closer waist-up framing in V4's exact carefree style: charcoal-emerald jacket, dual shift badges, smartphone & cold brew."
+          },
+          {
+            file: "p2-part-timer-v2-female-carefree-dark",
+            label: "P2-V2 · Carefree Female Sibling (Dark Key)",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Wolf-cut with emerald inner highlights, open windbreaker, dual shift lanyards, earbuds & energy drink."
+          },
+          {
+            file: "p2-part-timer-v3-clockout-chroma",
+            label: "P2-V3 · Clocking-Out-at-5 (Chroma Key)",
+            keyType: "chroma-key",
+            keyBadge: "Chroma Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Single-ear headphone, streetwear work vest over hoodie, dispatch pouch slung over shoulder, checking watch with laid-back grin."
+          },
+          {
+            file: "part-timer-v4-full-satire",
+            label: "P1-V4 Full Crop (White Holes Cleaned)",
+            keyType: "clean-p1",
+            keyBadge: "White Holes Removed",
+            framingLabel: "Full Tight Crop",
+            desc: "Original full-crop framing of Pass 1 V4 with the trapped white gaps between arm/waist removed."
+          }
+        ]
+      },
+      {
+        id: "office_clerk",
+        name: "Office clerk",
+        tier: 2,
+        costText: "$50 · Rep 3",
+        timeText: "15m",
+        proposedRole: "Baseline professional farming unit: no tier-1 penalty, +5% payout vs average tier-1 farming crew.",
+        variants: [
+          {
+            file: "p2-office-clerk-v4-reframed",
+            label: "P1-V4 Cleaned + 3/4 Reframed (Your Favorite)",
+            keyType: "clean-p1",
+            keyBadge: "White Holes Removed + Reframed",
+            framingLabel: "3/4 Reframed",
+            desc: "Your favorite chill Pass 1 V4 Office Clerk, reframed to 1/2–3/4 body with interior white gaps stripped."
+          },
+          {
+            file: "p2-office-clerk-v1-chill-dark",
+            label: "P2-V1 · Chill Dossier Clerk (Dark Key)",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Fresh 1/2–3/4 render in V4's exact vibe: asymmetric bob, cropped blazer, color-coded folders & checking wristwatch."
+          },
+          {
+            file: "p2-office-clerk-v2-clipboard-chroma",
+            label: "P2-V2 · Desk & Mug Clerk (Chroma Key)",
+            keyType: "chroma-key",
+            keyBadge: "Chroma Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Caramel hair with clip, knit office vest over rolled-sleeve shirt, badge reel, clipboard & warm mug with wry everyday smile."
+          },
+          {
+            file: "office-clerk-v4-full-satire",
+            label: "P1-V4 Full Crop (White Holes Cleaned)",
+            keyType: "clean-p1",
+            keyBadge: "White Holes Removed",
+            framingLabel: "Full Tight Crop",
+            desc: "Original Pass 1 V4 full crop with cleaned alpha transparency."
+          }
+        ]
+      },
+      {
+        id: "call_center_veteran",
+        name: "Call Center Veteran",
+        tier: 2,
+        costText: "$70 · Rep 3",
+        timeText: "15m",
+        proposedRole: "+10% payout on service/client-facing contracts. Resistant to mood drain while on jobs.",
+        variants: [
+          {
+            file: "call-center-veteran-v2-bust-satire",
+            label: "P1-V2 Cleaned (Your Favorite)",
+            keyType: "clean-p1",
+            keyBadge: "White Holes Removed",
+            framingLabel: "Bust / Upper Torso",
+            desc: "Your favorite Pass 1 V2 operator (twin-toned hair, retro-futuristic headset, iced coffee) with all trapped white pockets removed."
+          },
+          {
+            file: "p2-call-center-v1-operator-dark",
+            label: "P2-V1 · 1/2–3/4 Operator Sibling (Dark Key)",
+            keyType: "dark-key",
+            keyBadge: "Dark-Studio Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Expanded to 1/2–3/4 waist/hip framing on a dark studio key: two-tone teal/dark hair, glowing headset, iced coffee & hand on hip."
+          },
+          {
+            file: "p2-call-center-v2-mute-chroma",
+            label: "P2-V2 · Mute-Button Veteran (Chroma Key)",
+            keyType: "chroma-key",
+            keyBadge: "Chroma Keyed",
+            framingLabel: "1/2–3/4 Body",
+            desc: "Lavender-ash wavy hair, cushioned dual headset, off-shoulder office cardigan & mug, tapping mute with unshakeable calm."
+          }
+        ]
+      }
+    ];
+
+    const BANKED_ITEMS = [
+      {
+        file: "office-clerk-v1-bust-pro",
+        title: "Banked #1 · Silver-Haired Glasses Executive Blouse",
+        tag: "From Office Clerk V1 · White Gap Between Neck & Hair Fixed!",
+        useFor: "Higher-Tier Support / Special / R&D Unit",
+        desc: "You loved her shirt design and cool vibe — we cleared the 18,000px white pocket trapped between her silver hair and neck."
+      },
+      {
+        file: "office-clerk-v3-threequarter-pro",
+        title: "Banked #2 · Holographic Ledger Analyst",
+        tag: "From Office Clerk V3 · Clean Alpha",
+        useFor: "Tier 2/3 Support or Intel Analyst",
+        desc: "Science/data-flavoured 3/4 portrait with structured charcoal vest and translucent holographic slate."
+      },
+      {
+        file: "call-center-veteran-v1-bust-pro",
+        title: "Banked #3 · Classy Comms Coordinator",
+        tag: "From Call Center Vet V1 · Clean Alpha",
+        useFor: "Higher-Tier Support / PR / Dispatch Unit",
+        desc: "Polished single-ear holographic comms blazer portrait — saved for a higher-tier corporate role."
+      },
+      {
+        file: "call-center-veteran-v3-threequarter-pro",
+        title: "Banked #4 · Acoustic Comms Specialist",
+        tag: "From Call Center Vet V3 · Clean Alpha",
+        useFor: "Intel / Scouting Category Unit",
+        desc: "High-collar acoustic jacket & wrist console — earmarked for the Intel unit category as you suggested."
+      },
+      {
+        file: "p2-banked-v4-outfit-rework-dark",
+        title: "Banked #5 · V4 High-Fashion Comms Outfit (New Character!)",
+        tag: "Pass 2 Rework · Dark-Studio Keyed · Zero Secretary Overlap",
+        useFor: "Higher-Tier Special / Support Unit",
+        desc: "Kept the tailored charcoal-emerald shoulder-pad comms outfit & holographic ticker from Vet V4, redesigned onto a platinum pixie-cut character so she never clashes with your Secretaries."
+      }
+    ];
+
+    const equippedIndexByUnit = {
+      fresh_graduate: 0,
+      part_timer: 0,
+      office_clerk: 0,
+      call_center_veteran: 0
+    };
+
+    let useStudioJpg = false;
+    let activeFilter = "all";
+
+    function imgUrl(fileBase) {
+      return `${IMG_BASE}${fileBase}.${useStudioJpg ? "jpg" : "png"}`;
+    }
+
+    function badgeClass(keyType) {
+      if (keyType === "dark-key") return "badge-dark-key";
+      if (keyType === "chroma-key") return "badge-chroma-key";
+      return "badge-clean-p1";
+    }
+
+    function renderLiveCards() {
+      const grid = document.getElementById("liveCardGrid");
+      grid.innerHTML = UNITS.map((unit) => {
+        const idx = equippedIndexByUnit[unit.id] || 0;
+        const v = unit.variants[idx] || unit.variants[0];
+        return `
+          <div class="recruit-card-demo">
+            <div class="recruit-thumb-box" title="${v.label}">
+              <img src="${imgUrl(v.file)}" alt="${unit.name}" />
+            </div>
+            <div class="recruit-card-right">
+              <div>
+                <div class="recruit-head-row">
+                  <span class="recruit-unit-name">${unit.name}</span>
+                  <span class="recruit-tier-tag">Tier ${unit.tier}</span>
+                </div>
+                <div class="recruit-cost-under">
+                  <span>${unit.costText}</span>
+                  <span class="time">· ${unit.timeText}</span>
+                </div>
+              </div>
+              <div class="recruit-action-row">
+                <label class="recruit-qty-mini">
+                  <span>Qty</span>
+                  <input type="number" value="1" min="1" max="5" readonly />
+                </label>
+                <button type="button" class="recruit-hire-btn">Queue order</button>
+              </div>
+              <p class="recruit-role-bottom" title="${unit.proposedRole}">
+                ${unit.proposedRole}
+              </p>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderGallery() {
+      const container = document.getElementById("unitsGallery");
+      container.innerHTML = UNITS.map((unit) => {
+        const filtered = unit.variants
+          .map((v, idx) => ({ ...v, idx }))
+          .filter((v) => activeFilter === "all" || v.keyType === activeFilter);
+
+        return `
+          <div class="unit-section">
+            <div class="unit-header-bar">
+              <h3>${unit.name} <span style="font-size:0.78rem;color:var(--muted);font-weight:500;">· Tier ${unit.tier} Farming · ${unit.costText}</span></h3>
+              <span style="font-size:0.76rem;color:var(--muted);">${unit.proposedRole}</span>
+            </div>
+            <div class="variants-grid">
+              ${filtered.map((v) => {
+                const equipped = equippedIndexByUnit[unit.id] === v.idx;
+                return `
+                  <article class="variant-card ${equipped ? "is-equipped" : ""}">
+                    <div class="variant-img-wrap" data-zoom="${imgUrl(v.file)}" data-caption="${unit.name} — ${v.label} (${v.keyBadge}, ${v.framingLabel})">
+                      <img src="${imgUrl(v.file)}" alt="${unit.name} ${v.label}" loading="lazy" />
+                      <div class="variant-badges">
+                        <span class="variant-badge ${badgeClass(v.keyType)}">${v.keyBadge}</span>
+                        <span class="variant-badge">${v.framingLabel}</span>
+                      </div>
+                    </div>
+                    <div class="variant-body">
+                      <div class="variant-title">
+                        <span>${v.label}</span>
+                        ${equipped ? '<span style="color:#84e6b8;font-size:0.7rem;flex-shrink:0;">● In Card</span>' : ""}
+                      </div>
+                      <p class="variant-desc">${v.desc}</p>
+                      <div class="variant-actions">
+                        <button type="button" class="${equipped ? "primary" : ""}" data-equip-unit="${unit.id}" data-equip-idx="${v.idx}">
+                          ${equipped ? "Equipped in Card Preview" : "Equip in Card Preview"}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderBankedVault() {
+      const grid = document.getElementById("bankedVaultGrid");
+      grid.innerHTML = BANKED_ITEMS.map((item) => `
+        <article class="variant-card">
+          <div class="variant-img-wrap" data-zoom="${imgUrl(item.file)}" data-caption="${item.title} — ${item.useFor}">
+            <img src="${imgUrl(item.file)}" alt="${item.title}" loading="lazy" />
+            <div class="variant-badges">
+              <span class="variant-badge badge-clean-p1">${item.useFor}</span>
+            </div>
+          </div>
+          <div class="variant-body">
+            <div class="variant-title"><span>${item.title}</span></div>
+            <div style="font-size:0.68rem;color:#84e6b8;font-weight:600;">${item.tag}</div>
+            <p class="variant-desc">${item.desc}</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    document.addEventListener("click", (e) => {
+      const bgBtn = e.target.closest("[data-bg]");
+      if (bgBtn) {
+        document.querySelectorAll("[data-bg]").forEach((b) => b.classList.remove("active"));
+        bgBtn.classList.add("active");
+        const mode = bgBtn.getAttribute("data-bg");
+        document.body.className = mode;
+        useStudioJpg = mode === "bg-mode-studio";
+        renderLiveCards();
+        renderGallery();
+        renderBankedVault();
+        return;
+      }
+
+      const filterBtn = e.target.closest("[data-filter]");
+      if (filterBtn) {
+        document.querySelectorAll("[data-filter]").forEach((b) => b.classList.remove("active"));
+        filterBtn.classList.add("active");
+        activeFilter = filterBtn.getAttribute("data-filter");
+        renderGallery();
+        return;
+      }
+
+      const equipBtn = e.target.closest("[data-equip-unit]");
+      if (equipBtn) {
+        const unitId = equipBtn.getAttribute("data-equip-unit");
+        const idx = Number(equipBtn.getAttribute("data-equip-idx"));
+        equippedIndexByUnit[unitId] = idx;
+        renderLiveCards();
+        renderGallery();
+        return;
+      }
+
+      const zoomWrap = e.target.closest("[data-zoom]");
+      if (zoomWrap) {
+        const lb = document.getElementById("lightbox");
+        document.getElementById("lightboxImg").src = zoomWrap.getAttribute("data-zoom");
+        document.getElementById("lightboxCaption").textContent = zoomWrap.getAttribute("data-caption");
+        lb.classList.add("open");
+        return;
+      }
+
+      if (e.target.closest("#lightbox")) {
+        document.getElementById("lightbox").classList.remove("open");
+      }
+    });
+
+    document.getElementById("cardWidthSlider").addEventListener("input", (e) => {
+      const val = e.target.value;
+      document.documentElement.style.setProperty("--card-min-w", `${val}px`);
+      document.getElementById("cardWidthVal").textContent = `${val}px`;
+    });
+
+    renderLiveCards();
+    renderGallery();
+    renderBankedVault();
+  </script>
+</body>
+</html>

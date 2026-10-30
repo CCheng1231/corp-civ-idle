@@ -8,10 +8,15 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { GameAction, GameState, MainView } from "../game/types";
-
-const HOME_HUB_VIEWS: MainView[] = ["operations", "recruitment", "research"];
+import {
+  isHomeHubActiveView,
+  isHomeHubMainView,
+  isSecretaryHubActiveView,
+} from "../game/hubNavigation";
 
 const SECRETARY_HUB_VIEWS: MainView[] = ["secretary", "office"];
+
+const HOME_HUB_DOUBLE_TAP_MS = 320;
 
 const PRIMARY_SHORTCUTS: { view: MainView; label: string; short: string }[] = [
   { view: "world", label: "World map", short: "World" },
@@ -36,7 +41,7 @@ function clamp(n: number, min: number, max: number) {
 }
 
 function isHomeHubView(view: MainView): boolean {
-  return HOME_HUB_VIEWS.includes(view);
+  return isHomeHubMainView(view);
 }
 
 function isSecretaryHubView(view: MainView): boolean {
@@ -96,6 +101,10 @@ export function ShortcutSidebar({
     dragging: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
+  const homeClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const secretaryClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const navRef = useRef<HTMLElement>(null);
 
   function navigate(view: MainView) {
@@ -106,33 +115,36 @@ export function ShortcutSidebar({
     event.stopPropagation();
     if (suppressClickRef.current) return;
 
-    if (isHomeHubView(state.view)) {
-      dispatch({ type: "SET_VIEW", view: "overview" });
+    if (homeClickTimerRef.current !== null) {
+      clearTimeout(homeClickTimerRef.current);
+      homeClickTimerRef.current = null;
+      dispatch({ type: "GO_HOME_LANDING" });
       return;
     }
 
-    if (state.view === "overview") {
-      if (state.homePanel !== "landing") {
-        dispatch({ type: "SET_HOME_PANEL", panel: "landing" });
-      }
-      return;
-    }
-
-    dispatch({ type: "SET_VIEW", view: "overview" });
+    homeClickTimerRef.current = setTimeout(() => {
+      homeClickTimerRef.current = null;
+      if (isHomeHubActiveView(state.view)) return;
+      dispatch({ type: "RESTORE_HOME_HUB" });
+    }, HOME_HUB_DOUBLE_TAP_MS);
   }
 
   function handleSecretaryClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     if (suppressClickRef.current) return;
 
-    if (state.view === "secretary") {
-      if (state.secretaryPanel !== "landing") {
-        dispatch({ type: "SET_SECRETARY_PANEL", panel: "landing" });
-      }
+    if (secretaryClickTimerRef.current !== null) {
+      clearTimeout(secretaryClickTimerRef.current);
+      secretaryClickTimerRef.current = null;
+      dispatch({ type: "GO_SECRETARY_LANDING" });
       return;
     }
 
-    dispatch({ type: "SET_VIEW", view: "secretary" });
+    secretaryClickTimerRef.current = setTimeout(() => {
+      secretaryClickTimerRef.current = null;
+      if (isSecretaryHubActiveView(state.view)) return;
+      dispatch({ type: "RESTORE_SECRETARY_HUB" });
+    }, HOME_HUB_DOUBLE_TAP_MS);
   }
 
   useEffect(() => {

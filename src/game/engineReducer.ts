@@ -28,6 +28,13 @@ import {
   recruitmentOrderBuildTimeHours,
   clampUiScale
 } from "./constants";
+import {
+  isHomeHubActiveView,
+  isHomeHubMainView,
+  isSecretaryHubActiveView,
+  snapshotHomeHubResume,
+  snapshotSecretaryHubResume,
+} from "./hubNavigation";
 import { resolveOfficeLocation } from "./officeSelection";
 import { cancelRefundFromSpent } from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
@@ -82,8 +89,9 @@ import {
 import type {
   GameAction,
   GameState,
+  HomeHubResume,
   ResourceCost,
-  EstablishedBranchSite
+  EstablishedBranchSite,
 } from "./types";
 import {
   appendBranchOffice,
@@ -186,21 +194,51 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           ...state,
           view: "secretary",
           secretaryPanel: "log",
+          secretaryHubResume: "log",
           ...(action.logbookFilter !== undefined
             ? { logbookFilterId: action.logbookFilter }
             : {}),
           logbookHighlightEntryId: action.logbookHighlightEntryId ?? null,
           recruitFocusUnitId: null,
-          jobFocusPostingId: null
-};
+          jobFocusPostingId: null,
+        };
       }
+
+      const wasHome = isHomeHubActiveView(state.view);
+      const willBeHome =
+        action.view === "overview" || isHomeHubMainView(action.view);
+      const homeHubResume: HomeHubResume =
+        wasHome && !willBeHome
+          ? snapshotHomeHubResume(state)
+          : isHomeHubMainView(action.view)
+            ? action.view
+            : action.view === "overview"
+              ? state.homePanel === "overview"
+                ? "overview"
+                : "landing"
+              : state.homeHubResume;
+
+      const wasSecretary = isSecretaryHubActiveView(state.view);
+      const willBeSecretary =
+        action.view === "secretary" || action.view === "office";
+      const secretaryHubResume =
+        wasSecretary && !willBeSecretary
+          ? snapshotSecretaryHubResume(state)
+          : action.view === "office"
+            ? "job"
+            : action.view === "secretary"
+              ? state.secretaryPanel === "roaster"
+                ? "roaster"
+                : state.secretaryPanel === "log"
+                  ? "log"
+                  : "landing"
+              : state.secretaryHubResume;
 
       return {
         ...state,
         view: action.view,
-        homePanel: action.view === "overview" ? "landing" : state.homePanel,
-        secretaryPanel:
-          action.view === "secretary" ? "landing" : state.secretaryPanel,
+        homeHubResume,
+        secretaryHubResume,
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
@@ -212,8 +250,12 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         jobFocusPostingId:
           action.view === "office"
             ? (action.jobFocusPostingId ?? null)
-            : null
-};
+            : null,
+        structureFocusStructureId:
+          action.view === "operations"
+            ? (action.structureFocusStructureId ?? null)
+            : null,
+      };
     }
 
     case "CLEAR_JOB_FOCUS":
@@ -270,20 +312,91 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         ...state,
         view: "secretary",
         secretaryPanel: action.panel,
+        secretaryHubResume:
+          action.panel === "roaster"
+            ? "roaster"
+            : action.panel === "log"
+              ? "log"
+              : "landing",
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
         ...(action.logbookHighlightEntryId !== undefined
           ? { logbookHighlightEntryId: action.logbookHighlightEntryId }
-          : {})
-};
+          : {}),
+      };
 
     case "SET_HOME_PANEL":
       return {
         ...state,
         view: "overview",
-        homePanel: action.panel
-};
+        homePanel: action.panel,
+        homeHubResume: action.panel === "overview" ? "overview" : "landing",
+      };
+
+    case "GO_HOME_LANDING":
+      return {
+        ...state,
+        view: "overview",
+        homePanel: "landing",
+        homeHubResume: "landing",
+      };
+
+    case "RESTORE_HOME_HUB": {
+      const target = state.homeHubResume;
+      if (target === "landing") {
+        return {
+          ...state,
+          view: "overview",
+          homePanel: "landing",
+        };
+      }
+      if (target === "overview") {
+        return {
+          ...state,
+          view: "overview",
+          homePanel: "overview",
+        };
+      }
+      return {
+        ...state,
+        view: target,
+      };
+    }
+
+    case "GO_SECRETARY_LANDING":
+      return {
+        ...state,
+        view: "secretary",
+        secretaryPanel: "landing",
+        secretaryHubResume: "landing",
+      };
+
+    case "RESTORE_SECRETARY_HUB": {
+      const target = state.secretaryHubResume;
+      if (target === "job") {
+        return { ...state, view: "office" };
+      }
+      if (target === "roaster") {
+        return {
+          ...state,
+          view: "secretary",
+          secretaryPanel: "roaster",
+        };
+      }
+      if (target === "log") {
+        return {
+          ...state,
+          view: "secretary",
+          secretaryPanel: "log",
+        };
+      }
+      return {
+        ...state,
+        view: "secretary",
+        secretaryPanel: "landing",
+      };
+    }
 
     case "DISMISS_OFFLINE_SUMMARY":
       if (!state.pendingOfflineSummary) return state;

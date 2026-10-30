@@ -112,6 +112,7 @@ import {
 import { MapLandmarkArtLayer } from "./MapLandmarkArtLayer";
 import { MapBakedLandmarkOverlayLayer } from "./MapBakedLandmarkOverlayLayer";
 import { resolvePlayerBuildingLandmarkInstances } from "../game/mapPlayerBuildingLandmarks";
+import { playerWorldLandmarkArtVisible } from "../game/mapLandmarkPolicy";
 import { WorldMapZ1ProceduralOverlay } from "./WorldMapZ1ProceduralOverlay";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
 import {
@@ -408,18 +409,22 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     [isDev, state.settings],
   );
 
-  const mapOverlayLandmarkInstances = useMemo(
-    () => [
+  const mapOverlayLandmarkInstances = useMemo(() => {
+    if (isDev || !playerWorldLandmarkArtVisible(state.settings)) {
+      return [];
+    }
+    return [
       ...playerLandmarkArtInstances,
       ...officeTowerLandmarkInstances,
       ...playerBuildingLandmarkInstances,
-    ],
-    [
-      playerLandmarkArtInstances,
-      officeTowerLandmarkInstances,
-      playerBuildingLandmarkInstances,
-    ],
-  );
+    ];
+  }, [
+    isDev,
+    state.settings,
+    playerLandmarkArtInstances,
+    officeTowerLandmarkInstances,
+    playerBuildingLandmarkInstances,
+  ]);
   const inspectedLandmarkInstance = useMemo(() => {
     if (!inspectedCoord || isDev) return null;
     return playerLandmarkArtInstanceAtCoord(
@@ -1043,6 +1048,10 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     }
     if (shouldInspect && hitCoord) {
       inspectHex(hitCoord);
+      return;
+    }
+    if (!drag.moved && !hitCoord && inspectedCoord !== null) {
+      closeDrawer();
     }
   }
 
@@ -1099,6 +1108,8 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   }, [mapVisibleJobPostings, state.settings]);
 
   const mapJobHighlight = !isDev && mapVisibleJobPostings.length > 0;
+  const playerLandmarkIconsVisible =
+    !isDev && playerWorldLandmarkArtVisible(state.settings);
 
   const selectedJobSiteCoordKey = useMemo(() => {
     if (!selectedMapPostingId) return null;
@@ -1407,11 +1418,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 const landmarkHexSite = playerLandmarkHexSites.get(axialKey(coord));
                 const hasLandmarkArtHex = !isDev && landmarkHexSite != null;
                 const displayVariant =
-                  !isDev &&
+                  playerLandmarkIconsVisible &&
                   isAuthoredHqHex &&
                   (variant === "hq" || variant === "branch")
                     ? "default"
-                    : !isDev && isAuthoredOfficeTowerHex && variant === "tower"
+                    : playerLandmarkIconsVisible &&
+                        isAuthoredOfficeTowerHex &&
+                        variant === "tower"
                       ? "default"
                       : hasLandmarkArtHex
                         ? "default"

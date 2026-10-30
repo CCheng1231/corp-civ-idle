@@ -1,12 +1,13 @@
 const OFFICE_STORAGE_KEY = "corp-civ-idle-office-category-open";
 const RECRUIT_STORAGE_KEY = "corp-civ-idle-recruit-category-open";
 const RESEARCH_STORAGE_KEY = "corp-civ-idle-research-category-open";
+const ROASTER_STORAGE_KEY = "corp-civ-idle-roaster-section-open";
 
 type OpenMap = Record<string, Record<string, boolean>>;
 
 function readAll(storageKey: string): OpenMap {
   try {
-    const raw = sessionStorage.getItem(storageKey);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") return {};
@@ -34,7 +35,7 @@ function setStoredOpen(
   const all = readAll(storageKey);
   all[scopeId] = { ...all[scopeId], [category]: open };
   try {
-    sessionStorage.setItem(storageKey, JSON.stringify(all));
+    localStorage.setItem(storageKey, JSON.stringify(all));
   } catch {
     /* ignore quota / private mode */
   }
@@ -84,4 +85,17 @@ export function setResearchCategoryOpen(
   open: boolean,
 ): void {
   setStoredOpen(RESEARCH_STORAGE_KEY, officeId, category, open);
+}
+
+export function getRoasterSectionOpen(
+  section: "secretaries" | "unit_skins",
+): boolean | undefined {
+  return getStoredOpen(ROASTER_STORAGE_KEY, "firm", section);
+}
+
+export function setRoasterSectionOpen(
+  section: "secretaries" | "unit_skins",
+  open: boolean,
+): void {
+  setStoredOpen(ROASTER_STORAGE_KEY, "firm", section, open);
 }

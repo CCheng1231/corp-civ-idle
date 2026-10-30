@@ -15,7 +15,7 @@ import {
   resolveOfficeLocation,
 } from "../game/officeSelection";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
-import type { GameAction, GameState, OfficeLocationId } from "../game/types";
+import type { GameAction, GameState, OfficeLocationId, StructureId } from "../game/types";
 import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
@@ -75,6 +75,18 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
     </>
   );
 
+  function openStructureFromOverview(
+    siteId: OfficeLocationId,
+    structureId: StructureId,
+  ) {
+    dispatch({ type: "SELECT_OFFICE", officeId: siteId });
+    dispatch({
+      type: "SET_VIEW",
+      view: "operations",
+      structureFocusStructureId: structureId,
+    });
+  }
+
   function renderStructureLevels(siteId: OfficeLocationId, siteLabel: string) {
     const structures = state.structureLevelsByLocation[siteId];
     const built = STRUCTURES.filter((def) => structures[def.id] > 0);
@@ -90,7 +102,12 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
         {built.map((def) => {
           const level = structures[def.id];
           return (
-            <li key={`${siteId}-${def.id}`}>
+            <li
+              key={`${siteId}-${def.id}`}
+              className="overview-structure-row"
+              title="Double-click to open Structure"
+              onDoubleClick={() => openStructureFromOverview(siteId, def.id)}
+            >
               <span>
                 {showAll ? `${siteLabel} · ` : ""}
                 {def.name}

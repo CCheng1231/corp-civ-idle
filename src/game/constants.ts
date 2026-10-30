@@ -685,7 +685,9 @@ export function createInitialState(now = Date.now()): GameState {
     phase: 1,
     view: "operations",
     homePanel: "landing",
+    homeHubResume: "operations",
     secretaryPanel: "landing",
+    secretaryHubResume: "landing",
     chiefOfStaffId: DEFAULT_CHIEF_OF_STAFF_ID,
     playerNotes: "",
     activityLog: [],
@@ -697,6 +699,7 @@ export function createInitialState(now = Date.now()): GameState {
     pendingOfflineSummary: null,
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,
+    structureFocusStructureId: null,
     logbookHighlightEntryId: null,
     jobFocusPostingId: null,
     settings: {

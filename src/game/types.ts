@@ -457,8 +457,12 @@ export interface GameState {
   view: MainView;
   /** Home hub: COS landing vs HQ overview dashboard. */
   homePanel: HomePanel;
+  /** Last Home hub destination — restored on bottom-nav Home tap. */
+  homeHubResume: HomeHubResume;
   /** Secretary hub: Chief of Staff landing vs full roaster list. */
   secretaryPanel: SecretaryPanel;
+  /** Last Secretary hub destination — restored on bottom-nav Secretary tap. */
+  secretaryHubResume: SecretaryHubResume;
   /** Active Chief of Staff (Secretary roster). */
   chiefOfStaffId: SecretaryId;
   /** Free-form notes saved with the game. */
@@ -480,6 +484,8 @@ export interface GameState {
   pendingCompletionAlerts?: CompletionAlert[];
   /** Scroll/highlight target on Recruitment; stripped from saves. */
   recruitFocusUnitId?: UnitId | null;
+  /** Scroll/highlight target on Structure; stripped from saves. */
+  structureFocusStructureId?: StructureId | null;
   /** Scroll/highlight target on Notes & logbook; stripped from saves. */
   logbookHighlightEntryId?: string | null;
   /** Scroll/highlight target on Secretary job board; stripped from saves. */
@@ -548,6 +554,8 @@ export interface GameSettings {
   >;
   /** Player map: show canon world landmark art (Gov, hubs). Per-account only — does not affect other players. Default on. */
   mapShowWorldLandmarkArt?: boolean;
+  /** Per-unit portrait skin id (Secretary -> Roaster -> Unit skins). */
+  unitPortraitSkins?: Partial<Record<UnitId, string>>;
   /** Z1 pass-1 raster: locked v5 (ship) or engine-aligned v6 draft (try). */
   mapZ1BakeVariant?: "v5" | "v6-draft";
   /** Dev: overlay pass-2 align guide on Z1 bake. */
@@ -617,6 +625,15 @@ export type SecretaryId =
 export type SecretaryPanel = "landing" | "roaster" | "log";
 
 export type HomePanel = "landing" | "overview";
+
+export type HomeHubResume =
+  | "landing"
+  | "overview"
+  | "operations"
+  | "recruitment"
+  | "research";
+
+export type SecretaryHubResume = "landing" | "roaster" | "job" | "log";
 
 export type LogCategory =
   | "structure_upgrade"
@@ -694,6 +711,7 @@ export type GameAction =
       view: MainView;
       logbookFilter?: string;
       recruitFocusUnitId?: UnitId | null;
+      structureFocusStructureId?: StructureId | null;
       logbookHighlightEntryId?: string | null;
       jobFocusPostingId?: string | null;
     }
@@ -706,6 +724,10 @@ export type GameAction =
   | { type: "SELECT_CHIEF_OF_STAFF"; secretaryId: SecretaryId }
   | { type: "SET_SECRETARY_PANEL"; panel: SecretaryPanel; logbookFilter?: string; logbookHighlightEntryId?: string | null }
   | { type: "SET_HOME_PANEL"; panel: HomePanel }
+  | { type: "RESTORE_HOME_HUB" }
+  | { type: "GO_HOME_LANDING" }
+  | { type: "RESTORE_SECRETARY_HUB" }
+  | { type: "GO_SECRETARY_LANDING" }
   | { type: "DISMISS_OFFLINE_SUMMARY" }
   | { type: "DISMISS_COMPLETION_ALERT"; alertId: string }
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }

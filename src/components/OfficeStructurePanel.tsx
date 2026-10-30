@@ -7,6 +7,7 @@ import {
   canBuildStructure,
   canSellStructureLevel,
   formatNumber,
+  getStructureDefinition,
   isStructureCompletedAtSite,
   isStructureQueueFull,
   isStructureQueuedAt,
@@ -249,6 +250,35 @@ export function OfficeStructurePanel({
     }
     return seeded;
   });
+  const focusStructureId = state.structureFocusStructureId ?? null;
+
+  useEffect(() => {
+    if (!focusStructureId) return;
+    let structure;
+    try {
+      structure = getStructureDefinition(focusStructureId);
+    } catch {
+      return;
+    }
+    setCategoryOpen((prev) => ({ ...prev, [structure.category]: true }));
+    setOfficeCategoryOpen(officeId, structure.category, true);
+    const scrollId = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`structure-card-${focusStructureId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    const clearId = window.setTimeout(() => {
+      dispatch({
+        type: "SET_VIEW",
+        view: "operations",
+        structureFocusStructureId: null,
+      });
+    }, 2500);
+    return () => {
+      window.cancelAnimationFrame(scrollId);
+      window.clearTimeout(clearId);
+    };
+  }, [focusStructureId, officeId, dispatch]);
 
   useEffect(() => {
     const seeded: Partial<Record<StructureCategory, boolean>> = {};
@@ -309,6 +339,7 @@ export function OfficeStructurePanel({
       return (
         <li
           key={structure.id}
+          id={`structure-card-${structure.id}`}
           className="structure-card structure-card-upgrade research-card-completed progression-card-maxed"
         >
           <ProgressionMaxedCard
@@ -366,6 +397,7 @@ export function OfficeStructurePanel({
     return (
       <li
         key={structure.id}
+        id={`structure-card-${structure.id}`}
         className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
       >
         <div className="structure-head">
@@ -520,19 +552,14 @@ export function OfficeStructurePanel({
         const maxedCount = items.filter((structure) =>
           isStructureCompletedAtSite(state, officeId, structure),
         ).length;
-        const fallbackOpen = items.some(
-          (structure) =>
-            !isStructureCompletedAtSite(state, officeId, structure) ||
-            isStructureQueuedAt(state, officeId, structure.id),
-        );
         const remembered = categoryOpen[category];
-        const open = remembered ?? fallbackOpen;
+        const open = remembered ?? false;
 
         return (
           <ProgressionCategorySection
             key={category}
             title={STRUCTURE_CATEGORY_LABELS[category]}
-            defaultOpen={fallbackOpen}
+            defaultOpen={false}
             open={open}
             onOpenChange={(next) => {
               if (next === open) return;

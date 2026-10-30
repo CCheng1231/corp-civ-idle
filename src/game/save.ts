@@ -52,7 +52,9 @@ import type {
   MainView,
   ResearchId,
   HomePanel,
+  HomeHubResume,
   SecretaryPanel,
+  SecretaryHubResume,
   UnitId,
   UnitRoster,
   ContractorCategoryId,
@@ -165,6 +167,30 @@ function normalizeHomePanel(panel: unknown): HomePanel {
   return panel === "overview" ? "overview" : "landing";
 }
 
+const HOME_HUB_RESUME_IDS = new Set([
+  "landing",
+  "overview",
+  "operations",
+  "recruitment",
+  "research",
+]);
+
+function normalizeHomeHubResume(resume: unknown): HomeHubResume {
+  return typeof resume === "string" &&
+    HOME_HUB_RESUME_IDS.has(resume)
+    ? (resume as HomeHubResume)
+    : "landing";
+}
+
+const SECRETARY_HUB_RESUME_IDS = new Set(["landing", "roaster", "job", "log"]);
+
+function normalizeSecretaryHubResume(resume: unknown): SecretaryHubResume {
+  return typeof resume === "string" &&
+    SECRETARY_HUB_RESUME_IDS.has(resume)
+    ? (resume as SecretaryHubResume)
+    : "landing";
+}
+
 function normalizeViewportPreview(
   value: unknown,
   fallback: GameState["settings"]["viewportPreview"] = "auto",
@@ -197,7 +223,9 @@ function hydrateOnlineNavigationFromCache(
       ...state,
       view: normalizeView(cached.view),
       homePanel: normalizeHomePanel(cached.homePanel),
+      homeHubResume: normalizeHomeHubResume(cached.homeHubResume),
       secretaryPanel: normalizeSecretaryPanel(cached.secretaryPanel),
+      secretaryHubResume: normalizeSecretaryHubResume(cached.secretaryHubResume),
       settings: {
         ...state.settings,
         viewportPreview: normalizeViewportPreview(
@@ -755,6 +783,11 @@ function normalizeSave(
       ),
       mapShowWorldLandmarkArt:
         parsed.settings?.mapShowWorldLandmarkArt === false ? false : undefined,
+      unitPortraitSkins:
+        parsed.settings?.unitPortraitSkins &&
+        typeof parsed.settings.unitPortraitSkins === "object"
+          ? (parsed.settings.unitPortraitSkins as Partial<Record<UnitId, string>>)
+          : undefined,
       mapZ1BakeVariant:
         parsed.settings?.mapZ1BakeVariant === "v6-draft"
           ? "v6-draft"
@@ -808,6 +841,8 @@ function normalizeSave(
         ? "log"
         : normalizeSecretaryPanel(parsed.secretaryPanel),
     homePanel: normalizeHomePanel(parsed.homePanel),
+    homeHubResume: normalizeHomeHubResume(parsed.homeHubResume),
+    secretaryHubResume: normalizeSecretaryHubResume(parsed.secretaryHubResume),
     logbookFilterId:
       typeof parsed.logbookFilterId === "string" ? parsed.logbookFilterId : "all",
     lastTickAt:
@@ -1137,6 +1172,7 @@ export function saveGameState(
     pendingOfflineSummary: _welcome,
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
+    structureFocusStructureId: _structureFocus,
     logbookHighlightEntryId: _logHighlight,
     jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
