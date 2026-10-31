@@ -7,6 +7,12 @@ import {
 
 interface ProgressionDetailDialogProps extends ProgressionDetailModel {
   onClose: () => void;
+  secondaryAction?: {
+    label: string;
+    disabled?: boolean;
+    title?: string;
+    onClick: () => void;
+  };
 }
 
 function TreeRow({ row }: { row: ProgressionUpgradeTreeRow }) {
@@ -34,6 +40,7 @@ export function ProgressionDetailDialog({
   requirement,
   rows,
   onClose,
+  secondaryAction,
 }: ProgressionDetailDialogProps) {
   const inProgress = projectedLevel > currentLevel;
   const levelMax = maxLevel > 1 ? ` / max ${maxLevel}` : "";
@@ -108,6 +115,17 @@ export function ProgressionDetailDialog({
         </section>
 
         <footer className="progression-detail-actions">
+          {secondaryAction ? (
+            <button
+              type="button"
+              className="btn btn-muted"
+              disabled={secondaryAction.disabled}
+              title={secondaryAction.title}
+              onClick={secondaryAction.onClick}
+            >
+              {secondaryAction.label}
+            </button>
+          ) : null}
           <button type="button" className="btn" onClick={onClose}>
             Close
           </button>

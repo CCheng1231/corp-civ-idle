@@ -78,6 +78,11 @@ import momV2 from "../assets/reference/unit-portraits/support/support-momdad-v2-
 import momV3 from "../assets/reference/unit-portraits/support/support-momdad-v3-cardigan-chroma.png";
 import momV4 from "../assets/reference/unit-portraits/support/support-momdad-v4-dad-chroma.png";
 
+import bmV1 from "../assets/reference/unit-portraits/special/special-branch-manager-v1-keys-chroma.png";
+import bmV2 from "../assets/reference/unit-portraits/special/special-branch-manager-v2-map-chroma.png";
+import bmV5 from "../assets/reference/unit-portraits/special/special-branch-manager-v5-ribbon-chroma.png";
+import bmV7 from "../assets/reference/unit-portraits/special/special-branch-manager-v7-model-chroma.png";
+
 export interface UnitPortraitSkinOption {
   id: string;
   label: string;
@@ -182,6 +187,12 @@ export const UNIT_PORTRAIT_SKINS: Partial<
     { id: "p1-v3", label: "P1-V3 · Blanket", src: momV3 },
     { id: "p1-v4", label: "P1-V4 · Tea & Kit", src: momV4 },
   ],
+  branch_manager: [
+    { id: "p2-v1", label: "P2-V1 · Keys & Tube", src: bmV1 },
+    { id: "p2-v2", label: "P2-V2 · Region Map", src: bmV2 },
+    { id: "p2-v5", label: "P2-V5 · Ribbon Cut", src: bmV5 },
+    { id: "p2-v7", label: "P2-V7 · Trophy Model", src: bmV7 },
+  ],
 };
 
 /** Default approved skin id per unit (Chris Oct 29, 2026). */
@@ -202,6 +213,7 @@ export const DEFAULT_UNIT_PORTRAIT_SKIN_ID: Partial<Record<UnitId, string>> = {
   bike_courier: "p1-v1",
   junior_team_lead: "p1-v1",
   office_mom_dad: "p1-v1",
+  branch_manager: "p2-v1",
 };
 
 export function selectedUnitPortraitSkinId(

@@ -32,6 +32,13 @@ Task: [specific tab or change]
 - **Future cosmetics** — world landmarks stay shared; player skins (e.g. own HQ/office) affect **only that player's view** of their assets, not what others see on the map.
 - **Agent habit:** if unsure canon vs player-owned or shared vs private visibility, **ask Chris** before wiring coords to `GameState`.
 
+**Recent state (Oct 30, 2026 — Build + Research category art):**
+
+- **Build tab:** Pass 2 wired — Essentials v4, Departments v4, Power & research v4, Recruitment structures v1 (`structure*Art.ts`, `OfficeStructurePanel`). Review: `docs/structure-category-review/`.
+- **Research tab:** Pass 2 wired — Resources v2, Payouts v4, Discover v1, Operations v1 (`research*Art.ts`, `ResearchView`). Review: `docs/research-category-review/`.
+- **Category banners:** Structure / Recruit / Research summary strips **9.5×2.82rem** (`06-job-board.css`).
+- **Next (Chris):** Recruit tab images — contractor/unit card art pass (structure recruitment category already wired; role roster cards TBD).
+
 **Recent state (Oct 28, 2026 — map filter + landmark pipeline):**
 
 - **Multi-hex (dormant):** enable sites in `mapLandmarkCanonSites.ts` (`canonMultiHexLandmarkProviders`); helpers `landmarkArtInstanceMultiHex`, `playerLandmarkArtInstanceAtCoord`.

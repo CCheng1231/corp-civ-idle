@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Essentials Pass 1 (E isometric)</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Essentials — Pass 1 (not wired)</h1>
+      <p>
+        Tune <strong>Zoom / Focal X / Focal Y</strong> on each mock strip (saved in this browser). Copy JSON and paste in chat — we map
+        <code>panZoomFactor</code> + <code>focalYPercent</code> into the game banner; horizontal bias may need in-game pan until we add default X.
+        <a href="./index.html">← Hub</a> · <a href="./essentials.html">Pass 0 archived</a>
+      </p>
+    </header>
+
+    <div class="export-crops-bar">
+      <strong>Crop settings export</strong>
+      <p class="genre-meta" style="margin:0.35rem 0">
+        Tune banner strip and Build card mocks (card strip = office desk standard 5.4×8.5rem).
+      </p>
+      <button type="button" id="copy-crops-all">Copy all crop JSON</button>
+      <button type="button" id="copy-crops-banner">Copy banner only</button>
+      <pre id="crop-json" aria-live="polite"></pre>
+    </div>
+
+    <section class="genre-block">
+      <h2>Category banner — choose 1 of 3</h2>
+      <p class="genre-meta">16:9 masters · header strip mock ≈ in-game Essentials section.</p>
+      <div class="grid" id="banners"></div>
+    </section>
+
+    <div id="structures"></div>
+  </div>
+  <script src="./essentials-pass1-data.js"></script>
+  <script src="./essentials-wire-defaults.js"></script>
+  <script src="./essentials-crop-tuner.js"></script>
+  <script>
+    const IMG_B = "./images/essentials/pass1/banners/";
+    const IMG_S = "./images/essentials/pass1/structures/";
+    const banners = PASS1_BANNERS;
+    const structures = PASS1_STRUCTURES;
+    const bannerCropIds = [];
+
+    function stripMock(file, base) {
+      const cropId = "banner:" + file;
+      bannerCropIds.push(cropId);
+      return `
+        <div class="strip-label">Header mock (tune below)</div>
+        <div class="header-row-mock">
+          <span class="title">Essentials</span>
+          <div class="header-strip crop-tuner-wrap" data-crop-id="${cropId}">
+            <img class="crop-tuner-target" src="${base}${file}" alt="" />
+          </div>
+        </div>`;
+    }
+
+    function cardPortraitMock(file) {
+      const cropId = "structure:" + file;
+      return `
+        <div class="strip-label">Build card mock (optional tune)</div>
+        <div class="structure-card-mock">
+          <div class="structure-card-mock-portrait crop-tuner-wrap" data-crop-id="${cropId}">
+            <img class="crop-tuner-target" src="${IMG_S}${file}" alt="" />
+          </div>
+          <div class="structure-card-mock-body">
+            <strong>Structure name</strong>
+            <span class="muted">Lv 1 → 2 · preview line</span>
+          </div>
+        </div>`;
+    }
+
+    document.getElementById("banners").innerHTML = banners
+      .map(
+        (b) => `
+      <article class="card">
+        <img class="full" src="${IMG_B}${b.file}" alt="${b.title}" loading="lazy" />
+        <div class="card-body">
+          <h3>${b.title}</h3>
+          <p>${b.note}</p>
+          <span class="pill">${b.file}</span>
+          ${stripMock(b.file, IMG_B)}
+        </div>
+      </article>`
+      )
+      .join("");
+
+    const structRoot = document.getElementById("structures");
+    for (const group of structures) {
+      const section = document.createElement("section");
+      section.className = "genre-block";
+      section.innerHTML = `
+        <h2>${group.name} <code>${group.id}</code></h2>
+        <p class="genre-meta">${group.hint}</p>
+        <div class="grid">
+          ${group.variants
+            .map(
+              (v) => `
+            <article class="card">
+              <img class="portrait" src="${IMG_S}${v.file}" alt="${v.title}" loading="lazy" />
+              <div class="card-body">
+                <h3>${v.title}</h3>
+                <p>${v.note}</p>
+                <span class="pill">${v.file}</span>
+                ${cardPortraitMock(v.file)}
+              </div>
+            </article>`
+            )
+            .join("")}
+        </div>`;
+      structRoot.appendChild(section);
+    }
+
+    document.querySelectorAll(".crop-tuner-wrap").forEach((wrap) => {
+      const cropId = wrap.getAttribute("data-crop-id");
+      const card = wrap.closest(".card-body");
+      initCropTuner(card || wrap.parentElement, cropId, ESSENTIALS_WIRE.getReviewCropDefaults(cropId));
+    });
+
+    function refreshCropJson() {
+      document.getElementById("crop-json").textContent = JSON.stringify(
+        exportReviewCrops(allReviewCropIds()),
+        null,
+        2,
+      );
+    }
+    document.addEventListener("review-crop-change", refreshCropJson);
+    refreshCropJson();
+
+    function flash(btn) {
+      const prev = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(() => { btn.textContent = prev; }, 1200);
+    }
+    document.getElementById("copy-crops-all").addEventListener("click", () => {
+      copyReviewCropsJson(allReviewCropIds()).then(() =>
+        flash(document.getElementById("copy-crops-all")),
+      );
+    });
+    document.getElementById("copy-crops-banner").addEventListener("click", () => {
+      copyReviewCropsJson(bannerCropIds).then(() =>
+        flash(document.getElementById("copy-crops-banner")),
+      );
+    });
+  </script>
+</body>
+</html>

@@ -49,6 +49,17 @@ Configured in `src/game/unitPortraitAssets.ts` (switchable in **Secretary → Ro
 
 Skins switchable in **Secretary → Roaster → Unit skins** (`src/game/unitPortraitAssets.ts`).
 
+### Special (Oct 30, 2026)
+
+| Unit (`UnitId`) | Default Skin ID | Asset File | Notes |
+|---|---|---|---|
+| `branch_manager` (T1) | `p2-v1` | `special/special-branch-manager-v1-keys-chroma.png` | Keys and blueprint tube |
+| | `p2-v2` | `special/special-branch-manager-v2-map-chroma.png` | Anime map + carry-on |
+| | `p2-v5` | `special/special-branch-manager-v5-ribbon-chroma.png` | Ribbon-cutting satire |
+| | `p2-v7` | `special/special-branch-manager-v7-model-chroma.png` | Office model trophy |
+
+Pass 1 V1 banked in review vault: `special-branch-manager-v1-keys-pass1-banked.png`. Variants V3/V4/V6/V8 not wired.
+
 ---
 
 ## Banked Designs for Future Units

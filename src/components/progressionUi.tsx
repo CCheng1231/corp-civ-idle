@@ -10,6 +10,8 @@ interface ProgressionCategorySectionProps {
   maxedCount: number;
   totalCount: number;
   banner?: ReactNode;
+  /** Collapsed: banner lives in the summary row; expanded: banner hidden (Recruit tab). */
+  bannerInSummary?: boolean;
   children: ReactNode;
 }
 
@@ -21,6 +23,7 @@ export function ProgressionCategorySection({
   maxedCount,
   totalCount,
   banner,
+  bannerInSummary = false,
   children,
 }: ProgressionCategorySectionProps) {
   const allMaxed = totalCount > 0 && maxedCount === totalCount;
@@ -38,17 +41,42 @@ export function ProgressionCategorySection({
 
   return (
     <details
-      className="progression-category-section research-type-section"
+      className={[
+        "progression-category-section research-type-section",
+        bannerInSummary ? "progression-category-section--banner-in-summary" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       open={resolvedOpen}
       onToggle={handleToggle}
     >
       <summary className="progression-category-summary research-type-heading">
-        {title}
-        {allMaxed ? (
-          <span className="progression-category-meta"> · {totalCount} maxed</span>
+        <span className="progression-category-summary-title">
+          {title}
+          {allMaxed ? (
+            <span className="progression-category-meta"> · {totalCount} maxed</span>
+          ) : null}
+        </span>
+        {bannerInSummary && banner ? (
+          <span
+            className="progression-category-summary-banner"
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+              }
+            }}
+          >
+            {banner}
+          </span>
         ) : null}
       </summary>
-      {banner}
+      {!bannerInSummary && banner}
       {children}
       <button
         type="button"

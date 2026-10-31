@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Build · Essentials art direction (Pass 0)</title>
+  <style>
+    :root {
+      --bg: #0f141b;
+      --panel: #171e27;
+      --border: rgba(147, 161, 181, 0.22);
+      --text: #e8eef7;
+      --muted: #93a1b5;
+      --accent: #7c9cff;
+      --strip-w: 9.5rem;
+      --strip-h: 2.35rem;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 1.25rem clamp(0.85rem, 2.5vw, 2rem) 3rem;
+      background: radial-gradient(circle at 20% 0%, #182230 0%, #0d1218 70%);
+      color: var(--text);
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; }
+    header {
+      padding: 1rem 1.15rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: rgba(23, 30, 39, 0.9);
+      margin-bottom: 1.25rem;
+    }
+    header h1 { margin: 0 0 0.35rem; font-size: 1.2rem; }
+    header p { margin: 0; color: var(--muted); font-size: 0.84rem; max-width: 90ch; }
+    header a { color: var(--accent); }
+    .genre-block {
+      margin: 1.75rem 0;
+      padding: 1rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .genre-block h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.05rem;
+    }
+    .genre-meta {
+      margin: 0 0 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: #121820;
+    }
+    .card img.full {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      background: #0a0e12;
+    }
+    .card-body { padding: 0.65rem 0.75rem 0.85rem; }
+    .card-body h3 { margin: 0 0 0.35rem; font-size: 0.88rem; }
+    .card-body p { margin: 0; font-size: 0.75rem; color: var(--muted); }
+    .strip-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin: 0.55rem 0 0.25rem;
+    }
+    .header-row-mock {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.38rem;
+      background: rgba(15, 20, 27, 0.95);
+      border: 1px solid var(--border);
+    }
+    .header-row-mock .title {
+      flex: 1 1 auto;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .header-strip {
+      flex: 0 0 var(--strip-w);
+      width: var(--strip-w);
+      height: var(--strip-h);
+      border-radius: 0.38rem;
+      overflow: hidden;
+      margin-left: auto;
+      isolation: isolate;
+    }
+    .header-strip img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 42%;
+      transform: scale(1.78);
+      transform-origin: center 42%;
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+    .pill {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      margin-right: 0.35rem;
+    }
+    table.guide {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin: 1rem 0;
+    }
+    table.guide th, table.guide td {
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    table.guide th { background: #1a222c; color: var(--muted); font-weight: 600; }
+    .share-box {
+      margin-top: 1rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: rgba(12, 18, 26, 0.85);
+      font-size: 0.8rem;
+    }
+    .share-box strong { display: block; margin-bottom: 0.35rem; }
+    .share-note { margin: 0.5rem 0 0.25rem; color: var(--muted); font-size: 0.72rem; }
+    .share-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    .share-row input {
+      flex: 1 1 16rem;
+      min-width: 0;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.35rem;
+      border: 1px solid var(--border);
+      background: #0a0e12;
+      color: var(--text);
+      font-size: 0.72rem;
+    }
+    .share-row button {
+      padding: 0.35rem 0.65rem;
+      border-radius: 0.35rem;
+      border: 1px solid var(--border);
+      background: #1d2632;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.72rem;
+    }
+    .share-setup { margin: 0.55rem 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Build · Essentials — art direction exploration (Pass 0 · archived)</h1>
+      <p>
+        <strong>Superseded by <a href="./essentials-pass1.html">Pass 1</a></strong> (E isometric production samples).
+        Pass 0 genre JPGs live under <code>archive/pass0-exploration/</code>.
+        Pick a <strong>genre lane</strong> first, then we run Pass 1 finals for the Essentials category strip
+        (Office Desk, Bank Account, Office Supply, Storage Room, Company Statue). Each sample uses one
+        <strong>keystone</strong> so the header crop reads instantly — less “AI noise wall.”
+        Mock strip: <strong>9.5rem × 2.35rem</strong>, <code>object-position: center 42%</code>, scale <strong>1.78</strong> (matches in-game pan zoom).
+        <strong>16:9</strong> masters for horizontal pan. No text / logos / real IP in prompts.
+        <a href="./index.html">← Structure category review hub</a>
+      </p>
+      <div class="share-box" id="share-box">
+        <strong>Share with others</strong>
+        <p class="share-note">Local dev (your machine only):</p>
+        <div class="share-row">
+          <input type="text" readonly id="share-local" value="http://localhost:5173/docs/structure-category-review/essentials.html" />
+          <button type="button" data-copy="share-local">Copy</button>
+        </div>
+        <p class="share-note">Public link (after GitHub Pages is enabled — see below):</p>
+        <div class="share-row">
+          <input type="text" readonly id="share-public" value="https://ccheng1231.github.io/corp-civ-idle/structure-category-review/essentials.html" />
+          <button type="button" data-copy="share-public">Copy</button>
+        </div>
+        <p class="share-setup">
+          One-time setup: commit and push <code>docs/structure-category-review/</code>, then on GitHub open
+          <strong>Settings → Pages</strong>, source <strong>Deploy from branch</strong>, branch <strong>main</strong>, folder <strong>/docs</strong>.
+          Wait ~1–2 min; the public URL above should load (repo must be public, or viewers need repo access).
+        </p>
+      </div>
+    </header>
+
+    <section class="genre-block">
+      <h2>Genre map (mood references only — original art)</h2>
+      <table class="guide">
+        <thead>
+          <tr><th>ID</th><th>Lane</th><th>Game mood refs</th><th>Samples</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A</td><td>Noir corporate, single focal light</td><td>Deus Ex: HR interiors, Disco Elysium desk clarity, Virginia quiet tension</td><td>4 (desk / bank / supply / statue)</td></tr>
+          <tr><td>B</td><td>Soft solarpunk office</td><td>Terra Nil hope, Against the Storm cozy upgrade, Spiritfarer calm craft</td><td>4</td></tr>
+          <tr><td>C</td><td>Anime / illustrative base room</td><td>Arknights base BG, Blue Archive clean rooms, Persona UI backgrounds</td><td>4</td></tr>
+          <tr><td>D</td><td>Legacy cyberpunk office (today’s strip, de-noised)</td><td>Current <code>Office_Essentials.jpg</code> lane — fewer monitors, one hero prop</td><td>4</td></tr>
+          <tr><td>E</td><td>Isometric sim read</td><td>Two Point Hospital, Project Highrise, Monument Valley clarity</td><td>3</td></tr>
+          <tr><td>F</td><td>Poster / minimal illustration</td><td>Firewatch, Alto’s Odyssey, Mini Metro pictogram hierarchy</td><td>3</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="genre-block" id="shipped">
+      <h2>Shipped today (problem reference)</h2>
+      <p class="genre-meta">Same noisy multi-monitor wall as Home Structure — hard to name the focal point in the header strip.</p>
+      <div class="compare">
+        <div class="card">
+          <img class="full" src="./images/essentials/shipped-office-essentials-reference.jpg" alt="Current Office_Essentials in game" />
+          <div class="card-body">
+            <h3>In-game <code>Office_Essentials.jpg</code></h3>
+            <p>Keystone unclear; many competing lights and screens.</p>
+            <div class="strip-label">In-game header mock</div>
+            <div class="header-row-mock">
+              <span class="title">Essentials</span>
+              <div class="header-strip">
+                <img src="./images/essentials/shipped-office-essentials-reference.jpg" alt="" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="genres"></div>
+  </div>
+
+  <script>
+    const imgPass0 = (genreId, file) =>
+      `./archive/pass0-exploration/${genreId}/${file}`;
+    const GENRES = [
+      {
+        id: "a",
+        title: "A — Noir corporate (readable focal)",
+        meta: "Mood: Deus Ex HR · Disco Elysium · Virginia — not copying assets.",
+        items: [
+          { file: "essentials-a-noir-desk-v1.jpg", title: "Keystone: Executive desk", note: "Desk + lamp hero; supply + statue whispers in blur." },
+          { file: "essentials-a-noir-bank-v2.jpg", title: "Keystone: Bank / vault corner", note: "Vault door + coin rolls; folders secondary." },
+          { file: "essentials-a-noir-supply-v3.jpg", title: "Keystone: Supply closet", note: "Open closet shelves; desk edge foreground blur." },
+          { file: "essentials-a-noir-statue-v4.jpg", title: "Keystone: Company statue", note: "Lobby monument spotlight; storage door hint." },
+        ],
+      },
+      {
+        id: "b",
+        title: "B — Soft solarpunk",
+        meta: "Mood: Terra Nil · Against the Storm · Spiritfarer — aligns with world map v0.1 soft hybrid.",
+        items: [
+          { file: "essentials-b-solar-desk-v1.jpg", title: "Keystone: Green desk + plant", note: "Daylit desk; supply caddy only." },
+          { file: "essentials-b-solar-bank-v2.jpg", title: "Keystone: Community finance nook", note: "Wooden counter + savings jar read." },
+          { file: "essentials-b-solar-supply-v3.jpg", title: "Keystone: Eco supply pantry", note: "Skylight + neat shelves." },
+          { file: "essentials-b-solar-statue-v4.jpg", title: "Keystone: Biophilic monument", note: "Statue with sapling; light satire." },
+        ],
+      },
+      {
+        id: "c",
+        title: "C — Anime / illustrative base",
+        meta: "Mood: Arknights base · Blue Archive · Persona backgrounds — matches Recruit strip energy if we unify tabs later.",
+        items: [
+          { file: "essentials-c-anime-desk-v1.jpg", title: "Keystone: Workstation", note: "Abstract monitor shapes, no UI text." },
+          { file: "essentials-c-anime-bank-v2.jpg", title: "Keystone: Finance corner", note: "Piggy bank + blank ledgers." },
+          { file: "essentials-c-anime-storage-v3.jpg", title: "Keystone: Storage roll-up", note: "Boxes + bins through half door." },
+          { file: "essentials-c-anime-statue-v4.jpg", title: "Keystone: Lobby mascot statue", note: "Tiny hard hat satire." },
+        ],
+      },
+      {
+        id: "d",
+        title: "D — Legacy cyberpunk (de-noised)",
+        meta: "Same lane as shipped Essentials / Home Structure, but one hero prop and negative space.",
+        items: [
+          { file: "essentials-d-legacy-desk-v1.jpg", title: "Keystone: Desk + amber holo ring", note: "Side monitors pushed to blur." },
+          { file: "essentials-d-legacy-holo-v2.jpg", title: "Keystone: Glass network panel", note: "Abstract nodes, minimal desk silhouette." },
+          { file: "essentials-d-legacy-supply-v3.jpg", title: "Keystone: Supply doorway", note: "Dark room, lit closet center." },
+          { file: "essentials-d-legacy-statue-v4.jpg", title: "Keystone: Statue spotlight", note: "Safe dial glint far left." },
+        ],
+      },
+      {
+        id: "e",
+        title: "E — Isometric sim",
+        meta: "Mood: Two Point · Project Highrise · Monument Valley — gameplay-readable at tiny crop.",
+        items: [
+          { file: "essentials-e-iso-floor-v1.jpg", title: "Keystone: Desk island on floor cutaway", note: "All five essentials as modules; desk largest." },
+          { file: "essentials-e-iso-wing-v2.jpg", title: "Keystone: Essentials wing module", note: "Desk terrace hero + attached icons." },
+          { file: "essentials-e-iso-minimal-v3.jpg", title: "Keystone: Desk monument blocks", note: "Geometric read, very clean." },
+        ],
+      },
+      {
+        id: "f",
+        title: "F — Poster / minimal",
+        meta: "Mood: Firewatch · Alto · Mini Metro — strong silhouette, lots of air.",
+        items: [
+          { file: "essentials-f-poster-desk-v1.jpg", title: "Keystone: Desk pictogram", note: "Icons for bank / supply / storage / statue." },
+          { file: "essentials-f-poster-supply-v2.jpg", title: "Keystone: Supply still life", note: "Gouache closet fills frame." },
+          { file: "essentials-f-poster-statue-v3.jpg", title: "Keystone: Statue silhouette", note: "Balanced floor icons." },
+        ],
+      },
+    ];
+
+    document.querySelectorAll("[data-copy]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-copy");
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+          const prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(() => { btn.textContent = prev; }, 1200);
+        });
+      });
+    });
+
+    const root = document.getElementById("genres");
+    for (const genre of GENRES) {
+      const section = document.createElement("section");
+      section.className = "genre-block";
+      section.id = "genre-" + genre.id;
+      const cards = genre.items
+        .map(
+          (item) => `
+        <article class="card">
+          <img class="full" src="${imgPass0(genre.id, item.file)}" alt="${item.title}" loading="lazy" />
+          <div class="card-body">
+            <h3>${item.title}</h3>
+            <p>${item.note}</p>
+            <span class="pill">${item.file}</span>
+            <div class="strip-label">In-game header mock</div>
+            <div class="header-row-mock">
+              <span class="title">Essentials</span>
+              <div class="header-strip">
+                <img src="${imgPass0(genre.id, item.file)}" alt="" />
+              </div>
+            </div>
+          </div>
+        </article>`
+        )
+        .join("");
+      section.innerHTML = `
+        <h2>${genre.title}</h2>
+        <p class="genre-meta">${genre.meta}</p>
+        <div class="grid">${cards}</div>`;
+      root.appendChild(section);
+    }
+  </script>
+</body>
+</html>

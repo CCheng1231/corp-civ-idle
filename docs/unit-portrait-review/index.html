@@ -194,6 +194,7 @@
       overflow: hidden;
       display: flex;
       align-items: stretch;
+      min-height: 8.5rem;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       transition: border-color 0.15s ease;
     }
@@ -206,6 +207,7 @@
       width: 5.4rem;
       flex-shrink: 0;
       align-self: stretch;
+      min-height: 8.5rem;
       border-right: 1px solid rgba(255, 255, 255, 0.1);
       overflow: hidden;
       position: relative;
@@ -560,6 +562,7 @@
           <a href="./defense.html" style="color:#b4c6ff;">Defense review →</a>
           · <a href="./intel.html" style="color:#b4c6ff;">Intel sample pass →</a>
           · <a href="./support.html" style="color:#b4c6ff;">Support review →</a>
+          · <a href="./special.html" style="color:#b4c6ff;">Special review →</a>
         </p>
       </div>
       <div class="badge-row">
@@ -575,7 +578,11 @@
         <div>
           <h2>1. Live In-Game Card Preview (Full-Left 5.4rem Portrait · Inline Qty · Compact Button)</h2>
           <div class="sub">
-            Matches the exact layout now running in <code>RecruitmentView.tsx</code>. Click <strong>"Equip in Card"</strong> on any variant below to test it live.
+            Matches <code>RecruitmentView.tsx</code> compact cards (portrait strip
+            <strong>5.4×8.5rem</strong> — same width reference as Build Essentials office desk).
+            Unit height/scale in-game uses <code>--progression-compact-portrait-unit-img-*</code> in
+            <code>06-job-board.css</code>; revisit all unit framing here before the next wire pass.
+            Click <strong>"Equip in Card"</strong> on any variant below to test it live.
           </div>
         </div>
       </div>

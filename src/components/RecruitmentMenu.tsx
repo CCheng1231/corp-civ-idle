@@ -8,7 +8,7 @@ import {
   powerAvailable,
   recruitBatchCost,
 } from "../game/constants";
-import { RECRUITMENT_UNITS } from "../game/recruitmentData";
+import { RECRUITMENT_UNITS, BRANCH_MANAGER_RESEARCH_LOCK_HINT } from "../game/recruitmentData";
 import { resolveOfficeLocation } from "../game/officeSelection";
 import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
 
@@ -71,15 +71,16 @@ export function RecruitmentMenu({
                 </div>
                 <p className="recruitment-flavor">{unit.category}</p>
                 <p>{unit.proposedRole}</p>
-                {researchLocked && (
-                  <p className="structure-blocker">
-                    Requires Branch Management research
-                  </p>
-                )}
                 <button
                   type="button"
                   className="btn primary"
                   disabled={!affordable || researchLocked}
+                  title={researchLocked ? BRANCH_MANAGER_RESEARCH_LOCK_HINT : undefined}
+                  aria-label={
+                    researchLocked
+                      ? `Locked. ${BRANCH_MANAGER_RESEARCH_LOCK_HINT}`
+                      : undefined
+                  }
                   onClick={() => hire(unit.id)}
                 >
                   {researchLocked ? "Locked" : "Hire"}

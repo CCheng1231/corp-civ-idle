@@ -37,6 +37,7 @@ import {
   ProgressionNameButton,
 } from "./progressionUi";
 import { SceneBanner } from "./SceneBanner";
+import { StructureCardPortrait } from "./StructureCardPortrait";
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
@@ -58,30 +59,64 @@ import type {
   StructureId,
   StructureCategory,
 } from "../game/types";
-import officeDepartmentsArt from "../assets/Office_Departments.jpg";
-import officeEssentialsArt from "../assets/Office_Essentials.jpg";
-import officePowerArt from "../assets/Office_Power.jpg";
-import officeRecruitmentArt from "../assets/Office_Recruitment.jpg";
+import {
+  ESSENTIALS_CATEGORY_BANNER,
+  structureEssentialsPortrait,
+} from "../game/structureEssentialsArt";
+import {
+  DEPARTMENTS_CATEGORY_BANNER,
+  structureDepartmentsPortrait,
+} from "../game/structureDepartmentsArt";
+import {
+  POWER_RESEARCH_CATEGORY_BANNER,
+  structurePowerResearchPortrait,
+} from "../game/structurePowerResearchArt";
+import {
+  RECRUITMENT_CATEGORY_BANNER,
+  structureRecruitmentPortrait,
+} from "../game/structureRecruitmentArt";
 
-const OFFICE_CATEGORY_SCENE: Record<
-  StructureCategory,
-  { src: string; storageKey: string }
-> = {
+type OfficeCategoryScene = {
+  src: string;
+  storageKey?: string;
+  panZoomFactor?: number;
+  focalYPercent?: number;
+  focalXPercent?: number;
+  pannable: boolean;
+};
+
+const OFFICE_CATEGORY_SCENE: Record<StructureCategory, OfficeCategoryScene> = {
   essentials: {
-    src: officeEssentialsArt,
-    storageKey: "corp-civ-idle-office-essentials-art-pan",
+    src: ESSENTIALS_CATEGORY_BANNER.src,
+    storageKey: ESSENTIALS_CATEGORY_BANNER.storageKey,
+    panZoomFactor: ESSENTIALS_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: ESSENTIALS_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: ESSENTIALS_CATEGORY_BANNER.crop.focalXPercent,
+    pannable: true,
   },
   departments: {
-    src: officeDepartmentsArt,
-    storageKey: "corp-civ-idle-office-departments-art-pan",
+    src: DEPARTMENTS_CATEGORY_BANNER.src,
+    storageKey: DEPARTMENTS_CATEGORY_BANNER.storageKey,
+    panZoomFactor: DEPARTMENTS_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: DEPARTMENTS_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: DEPARTMENTS_CATEGORY_BANNER.crop.focalXPercent,
+    pannable: true,
   },
   infrastructure: {
-    src: officePowerArt,
-    storageKey: "corp-civ-idle-office-power-art-pan",
+    src: POWER_RESEARCH_CATEGORY_BANNER.src,
+    storageKey: POWER_RESEARCH_CATEGORY_BANNER.storageKey,
+    panZoomFactor: POWER_RESEARCH_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: POWER_RESEARCH_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: POWER_RESEARCH_CATEGORY_BANNER.crop.focalXPercent,
+    pannable: true,
   },
   staffing: {
-    src: officeRecruitmentArt,
-    storageKey: "corp-civ-idle-office-recruitment-art-pan",
+    src: RECRUITMENT_CATEGORY_BANNER.src,
+    storageKey: RECRUITMENT_CATEGORY_BANNER.storageKey,
+    panZoomFactor: RECRUITMENT_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: RECRUITMENT_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: RECRUITMENT_CATEGORY_BANNER.crop.focalXPercent,
+    pannable: true,
   },
 };
 
@@ -294,6 +329,16 @@ export function OfficeStructurePanel({
   }
 
   function renderStructureCard(structure: StructureDefinition) {
+    const portraitArt =
+      structureEssentialsPortrait(structure.id) ??
+      structureDepartmentsPortrait(structure.id) ??
+      structurePowerResearchPortrait(structure.id) ??
+      structureRecruitmentPortrait(structure.id);
+    const portraitEl = portraitArt ? (
+      <StructureCardPortrait src={portraitArt.src} crop={portraitArt.crop} />
+    ) : null;
+    const withPortrait = Boolean(portraitEl);
+
     const level = locationStructures[structure.id];
     const projected = projectedStructures[structure.id];
     const maxed = isStructureCompletedAtSite(state, officeId, structure);
@@ -335,71 +380,205 @@ export function OfficeStructurePanel({
     const levelLabel =
       structure.maxLevel > 1 ? `Lv ${level}/${structure.maxLevel}` : `Lv ${level}`;
 
+    const upgradeButtonLabel = !unlocked
+      ? "Locked"
+      : readOnly
+        ? "Pick an office"
+        : inProgress
+          ? "In progress"
+          : "Upgrade";
+
+    const portraitCardClasses = withPortrait
+      ? " recruitment-card-compact recruitment-card-with-portrait"
+      : "";
+
+    function renderPortraitCompactActiveBody() {
+      const headBlock = (
+        <div className="structure-head">
+          <ProgressionNameButton
+            name={structure.name}
+            onClick={() => openStructureDetail(structure)}
+          />
+          {unlocked ? (
+            <div className="structure-level-meta">
+              <span className="structure-level-current">
+                Lv {level} → {targetLevel}
+              </span>
+              {structure.maxLevel > 1 ? (
+                <span className="structure-level-max">
+                  Max: {structure.maxLevel}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <span>Locked</span>
+          )}
+        </div>
+      );
+
+      const showBuildMeta = unlocked && !inProgress;
+
+      const actionsRow = (
+        <div className="recruitment-hire-actions structure-build-actions">
+          <span className="recruitment-queue-btn-hint-wrap">
+            <button
+              type="button"
+              className="btn primary recruitment-queue-btn"
+              disabled={!canUpgrade}
+              onClick={() =>
+                dispatch({
+                  type: "BUY_STRUCTURE",
+                  structureId: structure.id,
+                  locationId: officeId,
+                })
+              }
+            >
+              {upgradeButtonLabel}
+            </button>
+          </span>
+        </div>
+      );
+
+      const metaBlock = (
+        <div className="recruitment-hire-meta">
+          {showBuildMeta ? (
+            <div className="recruitment-hire-meta-cost">
+              <StructureCostLine
+                state={state}
+                officeId={officeId}
+                cost={cost}
+                layout="line"
+                prefix=""
+                inline
+              />
+              {buildHours > 0 ? (
+                <>
+                  <span className="structure-cost-sep">·</span>
+                  <span className="recruitment-time-inline">
+                    {formatQueueTimeHours(buildHours)}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {actionsRow}
+        </div>
+      );
+
+      return (
+        <>
+          {headBlock}
+          {metaBlock}
+          {blockerMessage && !maxed && !inProgress && unlocked ? (
+            <p className="structure-blocker">{blockerMessage}</p>
+          ) : null}
+          {!unlocked ? (
+            <small className="cost-line">
+              Requires: {structureUnlockRequirementLabel(structure.id)}
+            </small>
+          ) : null}
+          {structure.officeSlotsWhenBuilt > 0 ? (
+            <p className="structure-space-line compact-stack-line">
+              <span className="compact-stack-label">Office slot:</span>{" "}
+              {structure.officeSlotsWhenBuilt}
+            </p>
+          ) : null}
+          <p
+            className="structure-desc muted recruitment-role recruitment-role-footer"
+            title={structure.description}
+          >
+            {structure.description}
+          </p>
+        </>
+      );
+    }
+
     if (maxed) {
+      const maxedBody = (
+        <>
+        <ProgressionMaxedCard
+          name={structure.name}
+          levelLabel={levelLabel}
+          compactBonus={compactBonus}
+          onNameClick={() => openStructureDetail(structure)}
+        >
+          {completedLines.length > 0 ? (
+            <ul className="structure-upgrade-preview-effects">
+              {completedLines.map((line) => (
+                <li key={line.label}>
+                  <span className="structure-upgrade-preview-label">
+                    {line.label}
+                  </span>
+                  <span className="structure-upgrade-preview-value">
+                    {line.text
+                      ? formatPreviewText(line.text)
+                      : formatPreviewDelta(
+                          line.from,
+                          line.to,
+                          line.unit,
+                          line.label,
+                        )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {!withPortrait ? (
+            <p className="structure-desc muted">{structure.description}</p>
+          ) : null}
+          {level > 0 && (
+            <button
+              type="button"
+              className="btn btn-muted structure-sell-btn"
+              disabled={!canSell}
+              onClick={() => {
+                if (!canSell || !sellRefund) return;
+                setSellConfirm({
+                  structureId: structure.id,
+                  structureName: structure.name,
+                  refund: sellRefund,
+                });
+              }}
+            >
+              {!canSell && sellBlocked
+                ? "Queued — can't sell"
+                : "Sell 1 level"}
+            </button>
+          )}
+        </ProgressionMaxedCard>
+        {withPortrait ? (
+          <p
+            className="structure-desc muted recruitment-role recruitment-role-footer"
+            title={structure.description}
+          >
+            {structure.description}
+          </p>
+        ) : null}
+      </>
+      );
+
       return (
         <li
           key={structure.id}
           id={`structure-card-${structure.id}`}
-          className="structure-card structure-card-upgrade research-card-completed progression-card-maxed"
+          className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}`}
         >
-          <ProgressionMaxedCard
-            name={structure.name}
-            levelLabel={levelLabel}
-            compactBonus={compactBonus}
-            onNameClick={() => openStructureDetail(structure)}
-          >
-            {completedLines.length > 0 ? (
-              <ul className="structure-upgrade-preview-effects">
-                {completedLines.map((line) => (
-                  <li key={line.label}>
-                    <span className="structure-upgrade-preview-label">
-                      {line.label}
-                    </span>
-                    <span className="structure-upgrade-preview-value">
-                      {line.text
-                        ? formatPreviewText(line.text)
-                        : formatPreviewDelta(
-                            line.from,
-                            line.to,
-                            line.unit,
-                            line.label,
-                          )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <p className="structure-desc muted">{structure.description}</p>
-            {level > 0 && (
-              <button
-                type="button"
-                className="btn btn-muted structure-sell-btn"
-                disabled={!canSell}
-                onClick={() => {
-                  if (!canSell || !sellRefund) return;
-                  setSellConfirm({
-                    structureId: structure.id,
-                    structureName: structure.name,
-                    refund: sellRefund,
-                  });
-                }}
-              >
-                {!canSell && sellBlocked
-                  ? "Queued — can't sell"
-                  : "Sell 1 level"}
-              </button>
-            )}
-          </ProgressionMaxedCard>
+          {withPortrait ? (
+            <div className="recruitment-card-split">
+              {portraitEl}
+              <div className="recruitment-card-main">{maxedBody}</div>
+            </div>
+          ) : (
+            maxedBody
+          )}
         </li>
       );
     }
 
-    return (
-      <li
-        key={structure.id}
-        id={`structure-card-${structure.id}`}
-        className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
-      >
+    const activeBody = withPortrait ? (
+      renderPortraitCompactActiveBody()
+    ) : (
+      <>
         <div className="structure-head">
           <ProgressionNameButton
             name={structure.name}
@@ -520,6 +699,25 @@ export function OfficeStructurePanel({
             </button>
           )}
         </div>
+      </>
+    );
+
+    return (
+      <li
+        key={structure.id}
+        id={`structure-card-${structure.id}`}
+        className={`structure-card structure-card-upgrade${
+          unlocked ? "" : " progression-locked"
+        }${portraitCardClasses}`}
+      >
+        {withPortrait ? (
+          <div className="recruitment-card-split">
+            {portraitEl}
+            <div className="recruitment-card-main">{activeBody}</div>
+          </div>
+        ) : (
+          activeBody
+        )}
       </li>
     );
   }
@@ -568,14 +766,28 @@ export function OfficeStructurePanel({
             }}
             maxedCount={maxedCount}
             totalCount={items.length}
+            bannerInSummary
             banner={
               <SceneBanner
                 src={OFFICE_CATEGORY_SCENE[category].src}
                 storageKey={OFFICE_CATEGORY_SCENE[category].storageKey}
+                panZoomFactor={OFFICE_CATEGORY_SCENE[category].panZoomFactor}
+                focalYPercent={OFFICE_CATEGORY_SCENE[category].focalYPercent}
+                focalXPercent={OFFICE_CATEGORY_SCENE[category].focalXPercent}
+                pannable={OFFICE_CATEGORY_SCENE[category].pannable}
               />
             }
           >
-            <ul className="structure-list progression-grid">
+            <ul
+              className={`structure-list ${
+                category === "essentials" ||
+                category === "departments" ||
+                category === "infrastructure" ||
+                category === "staffing"
+                  ? "recruitment-grid"
+                  : "progression-grid"
+              }`}
+            >
               {items.map(renderStructureCard)}
             </ul>
           </ProgressionCategorySection>
@@ -605,12 +817,53 @@ export function OfficeStructurePanel({
           onCancel={() => setSellConfirm(null)}
         />
       )}
-      {detailStructure && (
-        <ProgressionDetailDialog
-          {...buildStructureDetailModel(state, officeId, detailStructure)}
-          onClose={() => setDetailStructure(null)}
-        />
-      )}
+      {detailStructure && (() => {
+        const detailLevel =
+          state.structureLevelsByLocation[officeId][detailStructure.id];
+        const detailCanSell =
+          !readOnly &&
+          canSellStructureLevel(state, officeId, detailStructure.id);
+        const detailSellBlocked = isStructureQueuedAt(
+          state,
+          officeId,
+          detailStructure.id,
+        );
+        return (
+          <ProgressionDetailDialog
+            {...buildStructureDetailModel(state, officeId, detailStructure)}
+            onClose={() => setDetailStructure(null)}
+            secondaryAction={
+              detailLevel > 0
+                ? {
+                    label: detailCanSell
+                      ? "Sell 1 level"
+                      : detailSellBlocked
+                        ? "Queued — can't sell"
+                        : "Sell 1 level",
+                    disabled: !detailCanSell,
+                    title: detailSellBlocked
+                      ? "Can't sell while this structure is in the build queue."
+                      : undefined,
+                    onClick: () => {
+                      const refund = structureDemolishRefund(
+                        state,
+                        officeId,
+                        detailStructure.id,
+                      );
+                      if (!detailCanSell || !refund) return;
+                      setDetailStructure(null);
+                      setSellConfirm({
+                        structureId: detailStructure.id,
+                        structureName: detailStructure.name,
+                        refund,
+                      });
+                    },
+                  }
+                : undefined
+            }
+          />
+        );
+      })()}
     </div>
   );
 }

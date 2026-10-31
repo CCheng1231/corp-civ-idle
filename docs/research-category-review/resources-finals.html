@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research — Resource efficiency finals</title>
+  <link rel="stylesheet" href="../structure-category-review/essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Resource efficiency — finals</h1>
+      <p><a href="./index.html">← Hub</a> · <a href="./resources-pass2.html">Pass 2</a></p>
+    </header>
+    <div class="export-crops-bar">
+      <button type="button" id="copy-crops-all">Copy crop JSON</button>
+      <button type="button" id="copy-crops-ts">Copy TS snippet</button>
+      <pre id="crop-json"></pre>
+    </div>
+    <section class="genre-block">
+      <div class="grid">
+        <article class="card card-banner">
+          <img class="full" src="./images/resources/finals/research-resources-banner.jpg" alt="" />
+          <div class="card-body">
+            <span class="pill">research-resources-banner.jpg</span>
+            <div class="strip-label">Banner mock</div>
+            <div class="header-row-mock">
+              <span class="title">Resource efficiency</span>
+              <div class="header-strip crop-tuner-wrap" data-crop-id="finals-banner">
+                <img class="crop-tuner-target" src="./images/resources/finals/research-resources-banner.jpg" alt="" />
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+  <script src="./resources-wire-defaults.js"></script>
+  <script src="../structure-category-review/essentials-crop-tuner.js"></script>
+  <script>
+    initCropTuner(
+      document.querySelector(".card-body"),
+      "finals-banner",
+      RESEARCH_RESOURCES_WIRE.getReviewCropDefaults("finals-banner"),
+    );
+    const refresh = () => {
+      document.getElementById("crop-json").textContent = JSON.stringify(
+        exportReviewCrops(allReviewCropIds()),
+        null,
+        2,
+      );
+    };
+    document.addEventListener("review-crop-change", refresh);
+    refresh();
+    document.getElementById("copy-crops-all").onclick = () =>
+      copyReviewCropsJson(allReviewCropIds());
+    document.getElementById("copy-crops-ts").onclick = () =>
+      copyReviewCropsTypeScript(allReviewCropIds());
+  </script>
+</body>
+</html>

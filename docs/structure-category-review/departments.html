@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Build · Departments art direction (Pass 0)</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+  <style>
+    .prompt-box {
+      margin-top: 0.45rem;
+      padding: 0.45rem 0.5rem;
+      border-radius: 0.35rem;
+      border: 1px dashed var(--border);
+      background: #0a0e12;
+      font-size: 0.62rem;
+      line-height: 1.35;
+      color: var(--muted);
+      max-height: 6rem;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .copy-prompt {
+      margin-top: 0.25rem;
+      padding: 0.2rem 0.45rem;
+      font-size: 0.62rem;
+      border-radius: 0.3rem;
+      border: 1px solid var(--border);
+      background: #1a222c;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .img-missing {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 16 / 9;
+      background: #1a222c;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-align: center;
+      padding: 0.5rem;
+    }
+    table.guide {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin: 1rem 0;
+    }
+    table.guide th, table.guide td {
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    table.guide th { background: #1a222c; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Build · Departments — Pass 0 (direction + prompts)</h1>
+      <p>
+        <strong>Same art family as wired Essentials</strong> (isometric floor · soft anime BG · v1–v4 sets in Pass 2).
+        Separate <strong>category banner</strong> + five structure masters. Replace legacy
+        <code>Office_Departments.jpg</code> entirely. No in-game wire until
+        <a href="./departments-finals.html">Finals</a>.
+        <a href="./index.html">← Hub</a> · Next:
+        <a href="./departments-pass1.html">Pass 1</a>
+      </p>
+    </header>
+
+    <section class="genre-block">
+      <h2>Decisions (locked)</h2>
+      <ul class="genre-meta" style="margin:0;padding-left:1.2rem">
+        <li>Match Essentials building / palette — departments wing on same tile language.</li>
+        <li>Pass 2: four version sets (same pipeline as Essentials).</li>
+        <li>Video studio + press room: show full art in review (hide-unavailable UI later).</li>
+        <li>Prompts: no readable text, no logos, no reference-title easter eggs in frame.</li>
+      </ul>
+    </section>
+
+    <section class="genre-block">
+      <h2>Structures in this category</h2>
+      <table class="guide">
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>Keystone (art brief)</th></tr>
+        </thead>
+        <tbody id="structure-table"></tbody>
+      </table>
+    </section>
+
+    <section class="genre-block">
+      <h2>Legacy strip (replace)</h2>
+      <div class="compare">
+        <article class="card">
+          <img class="full" src="../../src/assets/Office_Departments.jpg" alt="Current in-game strip" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'img-missing',textContent:'Add ../../src/assets/Office_Departments.jpg or open from repo root'}))" />
+          <div class="card-body">
+            <h3>Shipped <code>Office_Departments.jpg</code></h3>
+            <p>Category banner only today — no per-structure thumbs.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="genre-block">
+      <h2>Category banner — separate 16:9 master</h2>
+      <p class="genre-meta">Save to <code>images/departments/pass1/</code> or pass0 probes under <code>archive/</code>.</p>
+      <article class="card card-banner">
+        <div class="img-missing" id="banner-placeholder">Drop banner JPG above when ready</div>
+        <div class="card-body">
+          <button type="button" class="copy-prompt" data-copy-target="banner-prompt">Copy banner prompt</button>
+          <div class="prompt-box" id="banner-prompt"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="genre-block">
+      <h2>Structure card masters — prompt bank</h2>
+      <p class="genre-meta">One keystone per Build card · tune crops later on Pass 1+ mocks (5.4×8.5rem strip).</p>
+      <div class="grid" id="prompt-cards"></div>
+    </section>
+  </div>
+  <script src="./departments-prompts.js"></script>
+  <script>
+    document.getElementById("structure-table").innerHTML = DEPARTMENTS_STRUCTURES.map(
+      (s) => `<tr><td><code>${s.id}</code></td><td>${s.name}</td><td>${s.keystone}</td></tr>`,
+    ).join("");
+
+    document.getElementById("banner-prompt").textContent = departmentsBannerPrompt(
+      "Pass 0 exploration — departments wing overview banner.",
+    );
+
+    document.getElementById("prompt-cards").innerHTML = DEPARTMENTS_STRUCTURES.map(
+      (s) => {
+        const prompt = departmentsStructurePrompt(s.id, "Pass 0 — pick composition for Pass 1 variants.");
+        return `
+        <article class="card">
+          <div class="img-missing">pass1/structures/${"departments-" + s.id.replace(/_/g, "-") + "-pass1-v1.jpg"}</div>
+          <div class="card-body">
+            <h3>${s.name}</h3>
+            <span class="pill">${s.id}</span>
+            <button type="button" class="copy-prompt" data-prompt="${encodeURIComponent(prompt)}">Copy prompt</button>
+            <div class="prompt-box">${prompt.replace(/</g, "&lt;")}</div>
+          </div>
+        </article>`;
+      },
+    ).join("");
+
+    document.querySelectorAll(".copy-prompt").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-copy-target");
+        const text = id
+          ? document.getElementById(id).textContent
+          : decodeURIComponent(btn.getAttribute("data-prompt") || "");
+        navigator.clipboard.writeText(text).then(() => {
+          const prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(() => { btn.textContent = prev; }, 1200);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

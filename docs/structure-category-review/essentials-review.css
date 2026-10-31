@@ -1,0 +1,253 @@
+:root {
+  --bg: #0f141b;
+  --panel: #171e27;
+  --border: rgba(147, 161, 181, 0.22);
+  --text: #e8eef7;
+  --muted: #93a1b5;
+  --accent: #7c9cff;
+  --strip-w: 9.5rem;
+  --strip-h: 2.35rem;
+  /* Match in-game `06-job-board.css` — office desk card strip reference */
+  --progression-compact-portrait-width: 5.4rem;
+  --progression-compact-portrait-min-height: 8.5rem;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 1.25rem clamp(0.85rem, 2.5vw, 2rem) 3rem;
+  background: radial-gradient(circle at 20% 0%, #182230 0%, #0d1218 70%);
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1.45;
+}
+.wrap { max-width: 1200px; margin: 0 auto; }
+.hero, header.hero {
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: rgba(23, 30, 39, 0.9);
+  margin-bottom: 1.25rem;
+}
+.hero h1, header.hero h1 { margin: 0 0 0.35rem; font-size: 1.2rem; }
+.hero p, header.hero p { margin: 0; color: var(--muted); font-size: 0.84rem; max-width: 90ch; }
+.hero a, header.hero a { color: var(--accent); }
+.genre-block {
+  margin: 1.75rem 0;
+  padding: 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.genre-block h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+.genre-meta { margin: 0 0 1rem; font-size: 0.78rem; color: var(--muted); }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #121820;
+}
+.card img.full {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+.card img.portrait {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  background: #0a0e12;
+}
+.card-body { padding: 0.65rem 0.75rem 0.85rem; }
+.card-body h3 { margin: 0 0 0.35rem; font-size: 0.88rem; }
+.card-body p { margin: 0; font-size: 0.75rem; color: var(--muted); }
+.strip-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0.55rem 0 0.25rem;
+}
+.header-row-mock {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.38rem;
+  background: rgba(15, 20, 27, 0.95);
+  border: 1px solid var(--border);
+}
+.header-row-mock .title { flex: 1 1 auto; font-size: 0.82rem; font-weight: 600; }
+.header-strip {
+  flex: 0 0 var(--strip-w);
+  width: var(--strip-w);
+  height: var(--strip-h);
+  border-radius: 0.38rem;
+  overflow: hidden;
+  margin-left: auto;
+}
+.header-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  transform: scale(1.78);
+  transform-origin: center 42%;
+}
+/* Crop tuner overrides defaults (Zoom · Focal X · Focal Y) */
+.header-strip img.crop-tuner-target,
+.structure-card-mock-portrait img.crop-tuner-target {
+  object-fit: cover;
+}
+.crop-tuner {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px dashed var(--border);
+  font-size: 0.68rem;
+}
+.crop-tuner-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.15rem;
+  margin-bottom: 0.35rem;
+}
+.crop-tuner-row label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.crop-tuner input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.crop-reset {
+  margin-top: 0.15rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.65rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border);
+  background: #1a222c;
+  color: var(--text);
+  cursor: pointer;
+}
+.crop-tuner-note {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.export-crops-bar {
+  margin: 1rem 0 2rem;
+  padding: 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 0.78rem;
+}
+.export-crops-bar pre {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem;
+  max-height: 12rem;
+  overflow: auto;
+  background: #0a0e12;
+  border-radius: 0.35rem;
+  font-size: 0.65rem;
+}
+.export-crops-bar button {
+  margin: 0.35rem 0.5rem 0 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border);
+  background: #1d2632;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+.structure-card-mock {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: rgba(15, 20, 27, 0.42);
+  overflow: hidden;
+  max-width: 16rem;
+  min-height: var(--progression-compact-portrait-min-height);
+}
+.structure-card-mock-portrait {
+  flex: 0 0 var(--progression-compact-portrait-width);
+  width: var(--progression-compact-portrait-width);
+  min-height: var(--progression-compact-portrait-min-height);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  overflow: hidden;
+  background: rgba(12, 16, 22, 0.55);
+  position: relative;
+  isolation: isolate;
+}
+.structure-card-mock-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(
+      ellipse 95% 88% at 50% 50%,
+      rgba(12, 16, 22, 0.35) 0%,
+      rgba(12, 16, 22, 0.12) 55%,
+      transparent 100%
+    );
+}
+.structure-card-mock-portrait .crop-tuner-target,
+.structure-card-mock-portrait img.crop-tuner-target {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  z-index: 1;
+}
+.structure-card-mock-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.42rem 0.52rem;
+  font-size: 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  justify-content: center;
+  background: rgba(15, 20, 27, 0.32);
+}
+.structure-card-mock-body .muted { color: var(--muted); font-size: 0.65rem; }
+.card-banner {
+  grid-column: 1 / -1;
+}
+.grid-set {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+@media (min-width: 900px) {
+  .grid-set .card-banner {
+    grid-column: span 2;
+  }
+}
+.pill {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  margin-top: 0.35rem;
+}

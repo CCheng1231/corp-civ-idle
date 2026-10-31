@@ -31,10 +31,22 @@ import { TabPortraitLayout } from "./TabPortraitLayout";
 import { TabSiteHeader } from "./TabSiteHeader";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
-import researchResourceArt from "../assets/Research_ResourceEfficiency.jpg";
-import researchPayoutsArt from "../assets/Research_ProjectPayouts.jpg";
-import researchDiscoverArt from "../assets/Research_DiscoverStructures.jpg";
-import researchOperationsArt from "../assets/Research_Operations.webp";
+import {
+  RESEARCH_RESOURCES_CATEGORY_BANNER,
+  researchResourcesPortrait,
+} from "../game/researchResourcesArt";
+import {
+  RESEARCH_PAYOUTS_CATEGORY_BANNER,
+  researchPayoutsPortrait,
+} from "../game/researchPayoutsArt";
+import {
+  RESEARCH_DISCOVER_CATEGORY_BANNER,
+  researchDiscoverPortrait,
+} from "../game/researchDiscoverArt";
+import {
+  RESEARCH_OPERATIONS_CATEGORY_BANNER,
+  researchOperationsPortrait,
+} from "../game/researchOperationsArt";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
   getResearchCategoryOpen,
@@ -52,6 +64,7 @@ import {
   ProgressionNameButton,
 } from "./progressionUi";
 import { SceneBanner } from "./SceneBanner";
+import { StructureCardPortrait } from "./StructureCardPortrait";
 import { ResearchQueueList } from "./StructureBuildQueueList";
 import type {
   GameAction,
@@ -68,23 +81,41 @@ interface ResearchViewProps {
 
 const RESEARCH_CATEGORY_SCENE: Record<
   ResearchCategory,
-  { src: string; storageKey: string }
+  {
+    src: string;
+    storageKey: string;
+    panZoomFactor: number;
+    focalYPercent?: number;
+    focalXPercent?: number;
+  }
 > = {
   resources: {
-    src: researchResourceArt,
-    storageKey: "corp-civ-idle-research-resources-art-pan",
+    src: RESEARCH_RESOURCES_CATEGORY_BANNER.src,
+    storageKey: RESEARCH_RESOURCES_CATEGORY_BANNER.storageKey,
+    panZoomFactor: RESEARCH_RESOURCES_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: RESEARCH_RESOURCES_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: RESEARCH_RESOURCES_CATEGORY_BANNER.crop.focalXPercent,
   },
   mult: {
-    src: researchPayoutsArt,
-    storageKey: "corp-civ-idle-research-mult-art-pan",
+    src: RESEARCH_PAYOUTS_CATEGORY_BANNER.src,
+    storageKey: RESEARCH_PAYOUTS_CATEGORY_BANNER.storageKey,
+    panZoomFactor: RESEARCH_PAYOUTS_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: RESEARCH_PAYOUTS_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: RESEARCH_PAYOUTS_CATEGORY_BANNER.crop.focalXPercent,
   },
   discover: {
-    src: researchDiscoverArt,
-    storageKey: "corp-civ-idle-research-discover-art-pan",
+    src: RESEARCH_DISCOVER_CATEGORY_BANNER.src,
+    storageKey: RESEARCH_DISCOVER_CATEGORY_BANNER.storageKey,
+    panZoomFactor: RESEARCH_DISCOVER_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: RESEARCH_DISCOVER_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: RESEARCH_DISCOVER_CATEGORY_BANNER.crop.focalXPercent,
   },
   unlock: {
-    src: researchOperationsArt,
-    storageKey: "corp-civ-idle-research-unlock-art-pan",
+    src: RESEARCH_OPERATIONS_CATEGORY_BANNER.src,
+    storageKey: RESEARCH_OPERATIONS_CATEGORY_BANNER.storageKey,
+    panZoomFactor: RESEARCH_OPERATIONS_CATEGORY_BANNER.crop.panZoomFactor,
+    focalYPercent: RESEARCH_OPERATIONS_CATEGORY_BANNER.crop.focalYPercent,
+    focalXPercent: RESEARCH_OPERATIONS_CATEGORY_BANNER.crop.focalXPercent,
   },
 };
 
@@ -137,6 +168,19 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   }
 
   function renderResearchCard(research: ResearchDefinition) {
+    const portraitArt =
+      researchResourcesPortrait(research.id) ??
+      researchPayoutsPortrait(research.id) ??
+      researchDiscoverPortrait(research.id) ??
+      researchOperationsPortrait(research.id);
+    const portraitEl = portraitArt ? (
+      <StructureCardPortrait src={portraitArt.src} crop={portraitArt.crop} />
+    ) : null;
+    const withPortrait = Boolean(portraitEl);
+    const portraitCardClasses = withPortrait
+      ? " recruitment-card-compact recruitment-card-with-portrait"
+      : "";
+
     const level = state.researchLevels[research.id];
     const projectedLevel = projected[research.id];
     const maxed = isResearchCompleted(state, research);
@@ -171,11 +215,8 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
       research.maxLevel > 1 ? `Lv ${level}/${research.maxLevel}` : `Lv ${level}`;
 
     if (maxed) {
-      return (
-        <li
-          key={research.id}
-          className="structure-card structure-card-upgrade research-card-completed progression-card-maxed"
-        >
+      const maxedBody = (
+        <>
           <ProgressionMaxedCard
             name={research.name}
             levelLabel={levelLabel}
@@ -203,17 +244,40 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
                 ))}
               </ul>
             ) : null}
-            <p className="structure-desc muted">{description}</p>
+            {!withPortrait ? (
+              <p className="structure-desc muted">{description}</p>
+            ) : null}
           </ProgressionMaxedCard>
+          {withPortrait ? (
+            <p
+              className="structure-desc muted recruitment-role recruitment-role-footer"
+              title={description}
+            >
+              {description}
+            </p>
+          ) : null}
+        </>
+      );
+
+      return (
+        <li
+          key={research.id}
+          className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}`}
+        >
+          {withPortrait ? (
+            <div className="recruitment-card-split">
+              {portraitEl}
+              <div className="recruitment-card-main">{maxedBody}</div>
+            </div>
+          ) : (
+            maxedBody
+          )}
         </li>
       );
     }
 
-    return (
-      <li
-        key={research.id}
-        className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}`}
-      >
+    const activeInner = (
+      <>
         <div className="structure-head">
           <ProgressionNameButton
             name={research.name}
@@ -270,7 +334,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             </div>
           </div>
         )}
-        <p className="structure-desc muted">{description}</p>
+        <p
+          className={`structure-desc muted${withPortrait ? " recruitment-role recruitment-role-footer" : ""}`}
+          title={withPortrait ? description : undefined}
+        >
+          {description}
+        </p>
         {!unlocked && (
           <small className="cost-line">
             Requires: {researchRequirementLabel(research)}
@@ -298,6 +367,22 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
                 ? "Queue full"
                 : "Queue research"}
         </button>
+      </>
+    );
+
+    return (
+      <li
+        key={research.id}
+        className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}${portraitCardClasses}`}
+      >
+        {withPortrait ? (
+          <div className="recruitment-card-split">
+            {portraitEl}
+            <div className="recruitment-card-main">{activeInner}</div>
+          </div>
+        ) : (
+          activeInner
+        )}
       </li>
     );
   }
@@ -394,14 +479,27 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             }}
             maxedCount={maxedCount}
             totalCount={items.length}
+            bannerInSummary
             banner={
               <SceneBanner
                 src={RESEARCH_CATEGORY_SCENE[category].src}
                 storageKey={RESEARCH_CATEGORY_SCENE[category].storageKey}
+                panZoomFactor={RESEARCH_CATEGORY_SCENE[category].panZoomFactor}
+                focalYPercent={RESEARCH_CATEGORY_SCENE[category].focalYPercent}
+                focalXPercent={RESEARCH_CATEGORY_SCENE[category].focalXPercent}
               />
             }
           >
-            <ul className="structure-list progression-grid">
+            <ul
+              className={`structure-list ${
+                category === "resources" ||
+                category === "mult" ||
+                category === "discover" ||
+                category === "unlock"
+                  ? "recruitment-grid"
+                  : "progression-grid"
+              }`}
+            >
               {items.map(renderResearchCard)}
             </ul>
           </ProgressionCategorySection>

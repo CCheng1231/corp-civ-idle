@@ -10,7 +10,7 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
-import { RECRUITMENT_UNITS } from "../game/recruitmentData";
+import { RECRUITMENT_UNITS, BRANCH_MANAGER_RESEARCH_LOCK_HINT } from "../game/recruitmentData";
 import type { RecruitmentUnitDefinition } from "../game/recruitmentData";
 import type { ContractorCategoryId } from "../game/types";
 import { formatQueueTimeHours } from "../game/timers";
@@ -89,6 +89,7 @@ const RECRUIT_CATEGORY_SCENE: Record<
   },
 };
 
+/** Shown on the Locked hire button (tooltip / long-press), not on the card body. */
 function isRecruitmentUnitLocked(
   state: GameState,
   unit: RecruitmentUnitDefinition,
@@ -99,9 +100,11 @@ function isRecruitmentUnitLocked(
   );
 }
 
-function recruitmentBlockerMessage(researchLocked: boolean): string | null {
-  if (researchLocked) return "Requires Branch Management research";
-  return null;
+function recruitmentLockedButtonTitle(
+  researchLocked: boolean,
+): string | undefined {
+  if (researchLocked) return BRANCH_MANAGER_RESEARCH_LOCK_HINT;
+  return undefined;
 }
 
 export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
@@ -183,7 +186,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
       !researchLocked &&
       canAffordAtOffice(state, officeId, cost);
     const orderHours = recruitmentOrderBuildTimeHours(count);
-    const blocker = recruitmentBlockerMessage(researchLocked);
+    const lockedTitle = recruitmentLockedButtonTitle(researchLocked);
 
     const focused = focusUnitId === unit.id;
     const portraitSrc = unitPortraitSrc(unit.id, state.settings);
@@ -233,20 +236,31 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               }}
             />
           </label>
-          <button
-            type="button"
-            className="btn primary recruitment-queue-btn"
-            disabled={!affordable || queueFull || researchLocked}
-            onClick={() => hire(unit.id)}
+          <span
+            className="recruitment-queue-btn-hint-wrap"
+            title={lockedTitle}
           >
-            {actionsLocked
-              ? "Pick an office"
-              : researchLocked
-              ? "Locked"
-              : queueFull
-                ? "Queue full"
-                : "Queue order"}
-          </button>
+            <button
+              type="button"
+              className="btn primary recruitment-queue-btn"
+              disabled={!affordable || queueFull || researchLocked}
+              title={lockedTitle}
+              aria-label={
+                researchLocked
+                  ? `Locked. ${BRANCH_MANAGER_RESEARCH_LOCK_HINT}`
+                  : undefined
+              }
+              onClick={() => hire(unit.id)}
+            >
+              {actionsLocked
+                ? "Pick an office"
+                : researchLocked
+                  ? "Locked"
+                  : queueFull
+                    ? "Queue full"
+                    : "Queue order"}
+            </button>
+          </span>
         </div>
       </div>
     );
@@ -275,7 +289,6 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               >
                 {unit.proposedRole}
               </p>
-              {blocker && <p className="structure-blocker">{blocker}</p>}
             </div>
           </div>
         ) : (
@@ -288,7 +301,6 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               {unit.proposedRole}
             </p>
             {hireMetaBlock}
-            {blocker && <p className="structure-blocker">{blocker}</p>}
           </>
         )}
       </li>
@@ -415,10 +427,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             }}
             maxedCount={0}
             totalCount={units.length}
+            bannerInSummary
             banner={
               <SceneBanner
                 src={RECRUIT_CATEGORY_SCENE[category].src}
                 storageKey={RECRUIT_CATEGORY_SCENE[category].storageKey}
+                panZoomFactor={1.78}
               />
             }
           >

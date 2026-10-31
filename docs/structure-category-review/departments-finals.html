@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Departments finals</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Departments — finals (wired v4)</h1>
+      <p>
+        Masters in <code>images/departments/finals/</code>. Card strip 5.4×8.5rem · match Essentials wiring pattern.
+        <a href="./index.html">← Hub</a>
+      </p>
+    </header>
+
+    <div class="export-crops-bar">
+      <strong>Crop settings export</strong>
+      <button type="button" id="copy-crops-all">Copy all crop JSON</button>
+      <button type="button" id="copy-crops-banner">Copy banner only</button>
+      <button type="button" id="copy-crops-ts">Copy TS crop snippet</button>
+      <pre id="crop-json" aria-live="polite"></pre>
+    </div>
+
+    <section class="genre-block">
+      <h2>Category banner</h2>
+      <div class="grid">
+        <article class="card card-banner">
+          <img class="full" src="./images/departments/finals/departments-category-banner.jpg" alt="Banner" />
+          <div class="card-body" id="banner-body">
+            <span class="pill">departments-category-banner.jpg</span>
+            <div class="strip-label">Header mock</div>
+            <div class="header-row-mock">
+              <span class="title">Departments</span>
+              <div class="header-strip crop-tuner-wrap" data-crop-id="finals-banner">
+                <img class="crop-tuner-target" src="./images/departments/finals/departments-category-banner.jpg" alt="" />
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="genre-block">
+      <h2>Structure thumbnails</h2>
+      <div class="grid" id="structures"></div>
+    </section>
+  </div>
+  <script src="./departments-wire-defaults.js"></script>
+  <script src="./essentials-crop-tuner.js"></script>
+  <script>
+    const FINALS = [
+      { id: "dept_b2b", name: "Department of B2B", file: "departments-dept-b2b.jpg" },
+      { id: "break_room", name: "Break room", file: "departments-break-room.jpg" },
+      { id: "social_media", name: "Social Media", file: "departments-social-media.jpg" },
+      { id: "video_production_studio", name: "Video production studio", file: "departments-video-production-studio.jpg" },
+      { id: "press_room", name: "Press Room", file: "departments-press-room.jpg" },
+    ];
+    const IMG = "./images/departments/finals/";
+    const bannerCropId = "finals-banner";
+
+    document.getElementById("structures").innerHTML = FINALS.map((s) => `
+      <article class="card">
+        <img class="portrait" src="${IMG}${s.file}" alt="${s.name}" />
+        <div class="card-body">
+          <h3>${s.name}</h3>
+          <span class="pill">${s.file}</span>
+          <div class="strip-label">Build card mock</div>
+          <div class="structure-card-mock">
+            <div class="structure-card-mock-portrait crop-tuner-wrap" data-crop-id="finals-${s.id}">
+              <img class="crop-tuner-target" src="${IMG}${s.file}" alt="" />
+            </div>
+            <div class="structure-card-mock-body">
+              <strong>${s.name}</strong>
+              <span class="muted">Departments · thumbnail</span>
+            </div>
+          </div>
+        </div>
+      </article>`).join("");
+
+    document.querySelectorAll(".crop-tuner-wrap").forEach((wrap) => {
+      const cropId = wrap.getAttribute("data-crop-id");
+      initCropTuner(
+        wrap.closest(".card-body"),
+        cropId,
+        DEPARTMENTS_WIRE.getReviewCropDefaults(cropId),
+      );
+    });
+
+    function refreshCropJson() {
+      document.getElementById("crop-json").textContent = JSON.stringify(
+        exportReviewCrops(allReviewCropIds()),
+        null,
+        2,
+      );
+    }
+    document.addEventListener("review-crop-change", refreshCropJson);
+    refreshCropJson();
+
+    function flash(btn) {
+      const prev = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(() => { btn.textContent = prev; }, 1200);
+    }
+    document.getElementById("copy-crops-all").addEventListener("click", () => {
+      copyReviewCropsJson(allReviewCropIds()).then(() =>
+        flash(document.getElementById("copy-crops-all")),
+      );
+    });
+    document.getElementById("copy-crops-banner").addEventListener("click", () => {
+      copyReviewCropsJson([bannerCropId]).then(() =>
+        flash(document.getElementById("copy-crops-banner")),
+      );
+    });
+    document.getElementById("copy-crops-ts").addEventListener("click", () => {
+      copyReviewCropsTypeScript(allReviewCropIds()).then(() =>
+        flash(document.getElementById("copy-crops-ts")),
+      );
+    });
+  </script>
+</body>
+</html>

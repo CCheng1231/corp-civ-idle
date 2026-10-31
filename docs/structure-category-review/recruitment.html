@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Recruitment Pass 0</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Recruitment — Pass 0</h1>
+      <p>
+        Build tab <strong>Recruitment</strong> (staffing): Recruitment Desk, MIT room. Replaces <code>Office_Recruitment.jpg</code> when wired.
+        <a href="./index.html">← Hub</a> ·
+        <a href="./recruitment-pass2.html"><strong>Pass 2</strong></a>
+      </p>
+    </header>
+    <section class="genre-block">
+      <h2>Layout rules</h2>
+      <ul class="genre-meta">
+        <li><strong>Recruitment Desk</strong> — HR welcome counter, interview chairs, blank resume stacks (not classroom).</li>
+        <li><strong>MIT room</strong> — U-table training room, projector screen, flip chart (not front desk).</li>
+        <li>Structures first, banner two-pod mosaic last. MIT is research-gated — full art on card when locked.</li>
+      </ul>
+    </section>
+    <section class="genre-block">
+      <h2>Prompt bank (v1)</h2>
+      <pre id="prompts"></pre>
+    </section>
+  </div>
+  <script src="./recruitment-prompts.js"></script>
+  <script>
+    document.getElementById("prompts").textContent = [
+      recruitmentPass2BannerPrompt(1),
+      "",
+      recruitmentPass2StructurePrompt(1, "recruitment_desk"),
+      "",
+      recruitmentPass2StructurePrompt(1, "mit_room"),
+    ].join("\n");
+  </script>
+</body>
+</html>

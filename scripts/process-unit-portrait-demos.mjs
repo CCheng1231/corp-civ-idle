@@ -595,8 +595,9 @@ async function saveBothDirs(baseName, srcJpgPath, pngBuffer) {
 const defenseOnly = process.argv.includes("--defense-only");
 const intelOnly = process.argv.includes("--intel-only");
 const supportOnly = process.argv.includes("--support-only");
+const specialOnly = process.argv.includes("--special-only");
 
-if (!defenseOnly && !intelOnly && !supportOnly) {
+if (!defenseOnly && !intelOnly && !supportOnly && !specialOnly) {
 for (const base of PASS1_WHITE_FILES) {
   const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
   if (!existsSync(srcJpg)) continue;
@@ -837,4 +838,75 @@ async function processSupportPortraits() {
 
 if (supportOnly) {
   await processSupportPortraits();
+}
+
+const specialOutDirs = [
+  join(root, "docs/unit-portrait-review/images/special"),
+  join(root, "src/assets/reference/unit-portraits/special"),
+];
+for (const d of specialOutDirs) {
+  mkdirSync(d, { recursive: true });
+}
+
+const SPECIAL_CHROMA_FILES = [
+  "special-branch-manager-v1-keys-chroma",
+  "special-branch-manager-v2-map-chroma",
+  "special-branch-manager-v3-tablet-chroma",
+  "special-branch-manager-v4-folio-chroma",
+  "special-branch-manager-v5-ribbon-chroma",
+  "special-branch-manager-v6-boxes-chroma",
+  "special-branch-manager-v7-model-chroma",
+  "special-branch-manager-v8-nameplates-chroma",
+];
+
+async function saveSpecialDirs(baseName, srcJpgPath, pngBuffer) {
+  for (const outDir of specialOutDirs) {
+    try {
+      if (srcJpgPath) {
+        copyFileSync(srcJpgPath, join(outDir, `${baseName}.jpg`));
+      }
+      await writePngAtomic(outDir, baseName, pngBuffer);
+    } catch (err) {
+      console.warn(`[special skip write] ${outDir}/${baseName}: ${err.message}`);
+    }
+  }
+}
+
+async function specialPortraitKeyMode(srcPath) {
+  const { data, info } = await sharp(srcPath).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const w = info.width;
+  const h = info.height;
+  let magCorners = 0;
+  for (const [x, y] of [
+    [0, 0],
+    [w - 1, 0],
+    [0, h - 1],
+    [w - 1, h - 1],
+  ]) {
+    const o = (y * w + x) * 3;
+    if (isChromaBackdrop(data[o], data[o + 1], data[o + 2])) magCorners++;
+  }
+  return magCorners >= 2 ? "chroma" : "white";
+}
+
+async function processSpecialPortraits() {
+  for (const base of SPECIAL_CHROMA_FILES) {
+    const srcJpg = join(cursorAssetsDir, `${base}.jpg`);
+    if (!existsSync(srcJpg)) {
+      console.warn(`[Special skip missing] ${base}.jpg`);
+      continue;
+    }
+    const mode = await specialPortraitKeyMode(srcJpg);
+    const pngBuf =
+      mode === "chroma"
+        ? await keyChromaMagentaSilhouetteLocked(srcJpg)
+        : await keyWhiteStudioSilhouetteLocked(srcJpg);
+    await saveSpecialDirs(base, srcJpg, pngBuf);
+    console.log(`[Special ${mode}] ${base}`);
+  }
+  console.log("Special portrait batch complete.");
+}
+
+if (specialOnly) {
+  await processSpecialPortraits();
 }

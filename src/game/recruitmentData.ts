@@ -223,10 +223,14 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
       "reputation": 10,
       "connection": 8
     },
-    "detail": "Site-founding specialist. Cannot be assigned to contracts. One unit is consumed to open a branch.",
-    "proposedRole": "Establish-only unit: required and consumed when founding a branch. No job or office passive effects. Further branches need Massive Expansion research + another Branch Manager each."
+    "detail": "Site-founding specialist. Consumed when founding a branch.",
+    "proposedRole": "Consumed when founding a branch."
   }
 ];
+
+/** Hire button tooltip when Branch Management research is not unlocked. */
+export const BRANCH_MANAGER_RESEARCH_LOCK_HINT =
+  "Requires Branch Management research";
 
 export const UNIT_IDS: UnitId[] = RECRUITMENT_UNITS.map((u) => u.id);
 

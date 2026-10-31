@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research — Operations Pass 2</title>
+  <link rel="stylesheet" href="../structure-category-review/essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Operations — Pass 2 (wired v1 in game)</h1>
+      <p>
+        Category banner + <strong>3 operations projects</strong> (branch · portfolio · expansion).
+        Banner mock 9.5×2.35rem · card mock 5.4×8.5rem.
+        <a href="./index.html">← Hub</a>
+      </p>
+    </header>
+    <div class="export-crops-bar">
+      <strong>Crop settings export</strong>
+      <button type="button" id="copy-crops-all">Copy all crop JSON</button>
+      <button type="button" id="copy-crops-banner">Copy banner only</button>
+      <button type="button" id="copy-crops-ts">Copy TS crop snippet</button>
+      <pre id="crop-json" aria-live="polite"></pre>
+    </div>
+    <div id="sets"></div>
+  </div>
+  <script src="./operations-pass2-data.js"></script>
+  <script src="./operations-wire-defaults.js"></script>
+  <script src="../structure-category-review/essentials-crop-tuner.js"></script>
+  <script>
+    const IMG_B = "./images/operations/pass2/banners/";
+    const IMG_P = "./images/operations/pass2/projects/";
+    const bannerCropIds = [];
+
+    function stripMock(file) {
+      const cropId = "pass2-banner:" + file;
+      bannerCropIds.push(cropId);
+      return `
+        <div class="strip-label">Category banner (9.5×2.35rem)</div>
+        <div class="header-row-mock">
+          <span class="title">Operations</span>
+          <div class="header-strip crop-tuner-wrap" data-crop-id="${cropId}">
+            <img class="crop-tuner-target" src="${IMG_B}${file}" alt="" />
+          </div>
+        </div>`;
+    }
+
+    function cardMock(p, version) {
+      const cropId = `pass2-v${version}:${p.file}`;
+      return `
+        <article class="card">
+          <img class="portrait" src="${IMG_P}${p.file}" alt="${p.name}" loading="lazy" />
+          <div class="card-body">
+            <h3>${p.name}</h3>
+            <p>${p.note}</p>
+            <span class="pill">${p.file}</span>
+            <div class="strip-label">Research card mock</div>
+            <div class="structure-card-mock">
+              <div class="structure-card-mock-portrait crop-tuner-wrap" data-crop-id="${cropId}">
+                <img class="crop-tuner-target" src="${IMG_P}${p.file}" alt="" />
+              </div>
+              <div class="structure-card-mock-body">
+                <strong>${p.name}</strong>
+                <span class="muted">Set v${version}</span>
+              </div>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    const root = document.getElementById("sets");
+    for (const set of OPERATIONS_PASS2_SETS) {
+      const section = document.createElement("section");
+      section.className = "genre-block";
+      section.id = "set-v" + set.version;
+      const bannerCard = `
+        <article class="card card-banner">
+          <img class="full" src="${IMG_B}${set.banner.file}" alt="" loading="lazy" />
+          <div class="card-body">
+            <h3>${set.banner.title}</h3>
+            <p>${set.banner.note}</p>
+            <span class="pill">${set.banner.file}</span>
+            ${stripMock(set.banner.file)}
+          </div>
+        </article>`;
+      const projectCards = set.projects.map((p) => cardMock(p, set.version)).join("");
+      section.innerHTML = `
+        <h2>Version ${set.version} — ${set.style}</h2>
+        <div class="grid grid-set">
+          ${bannerCard}
+          ${projectCards}
+        </div>`;
+      root.appendChild(section);
+    }
+
+    document.querySelectorAll(".crop-tuner-wrap").forEach((wrap) => {
+      const cropId = wrap.getAttribute("data-crop-id");
+      initCropTuner(
+        wrap.closest(".card-body"),
+        cropId,
+        RESEARCH_OPERATIONS_WIRE.getReviewCropDefaults(cropId),
+      );
+    });
+
+    function refreshCropJson() {
+      document.getElementById("crop-json").textContent = JSON.stringify(
+        exportReviewCrops(allReviewCropIds()),
+        null,
+        2,
+      );
+    }
+    document.addEventListener("review-crop-change", refreshCropJson);
+    refreshCropJson();
+
+    function flash(btn) {
+      const prev = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(() => { btn.textContent = prev; }, 1200);
+    }
+    document.getElementById("copy-crops-all").addEventListener("click", () => {
+      copyReviewCropsJson(allReviewCropIds()).then(() =>
+        flash(document.getElementById("copy-crops-all")),
+      );
+    });
+    document.getElementById("copy-crops-banner").addEventListener("click", () => {
+      copyReviewCropsJson(bannerCropIds).then(() =>
+        flash(document.getElementById("copy-crops-banner")),
+      );
+    });
+    document.getElementById("copy-crops-ts").addEventListener("click", () => {
+      copyReviewCropsTypeScript(allReviewCropIds()).then(() =>
+        flash(document.getElementById("copy-crops-ts")),
+      );
+    });
+  </script>
+</body>
+</html>

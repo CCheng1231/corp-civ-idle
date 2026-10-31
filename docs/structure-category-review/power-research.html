@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corp Civ Idle — Power &amp; research Pass 0</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Power &amp; research — Pass 0</h1>
+      <p>
+        Build tab category <strong>Power &amp; research</strong> (infrastructure): Electrical Panel, Electricity Generator, Department of R&amp;D.
+        Replaces <code>Office_Power.jpg</code> when wired. Same Essentials isometric family as Departments.
+        <a href="./index.html">← Hub</a> ·
+        <a href="./power-research-pass2.html"><strong>Pass 2 (review)</strong></a>
+      </p>
+    </header>
+
+    <section class="genre-block">
+      <h2>Layout rules (Pass 2b)</h2>
+      <ul class="genre-meta">
+        <li><strong>Electrical Panel</strong> — breaker alcove, conduit, amber indicators (not generator bay).</li>
+        <li><strong>Electricity Generator</strong> — open industrial bay, gensets or battery racks (not lab).</li>
+        <li><strong>Department of R&amp;D</strong> — lab benches, microscope, flasks, soft cyan research glow (not power gear).</li>
+        <li>Generate <strong>three structure masters first</strong>, banner mosaic last. Essentials desk pass2 vN = palette ref only.</li>
+        <li>Generator is research-gated in game — still show full art on cards (same as hidden department structures).</li>
+      </ul>
+    </section>
+
+    <section class="genre-block">
+      <h2>Prompt bank</h2>
+      <p class="genre-meta">Copy from <code>power-research-prompts.js</code> or run in console:</p>
+      <pre id="prompts"></pre>
+    </section>
+  </div>
+  <script src="./power-research-prompts.js"></script>
+  <script>
+    const ids = ["power_panel", "electricity_generator", "dept_rnd"];
+    const lines = [
+      "// Banner v1",
+      powerResearchPass2BannerPrompt(1),
+      "",
+      ...ids.flatMap((id) => [
+        `// ${id} v1`,
+        powerResearchPass2StructurePrompt(1, id),
+        "",
+      ]),
+    ];
+    document.getElementById("prompts").textContent = lines.join("\n");
+  </script>
+</body>
+</html>
