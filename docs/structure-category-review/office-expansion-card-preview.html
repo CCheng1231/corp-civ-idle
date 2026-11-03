@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Office Expansion — card preview (approve before wire)</title>
+  <link rel="stylesheet" href="./essentials-review.css" />
+  <style>
+    :root {
+      --panel-2: rgba(15, 20, 27, 0.42);
+      --border: rgba(255, 255, 255, 0.1);
+      --muted: #9aa8bc;
+      --text: #e8eef5;
+      --accent-2: #93c5fd;
+      --success: #6ee7b7;
+      --danger: #f87171;
+    }
+    .preview-note {
+      max-width: 42rem;
+      line-height: 1.45;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .build-summary-mock {
+      display: flex;
+      justify-content: flex-end;
+      width: fit-content;
+      max-width: 100%;
+      margin-left: auto;
+      padding: 0.1rem 0.26rem;
+      border: 1px solid var(--border);
+      border-radius: 0.32rem;
+      background: rgba(8, 12, 18, 0.55);
+    }
+    .capacity-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.05rem;
+      font-size: 0.56rem;
+      max-width: 7.1rem;
+    }
+    .cap-stat {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.45rem;
+      align-items: start;
+    }
+    .cap-stat strong { font-weight: 550; color: var(--muted); }
+    .cap-values {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .cap-free { color: var(--success); font-size: 0.58rem; }
+    .build-card-compact {
+      display: flex;
+      align-items: stretch;
+      min-height: 8.5rem;
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      background: var(--panel-2);
+    }
+    .build-card-portrait {
+      width: 5.4rem;
+      flex-shrink: 0;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      background: #0c1018;
+      overflow: hidden;
+      position: relative;
+    }
+    .build-card-portrait img,
+    .build-card-portrait svg {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 100%;
+      height: 152%;
+      transform: translateX(-50%) scale(1.1);
+      transform-origin: 50% 100%;
+      object-fit: contain;
+      object-position: 50% 100%;
+      display: block;
+    }
+    .build-card-main {
+      flex: 1;
+      min-width: 0;
+      padding: 0.42rem 0.52rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.2rem;
+    }
+    .build-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.35rem;
+      font-size: 0.72rem;
+    }
+    .build-card-head strong { font-size: 0.78rem; }
+    .level-meta {
+      text-align: right;
+      font-size: 0.62rem;
+      color: var(--muted);
+      line-height: 1.2;
+    }
+    .level-meta .max { display: block; font-size: 0.58rem; }
+    .build-card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .cost-line {
+      font-size: 0.65rem;
+      color: var(--success);
+    }
+    .build-card-actions { display: flex; justify-content: flex-end; }
+    .btn-upgrade {
+      font-size: 0.68rem;
+      font-weight: 650;
+      padding: 0.14rem 0.48rem;
+      border-radius: 0.36rem;
+      border: none;
+      background: linear-gradient(180deg, #5b8def, #3d6fd6);
+      color: #fff;
+    }
+    .build-card-desc {
+      margin: 0;
+      font-size: 0.52rem;
+      line-height: 1.28;
+      color: var(--muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 0.18rem;
+    }
+    .dept-section-mock {
+      margin-top: 1.5rem;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+    }
+    .dept-section-mock summary {
+      cursor: pointer;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    .grid-single {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+      max-width: 24rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Office Expansion — approve before wire</h1>
+      <p>
+        Proposed <strong>Build</strong> UX per Chris (Nov 2026): summary strip = Space + Power only (right-aligned);
+        <strong>Office Expansion</strong> = first card in <strong>Departments</strong> (same compact portrait card as other builds).
+        <a href="./index.html">← Hub</a>
+      </p>
+    </header>
+
+    <p class="preview-note">
+      Strip art is <strong>embedded inline</strong> below (works when opening this file directly in a browser).
+      Source file: <code>images/departments/drafts/office-expansion-proposed.svg</code>.
+      After approval, bake to <code>departments-office-expansion.jpg</code> and wire in
+      <code>structureDepartmentsArt.ts</code>.
+    </p>
+
+    <section class="genre-block">
+      <h2>Build tab — summary strip (right-aligned)</h2>
+      <div class="build-summary-mock" aria-label="Space and Power only">
+        <div class="capacity-stack">
+          <div class="cap-stat">
+            <span>Space</span>
+            <span class="cap-values">
+              <strong>14/21</strong>
+              <span class="cap-free">7 free</span>
+            </span>
+          </div>
+          <div class="cap-stat">
+            <span>Power</span>
+            <span class="cap-values">
+              <strong>55/126</strong>
+              <span class="cap-free">71 free</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="genre-block">
+      <h2>Departments — first card (Office Expansion)</h2>
+      <div class="dept-section-mock">
+        <details open>
+          <summary>Departments ▾</summary>
+          <div class="grid-single">
+            <article class="build-card-compact" aria-label="Office Expansion card mock">
+              <div class="build-card-portrait">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="card-bg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#1a2230"/>
+                      <stop offset="100%" stop-color="#0c1018"/>
+                    </linearGradient>
+                    <linearGradient id="card-floor" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#3d4a66"/>
+                      <stop offset="100%" stop-color="#2a3348"/>
+                    </linearGradient>
+                    <linearGradient id="card-glass" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#8fd4ff" stop-opacity="0.85"/>
+                      <stop offset="100%" stop-color="#5a8fd4" stop-opacity="0.45"/>
+                    </linearGradient>
+                    <linearGradient id="card-glow" x1="0" y1="1" x2="0" y2="0">
+                      <stop offset="0%" stop-color="#7c5cff" stop-opacity="0.55"/>
+                      <stop offset="100%" stop-color="#36d6c3" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="512" height="640" fill="url(#card-bg)"/>
+                  <ellipse cx="256" cy="580" rx="200" ry="36" fill="#000" opacity="0.35"/>
+                  <g transform="translate(72 220)">
+                    <path d="M0 120 L80 80 L200 80 L200 200 L0 200 Z" fill="url(#card-floor)" stroke="#6b7896" stroke-width="3"/>
+                    <path d="M20 95 L80 65 L180 65 L180 85 L80 85 L20 115 Z" fill="url(#card-glass)" stroke="#a8c8ff" stroke-width="2"/>
+                    <rect x="24" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+                    <rect x="72" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+                    <rect x="120" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+                  </g>
+                  <g transform="translate(248 180)" opacity="0.95">
+                    <path d="M0 140 L60 110 L160 110 L160 230 L0 230 Z" fill="url(#card-floor)" stroke="#9d7bff" stroke-width="3" stroke-dasharray="8 6"/>
+                    <path d="M12 118 L60 92 L148 92 L148 108 L60 108 L12 134 Z" fill="url(#card-glass)" stroke="#c4b5ff" stroke-width="2"/>
+                    <rect x="20" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+                    <rect x="64" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+                    <rect x="108" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+                    <text x="80" y="205" text-anchor="middle" fill="#c4b5ff" font-family="Segoe UI,sans-serif" font-size="22" font-weight="600">+</text>
+                  </g>
+                  <path d="M200 300 L248 268" stroke="#36d6c3" stroke-width="4" stroke-linecap="round"/>
+                  <rect x="0" y="480" width="512" height="160" fill="url(#card-glow)"/>
+                </svg>
+              </div>
+              <div class="build-card-main">
+                <div class="build-card-head">
+                  <strong>Office Expansion</strong>
+                  <div class="level-meta">
+                    <span>Lv 2 → 3</span>
+                    <span class="max">Max: 20</span>
+                  </div>
+                </div>
+                <div class="build-card-meta">
+                  <div class="cost-line">Cash 1.2K · Supply 800 · 12m</div>
+                  <div class="build-card-actions">
+                    <button type="button" class="btn-upgrade">Upgrade</button>
+                  </div>
+                </div>
+                <p class="build-card-desc">
+                  Add office slots at this site — each level increases total space capacity for structures.
+                </p>
+              </div>
+            </article>
+            <p class="muted" style="font-size:0.72rem;margin:0">
+              ↓ Other department structures (B2B, break room, …) follow in the same grid.
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="genre-block">
+      <h2>Proposed strip art (full)</h2>
+      <div class="grid">
+        <article class="card">
+          <svg class="portrait" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" role="img" aria-label="Office expansion proposed art">
+            <defs>
+              <linearGradient id="full-bg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1a2230"/>
+                <stop offset="100%" stop-color="#0c1018"/>
+              </linearGradient>
+              <linearGradient id="full-floor" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#3d4a66"/>
+                <stop offset="100%" stop-color="#2a3348"/>
+              </linearGradient>
+              <linearGradient id="full-glass" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#8fd4ff" stop-opacity="0.85"/>
+                <stop offset="100%" stop-color="#5a8fd4" stop-opacity="0.45"/>
+              </linearGradient>
+              <linearGradient id="full-glow" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#7c5cff" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="#36d6c3" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <rect width="512" height="640" fill="url(#full-bg)"/>
+            <ellipse cx="256" cy="580" rx="200" ry="36" fill="#000" opacity="0.35"/>
+            <g transform="translate(72 220)">
+              <path d="M0 120 L80 80 L200 80 L200 200 L0 200 Z" fill="url(#full-floor)" stroke="#6b7896" stroke-width="3"/>
+              <path d="M20 95 L80 65 L180 65 L180 85 L80 85 L20 115 Z" fill="url(#full-glass)" stroke="#a8c8ff" stroke-width="2"/>
+              <rect x="24" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+              <rect x="72" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+              <rect x="120" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+            </g>
+            <g transform="translate(248 180)" opacity="0.95">
+              <path d="M0 140 L60 110 L160 110 L160 230 L0 230 Z" fill="url(#full-floor)" stroke="#9d7bff" stroke-width="3" stroke-dasharray="8 6"/>
+              <path d="M12 118 L60 92 L148 92 L148 108 L60 108 L12 134 Z" fill="url(#full-glass)" stroke="#c4b5ff" stroke-width="2"/>
+              <rect x="20" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+              <rect x="64" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+              <rect x="108" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+              <text x="80" y="205" text-anchor="middle" fill="#c4b5ff" font-family="Segoe UI,sans-serif" font-size="22" font-weight="600">+</text>
+            </g>
+            <path d="M200 300 L248 268" stroke="#36d6c3" stroke-width="4" stroke-linecap="round"/>
+            <rect x="0" y="480" width="512" height="160" fill="url(#full-glow)"/>
+          </svg>
+          <div class="card-body">
+            <h3>Isometric wing + dashed expansion</h3>
+            <span class="pill">draft SVG · replace with JPG when approved</span>
+            <p class="muted">
+              Suggested crop for 5.4×8.5rem strip: panZoomFactor 1.55, focalY 42%, focalX 52% (tune in finals pass).
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="genre-block">
+      <h2>Checklist before wire-in</h2>
+      <ul class="preview-note">
+        <li>Approve card layout + title “Office Expansion”</li>
+        <li>Approve draft art or supply replacement JPG</li>
+        <li>Confirm description line on card footer</li>
+        <li>Reply in chat to wire JPG + crop into game build</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

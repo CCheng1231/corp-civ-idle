@@ -78,20 +78,6 @@ export function ProgressionCategorySection({
       </summary>
       {!bannerInSummary && banner}
       {children}
-      <button
-        type="button"
-        className="office-collapse-all"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!controlled) {
-            setInternalOpen(false);
-          }
-          onOpenChange?.(false);
-        }}
-      >
-        {"<< Collapse"}
-      </button>
     </details>
   );
 }

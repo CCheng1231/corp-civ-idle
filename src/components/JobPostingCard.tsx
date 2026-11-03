@@ -10,6 +10,7 @@ import {
   jobDefinitionForPosting,
   JOB_SIZE_LABELS,
   JOB_SIZES,
+  jobCompletionSupplyBonus,
   jobEngagementTravelSupplyCost,
   returnPerHour,
   validateEngagementAssignment,
@@ -18,7 +19,7 @@ import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
 import { formatJobDurationSec } from "../game/jobBoard";
 import {
   REGION_LABELS,
-  jobSiteCoordForDefinition,
+  jobSiteCoordForPosting,
   jobSiteLabelForPosting,
   jobSiteRegionForPosting,
 } from "../game/mapWorld";
@@ -109,10 +110,11 @@ export function JobPostingCard({
   const unitCount = totalAssigned(assignment);
   const expectedPerHour = returnPerHour(def, unitCount);
   const actualPerHour = actualShiftReturnPerHour(def, posting, unitCount);
+  const completionSupply = jobCompletionSupplyBonus(def);
   const travelHexes = jobTravelHexesToCoord(
     state,
     officeId,
-    jobSiteCoordForDefinition(def),
+    jobSiteCoordForPosting(posting, def, state.settings),
   );
   const tripSupply = jobEngagementTravelSupplyCost(
     state,
@@ -172,6 +174,12 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Payout</span>
           <span>${def.cashPerUnitHour}/unit-hour</span>
         </li>
+        {completionSupply > 0 ? (
+          <li>
+            <span className="job-posting-fact-label">On complete</span>
+            <span>{formatNumber(completionSupply)} supply</span>
+          </li>
+        ) : null}
         <li>
           <span className="job-posting-fact-label">Completion</span>
           <MetaTip<CompletionBand>

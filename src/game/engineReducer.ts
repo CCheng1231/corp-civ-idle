@@ -255,6 +255,10 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           action.view === "operations"
             ? (action.structureFocusStructureId ?? null)
             : null,
+        researchFocusResearchId:
+          action.view === "research"
+            ? (action.researchFocusResearchId ?? null)
+            : null,
       };
     }
 

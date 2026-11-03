@@ -1,6 +1,7 @@
-import { doc, getDoc, runTransaction, setDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, runTransaction, setDoc, writeBatch } from "firebase/firestore";
 import { MAP_REGION_SEED } from "../game/mapWorld";
-import { initializeJobPostings } from "../game/jobs";
+import { createPostingFromDefinition, initializeJobPostings } from "../game/jobs";
+import { JOB_DEFINITIONS } from "../game/jobHubData";
 import { getDb } from "./firebase";
 import type { OnlineSession, WorldId, WorldMeta } from "./types";
 import { jobPostingsCol, metaRef, worldRoot } from "./worldDocs";
@@ -115,4 +116,26 @@ export async function seedSharedJobPostingsIfNeeded(
       { merge: true },
     );
   });
+}
+
+/** Add shared postings for new job definitions (existing online worlds). */
+export async function ensureSharedJobDefinitionsSynced(
+  session: OnlineSession,
+): Promise<void> {
+  const snap = await getDocs(jobPostingsCol(session.worldId));
+  const defsSeen = new Set(
+    snap.docs.map((d) =>
+      String((d.data() as Record<string, unknown>).definitionId ?? ""),
+    ),
+  );
+  const missing = JOB_DEFINITIONS.filter((d) => !defsSeen.has(d.id));
+  if (missing.length === 0) return;
+
+  const now = Date.now();
+  const batch = writeBatch(getDb());
+  for (const def of missing) {
+    const posting = createPostingFromDefinition(def, now);
+    batch.set(doc(jobPostingsCol(session.worldId), posting.id), posting);
+  }
+  await batch.commit();
 }

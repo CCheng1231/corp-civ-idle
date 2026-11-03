@@ -67,7 +67,7 @@ Tier is a **badge on the card**, not the section header (recruitment).
 
 - **Cost line** (red/green) = affordability. Do not repeat cash/supply/power shortfalls in blocker text.
 - **Button label** = action state (Locked, Queue full, In progress). Do not duplicate in a line above.
-- Keep **Requires:** (or similar) for locks when the button only says “Locked”.
+- Keep **Requires:** for locks when the button only says “Locked”. Each missing gate is a **separate clickable line** (not plain text). Portrait cards: overlay links on the left strip (`ProgressionLockRequirements`, `ProgressionCardPortraitColumn`). Navigation uses `progressionLockNav.ts` + focus scroll/highlight (`progressionFocusScroll.ts`, `progression-focus-target`). **New gates:** structures via `unlocksStructure` research; research via `rndLevelRequired` / `requires`; recruits via `RECRUITMENT_UNIT_RESEARCH_GATES` in `progressionLockNav.ts`.
 - Destructive actions (sell/demolish) → **`ConfirmDialog`** with refund note; no refund line on the card.
 
 ### Copy

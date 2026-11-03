@@ -1,12 +1,10 @@
 import { useState, type Dispatch } from "react";
 import { MAX_STRUCTURE_QUEUE } from "../game/constants";
-import { ownedOfficeIds } from "../game/mapWorld";
+import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
   isAllOfficesSelected,
   resolveOfficeLocation,
-  structureJobsForOffices,
 } from "../game/officeSelection";
-import { CompactQueueHeading } from "./CompactQueueHeading";
 import { LocationSitePanel } from "./LocationSitePanel";
 import { OfficeBuildQueueSection } from "./OfficeStructurePanel";
 import { OfficeSiteSummary } from "./OfficeSiteSummary";
@@ -27,28 +25,39 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
   const showAll = isAllOfficesSelected(state.selectedOffice);
   const officeId: OfficeLocationId = resolveOfficeLocation(state);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const buildEntries = structureJobsForOffices(state);
-  const officeCount = ownedOfficeIds(state).length;
 
   const officeBesidePortrait = (
     <>
       <TabSiteHeader homeHubTab="operations" state={state} dispatch={dispatch} />
       {showAll ? (
-        <section className="location-view-section tab-queue-section tab-compact-queue">
-          <CompactQueueHeading
-            title="Structure in progress"
-            count={buildEntries.length}
-            countAriaLabel={`Structure queue ${buildEntries.length}`}
-          />
-          <StructureBuildQueueList
-            state={state}
-            entries={buildEntries}
-            dispatch={dispatch}
-            compact
-            maxSlots={officeCount * MAX_STRUCTURE_QUEUE}
-            emptyLabel=""
-          />
-        </section>
+        ownedOfficeIds(state).map((siteId) => {
+          const siteQueue = state.structureQueues[siteId] ?? [];
+          return (
+            <section
+              key={siteId}
+              className="location-view-section tab-queue-section tab-compact-queue"
+            >
+              <div className="tab-queue-heading">
+                <h3>{officeDisplayName(state, siteId)}</h3>
+                <span
+                  className="tab-queue-count muted"
+                  aria-label={`Structure queue ${siteQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
+                >
+                  {siteQueue.length}/{MAX_STRUCTURE_QUEUE}
+                </span>
+              </div>
+              <StructureBuildQueueList
+                state={state}
+                jobs={siteQueue}
+                locationId={siteId}
+                dispatch={dispatch}
+                now={Date.now()}
+                compact
+                emptyLabel=""
+              />
+            </section>
+          );
+        })
       ) : (
         <OfficeBuildQueueSection
           state={state}
@@ -81,7 +90,6 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           {!showAll ? (
             <OfficeSiteSummary
               state={state}
-              dispatch={dispatch}
               officeId={officeId}
               variant="banner"
             />

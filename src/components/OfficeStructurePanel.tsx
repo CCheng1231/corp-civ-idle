@@ -4,6 +4,7 @@ import {
   STRUCTURE_CATEGORY_LABELS,
   STRUCTURE_CATEGORY_ORDER,
   MAX_STRUCTURE_QUEUE,
+  OFFICE_EXPANSION_STRUCTURE_ID,
   canBuildStructure,
   canSellStructureLevel,
   formatNumber,
@@ -41,10 +42,14 @@ import { StructureCardPortrait } from "./StructureCardPortrait";
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureBuildQueueList, QueueSection } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
+import { ProgressionCardPortraitColumn } from "./ProgressionCardPortraitColumn";
+import { ProgressionLockRequirements } from "./ProgressionLockRequirements";
 import {
   getOfficeCategoryOpen,
   setOfficeCategoryOpen,
 } from "../game/officeCategoryOpen";
+import { structureProgressionLockNav } from "../game/progressionLockNav";
+import { scrollProgressionCardIntoViewWhenReady } from "../utils/progressionFocusScroll";
 import {
   formatPreviewDelta,
   formatPreviewText,
@@ -286,34 +291,43 @@ export function OfficeStructurePanel({
     return seeded;
   });
   const focusStructureId = state.structureFocusStructureId ?? null;
+  const focusStructureCategory = (() => {
+    if (!focusStructureId) return null;
+    try {
+      return getStructureDefinition(focusStructureId).category;
+    } catch {
+      return null;
+    }
+  })();
+  const focusCategoryReady =
+    focusStructureCategory != null &&
+    categoryOpen[focusStructureCategory] === true;
 
   useEffect(() => {
-    if (!focusStructureId) return;
-    let structure;
-    try {
-      structure = getStructureDefinition(focusStructureId);
-    } catch {
-      return;
-    }
-    setCategoryOpen((prev) => ({ ...prev, [structure.category]: true }));
-    setOfficeCategoryOpen(officeId, structure.category, true);
-    const scrollId = window.requestAnimationFrame(() => {
-      document
-        .getElementById(`structure-card-${focusStructureId}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    if (!focusStructureId || !focusStructureCategory) return;
+    setCategoryOpen((prev) => ({ ...prev, [focusStructureCategory]: true }));
+    setOfficeCategoryOpen(officeId, focusStructureCategory, true);
+  }, [focusStructureId, focusStructureCategory, officeId]);
+
+  useEffect(() => {
+    if (!focusStructureId || !focusCategoryReady) return;
+
+    const cancelScroll = scrollProgressionCardIntoViewWhenReady(
+      `structure-card-${focusStructureId}`,
+      { align: "comfortable" },
+    );
     const clearId = window.setTimeout(() => {
       dispatch({
         type: "SET_VIEW",
         view: "operations",
         structureFocusStructureId: null,
       });
-    }, 2500);
+    }, 2800);
     return () => {
-      window.cancelAnimationFrame(scrollId);
+      cancelScroll();
       window.clearTimeout(clearId);
     };
-  }, [focusStructureId, officeId, dispatch]);
+  }, [focusStructureId, focusCategoryReady, dispatch]);
 
   useEffect(() => {
     const seeded: Partial<Record<StructureCategory, boolean>> = {};
@@ -329,6 +343,8 @@ export function OfficeStructurePanel({
   }
 
   function renderStructureCard(structure: StructureDefinition) {
+    const focused = focusStructureId === structure.id;
+    const lockLines = structureProgressionLockNav(state, structure.id);
     const portraitArt =
       structureEssentialsPortrait(structure.id) ??
       structureDepartmentsPortrait(structure.id) ??
@@ -472,11 +488,6 @@ export function OfficeStructurePanel({
           {blockerMessage && !maxed && !inProgress && unlocked ? (
             <p className="structure-blocker">{blockerMessage}</p>
           ) : null}
-          {!unlocked ? (
-            <small className="cost-line">
-              Requires: {structureUnlockRequirementLabel(structure.id)}
-            </small>
-          ) : null}
           {structure.officeSlotsWhenBuilt > 0 ? (
             <p className="structure-space-line compact-stack-line">
               <span className="compact-stack-label">Office slot:</span>{" "}
@@ -561,7 +572,9 @@ export function OfficeStructurePanel({
         <li
           key={structure.id}
           id={`structure-card-${structure.id}`}
-          className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}`}
+          className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}${
+            focused ? " progression-focus-target" : ""
+          }`}
         >
           {withPortrait ? (
             <div className="recruitment-card-split">
@@ -647,11 +660,9 @@ export function OfficeStructurePanel({
           <p className="structure-blocker">{blockerMessage}</p>
         )}
         <p className="structure-desc muted">{structure.description}</p>
-        {!unlocked && (
-          <small className="cost-line">
-            Requires: {structureUnlockRequirementLabel(structure.id)}
-          </small>
-        )}
+        {!unlocked && lockLines.length > 0 && !withPortrait ? (
+          <ProgressionLockRequirements lines={lockLines} dispatch={dispatch} />
+        ) : null}
         {structure.officeSlotsWhenBuilt > 0 ? (
           <p className="structure-space-line compact-stack-line">
             <span className="compact-stack-label">Office slot:</span>{" "}
@@ -708,11 +719,16 @@ export function OfficeStructurePanel({
         id={`structure-card-${structure.id}`}
         className={`structure-card structure-card-upgrade${
           unlocked ? "" : " progression-locked"
-        }${portraitCardClasses}`}
+        }${portraitCardClasses}${focused ? " progression-focus-target" : ""}`}
       >
         {withPortrait ? (
           <div className="recruitment-card-split">
-            {portraitEl}
+            <ProgressionCardPortraitColumn
+              portrait={portraitEl}
+              lockLines={lockLines}
+              dispatch={dispatch}
+              showLockOverlay={!unlocked}
+            />
             <div className="recruitment-card-main">{activeBody}</div>
           </div>
         ) : (
@@ -720,6 +736,19 @@ export function OfficeStructurePanel({
         )}
       </li>
     );
+  }
+
+  function collapseAllStructureCategories() {
+    for (const category of STRUCTURE_CATEGORY_ORDER) {
+      setOfficeCategoryOpen(officeId, category, false);
+    }
+    setCategoryOpen((prev) => {
+      const next = { ...prev };
+      for (const category of STRUCTURE_CATEGORY_ORDER) {
+        next[category] = false;
+      }
+      return next;
+    });
   }
 
   return (
@@ -737,6 +766,17 @@ export function OfficeStructurePanel({
         />
       ) : null}
       {siteSummary}
+      {!readOnly ? (
+        <div className="office-structures-catalog-toolbar">
+          <button
+            type="button"
+            className="office-collapse-all"
+            onClick={collapseAllStructureCategories}
+          >
+            Collapse all
+          </button>
+        </div>
+      ) : null}
       {STRUCTURE_CATEGORY_ORDER.map((category) => {
         const items = structurePanelStructures().filter(
           (structure) => structure.category === category,
@@ -745,7 +785,13 @@ export function OfficeStructurePanel({
             !hideCompleted ||
             !isStructureCompletedAtSite(state, officeId, structure),
         );
-        if (items.length === 0) return null;
+        const expansionDef = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
+        const showOfficeExpansion =
+          category === "departments" &&
+          !readOnly &&
+          (!hideCompleted ||
+            !isStructureCompletedAtSite(state, officeId, expansionDef));
+        if (items.length === 0 && !showOfficeExpansion) return null;
 
         const maxedCount = items.filter((structure) =>
           isStructureCompletedAtSite(state, officeId, structure),
@@ -788,6 +834,9 @@ export function OfficeStructurePanel({
                   : "progression-grid"
               }`}
             >
+              {showOfficeExpansion
+                ? renderStructureCard(expansionDef)
+                : null}
               {items.map(renderStructureCard)}
             </ul>
           </ProgressionCategorySection>

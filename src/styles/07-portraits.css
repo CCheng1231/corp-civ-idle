@@ -69,7 +69,10 @@
   gap: 0.85rem;
 }
 
-.operations-view .tab-below-portrait,
+.operations-view .tab-below-portrait {
+  gap: 0.1rem;
+}
+
 .recruitment-view .tab-below-portrait,
 .research-view .tab-below-portrait,
 .secretary-view .tab-below-portrait {
@@ -515,6 +518,11 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
 
 .overview-view .tab-below-portrait > .overview-summary-block + .location-view-section {
   padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.operations-view .tab-below-portrait > .office-site-summary-banner--capacity-only + .office-sites-panel {
+  padding-top: 0.15rem;
   border-top: 1px solid var(--border);
 }
 
@@ -1034,6 +1042,26 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
 
 .office-collapse-all:hover {
   color: var(--text);
+}
+
+.office-structures-catalog-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.02rem 0.05rem 0;
+}
+
+.recruitment-view .office-structures-catalog-toolbar,
+.research-view .office-structures-catalog-toolbar {
+  padding: 0.05rem 0.08rem 0;
+}
+
+.operations-view .office-structures-catalog-toolbar .office-collapse-all,
+.recruitment-view .office-structures-catalog-toolbar .office-collapse-all,
+.research-view .office-structures-catalog-toolbar .office-collapse-all {
+  margin: 0;
 }
 
 .operations-view .tab-below-portrait > .office-sites-panel {

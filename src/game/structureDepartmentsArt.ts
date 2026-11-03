@@ -1,12 +1,14 @@
 import type { StructureId } from "./types";
 import type { StructureArtCrop } from "./structureEssentialsArt";
 // Crop defaults: keep in sync with docs/structure-category-review/departments-wire-defaults.js
+// office_expansion crop: docs/structure-category-review/office-expansion-wire-defaults.js
 import departmentsCategoryBanner from "../assets/structure-art/departments-category-banner.jpg";
 import departmentsDeptB2b from "../assets/structure-art/departments-dept-b2b.jpg";
 import departmentsBreakRoom from "../assets/structure-art/departments-break-room.jpg";
 import departmentsSocialMedia from "../assets/structure-art/departments-social-media.jpg";
 import departmentsVideoProductionStudio from "../assets/structure-art/departments-video-production-studio.jpg";
 import departmentsPressRoom from "../assets/structure-art/departments-press-room.jpg";
+import departmentsOfficeExpansion from "../assets/structure-art/departments-office-expansion.jpg";
 
 /** Departments category header (draggable pan). Pass 2 v4 finals. */
 export const DEPARTMENTS_CATEGORY_BANNER = {
@@ -47,6 +49,10 @@ const DEPARTMENTS_PORTRAITS: Partial<
   press_room: {
     src: departmentsPressRoom,
     crop: { panZoomFactor: 1.92, focalYPercent: 37, focalXPercent: 54 },
+  },
+  office_expansion: {
+    src: departmentsOfficeExpansion,
+    crop: { panZoomFactor: 1.92, focalYPercent: 53, focalXPercent: 76 },
   },
 };
 

@@ -38,6 +38,8 @@ export interface ProgressionUpgradeTreeRow {
 export interface ProgressionDetailModel {
   title: string;
   description?: string;
+  /** When set, replaces the default “Current: Lv …” line (e.g. contractors). */
+  levelCaption?: string;
   currentLevel: number;
   projectedLevel: number;
   maxLevel: number;
@@ -143,4 +145,30 @@ export function buildStructureDetailModel(
 export function formatTreeRowCost(cost: ResourceCost): string {
   const text = formatResourceCost(cost);
   return text || "—";
+}
+
+export function buildRecruitmentUnitDetailModel(
+  unit: {
+    name: string;
+    tier: number;
+    proposedRole: string;
+    detail: string;
+  },
+  options: { locked: boolean; requirement?: string },
+): ProgressionDetailModel {
+  const description = [unit.proposedRole, unit.detail]
+    .filter((part) => part.trim().length > 0)
+    .join("\n\n");
+  return {
+    title: unit.name,
+    description,
+    levelCaption: `Tier ${unit.tier} contractor`,
+    currentLevel: 0,
+    projectedLevel: 0,
+    maxLevel: 1,
+    maxed: false,
+    locked: options.locked,
+    requirement: options.requirement,
+    rows: [],
+  };
 }

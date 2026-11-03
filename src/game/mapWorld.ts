@@ -34,6 +34,7 @@ import type {
   GameState,
   JobDefinition,
   JobPosting,
+  MajorHubId,
   MapRegion,
   OfficeLocationId,
   OfficeTowerDefinition,
@@ -42,6 +43,10 @@ import type {
   TowerId,
 } from "./types";
 import { devRegionAtCoord, effectiveLandmarkCoord } from "./mapDevLayout";
+import {
+  majorHubById,
+  majorHubCoord,
+} from "./worldMapMajorHubs";
 import {
   canAffordAtOffice,
   formatNumber,
@@ -405,6 +410,9 @@ export function jobSiteCoordForDefinition(
       }
     );
   }
+  if (def.majorHubId) {
+    return majorHubCoord(def.majorHubId, settings);
+  }
   if (def.towerId) {
     return officeTowerCoord(def.towerId, settings);
   }
@@ -415,6 +423,9 @@ export function jobSiteLabelForDefinition(def: JobDefinition): string {
   if (def.commercialLotId) {
     return commercialLotById(def.commercialLotId).label;
   }
+  if (def.majorHubId) {
+    return majorHubById(def.majorHubId)?.label ?? def.majorHubId;
+  }
   if (def.towerId) {
     return towerById(def.towerId).name;
   }
@@ -422,7 +433,10 @@ export function jobSiteLabelForDefinition(def: JobDefinition): string {
 }
 
 export function jobSiteCoordForPosting(
-  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  posting: Pick<
+    JobPosting,
+    "towerId" | "majorHubId" | "commercialLotId"
+  >,
   def: JobDefinition,
   settings?: GameSettings,
 ): AxialCoord {
@@ -434,6 +448,10 @@ export function jobSiteCoordForPosting(
       }
     );
   }
+  const hubId = (posting.majorHubId ?? def.majorHubId) as MajorHubId | null;
+  if (hubId) {
+    return majorHubCoord(hubId, settings);
+  }
   if (posting.towerId) {
     return officeTowerCoord(posting.towerId, settings);
   }
@@ -444,6 +462,10 @@ export function jobSiteRegionForDefinition(def: JobDefinition): MapRegion {
   if (def.commercialLotId) {
     return commercialLotById(def.commercialLotId).region;
   }
+  if (def.majorHubId) {
+    const hub = majorHubById(def.majorHubId);
+    return hub ? regionAtCoord(hub.coord) : "metropolis";
+  }
   if (def.towerId) {
     return towerById(def.towerId).region;
   }
@@ -451,11 +473,20 @@ export function jobSiteRegionForDefinition(def: JobDefinition): MapRegion {
 }
 
 export function jobSiteRegionForPosting(
-  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  posting: Pick<
+    JobPosting,
+    "towerId" | "majorHubId" | "commercialLotId"
+  >,
   def: JobDefinition,
+  settings?: GameSettings,
 ): MapRegion {
   if (posting.commercialLotId) {
     return commercialLotById(posting.commercialLotId).region;
+  }
+  const hubId = (posting.majorHubId ?? def.majorHubId) as MajorHubId | null;
+  if (hubId) {
+    const hub = majorHubById(hubId, settings);
+    return hub ? regionAtCoord(hub.coord, settings) : jobSiteRegionForDefinition(def);
   }
   if (posting.towerId) {
     return towerById(posting.towerId).region;
@@ -464,11 +495,19 @@ export function jobSiteRegionForPosting(
 }
 
 export function jobSiteLabelForPosting(
-  posting: Pick<JobPosting, "towerId" | "commercialLotId">,
+  posting: Pick<
+    JobPosting,
+    "towerId" | "majorHubId" | "commercialLotId"
+  >,
   def: JobDefinition,
+  settings?: GameSettings,
 ): string {
   if (posting.commercialLotId) {
     return commercialLotById(posting.commercialLotId).label;
+  }
+  const hubId = (posting.majorHubId ?? def.majorHubId) as MajorHubId | null;
+  if (hubId) {
+    return majorHubById(hubId, settings)?.label ?? hubId;
   }
   if (posting.towerId) {
     return towerById(posting.towerId).name;

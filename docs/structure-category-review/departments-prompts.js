@@ -31,6 +31,18 @@ function departmentsEssentialsStyleRefPath(version) {
 
 const DEPARTMENTS_STRUCTURES = [
   {
+    id: "office_expansion",
+    name: "Office Expansion",
+    layout:
+      "In-wing floor expansion bay: left side shows existing open-plan desks and chairs in essentials palette, right side fresh empty floor plate with modular glass partition frames mid-install, coiled power conduits and rolled blueprint tubes, soft teal construction accent lights on the new slab",
+    camera:
+      "Isometric 3/4 corner pull-back so both occupied wing and new empty floor read in one vertical UI crop",
+    keystone:
+      "Glowing empty floor plate with partition frames and conduit bundle — growth and capacity, not exterior building cutaway",
+    avoid:
+      "No dashed-outline cartoon add-on wings, no press podium, no break-room couch, no readable text or plus-sign labels",
+  },
+  {
     id: "dept_b2b",
     name: "Department of B2B",
     layout:

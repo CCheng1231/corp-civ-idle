@@ -43,7 +43,9 @@ import {
   completionBandLabel,
   JOB_SIZE_LABELS,
   jobDefinitionForPosting,
+  jobCompletionSupplyBonus,
   postingsForCommercialLot,
+  postingsForMajorHub,
   postingsForTower,
 } from "../game/jobs";
 import type {
@@ -53,6 +55,7 @@ import type {
   GameAction,
   GameState,
   JobPosting,
+  MajorHubId,
   OfficeLocationId,
   ResourceCost,
   TowerId,
@@ -81,6 +84,7 @@ interface MapHexDrawerProps {
 
 type MapContractSite =
   | { mode: "tower"; towerId: TowerId }
+  | { mode: "major-hub"; majorHubId: MajorHubId }
   | { mode: "commercial"; commercialLotId: CommercialLotId };
 
 function MapLandmarkSiteDrawerSection({
@@ -119,6 +123,9 @@ function contractSiteForDrawer(
   if (info.kind === "tower") {
     return { mode: "tower", towerId: info.towerId };
   }
+  if (info.kind === "major-hub") {
+    return { mode: "major-hub", majorHubId: info.hubId as MajorHubId };
+  }
   if (info.kind === "commercial") {
     return { mode: "commercial", commercialLotId: info.commercialLotId };
   }
@@ -145,6 +152,10 @@ function contractSiteForDrawer(
     const resolvedTower = posting.towerId ?? def.towerId ?? null;
     if (resolvedTower) {
       return { mode: "tower", towerId: resolvedTower };
+    }
+    const resolvedHub = posting.majorHubId ?? def.majorHubId ?? null;
+    if (resolvedHub) {
+      return { mode: "major-hub", majorHubId: resolvedHub };
     }
   } catch {
     return null;
@@ -379,6 +390,13 @@ function HexContractsSection({
                                 band={band}
                               />{" "}
                               · ${formatNumber(jobPayoutPerHour(posting))}/hr
+                              {jobCompletionSupplyBonus(def) > 0 ? (
+                                <>
+                                  {" "}
+                                  · +{formatNumber(jobCompletionSupplyBonus(def))}{" "}
+                                  supply complete
+                                </>
+                              ) : null}
                             </span>
                           </div>
                           <button
@@ -401,6 +419,45 @@ function HexContractsSection({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function MajorHubContractsSection({
+  state,
+  dispatch,
+  majorHubId,
+  coord,
+  highlightPostingId,
+}: {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+  majorHubId: MajorHubId;
+  coord: AxialCoord;
+  highlightPostingId?: string | null;
+}) {
+  const postings = postingsForMajorHub(state, majorHubId);
+  const activePostingIds = new Set(
+    state.jobEngagements
+      .filter((engagement) => engagement.majorHubId === majorHubId)
+      .map((engagement) => engagement.postingId),
+  );
+
+  function sendToSecretary(postingId: string) {
+    dispatch({
+      type: "SET_VIEW",
+      view: "office",
+      jobFocusPostingId: postingId,
+    });
+  }
+
+  return (
+    <HexContractsSection
+      coord={coord}
+      postings={postings}
+      isEngaged={(postingId) => activePostingIds.has(postingId)}
+      onSend={sendToSecretary}
+      highlightPostingId={highlightPostingId}
+    />
   );
 }
 
@@ -848,6 +905,16 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             state={state}
             dispatch={dispatch}
             towerId={contractSite.towerId}
+            coord={coord}
+            highlightPostingId={highlightPostingId}
+          />
+        ) : null}
+
+        {contractSite?.mode === "major-hub" ? (
+          <MajorHubContractsSection
+            state={state}
+            dispatch={dispatch}
+            majorHubId={contractSite.majorHubId}
             coord={coord}
             highlightPostingId={highlightPostingId}
           />

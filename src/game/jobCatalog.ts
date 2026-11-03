@@ -7,6 +7,7 @@ import type {
   GameState,
   JobDefinition,
   JobPosting,
+  MajorHubId,
   TowerId,
   UnitAssignment,
   UnitId,
@@ -25,6 +26,22 @@ export function jobDefinitionById(id: string): JobDefinition {
 
 export function jobDefinitionForPosting(posting: JobPosting): JobDefinition {
   return jobDefinitionById(posting.definitionId);
+}
+
+export function postingsForMajorHub(
+  state: GameState,
+  majorHubId: MajorHubId,
+): JobPosting[] {
+  return state.jobPostings.filter((p) => {
+    if (p.status !== "open") return false;
+    if (p.majorHubId === majorHubId) return true;
+    try {
+      const def = jobDefinitionForPosting(p);
+      return def.majorHubId === majorHubId && !p.commercialLotId;
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function postingsForTower(
@@ -132,6 +149,12 @@ export const COMPLETION_BANDS: CompletionBand[] = [
   "finishing",
 ];
 
+export function jobCompletionSupplyBonus(
+  def: JobDefinition,
+): number {
+  return Math.max(0, Math.floor(def.completionPayout?.supply ?? 0));
+}
+
 export function hiddenTotalCash(def: JobDefinition): number {
   return def.cashPerUnitHour * def.unitHoursTotal;
 }
@@ -180,6 +203,17 @@ function newPostingId(definitionId: string, now: number): string {
   return `${definitionId}_${now}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export function mergeMissingJobPostings(
+  existing: JobPosting[],
+  now: number,
+): JobPosting[] {
+  const seenDefs = new Set(existing.map((p) => p.definitionId));
+  const added = JOB_DEFINITIONS.filter((d) => !seenDefs.has(d.id)).map((d) =>
+    createPostingFromDefinition(d, now),
+  );
+  return added.length > 0 ? [...existing, ...added] : existing;
+}
+
 export function createPostingFromDefinition(
   def: JobDefinition,
   now: number,
@@ -188,6 +222,7 @@ export function createPostingFromDefinition(
     id: newPostingId(def.id, now),
     definitionId: def.id,
     towerId: def.towerId ?? null,
+    majorHubId: def.majorHubId ?? null,
     commercialLotId: def.commercialLotId ?? null,
     spawnedAt: now,
     expiresAt: now + def.expirationSec * 1000,

@@ -203,10 +203,10 @@
     }
 
     .recruit-thumb-box {
-      width: 6.1rem;
+      width: 5.4rem;
       flex-shrink: 0;
       align-self: stretch;
-      min-height: 9rem;
+      min-height: 8.5rem;
       border-right: 1px solid rgba(255, 255, 255, 0.1);
       overflow: hidden;
       position: relative;
@@ -266,9 +266,10 @@
       bottom: 0;
       top: auto;
       width: 100%;
-      height: 132%;
+      height: 152%;
       max-width: none;
-      transform: translateX(-50%);
+      transform: translateX(-50%) scale(1.1);
+      transform-origin: 50% 100%;
       object-fit: contain;
       object-position: 50% 100%;
       display: block;
@@ -589,7 +590,7 @@
       <div class="badge-row">
         <span class="pill pill-green">Pass 1b · 13 regens</span>
         <span class="pill pill-blue">Silhouette + despill</span>
-        <span class="pill pill-amber">Not wired in-game yet</span>
+        <span class="pill pill-green">Wired · unitPortraitAssets.ts</span>
       </div>
     </header>
 
@@ -597,7 +598,7 @@
     <section class="section-card">
       <div class="section-head">
         <div>
-          <h2>1. Live In-Game Card Preview (6.1rem × 9rem portrait · bottom-anchored)</h2>
+          <h2>1. Live In-Game Card Preview (5.4rem × 8.5rem portrait · bottom-anchored)</h2>
           <div class="sub">
             Matches current <code>RecruitmentView</code> portrait strip. Equip variants from the gallery below.
           </div>

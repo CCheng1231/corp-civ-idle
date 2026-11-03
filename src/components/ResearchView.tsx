@@ -11,7 +11,6 @@ import {
   projectedResearchLevels,
   researchDisplayDescription,
   researchJobsAtOffice,
-  researchRequirementLabel,
 } from "../game/constants";
 import { researchCost } from "../game/engine";
 import { researchBuildTimeHours } from "../game/researchBalance";
@@ -52,6 +51,8 @@ import {
   getResearchCategoryOpen,
   setResearchCategoryOpen,
 } from "../game/officeCategoryOpen";
+import { researchProgressionLockNav } from "../game/progressionLockNav";
+import { scrollProgressionCardIntoViewWhenReady } from "../utils/progressionFocusScroll";
 import {
   isAllOfficesSelected,
   resolveOfficeLocation,
@@ -65,6 +66,8 @@ import {
 } from "./progressionUi";
 import { SceneBanner } from "./SceneBanner";
 import { StructureCardPortrait } from "./StructureCardPortrait";
+import { ProgressionCardPortraitColumn } from "./ProgressionCardPortraitColumn";
+import { ProgressionLockRequirements } from "./ProgressionLockRequirements";
 import { ResearchQueueList } from "./StructureBuildQueueList";
 import type {
   GameAction,
@@ -163,11 +166,60 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     setCategoryOpen(seeded);
   }, [office]);
 
+  const focusResearchId = state.researchFocusResearchId ?? null;
+  const focusResearchCategory = focusResearchId
+    ? (RESEARCH.find((r) => r.id === focusResearchId)?.category ?? null)
+    : null;
+  const focusCategoryReady =
+    focusResearchCategory != null &&
+    categoryOpen[focusResearchCategory] === true;
+
+  useEffect(() => {
+    if (!focusResearchId || !focusResearchCategory) return;
+    setCategoryOpen((prev) => ({ ...prev, [focusResearchCategory]: true }));
+    setResearchCategoryOpen(office, focusResearchCategory, true);
+  }, [focusResearchId, focusResearchCategory, office]);
+
+  useEffect(() => {
+    if (!focusResearchId || !focusCategoryReady) return;
+
+    const cancelScroll = scrollProgressionCardIntoViewWhenReady(
+      `research-card-${focusResearchId}`,
+      { align: "comfortable" },
+    );
+    const clearId = window.setTimeout(() => {
+      dispatch({
+        type: "SET_VIEW",
+        view: "research",
+        researchFocusResearchId: null,
+      });
+    }, 2800);
+    return () => {
+      cancelScroll();
+      window.clearTimeout(clearId);
+    };
+  }, [focusResearchId, focusCategoryReady, dispatch]);
+
   function openResearchDetail(research: ResearchDefinition) {
     setDetailResearch(research);
   }
 
+  function collapseAllResearchCategories() {
+    for (const category of RESEARCH_CATEGORY_ORDER) {
+      setResearchCategoryOpen(office, category, false);
+    }
+    setCategoryOpen((prev) => {
+      const next = { ...prev };
+      for (const category of RESEARCH_CATEGORY_ORDER) {
+        next[category] = false;
+      }
+      return next;
+    });
+  }
+
   function renderResearchCard(research: ResearchDefinition) {
+    const focused = focusResearchId === research.id;
+    const lockLines = researchProgressionLockNav(state, research);
     const portraitArt =
       researchResourcesPortrait(research.id) ??
       researchPayoutsPortrait(research.id) ??
@@ -179,7 +231,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     const withPortrait = Boolean(portraitEl);
     const portraitCardClasses = withPortrait
       ? " recruitment-card-compact recruitment-card-with-portrait"
-      : "";
+      : " recruitment-card-compact";
 
     const level = state.researchLevels[research.id];
     const projectedLevel = projected[research.id];
@@ -213,6 +265,103 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     const compactBonus = formatCompactBonus(completedLines);
     const levelLabel =
       research.maxLevel > 1 ? `Lv ${level}/${research.maxLevel}` : `Lv ${level}`;
+
+    const queueButtonLabel = !unlocked
+      ? "Locked"
+      : actionsLocked
+        ? "Pick an office"
+        : inProgress
+          ? "In progress"
+          : queueBlocked
+            ? "Queue full"
+            : "Queue research";
+
+    function renderPortraitCompactActiveBody() {
+      const headBlock = (
+        <div className="structure-head">
+          <ProgressionNameButton
+            name={research.name}
+            onClick={() => openResearchDetail(research)}
+          />
+          {unlocked ? (
+            <div className="structure-level-meta">
+              <span className="structure-level-current">
+                Lv {level} → {targetLevel}
+              </span>
+              {research.maxLevel > 1 ? (
+                <span className="structure-level-max">
+                  Max: {research.maxLevel}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <span>Locked</span>
+          )}
+        </div>
+      );
+
+      const showQueueMeta = unlocked && !inProgress;
+
+      const actionsRow = (
+        <div className="recruitment-hire-actions structure-build-actions">
+          <span className="recruitment-queue-btn-hint-wrap">
+            <button
+              type="button"
+              className="btn primary recruitment-queue-btn"
+              disabled={disabled}
+              onClick={() =>
+                dispatch({
+                  type: "BUY_RESEARCH",
+                  researchId: research.id,
+                  officeId: office,
+                })
+              }
+            >
+              {queueButtonLabel}
+            </button>
+          </span>
+        </div>
+      );
+
+      const metaBlock = (
+        <div className="recruitment-hire-meta">
+          {showQueueMeta ? (
+            <div className="recruitment-hire-meta-cost">
+              <StructureCostLine
+                state={state}
+                officeId={office}
+                cost={cost}
+                layout="line"
+                prefix=""
+                inline
+              />
+              {buildHours > 0 ? (
+                <>
+                  <span className="structure-cost-sep">·</span>
+                  <span className="recruitment-time-inline">
+                    {formatQueueTimeHours(buildHours)}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {actionsRow}
+        </div>
+      );
+
+      return (
+        <>
+          {headBlock}
+          {metaBlock}
+          <p
+            className="structure-desc muted recruitment-role recruitment-role-footer"
+            title={description}
+          >
+            {description}
+          </p>
+        </>
+      );
+    }
 
     if (maxed) {
       const maxedBody = (
@@ -259,10 +408,13 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         </>
       );
 
-      return (
-        <li
-          key={research.id}
-          className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}`}
+    return (
+      <li
+        key={research.id}
+        id={`research-card-${research.id}`}
+        className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}${
+          focused ? " progression-focus-target" : ""
+        }`}
         >
           {withPortrait ? (
             <div className="recruitment-card-split">
@@ -276,7 +428,9 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
       );
     }
 
-    const activeInner = (
+    const activeInner = withPortrait ? (
+      renderPortraitCompactActiveBody()
+    ) : (
       <>
         <div className="structure-head">
           <ProgressionNameButton
@@ -334,17 +488,13 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             </div>
           </div>
         )}
-        <p
-          className={`structure-desc muted${withPortrait ? " recruitment-role recruitment-role-footer" : ""}`}
-          title={withPortrait ? description : undefined}
-        >
-          {description}
-        </p>
-        {!unlocked && (
-          <small className="cost-line">
-            Requires: {researchRequirementLabel(research)}
-          </small>
-        )}
+        <p className="structure-desc muted">{description}</p>
+        {!unlocked && lockLines.length > 0 ? (
+          <ProgressionLockRequirements
+            lines={lockLines}
+            dispatch={dispatch}
+          />
+        ) : null}
         <button
           type="button"
           className="btn"
@@ -357,15 +507,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             })
           }
         >
-          {!unlocked
-            ? "Locked"
-            : actionsLocked
-              ? "Pick an office"
-            : inProgress
-              ? "In progress"
-              : queueBlocked
-                ? "Queue full"
-                : "Queue research"}
+          {queueButtonLabel}
         </button>
       </>
     );
@@ -373,11 +515,19 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     return (
       <li
         key={research.id}
-        className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}${portraitCardClasses}`}
+        id={`research-card-${research.id}`}
+        className={`structure-card structure-card-upgrade${unlocked ? "" : " progression-locked"}${portraitCardClasses}${
+          focused ? " progression-focus-target" : ""
+        }`}
       >
         {withPortrait ? (
           <div className="recruitment-card-split">
-            {portraitEl}
+            <ProgressionCardPortraitColumn
+              portrait={portraitEl}
+              lockLines={lockLines}
+              dispatch={dispatch}
+              showLockOverlay={!unlocked}
+            />
             <div className="recruitment-card-main">{activeInner}</div>
           </div>
         ) : (
@@ -452,6 +602,15 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         <span className="research-progress-label">Firm-wide</span>
         <span className="research-progress-value">{progressLabel}</span>
       </div>
+      <div className="office-structures-catalog-toolbar">
+        <button
+          type="button"
+          className="office-collapse-all"
+          onClick={collapseAllResearchCategories}
+        >
+          Collapse all
+        </button>
+      </div>
       {RESEARCH_CATEGORY_ORDER.map((category) => {
         const items = RESEARCH.filter(
           (research) => research.category === category,
@@ -490,16 +649,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
               />
             }
           >
-            <ul
-              className={`structure-list ${
-                category === "resources" ||
-                category === "mult" ||
-                category === "discover" ||
-                category === "unlock"
-                  ? "recruitment-grid"
-                  : "progression-grid"
-              }`}
-            >
+            <ul className="structure-list recruitment-grid">
               {items.map(renderResearchCard)}
             </ul>
           </ProgressionCategorySection>

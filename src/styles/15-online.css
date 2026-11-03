@@ -126,6 +126,53 @@
   border-bottom: 1px solid var(--border);
 }
 
+.app-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.2rem 0.5rem 0.2rem 0;
+  min-height: 1.75rem;
+}
+
+.app-status-row-lead {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-status-row .online-status-banner {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-bottom: none;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-right: 0.35rem;
+}
+
+.world-map-presentation-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.world-map-presentation-toggle .world-map-presentation-btn {
+  padding: 0.1rem 0.45rem;
+  min-height: 1.35rem;
+  min-width: 0;
+  border-radius: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 650;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.layout-mobile-nav .world-map-presentation-toggle .world-map-presentation-btn,
+.app-shell.viewport-preview-mobile .world-map-presentation-toggle .world-map-presentation-btn {
+  min-height: 1.35rem;
+}
+
 .online-status-connected {
   background: rgba(110, 231, 183, 0.08);
   color: #6ee7b7;

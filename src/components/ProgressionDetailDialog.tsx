@@ -32,6 +32,7 @@ function TreeRow({ row }: { row: ProgressionUpgradeTreeRow }) {
 export function ProgressionDetailDialog({
   title,
   description,
+  levelCaption,
   currentLevel,
   projectedLevel,
   maxLevel,
@@ -57,14 +58,18 @@ export function ProgressionDetailDialog({
           <div>
             <h2 id="progression-detail-title">{title}</h2>
             <p className="progression-detail-level">
-              Current: Lv {currentLevel}
-              {levelMax}
-              {inProgress ? (
-                <span className="progression-detail-queued">
-                  {" "}
-                  · Queued to Lv {projectedLevel}
-                </span>
-              ) : null}
+              {levelCaption ?? (
+                <>
+                  Current: Lv {currentLevel}
+                  {levelMax}
+                  {inProgress ? (
+                    <span className="progression-detail-queued">
+                      {" "}
+                      · Queued to Lv {projectedLevel}
+                    </span>
+                  ) : null}
+                </>
+              )}
             </p>
           </div>
           <button
@@ -93,26 +98,28 @@ export function ProgressionDetailDialog({
           <p className="progression-detail-status muted">Maxed</p>
         ) : null}
 
-        <section className="progression-tree-section">
-          <h3 className="progression-detail-section-title">Upgrade path</h3>
-          <div className="progression-tree-scroll">
-            <table className="progression-tree-table">
-              <thead>
-                <tr>
-                  <th>Lv</th>
-                  <th>Cost</th>
-                  <th>Time</th>
-                  <th>At this level</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <TreeRow key={row.level} row={row} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {rows.length > 0 ? (
+          <section className="progression-tree-section">
+            <h3 className="progression-detail-section-title">Upgrade path</h3>
+            <div className="progression-tree-scroll">
+              <table className="progression-tree-table">
+                <thead>
+                  <tr>
+                    <th>Lv</th>
+                    <th>Cost</th>
+                    <th>Time</th>
+                    <th>At this level</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <TreeRow key={row.level} row={row} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
 
         <footer className="progression-detail-actions">
           {secondaryAction ? (

@@ -1206,7 +1206,11 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       <div className="world-header">
         <div className="world-header-top">
           <h2>World map</h2>
-          <div className="world-map-controls world-map-controls-compact" role="group" aria-label="Map view mode">
+          <div
+            className="world-map-controls world-map-controls-compact"
+            role="group"
+            aria-label="Map distance and developer tools"
+          >
             <label className="world-map-main-office-field">
               <span className="sr-only">Distance from</span>
               <select
@@ -1230,32 +1234,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 ) : null}
               </select>
             </label>
-            <button
-              type="button"
-              className={`tab${!isDev ? " active" : ""}`}
-              aria-pressed={!isDev}
-              onClick={() =>
-                dispatch({
-                  type: "UPDATE_SETTINGS",
-                  settings: { mapPresentation: "player" },
-                })
-              }
-            >
-              Player&apos;s view
-            </button>
-            <button
-              type="button"
-              className={`tab${isDev ? " active" : ""}`}
-              aria-pressed={isDev}
-              onClick={() =>
-                dispatch({
-                  type: "UPDATE_SETTINGS",
-                  settings: { mapPresentation: "dev" },
-                })
-              }
-            >
-              Developer view
-            </button>
             {isDev ? (
               <WorldMapDevToolbar
                 state={state}

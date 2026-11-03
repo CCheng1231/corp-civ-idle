@@ -4,6 +4,7 @@ export {
   loadWorldMeta,
   ensureWorldBootstrapped,
   seedSharedJobPostingsIfNeeded,
+  ensureSharedJobDefinitionsSynced,
 } from "./worldMeta";
 export {
   authorizeOnlineSaveState,

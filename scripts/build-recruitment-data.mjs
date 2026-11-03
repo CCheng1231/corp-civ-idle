@@ -96,6 +96,10 @@ export interface RecruitmentUnitDefinition {
 
 export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = ${JSON.stringify(units, null, 2)};
 
+/** Player-facing lock copy — not sourced from the Recruitment sheet. */
+export const BRANCH_MANAGER_RESEARCH_LOCK_HINT =
+  "Requires Branch Management research";
+
 export const UNIT_IDS: UnitId[] = RECRUITMENT_UNITS.map((u) => u.id);
 
 export const DEFAULT_TIER1_UNIT: Record<ContractorCategoryId, UnitId> = ${JSON.stringify(

@@ -19,8 +19,8 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "category": "farming",
     "tier": 1,
     "cost": {
-      "cash": 20,
-      "reputation": 1
+      "cash": 84,
+      "supply": 30
     },
     "detail": "Very cheap, high availability, low fatigue gain",
     "proposedRole": "Cheapest crew. -15% payout on jobs unless crew size is above optimal. Low commitment cost; good filler unit."
@@ -31,8 +31,8 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "category": "farming",
     "tier": 1,
     "cost": {
-      "cash": 25,
-      "reputation": 2
+      "cash": 114,
+      "supply": 50
     },
     "detail": "Flexible schedule, low commitment cost.",
     "proposedRole": "-10% contract duration on short jobs (below median duration). No bonus on long or awkward-hour jobs."
@@ -43,8 +43,8 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "category": "farming",
     "tier": 2,
     "cost": {
-      "cash": 50,
-      "reputation": 3
+      "cash": 163,
+      "supply": 50
     },
     "detail": "Decent all-rounder, better success rate",
     "proposedRole": "Baseline professional farming unit: no tier-1 penalty, +5% payout vs average tier-1 farming crew."
@@ -55,8 +55,8 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "category": "farming",
     "tier": 2,
     "cost": {
-      "cash": 70,
-      "reputation": 3
+      "cash": 201,
+      "supply": 150
     },
     "detail": "High tolerance for soul-crushing work, good on phone/service jobs",
     "proposedRole": "+10% payout on service/client-facing contracts. Resistant to mood drain while on jobs."
@@ -223,12 +223,12 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
       "reputation": 10,
       "connection": 8
     },
-    "detail": "Site-founding specialist. Consumed when founding a branch.",
-    "proposedRole": "Consumed when founding a branch."
+    "detail": "Site-founding specialist. Cannot be assigned to contracts. One unit is consumed to open a branch.",
+    "proposedRole": "Establish-only unit: required and consumed when founding a branch. No job or office passive effects. Further branches need Massive Expansion research + another Branch Manager each."
   }
 ];
 
-/** Hire button tooltip when Branch Management research is not unlocked. */
+/** Player-facing lock copy — not sourced from the Recruitment sheet. */
 export const BRANCH_MANAGER_RESEARCH_LOCK_HINT =
   "Requires Branch Management research";
 
@@ -245,8 +245,8 @@ export const DEFAULT_TIER1_UNIT: Record<ContractorCategoryId, UnitId> = {
 /** Tier-1 hire cost per category (legacy helper). */
 export const RECRUITMENT_TIER1_COST: Record<ContractorCategoryId, ResourceCost> = {
   "farming": {
-    "cash": 20,
-    "reputation": 1
+    "cash": 84,
+    "supply": 30
   },
   "defense": {
     "cash": 95,

@@ -10,8 +10,10 @@ import {
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
-import { RECRUITMENT_UNITS, BRANCH_MANAGER_RESEARCH_LOCK_HINT } from "../game/recruitmentData";
+import { recruitmentUnitProgressionLockNav } from "../game/progressionLockNav";
+import type { ProgressionLockNavTarget } from "../game/progressionLockNav";
 import type { RecruitmentUnitDefinition } from "../game/recruitmentData";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { ContractorCategoryId } from "../game/types";
 import { formatQueueTimeHours } from "../game/timers";
 import type { GameAction, GameState, OfficeLocationId, UnitId } from "../game/types";
@@ -27,20 +29,20 @@ import { TabSiteHeader } from "./TabSiteHeader";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { SceneBanner } from "./SceneBanner";
-import { ProgressionCategorySection } from "./progressionUi";
-import recruitFarmingArt from "../assets/Recruit_resource.png";
-import recruitDefenseArt from "../assets/Recruit_defend.jpg";
-import recruitIntelArt from "../assets/Recruit_Intel.png";
-import recruitSupportArt from "../assets/Recruit_Support.png";
-import recruitSpecialArt from "../assets/Recruit_Special.webp";
+import { ProgressionCategorySection, ProgressionNameButton } from "./progressionUi";
+import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
+import { buildRecruitmentUnitDetailModel } from "./progressionDetailModel";
+import { recruitContractorCategoryBanner } from "../game/recruitContractorCategoryArt";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
   isAllOfficesSelected,
-  recruitmentJobsForOffices,
   resolveOfficeLocation,
   totalStaffAcrossOffices,
 } from "../game/officeSelection";
 import { unitPortraitSrc } from "../game/unitPortraitAssets";
+import { UnitCardPortrait } from "./UnitCardPortrait";
+import { ProgressionCardPortraitColumn } from "./ProgressionCardPortraitColumn";
+import { ProgressionLockRequirements } from "./ProgressionLockRequirements";
 
 interface RecruitmentViewProps {
   state: GameState;
@@ -63,48 +65,51 @@ const CATEGORY_LABELS: Record<ContractorCategoryId, string> = {
   special: "Special",
 };
 
-const RECRUIT_CATEGORY_SCENE: Record<
+const RECRUIT_CATEGORY_SCENE = Object.fromEntries(
+  (
+    [
+      "farming",
+      "defense",
+      "intel",
+      "support",
+      "special",
+    ] as const satisfies readonly ContractorCategoryId[]
+  ).map((category) => {
+    const banner = recruitContractorCategoryBanner(category);
+    return [
+      category,
+      {
+        src: banner.src,
+        storageKey: banner.storageKey,
+        panZoomFactor: banner.crop.panZoomFactor,
+        focalYPercent: banner.crop.focalYPercent,
+        focalXPercent: banner.crop.focalXPercent,
+      },
+    ] as const;
+  }),
+) as Record<
   ContractorCategoryId,
-  { src: string; storageKey: string }
-> = {
-  farming: {
-    src: recruitFarmingArt,
-    storageKey: "corp-civ-idle-recruit-farming-art-pan",
-  },
-  defense: {
-    src: recruitDefenseArt,
-    storageKey: "corp-civ-idle-recruit-defense-art-pan",
-  },
-  intel: {
-    src: recruitIntelArt,
-    storageKey: "corp-civ-idle-recruit-intel-art-pan",
-  },
-  support: {
-    src: recruitSupportArt,
-    storageKey: "corp-civ-idle-recruit-support-art-pan",
-  },
-  special: {
-    src: recruitSpecialArt,
-    storageKey: "corp-civ-idle-recruit-special-art-pan",
-  },
-};
+  {
+    src: string;
+    storageKey: string;
+    panZoomFactor: number;
+    focalYPercent: number;
+    focalXPercent: number;
+  }
+>;
 
-/** Shown on the Locked hire button (tooltip / long-press), not on the card body. */
 function isRecruitmentUnitLocked(
   state: GameState,
   unit: RecruitmentUnitDefinition,
 ): boolean {
-  return (
-    unit.id === "branch_manager" &&
-    (state.researchLevels.branch_management ?? 0) < 1
-  );
+  return recruitmentUnitProgressionLockNav(state, unit.id).length > 0;
 }
 
 function recruitmentLockedButtonTitle(
-  researchLocked: boolean,
+  lockLines: ProgressionLockNavTarget[],
 ): string | undefined {
-  if (researchLocked) return BRANCH_MANAGER_RESEARCH_LOCK_HINT;
-  return undefined;
+  if (lockLines.length === 0) return undefined;
+  return lockLines.map((line) => line.label).join(" · ");
 }
 
 export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
@@ -115,6 +120,9 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const [counts, setCounts] = useState<Partial<Record<UnitId, number>>>({});
   const [rosterOpen, setRosterOpen] = useState(false);
   const [hideLocked, setHideLocked] = useState(false);
+  const [detailUnit, setDetailUnit] = useState<RecruitmentUnitDefinition | null>(
+    null,
+  );
   const [categoryOpen, setCategoryOpen] = useState<
     Partial<Record<ContractorCategoryId, boolean>>
   >(() => {
@@ -125,9 +133,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     }
     return seeded;
   });
-  const hireQueueCount = showAll
-    ? recruitmentJobsForOffices(state).length
-    : recruitmentJobsAtOffice(state, officeId).length;
+  const hireQueueCount = recruitmentJobsAtOffice(state, officeId).length;
   const queueFull = actionsLocked
     ? true
     : isRecruitmentQueueFull(state, officeId);
@@ -177,23 +183,40 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     });
   }
 
+  function collapseAllRecruitCategories() {
+    for (const category of RECRUITMENT_CATEGORY_ORDER) {
+      setRecruitCategoryOpen(officeId, category, false);
+    }
+    setCategoryOpen((prev) => {
+      const next = { ...prev };
+      for (const category of RECRUITMENT_CATEGORY_ORDER) {
+        next[category] = false;
+      }
+      return next;
+    });
+  }
+
   function renderUnitCard(unit: RecruitmentUnitDefinition) {
     const count = counts[unit.id] ?? 1;
     const cost = recruitBatchCost(unit.id, count);
-    const researchLocked = isRecruitmentUnitLocked(state, unit);
+    const lockLines = recruitmentUnitProgressionLockNav(state, unit.id);
+    const researchLocked = lockLines.length > 0;
     const affordable =
       !actionsLocked &&
       !researchLocked &&
       canAffordAtOffice(state, officeId, cost);
     const orderHours = recruitmentOrderBuildTimeHours(count);
-    const lockedTitle = recruitmentLockedButtonTitle(researchLocked);
+    const lockedTitle = recruitmentLockedButtonTitle(lockLines);
 
     const focused = focusUnitId === unit.id;
     const portraitSrc = unitPortraitSrc(unit.id, state.settings);
 
     const headBlock = (
       <div className="structure-head">
-        <strong>{unit.name}</strong>
+        <ProgressionNameButton
+          name={unit.name}
+          onClick={() => setDetailUnit(unit)}
+        />
         <span className="recruitment-tier-badge">Tier {unit.tier}</span>
       </div>
     );
@@ -247,7 +270,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               title={lockedTitle}
               aria-label={
                 researchLocked
-                  ? `Locked. ${BRANCH_MANAGER_RESEARCH_LOCK_HINT}`
+                  ? `Locked. ${lockedTitle ?? "Requirements not met"}`
                   : undefined
               }
               onClick={() => hire(unit.id)}
@@ -277,9 +300,18 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
       >
         {portraitSrc ? (
           <div className="recruitment-card-split">
-            <div className="recruitment-card-portrait" aria-hidden="true">
-              <img src={portraitSrc} alt="" loading="lazy" />
-            </div>
+            <ProgressionCardPortraitColumn
+              portrait={
+                <UnitCardPortrait
+                  unitId={unit.id}
+                  src={portraitSrc}
+                  settings={state.settings}
+                />
+              }
+              lockLines={lockLines}
+              dispatch={dispatch}
+              showLockOverlay={researchLocked}
+            />
             <div className="recruitment-card-main">
               {headBlock}
               {hireMetaBlock}
@@ -300,6 +332,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             >
               {unit.proposedRole}
             </p>
+            {researchLocked ? (
+              <ProgressionLockRequirements
+                lines={lockLines}
+                dispatch={dispatch}
+              />
+            ) : null}
             {hireMetaBlock}
           </>
         )}
@@ -310,37 +348,56 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const recruitBesidePortrait = (
     <>
       <TabSiteHeader homeHubTab="recruitment" state={state} dispatch={dispatch} />
-      <section className="location-view-section tab-queue-section tab-compact-queue">
-        <CompactQueueHeading
-          title="Hiring in progress"
-          count={
-            <>
-              {hireQueueCount}
-              {showAll ? "" : `/${MAX_RECRUIT_QUEUE}`}
-            </>
-          }
-          countAriaLabel={`Hiring queue ${hireQueueCount}${showAll ? "" : ` of ${MAX_RECRUIT_QUEUE}`}`}
-          hideLabel="Hide locked"
-          hideChecked={hideLocked}
-          onHideChange={setHideLocked}
-        />
-        <RecruitmentQueueList
-          state={state}
-          {...(showAll
-            ? {
-                entries: recruitmentJobsForOffices(state),
-                maxSlots: ownedOfficeIds(state).length * MAX_RECRUIT_QUEUE,
-              }
-            : {
-                jobs: recruitmentJobsAtOffice(state, officeId),
-                officeId,
-              })}
-          dispatch={dispatch}
-          now={now}
-          compact
-          emptyLabel=""
-        />
-      </section>
+      {showAll ? (
+        ownedOfficeIds(state).map((siteId) => {
+          const siteQueue = recruitmentJobsAtOffice(state, siteId);
+          return (
+            <section
+              key={siteId}
+              className="location-view-section tab-queue-section tab-compact-queue"
+            >
+              <div className="tab-queue-heading">
+                <h3>{officeDisplayName(state, siteId)}</h3>
+                <span
+                  className="tab-queue-count muted"
+                  aria-label={`Hiring queue ${siteQueue.length} of ${MAX_RECRUIT_QUEUE}`}
+                >
+                  {siteQueue.length}/{MAX_RECRUIT_QUEUE}
+                </span>
+              </div>
+              <RecruitmentQueueList
+                state={state}
+                jobs={siteQueue}
+                officeId={siteId}
+                dispatch={dispatch}
+                now={now}
+                compact
+                emptyLabel=""
+              />
+            </section>
+          );
+        })
+      ) : (
+        <section className="location-view-section tab-queue-section tab-compact-queue">
+          <CompactQueueHeading
+            title="Hiring in progress"
+            count={`${hireQueueCount}/${MAX_RECRUIT_QUEUE}`}
+            countAriaLabel={`Hiring queue ${hireQueueCount} of ${MAX_RECRUIT_QUEUE}`}
+            hideLabel="Hide locked"
+            hideChecked={hideLocked}
+            onHideChange={setHideLocked}
+          />
+          <RecruitmentQueueList
+            state={state}
+            jobs={recruitmentJobsAtOffice(state, officeId)}
+            officeId={officeId}
+            dispatch={dispatch}
+            now={now}
+            compact
+            emptyLabel=""
+          />
+        </section>
+      )}
     </>
   );
 
@@ -404,6 +461,15 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           </div>
         ) : null}
       </div>
+      <div className="office-structures-catalog-toolbar">
+        <button
+          type="button"
+          className="office-collapse-all"
+          onClick={collapseAllRecruitCategories}
+        >
+          Collapse all
+        </button>
+      </div>
       {RECRUITMENT_CATEGORY_ORDER.map((category) => {
         const units = RECRUITMENT_UNITS.filter(
           (unit) => unit.category === category,
@@ -432,7 +498,9 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               <SceneBanner
                 src={RECRUIT_CATEGORY_SCENE[category].src}
                 storageKey={RECRUIT_CATEGORY_SCENE[category].storageKey}
-                panZoomFactor={1.78}
+                panZoomFactor={RECRUIT_CATEGORY_SCENE[category].panZoomFactor}
+                focalYPercent={RECRUIT_CATEGORY_SCENE[category].focalYPercent}
+                focalXPercent={RECRUIT_CATEGORY_SCENE[category].focalXPercent}
               />
             }
           >
@@ -462,6 +530,19 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         </TabPortraitLayout>
         <div className="tab-below-portrait">{recruitBelowPortrait}</div>
       </HubSyncedTabScrollBody>
+      {detailUnit ? (
+        <ProgressionDetailDialog
+          {...buildRecruitmentUnitDetailModel(detailUnit, {
+            locked: isRecruitmentUnitLocked(state, detailUnit),
+            requirement: isRecruitmentUnitLocked(state, detailUnit)
+              ? recruitmentUnitProgressionLockNav(state, detailUnit.id)
+                  .map((line) => line.label)
+                  .join(" · ")
+              : undefined,
+          })}
+          onClose={() => setDetailUnit(null)}
+        />
+      ) : null}
     </div>
   );
 }

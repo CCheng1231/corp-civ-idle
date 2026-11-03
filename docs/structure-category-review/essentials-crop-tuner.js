@@ -25,6 +25,7 @@
     return (
       window.ESSENTIALS_WIRE ||
       window.DEPARTMENTS_WIRE ||
+      window.OFFICE_EXPANSION_WIRE ||
       window.POWER_RESEARCH_WIRE ||
       window.RECRUITMENT_WIRE ||
       window.RESEARCH_RESOURCES_WIRE ||

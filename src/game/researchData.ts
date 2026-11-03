@@ -11,14 +11,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 1,
     "baseCost": {
-      "cash": 135,
-      "supply": 68,
-      "connection": 14,
+      "cash": 100,
+      "supply": 50,
+      "connection": 10,
       "mood": 0,
       "reputation": 0,
       "govReputation": 0
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.024,
       0.024,
@@ -40,14 +40,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 1,
     "baseCost": {
-      "cash": 68,
-      "supply": 135,
-      "connection": 7,
+      "cash": 50,
+      "supply": 100,
+      "connection": 5,
       "mood": 0,
       "reputation": 0,
       "govReputation": 0
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.024,
       0.024,
@@ -69,14 +69,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 5,
     "baseCost": {
-      "cash": 270,
-      "supply": 270,
-      "connection": 68,
+      "cash": 200,
+      "supply": 200,
+      "connection": 50,
       "mood": 0,
       "reputation": 0,
       "govReputation": 0
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.036000000000000004,
       0.036000000000000004,
@@ -98,14 +98,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 5,
     "baseCost": {
-      "cash": 270,
-      "supply": 270,
-      "connection": 68,
+      "cash": 200,
+      "supply": 200,
+      "connection": 50,
       "mood": 0,
       "reputation": 0,
       "govReputation": 0
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.036000000000000004,
       0.036000000000000004,
@@ -127,14 +127,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 6,
     "baseCost": {
-      "cash": 540,
-      "supply": 540,
-      "connection": 135,
+      "cash": 400,
+      "supply": 400,
+      "connection": 100,
       "mood": 0,
-      "reputation": 14,
-      "govReputation": 14
+      "reputation": 10,
+      "govReputation": 10
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.12,
       0.12,
@@ -156,14 +156,14 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 5,
     "rndLevelRequired": 6,
     "baseCost": {
-      "cash": 540,
-      "supply": 540,
-      "connection": 135,
+      "cash": 400,
+      "supply": 400,
+      "connection": 100,
       "mood": 0,
-      "reputation": 14,
-      "govReputation": 14
+      "reputation": 10,
+      "govReputation": 10
     },
-    "costScale": 1.12,
+    "costScale": 1.1,
     "buildTimeHoursPerLevel": [
       0.12,
       0.12,
@@ -391,8 +391,8 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     "maxLevel": 2,
     "rndLevelRequired": 2,
     "baseCost": {
-      "cash": 125,
-      "supply": 63,
+      "cash": 100,
+      "supply": 50,
       "connection": 10,
       "mood": 0,
       "reputation": 0,

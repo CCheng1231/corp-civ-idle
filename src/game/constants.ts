@@ -513,6 +513,8 @@ function structurePlayerDescription(structureId: StructureId): string {
       "HR desk — required before you can queue contractor hires.",
     mit_room:
       "Management trainee program — required for senior unit recruitment.",
+    office_expansion:
+      "Add office slots at this site — each level increases total space capacity for structures.",
   };
   return copy[structureId] ?? "Office infrastructure at this site.";
 }
@@ -530,6 +532,7 @@ function structureCategoryForId(structureId: StructureId): StructureCategory {
     case "social_media":
     case "video_production_studio":
     case "press_room":
+    case "office_expansion":
       return "departments";
     case "power_panel":
     case "electricity_generator":
@@ -700,6 +703,7 @@ export function createInitialState(now = Date.now()): GameState {
     pendingCompletionAlerts: [],
     recruitFocusUnitId: null,
     structureFocusStructureId: null,
+    researchFocusResearchId: null,
     logbookHighlightEntryId: null,
     jobFocusPostingId: null,
     settings: {

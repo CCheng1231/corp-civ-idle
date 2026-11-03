@@ -19,7 +19,7 @@ import {
   Z1_MAJOR_HUB_MARKER_COUNT,
   type MapZ1MajorHubMarker,
 } from "./worldMapZ1Markers";
-import type { GameSettings } from "./types";
+import type { GameSettings, MajorHubId } from "./types";
 import { effectiveLandmarkCoord } from "./mapDevLayout";
 
 export interface Z1MajorHubDefinition {
@@ -110,6 +110,26 @@ export function majorHubAtCoord(
 ): Z1MajorHubDefinition | null {
   const k = axialKey(coord);
   return resolveZ1MajorHubs(settings).find((h) => axialKey(h.coord) === k) ?? null;
+}
+
+export function majorHubById(
+  hubId: MajorHubId,
+  settings?: GameSettings,
+): Z1MajorHubDefinition | null {
+  return resolveZ1MajorHubs(settings).find((h) => h.id === hubId) ?? null;
+}
+
+export function majorHubCoord(
+  hubId: MajorHubId,
+  settings?: GameSettings,
+): AxialCoord {
+  const hub = majorHubById(hubId, settings);
+  if (!hub) {
+    throw new Error(`Unknown major hub ${hubId}`);
+  }
+  return (
+    effectiveLandmarkCoord(`major-${hub.slot}`, settings) ?? { ...hub.coord }
+  );
 }
 
 export function isZ1MajorHubCoord(

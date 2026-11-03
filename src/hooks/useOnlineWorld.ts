@@ -20,6 +20,7 @@ import {
   expireSharedPosting,
   savePrivateState,
   seedSharedJobPostingsIfNeeded,
+  ensureSharedJobDefinitionsSynced,
   subscribeCompanies,
   subscribeJobPostings,
   subscribePrivateState,
@@ -270,6 +271,7 @@ export function useOnlineWorld({
             lastExpectedSessionIdRef.current = expectedSessionId;
 
             await seedSharedJobPostingsIfNeeded(session);
+            await ensureSharedJobDefinitionsSynced(session);
 
             let remote = await loadPrivateState(session);
             if (isStaleBootstrap()) return;

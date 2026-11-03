@@ -536,8 +536,15 @@
   }
 }
 
-.recruit-unit-focused {
+.recruit-unit-focused,
+.progression-focus-target {
   animation: recruit-unit-flash 2.4s ease-out 1;
+}
+
+[id^="structure-card-"],
+[id^="research-card-"] {
+  scroll-margin-top: 0.35rem;
+  scroll-margin-bottom: 2.5rem;
 }
 
 .goal-bar-fill {

@@ -19,6 +19,7 @@ import { ONLINE_KICKED_MESSAGE } from "./multiplayer/browserLease";
 import { clearSession, readSession, writeSession } from "./multiplayer/session";
 import type { OnlineSession } from "./multiplayer/types";
 import { accountDisplayName, isOnlineSession } from "./multiplayer/types";
+import { MapPresentationToggle } from "./components/MapPresentationToggle";
 import "./App.css";
 
 function GameShell({
@@ -115,16 +116,25 @@ function GameShell({
       />
       <div className="app-top-chrome">
         <ResourceBar state={state} />
-        {online && state.onlineConnectionStatus ? (
-          <div
-            className={`online-status-banner online-status-${state.onlineConnectionStatus}`}
-            role="status"
-          >
-            {accountDisplayName(session.accountId, session.displayName)} · Online{" "}
-            {state.onlineConnectionStatus}
-            {state.onlineConnectionStatus === "error"
-              ? " — use Settings → Switch account and reconnect with your access key"
-              : null}
+        {(online && state.onlineConnectionStatus) || state.view === "world" ? (
+          <div className="app-status-row">
+            {online && state.onlineConnectionStatus ? (
+              <div
+                className={`online-status-banner online-status-${state.onlineConnectionStatus}`}
+                role="status"
+              >
+                {accountDisplayName(session.accountId, session.displayName)} · Online{" "}
+                {state.onlineConnectionStatus}
+                {state.onlineConnectionStatus === "error"
+                  ? " — use Settings → Switch account and reconnect with your access key"
+                  : null}
+              </div>
+            ) : (
+              <span className="app-status-row-lead" aria-hidden />
+            )}
+            {state.view === "world" ? (
+              <MapPresentationToggle state={state} dispatch={dispatch} />
+            ) : null}
           </div>
         ) : null}
         {state.won && (

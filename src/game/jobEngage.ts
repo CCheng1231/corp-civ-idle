@@ -3,7 +3,7 @@ import {
   jobTravelHexesToCoord,
   roundTripTravelSupplyCost,
 } from "./mapTravel";
-import { jobSiteCoordForDefinition } from "./mapWorld";
+import { jobSiteCoordForPosting } from "./mapWorld";
 import {
   canAssignFromRoster,
   subtractAssignmentFromRoster,
@@ -51,10 +51,11 @@ export function engageJobPosting(
   if (!canAssignFromRoster(roster, crewAssigned)) return state;
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) return state;
 
+  const siteCoord = jobSiteCoordForPosting(posting, def, state.settings);
   const travelHexes = jobTravelHexesToCoord(
     state,
     officeId,
-    jobSiteCoordForDefinition(def),
+    siteCoord,
   );
   const unitCount = totalAssigned(crewAssigned);
   const tripSupply = roundTripTravelSupplyCost(travelHexes, unitCount);
@@ -75,8 +76,9 @@ export function engageJobPosting(
     id: `eng_${postingId}_${now}`,
     postingId,
     definitionId: def.id,
-    towerId: def.towerId ?? null,
-    commercialLotId: def.commercialLotId ?? null,
+    towerId: posting.towerId ?? def.towerId ?? null,
+    majorHubId: posting.majorHubId ?? def.majorHubId ?? null,
+    commercialLotId: posting.commercialLotId ?? def.commercialLotId ?? null,
     officeId,
     crewAssigned,
     phase: "outbound",
@@ -130,7 +132,7 @@ export function validateEngagementAssignment(
   const travelHexes = jobTravelHexesToCoord(
     state,
     state.selectedOffice,
-    jobSiteCoordForDefinition(def),
+    jobSiteCoordForPosting(posting, def, state.settings),
   );
   const outboundSupply = roundTripTravelSupplyCost(
     travelHexes,
@@ -158,7 +160,7 @@ export function jobEngagementTravelSupplyCost(
   const hexes = jobTravelHexesToCoord(
     state,
     officeId,
-    jobSiteCoordForDefinition(def),
+    jobSiteCoordForPosting(posting, def, state.settings),
   );
   return roundTripTravelSupplyCost(hexes, totalAssigned(crewAssigned));
 }

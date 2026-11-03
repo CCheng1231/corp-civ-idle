@@ -100,6 +100,15 @@ export type TowerId =
   | "rural_crossing"
   | "country_estate";
 
+/** Canon Z1 major hub supertall sites (`major-hub-1` … `major-hub-6`). */
+export type MajorHubId =
+  | "major-hub-1"
+  | "major-hub-2"
+  | "major-hub-3"
+  | "major-hub-4"
+  | "major-hub-5"
+  | "major-hub-6";
+
 export type CommercialLotId =
   | "suburban_strip"
   | "rural_highway"
@@ -336,6 +345,7 @@ export type CompletionBand =
 export interface JobDefinition {
   id: string;
   towerId?: TowerId;
+  majorHubId?: MajorHubId;
   commercialLotId?: CommercialLotId;
   businessType: BusinessType;
   tier: JobTier;
@@ -366,6 +376,7 @@ export interface JobPosting {
   id: string;
   definitionId: string;
   towerId?: TowerId | null;
+  majorHubId?: MajorHubId | null;
   commercialLotId?: CommercialLotId | null;
   spawnedAt: number;
   expiresAt: number;
@@ -381,6 +392,7 @@ export interface JobEngagement {
   postingId: string;
   definitionId: string;
   towerId?: TowerId | null;
+  majorHubId?: MajorHubId | null;
   commercialLotId?: CommercialLotId | null;
   officeId: OfficeLocationId;
   crewAssigned: UnitAssignment;
@@ -486,6 +498,8 @@ export interface GameState {
   recruitFocusUnitId?: UnitId | null;
   /** Scroll/highlight target on Structure; stripped from saves. */
   structureFocusStructureId?: StructureId | null;
+  /** Scroll/highlight target on Research; stripped from saves. */
+  researchFocusResearchId?: ResearchId | null;
   /** Scroll/highlight target on Notes & logbook; stripped from saves. */
   logbookHighlightEntryId?: string | null;
   /** Scroll/highlight target on Secretary job board; stripped from saves. */
@@ -712,6 +726,7 @@ export type GameAction =
       logbookFilter?: string;
       recruitFocusUnitId?: UnitId | null;
       structureFocusStructureId?: StructureId | null;
+      researchFocusResearchId?: ResearchId | null;
       logbookHighlightEntryId?: string | null;
       jobFocusPostingId?: string | null;
     }

@@ -58,6 +58,53 @@ function findJobSheet(wb) {
   return JOB_SHEET_NAMES.find((name) => wb.SheetNames.includes(name)) ?? null;
 }
 
+function headerIndexMap(headerRow) {
+  const map = {};
+  headerRow.forEach((cell, idx) => {
+    const key = String(cell ?? "")
+      .trim()
+      .toLowerCase();
+    if (key === "completion supply" || key.includes("completion supply")) {
+      map.completionSupply = idx;
+    }
+    if (key === "completion cash" || key.includes("completion cash")) {
+      map.completionCash = idx;
+    }
+  });
+  return map;
+}
+
+function resolveJobSite(siteLabel) {
+  const raw = String(siteLabel ?? "").trim();
+  if (!raw) return null;
+
+  const mh =
+    raw.match(/^major\s*hub\s*(\d)$/i) ??
+    raw.match(/^mh\s*(\d)$/i) ??
+    raw.match(/^(major-hub-\d+)$/i);
+  if (mh) {
+    const id = mh[1].startsWith("major-hub-")
+      ? mh[1]
+      : `major-hub-${mh[1]}`;
+    return { majorHubId: id };
+  }
+
+  const towerId = TOWER_BY_LABEL[raw];
+  if (towerId) return { towerId };
+  return { towerId: slugify(raw) };
+}
+
+function completionPayoutFromRow(r, headerMap) {
+  const supplyCol = headerMap.completionSupply ?? 20;
+  const cashCol = headerMap.completionCash ?? 21;
+  const supply = num(r[supplyCol]);
+  const cash = num(r[cashCol]);
+  const payout = {};
+  if (supply > 0) payout.supply = supply;
+  if (cash > 0) payout.cash = cash;
+  return payout;
+}
+
 export function parseJobDefinitionsFromWorkbook(wb) {
   const sheetName = findJobSheet(wb);
   if (!sheetName) {
@@ -81,21 +128,29 @@ export function parseJobDefinitionsFromWorkbook(wb) {
     throw new Error("Job Hub design header not found");
   }
 
+  const headerMap = headerIndexMap(rows[headerIdx]);
+
   const jobs = [];
   for (let i = headerIdx + 1; i < rows.length; i += 1) {
     const r = rows[i];
-    const towerLabel = String(r[0] ?? "").trim();
+    const siteLabel = String(r[0] ?? "").trim();
     const title = String(r[1] ?? "").trim();
     const businessType = String(r[7] ?? "").trim();
-    if (!towerLabel || !title || !businessType) continue;
+    if (!siteLabel || !title || !businessType) continue;
+
+    const site = resolveJobSite(siteLabel);
+    if (!site) continue;
 
     const tier = num(r[8]);
     if (tier < 1 || tier > 2) continue;
 
+    const minFromSheet = num(r[12]);
+    const minUnitTier = minFromSheet >= 1 ? minFromSheet : tier;
+
     const id = `${BUSINESS_SLUG[businessType] ?? slugify(businessType)}_${slugify(title)}`;
     jobs.push({
       id,
-      towerId: TOWER_BY_LABEL[towerLabel] ?? slugify(towerLabel),
+      ...site,
       businessType: BUSINESS_SLUG[businessType] ?? slugify(businessType),
       tier,
       size: String(r[9] ?? "small").trim().toLowerCase(),
@@ -107,9 +162,9 @@ export function parseJobDefinitionsFromWorkbook(wb) {
       unitHoursTotal: num(r[16]) || 100,
       bonusPercent: num(r[18]) || 0.1,
       requiredCategory: String(r[11] ?? "farming").trim().toLowerCase(),
-      minUnitTier: Math.max(tier, num(r[12])),
+      minUnitTier,
       optionalIntelBoost: String(r[14]).toUpperCase() === "TRUE",
-      completionPayout: {},
+      completionPayout: completionPayoutFromRow(r, headerMap),
     });
   }
   return { jobs, sheetName };

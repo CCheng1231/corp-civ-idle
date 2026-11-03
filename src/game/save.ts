@@ -22,7 +22,8 @@ import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS } from "./secretaryData";
 import { trimSecretaryJobReports } from "./logbook";
 import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
-import { initializeJobPostings, jobDefinitionById } from "./jobs";
+import { initializeJobPostings, jobDefinitionById, mergeMissingJobPostings } from "./jobs";
+import { JOB_DEFINITIONS } from "./jobHubData";
 import { branchSiteCoord, isEstablishedBranchSiteOnMap } from "./branchSites";
 import { isCoordOnMapGrid, MAP_BRANCH } from "./hexLayout";
 import {
@@ -506,24 +507,43 @@ function migrateEngagementRow(engagement: JobEngagement): JobEngagement {
   };
 }
 
+const KNOWN_JOB_DEFINITION_IDS = new Set(JOB_DEFINITIONS.map((d) => d.id));
+
+function sanitizeLegacyJobRows(parsed: LegacySave): {
+  jobPostings: GameState["jobPostings"];
+  jobEngagements: GameState["jobEngagements"];
+} {
+  return {
+    jobPostings: (parsed.jobPostings ?? []).filter((p) =>
+      KNOWN_JOB_DEFINITION_IDS.has(p.definitionId),
+    ),
+    jobEngagements: (parsed.jobEngagements ?? []).filter((e) =>
+      KNOWN_JOB_DEFINITION_IDS.has(e.definitionId),
+    ),
+  };
+}
+
 function migrateJobFields(
   parsed: LegacySave,
   now: number,
 ): Pick<GameState, "jobPostings" | "jobEngagements"> {
-  const engagements = (parsed.jobEngagements ?? []).map(migrateEngagementRow);
+  const sanitized = sanitizeLegacyJobRows(parsed);
+  const engagements = sanitized.jobEngagements.map(migrateEngagementRow);
 
   // Online private saves omit shared jobPostings — still restore task forces.
   if (engagements.length > 0) {
     return {
-      jobPostings: parsed.jobPostings?.length ? parsed.jobPostings : [],
+      jobPostings: sanitized.jobPostings.length
+        ? mergeMissingJobPostings(sanitized.jobPostings, now)
+        : [],
       jobEngagements: engagements,
     };
   }
 
-  if (parsed.jobPostings?.length) {
+  if (sanitized.jobPostings.length) {
     return {
-      jobPostings: parsed.jobPostings,
-      jobEngagements: [],
+      jobPostings: mergeMissingJobPostings(sanitized.jobPostings, now),
+      jobEngagements: engagements,
     };
   }
 
@@ -1107,8 +1127,33 @@ export function loadGameState(session?: OnlineSession | null): GameState {
     return applyWorldMapDevLayoutToGameState(
       applyDevMapZ1AlignToGameState(normalized),
     );
-  } catch {
+  } catch (err) {
+    console.error("Failed to load offline save — starting fresh", err);
+    let persistRevision = 0;
+    let worldPersistRevision = 0;
+    try {
+      const raw = readOfflineSaveRaw(session);
+      if (raw) {
+        const parsed = JSON.parse(raw) as LegacySave;
+        if (
+          typeof parsed.persistRevision === "number" &&
+          Number.isFinite(parsed.persistRevision)
+        ) {
+          persistRevision = parsed.persistRevision;
+        }
+        if (
+          typeof parsed.worldPersistRevision === "number" &&
+          Number.isFinite(parsed.worldPersistRevision)
+        ) {
+          worldPersistRevision = parsed.worldPersistRevision;
+        }
+      }
+    } catch {
+      /* ignore secondary parse errors */
+    }
     const fresh = createInitialState();
+    fresh.persistRevision = persistRevision;
+    fresh.worldPersistRevision = worldPersistRevision;
     if (session) fresh.onlineSession = session;
     return applyWorldMapDevLayoutToGameState(
       applyDevMapZ1AlignToGameState(fresh),
@@ -1138,11 +1183,24 @@ function shouldOverwriteStoredSave(
   }
 }
 
-function writeOfflineSaveBlob(key: string, blob: Record<string, unknown>): void {
+function writeOfflineSaveBlob(
+  key: string,
+  blob: Record<string, unknown>,
+  options?: { rejectStale?: boolean },
+): void {
   if (typeof localStorage === "undefined") return;
   const existingRaw = localStorage.getItem(key);
-  if (!shouldOverwriteStoredSave(existingRaw, blob)) return;
-  localStorage.setItem(key, JSON.stringify(blob));
+  if (
+    options?.rejectStale !== false &&
+    !shouldOverwriteStoredSave(existingRaw, blob)
+  ) {
+    return;
+  }
+  try {
+    localStorage.setItem(key, JSON.stringify(blob));
+  } catch (err) {
+    console.error("Failed to write save to localStorage", err);
+  }
 }
 
 export function saveGameState(
@@ -1159,7 +1217,7 @@ export function saveGameState(
       Date.now(),
       state.onlineResetGeneration ?? 0,
     );
-    writeOfflineSaveBlob(cacheKey, blob);
+    writeOfflineSaveBlob(cacheKey, blob, { rejectStale: true });
     return;
   }
 
@@ -1173,6 +1231,7 @@ export function saveGameState(
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
     structureFocusStructureId: _structureFocus,
+    researchFocusResearchId: _researchFocus,
     logbookHighlightEntryId: _logHighlight,
     jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
@@ -1180,11 +1239,9 @@ export function saveGameState(
     onlineSession: _session,
     ...persistable
   } = state;
-  try {
-    writeOfflineSaveBlob(key, persistable as Record<string, unknown>);
-  } catch (err) {
-    console.error("Failed to write offline save", err);
-  }
+  writeOfflineSaveBlob(key, persistable as Record<string, unknown>, {
+    rejectStale: false,
+  });
 }
 
 export function resetGameState(

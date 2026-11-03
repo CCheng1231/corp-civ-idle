@@ -37,7 +37,7 @@ Task: [specific tab or change]
 - **Build tab:** Pass 2 wired — Essentials v4, Departments v4, Power & research v4, Recruitment structures v1 (`structure*Art.ts`, `OfficeStructurePanel`). Review: `docs/structure-category-review/`.
 - **Research tab:** Pass 2 wired — Resources v2, Payouts v4, Discover v1, Operations v1 (`research*Art.ts`, `ResearchView`). Review: `docs/research-category-review/`.
 - **Category banners:** Structure / Recruit / Research summary strips **9.5×2.82rem** (`06-job-board.css`).
-- **Next (Chris):** Recruit tab images — contractor/unit card art pass (structure recruitment category already wired; role roster cards TBD).
+- **Recruit tab roster cards:** All 17 roles wired — `unitPortraitAssets.ts`, `UnitCardPortrait.tsx`, `unitPortraitCardFraming.ts`. Review: `docs/unit-portrait-review/` (+ `unit-wire-defaults.js`). Structure recruitment category: `structureRecruitmentArt.ts`.
 
 **Recent state (Oct 28, 2026 — map filter + landmark pipeline):**
 

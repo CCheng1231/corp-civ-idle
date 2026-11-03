@@ -27,7 +27,7 @@ Gameplay may be deep and punishing; **UI must stay scannable**.
 
 - **Cost line** (red/green) = affordability. Do not repeat cash/supply/power shortfalls in blocker text.
 - **Button label** = action state (Locked, Queue full, In progress). Do not duplicate in a line above.
-- Keep **Requires:** for locks when the button only says “Locked”.
+- Keep **Requires:** for locks when the button only says “Locked”. Use **`ProgressionLockRequirements`** + **`progressionLockNav.ts`** (clickable lines; portrait overlay via **`ProgressionCardPortraitColumn`**). New recruit gates: extend **`RECRUITMENT_UNIT_RESEARCH_GATES`**.
 - Confirm destructive actions (sell/demolish) in a **dialog** with refund; do not show refund on the card.
 
 ## Copy

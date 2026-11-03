@@ -38,6 +38,7 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     pendingCompletionAlerts: _alerts,
     recruitFocusUnitId: _recruitFocus,
     structureFocusStructureId: _structureFocus,
+    researchFocusResearchId: _researchFocus,
     logbookHighlightEntryId: _logHighlight,
     jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
@@ -98,7 +99,10 @@ export function parseJobPosting(data: Record<string, unknown>): JobPosting {
   return {
     id: String(data.id ?? ""),
     definitionId: String(data.definitionId ?? ""),
-    towerId: data.towerId as JobPosting["towerId"],
+    towerId: (data.towerId as JobPosting["towerId"]) ?? null,
+    majorHubId: (data.majorHubId as JobPosting["majorHubId"]) ?? null,
+    commercialLotId:
+      (data.commercialLotId as JobPosting["commercialLotId"]) ?? null,
     spawnedAt: Number(data.spawnedAt ?? 0),
     expiresAt: Number(data.expiresAt ?? 0),
     unitHoursCompleted: Number(data.unitHoursCompleted ?? 0),

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2230"/>
+      <stop offset="100%" stop-color="#0c1018"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3d4a66"/>
+      <stop offset="100%" stop-color="#2a3348"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8fd4ff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#5a8fd4" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#7c5cff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#36d6c3" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="640" fill="url(#bg)"/>
+  <ellipse cx="256" cy="580" rx="200" ry="36" fill="#000" opacity="0.35"/>
+  <g transform="translate(72 220)">
+    <path d="M0 120 L80 80 L200 80 L200 200 L0 200 Z" fill="url(#floor)" stroke="#6b7896" stroke-width="3"/>
+    <path d="M20 95 L80 65 L180 65 L180 85 L80 85 L20 115 Z" fill="url(#glass)" stroke="#a8c8ff" stroke-width="2"/>
+    <rect x="24" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+    <rect x="72" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+    <rect x="120" y="130" width="36" height="28" rx="4" fill="#252d3d" stroke="#8899bb"/>
+  </g>
+  <g transform="translate(248 180)" opacity="0.95">
+    <path d="M0 140 L60 110 L160 110 L160 230 L0 230 Z" fill="url(#floor)" stroke="#9d7bff" stroke-width="3" stroke-dasharray="8 6"/>
+    <path d="M12 118 L60 92 L148 92 L148 108 L60 108 L12 134 Z" fill="url(#glass)" stroke="#c4b5ff" stroke-width="2"/>
+    <rect x="20" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <rect x="64" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <rect x="108" y="150" width="32" height="26" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <text x="80" y="205" text-anchor="middle" fill="#c4b5ff" font-family="Segoe UI,sans-serif" font-size="22" font-weight="600">+</text>
+  </g>
+  <path d="M200 300 L248 268" stroke="#36d6c3" stroke-width="4" stroke-linecap="round"/>
+  <rect x="0" y="480" width="512" height="160" fill="url(#glow)"/>
+</svg>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640" role="img" aria-label="Office expansion v3">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c2434"/>
+      <stop offset="100%" stop-color="#0c1018"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#445578"/>
+      <stop offset="100%" stop-color="#2d3850"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8ecff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#6aa8e8" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#5a8fd4" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#36d6c3" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="640" fill="url(#bg)"/>
+  <ellipse cx="256" cy="590" rx="210" ry="38" fill="#000" opacity="0.35"/>
+  <g transform="translate(56 160)">
+    <path d="M0 150 L90 95 L210 95 L210 240 L0 240 Z" fill="url(#floor)" stroke="#6b7896" stroke-width="3"/>
+    <path d="M22 72 L90 38 L198 38 L198 62 L90 62 L22 96 Z" fill="url(#glass)" stroke="#d0eeff" stroke-width="2"/>
+    <path d="M22 78 L90 44 L198 44 L198 118 L90 118 L22 152 Z" fill="url(#glass)" stroke="#a8c8ff" stroke-width="1" opacity="0.35"/>
+    <rect x="28" y="155" width="38" height="30" rx="4" fill="#252d3d" stroke="#8899bb"/>
+    <rect x="78" y="155" width="38" height="30" rx="4" fill="#252d3d" stroke="#8899bb"/>
+    <rect x="128" y="155" width="38" height="30" rx="4" fill="#252d3d" stroke="#8899bb"/>
+  </g>
+  <g transform="translate(248 130)" opacity="0.94">
+    <path d="M0 165 L70 125 L200 125 L200 265 L0 265 Z" fill="url(#floor)" stroke="#9d7bff" stroke-width="3" stroke-dasharray="10 7"/>
+    <path d="M14 108 L70 78 L188 78 L188 98 L70 98 L14 128 Z" fill="url(#glass)" stroke="#c4b5ff" stroke-width="2"/>
+    <rect x="22" y="168" width="36" height="28" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <rect x="72" y="168" width="36" height="28" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <rect x="122" y="168" width="36" height="28" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <rect x="172" y="168" width="36" height="28" rx="4" fill="#252d3d" stroke="#b8a6ff"/>
+    <text x="100" y="238" text-anchor="middle" fill="#c4b5ff" font-family="Segoe UI,sans-serif" font-size="24" font-weight="600">+</text>
+  </g>
+  <path d="M210 290 L248 250" stroke="#36d6c3" stroke-width="4" stroke-linecap="round"/>
+  <rect x="0" y="470" width="512" height="170" fill="url(#glow)"/>
+</svg>
