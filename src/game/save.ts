@@ -68,6 +68,14 @@ import {
   deserializePrivateState,
   serializePrivateState,
 } from "../multiplayer/companySave";
+import type { PlayerId } from "../multiplayer/types";
+import {
+  localSaveBackupExists,
+  quarantineFailedLoad,
+  readRotatingBackup,
+  rotateLocalBackup,
+  writeProtectedLocalSaveBlob,
+} from "./saveIntegrity";
 import { MAP_Z1_LAYER_DEFAULTS, type MapZ1FilterGroup } from "./worldMapLayout";
 import {
   resolveZ1RasterAlignment,
@@ -237,6 +245,100 @@ function hydrateOnlineNavigationFromCache(
     };
   } catch {
     return state;
+  }
+}
+
+function offlineStorageKeyForSession(session?: OnlineSession | null): string {
+  return session?.accountId != null
+    ? offlineSaveKey(session.accountId)
+    : SAVE_KEY;
+}
+
+function readBackupRaw(session?: OnlineSession | null): string | null {
+  return readRotatingBackup(offlineStorageKeyForSession(session));
+}
+
+/** True when a `-backup` entry exists for this offline account. */
+export function hasOfflineSaveBackup(session?: OnlineSession | null): boolean {
+  return localSaveBackupExists(offlineStorageKeyForSession(session));
+}
+
+function normalizeOfflineSaveRaw(
+  raw: string,
+  session?: OnlineSession | null,
+  options?: { restoredFromBackup?: boolean },
+): GameState {
+  const parsed = JSON.parse(raw) as LegacySave;
+  const normalized = normalizeSave(parsed);
+  if (session) normalized.onlineSession = session;
+  if (options?.restoredFromBackup) {
+    normalized.saveRestoredFromBackup = true;
+  }
+  return applyWorldMapDevLayoutToGameState(
+    applyDevMapZ1AlignToGameState(normalized),
+  );
+}
+
+/** Load backup blob into playable state (does not write primary slot). */
+export function loadOfflineSaveFromBackup(
+  session?: OnlineSession | null,
+): GameState | null {
+  const raw = readBackupRaw(session);
+  if (!raw) return null;
+  try {
+    return normalizeOfflineSaveRaw(raw, session, { restoredFromBackup: true });
+  } catch (err) {
+    console.error("Failed to load offline save backup", err);
+    return null;
+  }
+}
+
+/** Dev/local recovery: copy last online private cache into offline slot. */
+export function hasOnlinePrivateCache(accountId: PlayerId): boolean {
+  if (typeof localStorage === "undefined") return false;
+  const key = onlineCacheKey({
+    accountId,
+    playMode: "online",
+    worldId: "dev",
+  });
+  return Boolean(localStorage.getItem(key));
+}
+
+export function restoreOfflineFromOnlineCache(
+  session: OnlineSession,
+): GameState | null {
+  if (session.playMode !== "offline") return null;
+  if (typeof localStorage === "undefined") return null;
+  const cacheKey = onlineCacheKey({
+    accountId: session.accountId,
+    playMode: "online",
+    worldId: session.worldId ?? "dev",
+  });
+  const raw = localStorage.getItem(cacheKey);
+  if (!raw) return null;
+  try {
+    const remote = JSON.parse(raw) as Record<string, unknown>;
+    const partial = deserializePrivateState(remote, {
+      ...session,
+      playMode: "online",
+    });
+    const merged = normalizeSave({
+      ...createInitialState(),
+      ...partial,
+    } as LegacySave);
+    merged.onlineSession = session;
+    const playable = applyWorldMapDevLayoutToGameState(
+      applyDevMapZ1AlignToGameState(merged),
+    );
+    writeOfflineSaveBlob(
+      offlineStorageKeyForSession(session),
+      stripOfflinePersistable(playable) as Record<string, unknown>,
+      { rejectStale: false, allowExplicitReset: true },
+    );
+    return playable;
+  } catch (err) {
+    console.error("Failed to restore offline save from online cache", err);
+    return null;
   }
 }
 
@@ -553,6 +655,32 @@ function migrateJobFields(
   };
 }
 
+function resolveMapReferenceOfficeId(
+  parsed: LegacySave,
+  state: GameState,
+): OfficeLocationId {
+  const raw = parsed.settings?.mapReferenceOfficeId;
+  if (raw === "hq") return "hq";
+  if (
+    typeof raw === "string" &&
+    isBranchOfficeId(raw as OfficeLocationId) &&
+    branchSiteForOfficeId(state, raw as OfficeLocationId)
+  ) {
+    return raw as OfficeLocationId;
+  }
+  if (
+    parsed.settings?.mapMainOffice === "branch" &&
+    state.branchSites.length > 0
+  ) {
+    const last = state.lastSelectedOffice;
+    if (isBranchOfficeId(last) && branchSiteForOfficeId(state, last)) {
+      return last;
+    }
+    return branchOfficeIdForSite(state.branchSites[0]!);
+  }
+  return "hq";
+}
+
 function migrateBranchFields(
   parsed: LegacySave,
   merged: GameState,
@@ -596,7 +724,7 @@ function migrateBranchFields(
     name:
       typeof parsed.branchName === "string" && parsed.branchName.trim()
         ? parsed.branchName.trim().slice(0, 48)
-        : defaultBranchSiteName(commercialLotId, slotIndex, 1),
+        : defaultBranchSiteName(commercialLotId!, slotIndex, 1),
     officeSpaceBase:
       typeof parsed.branchOfficeSpaceBase === "number"
         ? parsed.branchOfficeSpaceBase
@@ -895,6 +1023,16 @@ function normalizeSave(
   };
 
   Object.assign(merged, migrateBranchFields(parsed, merged));
+  merged.branchEstablishmentTransits =
+    parsed.branchEstablishmentTransits ?? merged.branchEstablishmentTransits ?? [];
+  merged.worldBranchNameSeq =
+    typeof parsed.worldBranchNameSeq === "number"
+      ? parsed.worldBranchNameSeq
+      : merged.worldBranchNameSeq;
+  merged.officeSwitchAvailableAt =
+    typeof parsed.officeSwitchAvailableAt === "number"
+      ? parsed.officeSwitchAvailableAt
+      : merged.officeSwitchAvailableAt;
   Object.assign(merged, migrateJobFields(parsed, now));
 
   const legacyOfficeSections = parsed.settings?.officeSiteSections as
@@ -949,6 +1087,13 @@ function normalizeSave(
   ) {
     merged.selectedOffice = "hq";
   }
+
+  merged.settings = {
+    ...merged.settings,
+    mapReferenceOfficeId: resolveMapReferenceOfficeId(parsed, merged),
+    mapMainOffice:
+      resolveMapReferenceOfficeId(parsed, merged) === "hq" ? "hq" : "branch",
+  };
 
   merged.locationStats = computeLocationStats({
     structureLevelsByLocation: merged.structureLevelsByLocation,
@@ -1059,6 +1204,18 @@ function sanitizeOnlineMapAnchors(state: GameState): GameState {
     onGridBranches.length === 0
       ? "hq"
       : state.settings.mapMainOffice;
+  let mapReferenceOfficeId = state.settings.mapReferenceOfficeId ?? "hq";
+  if (
+    mapReferenceOfficeId !== "hq" &&
+    isBranchOfficeId(mapReferenceOfficeId) &&
+    !onGridBranches.some(
+      (site) => branchOfficeIdForSite(site) === mapReferenceOfficeId,
+    )
+  ) {
+    mapReferenceOfficeId = "hq";
+  }
+  const resolvedMainOffice =
+    mapReferenceOfficeId === "hq" ? "hq" : ("branch" as const);
   const selectedCommercialHex =
     state.selectedCommercialHex &&
     !isCoordOnMapGrid(state.selectedCommercialHex)
@@ -1067,6 +1224,7 @@ function sanitizeOnlineMapAnchors(state: GameState): GameState {
   if (
     !hadOffGridBranch &&
     mapMainOffice === state.settings.mapMainOffice &&
+    mapReferenceOfficeId === (state.settings.mapReferenceOfficeId ?? "hq") &&
     selectedCommercialHex === state.selectedCommercialHex
   ) {
     return state;
@@ -1077,7 +1235,8 @@ function sanitizeOnlineMapAnchors(state: GameState): GameState {
     selectedCommercialHex,
     settings: {
       ...state.settings,
-      mapMainOffice,
+      mapMainOffice: resolvedMainOffice,
+      mapReferenceOfficeId,
     },
   };
 }
@@ -1114,21 +1273,34 @@ export function loadGameState(session?: OnlineSession | null): GameState {
 
   try {
     const raw = readOfflineSaveRaw(session);
-    if (!raw) {
-      const fresh = createInitialState();
-      if (session) fresh.onlineSession = session;
-      return applyWorldMapDevLayoutToGameState(
-        applyDevMapZ1AlignToGameState(fresh),
-      );
+    if (raw) {
+      try {
+        return normalizeOfflineSaveRaw(raw, session);
+      } catch (primaryErr) {
+        console.error("Failed to load offline save — trying backup", primaryErr);
+        quarantineFailedLoad(
+          offlineStorageKeyForSession(session),
+          raw,
+          primaryErr,
+        );
+        const fromBackup = loadOfflineSaveFromBackup(session);
+        if (fromBackup) return fromBackup;
+        throw primaryErr;
+      }
     }
-    const parsed = JSON.parse(raw) as LegacySave;
-    const normalized = normalizeSave(parsed);
-    if (session) normalized.onlineSession = session;
+
+    const fromBackup = loadOfflineSaveFromBackup(session);
+    if (fromBackup) return fromBackup;
+
+    const fresh = createInitialState();
+    if (session) fresh.onlineSession = session;
     return applyWorldMapDevLayoutToGameState(
-      applyDevMapZ1AlignToGameState(normalized),
+      applyDevMapZ1AlignToGameState(fresh),
     );
   } catch (err) {
     console.error("Failed to load offline save — starting fresh", err);
+    const storageKey = offlineStorageKeyForSession(session);
+    quarantineFailedLoad(storageKey, readOfflineSaveRaw(session), err);
     let persistRevision = 0;
     let worldPersistRevision = 0;
     try {
@@ -1154,6 +1326,7 @@ export function loadGameState(session?: OnlineSession | null): GameState {
     const fresh = createInitialState();
     fresh.persistRevision = persistRevision;
     fresh.worldPersistRevision = worldPersistRevision;
+    fresh.saveLoadFailed = true;
     if (session) fresh.onlineSession = session;
     return applyWorldMapDevLayoutToGameState(
       applyDevMapZ1AlignToGameState(fresh),
@@ -1161,46 +1334,45 @@ export function loadGameState(session?: OnlineSession | null): GameState {
   }
 }
 
-function shouldOverwriteStoredSave(
-  existingRaw: string | null,
-  next: Record<string, unknown>,
-): boolean {
-  if (!existingRaw) return true;
-  try {
-    const existing = JSON.parse(existingRaw) as {
-      persistRevision?: number;
-      lastTickAt?: number;
-    };
-    const nextRev = Number(next.persistRevision ?? 0);
-    const existingRev = Number(existing.persistRevision ?? 0);
-    if (nextRev > existingRev) return true;
-    if (nextRev < existingRev) return false;
-    const nextTick = Number(next.lastTickAt ?? 0);
-    const existingTick = Number(existing.lastTickAt ?? 0);
-    return nextTick >= existingTick;
-  } catch {
-    return true;
-  }
-}
-
 function writeOfflineSaveBlob(
   key: string,
   blob: Record<string, unknown>,
-  options?: { rejectStale?: boolean },
+  options?: { rejectStale?: boolean; allowExplicitReset?: boolean },
 ): void {
-  if (typeof localStorage === "undefined") return;
-  const existingRaw = localStorage.getItem(key);
-  if (
-    options?.rejectStale !== false &&
-    !shouldOverwriteStoredSave(existingRaw, blob)
-  ) {
-    return;
-  }
-  try {
-    localStorage.setItem(key, JSON.stringify(blob));
-  } catch (err) {
-    console.error("Failed to write save to localStorage", err);
-  }
+  writeProtectedLocalSaveBlob(key, blob, options);
+}
+
+export function restoreOfflineSaveFromBackup(
+  session?: OnlineSession | null,
+): GameState | null {
+  const restored = loadOfflineSaveFromBackup(session);
+  if (!restored) return null;
+  const key = offlineStorageKeyForSession(session);
+  writeOfflineSaveBlob(
+    key,
+    stripOfflinePersistable(restored) as Record<string, unknown>,
+    { rejectStale: false, allowExplicitReset: true },
+  );
+  return restored;
+}
+
+function stripOfflinePersistable(state: GameState): Partial<GameState> {
+  const {
+    pendingOfflineSummary: _welcome,
+    pendingCompletionAlerts: _alerts,
+    recruitFocusUnitId: _recruitFocus,
+    structureFocusStructureId: _structureFocus,
+    researchFocusResearchId: _researchFocus,
+    logbookHighlightEntryId: _logHighlight,
+    jobFocusPostingId: _jobFocus,
+    companyPresence: _presence,
+    onlineConnectionStatus: _conn,
+    onlineSession: _session,
+    saveLoadFailed: _saveLoadFailed,
+    saveRestoredFromBackup: _backupFlag,
+    ...persistable
+  } = state;
+  return persistable;
 }
 
 export function saveGameState(
@@ -1209,6 +1381,7 @@ export function saveGameState(
 ): void {
   syncDevMapZ1AlignFromSettings(state.settings);
   syncWorldMapDevLayoutFromSettings(state.settings);
+  if (state.saveLoadFailed) return;
   const session = sessionOverride ?? state.onlineSession;
   if (session?.playMode === "online") {
     const cacheKey = onlineCacheKey(session);
@@ -1237,10 +1410,12 @@ export function saveGameState(
     companyPresence: _presence,
     onlineConnectionStatus: _conn,
     onlineSession: _session,
+    saveLoadFailed: _saveLoadFailed,
+    saveRestoredFromBackup: _backupFlag,
     ...persistable
   } = state;
   writeOfflineSaveBlob(key, persistable as Record<string, unknown>, {
-    rejectStale: false,
+    rejectStale: true,
   });
 }
 
@@ -1249,7 +1424,13 @@ export function resetGameState(
   accountId?: string,
 ): GameState {
   const key = accountId ? offlineSaveKey(accountId) : SAVE_KEY;
-  localStorage.removeItem(key);
+  if (typeof localStorage !== "undefined") {
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      rotateLocalBackup(key, existing);
+    }
+    localStorage.removeItem(key);
+  }
   const fresh = createInitialState();
   if (preserveSettings) {
     fresh.settings = {

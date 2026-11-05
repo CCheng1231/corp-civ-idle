@@ -10,6 +10,7 @@ import { axialKey } from "./hexLayout";
 import {
   branchOfficeIdForSite,
   branchSiteCoord,
+  branchSitePadIndex,
   isEstablishedBranchSiteOnMap,
 } from "./branchSites";
 import { branchSlotAtLot } from "./branchCommercial";
@@ -60,8 +61,9 @@ export function resolvePlayerBuildingLandmarkInstances(
 
   for (const site of state.branchSites) {
     if (!isEstablishedBranchSiteOnMap(site)) continue;
+    if (!site.commercialLotId) continue;
     const lot = commercialLotById(site.commercialLotId);
-    const slot = branchSlotAtLot(lot, site.slotIndex);
+    const slot = branchSlotAtLot(lot, branchSitePadIndex(site));
     if (!slot) continue;
     const coord = branchSiteCoord(site, state.settings);
     const key = axialKey(coord);

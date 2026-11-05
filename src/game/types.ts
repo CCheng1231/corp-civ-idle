@@ -1,4 +1,10 @@
-import type { CompanyPresence, OnlineSession } from "../multiplayer/types";
+import type {
+  CompanyPresence,
+  OnlineSession,
+  PlayerId,
+} from "../multiplayer/types";
+
+export type { PlayerId };
 
 export type ResourceKey =
   | "cash"
@@ -146,10 +152,45 @@ export interface CommercialLotDefinition {
 }
 
 export interface EstablishedBranchSite {
-  commercialLotId: CommercialLotId;
-  slotIndex: number;
+  /** Legacy commercial lot id; open-office hex uses `hexKey` instead. */
+  commercialLotId?: CommercialLotId;
+  /** Axial key `q,r` for dev open-office pads. */
+  hexKey?: string;
+  slotIndex?: number;
+  padIndex?: number;
   name: string;
   officeSpaceBase: number;
+  ownerPlayerId?: string;
+  establishedAt?: number;
+  /** Owner-only close timer start (ms); pad blocked while set. */
+  closingStartedAt?: number | null;
+}
+
+export interface DevOpenOfficePad {
+  tier: BranchOfficeSlotSize;
+  label?: string;
+  officeSpaceBase: number;
+  openingCost: ResourceCost;
+}
+
+export interface DevOpenOfficeHex {
+  pads: DevOpenOfficePad[];
+}
+
+export type BranchEstablishmentPhase = "outbound" | "returning";
+
+export interface BranchEstablishmentTransit {
+  id: string;
+  ownerPlayerId: string;
+  fromOfficeId: OfficeLocationId;
+  hexKey: string;
+  padIndex: number;
+  openingCostSpent: ResourceCost;
+  /** Player-chosen name applied when the branch opens on arrival. */
+  plannedBranchName?: string;
+  phase?: BranchEstablishmentPhase;
+  departedAt: number;
+  arrivesAt: number;
 }
 
 export interface AxialCoord {
@@ -457,6 +498,12 @@ export interface GameState {
   lastSelectedOffice: OfficeLocationId;
   /** Open branch offices (one per established commercial-lot pad). */
   branchSites: EstablishedBranchSite[];
+  /** Branch Managers traveling to open a pad (charged on send; refund on fail). */
+  branchEstablishmentTransits: BranchEstablishmentTransit[];
+  /** Global branch default name sequence (Tim's branch 001). */
+  worldBranchNameSeq: number;
+  /** Earliest time (ms) this player may switch active office again. */
+  officeSwitchAvailableAt: number;
   selectedTowerId: TowerId | null;
   selectedCommercialHex: AxialCoord | null;
   won: boolean;
@@ -516,6 +563,10 @@ export interface GameState {
   onlineResetGeneration?: number;
   /** Online: save session id from last reset/load (must match meta before saving). */
   onlineSaveSessionId?: string;
+  /** Set when offline save failed to parse/migrate — blocks auto-save from overwriting the blob. */
+  saveLoadFailed?: boolean;
+  /** Shown once when loaded from `-backup` localStorage; stripped from saves. */
+  saveRestoredFromBackup?: boolean;
 }
 
 export type CompletionAlertKind = "structure" | "research" | "recruitment" | "job";
@@ -557,8 +608,10 @@ export interface GameSettings {
   mapPlayerGround: MapPlayerGround;
   /** Player map: show soft closed outlines around each region band. */
   mapRegionOutlines: boolean;
-  /** World map: distance rings and focus button anchor to HQ or branch. */
+  /** World map: distance rings and Home button anchor (HQ or a branch). */
   mapMainOffice: "hq" | "branch";
+  /** Preferred office for map distance / Home focus; falls back from legacy mapMainOffice. */
+  mapReferenceOfficeId?: OfficeLocationId;
   /** Z1 layer stack visibility (v0.2 filters); omitted groups default to visible. */
   mapZ1LayerFilters?: Partial<
     Record<
@@ -599,8 +652,14 @@ export interface GameSettings {
   mapDevExtraHexes?: Array<{ q: number; r: number }>;
   /** Dev: landmark id → axial coord (see mapDevLayout.ts keys). */
   mapDevLandmarkCoords?: Record<string, { q: number; r: number }>;
-  /** Dev: move landmark | create hex | paint region */
-  mapDevHexEditMode?: "move" | "create" | "region";
+  /** Dev: move landmark | create hex | paint region | open office pads */
+  mapDevHexEditMode?: "move" | "create" | "region" | "open_office";
+  /** Dev: authored open-office pads per axial key `q,r`. */
+  mapDevOpenOffices?: Record<string, DevOpenOfficeHex>;
+  /** Player map filter: highlight hexes with a free open-office pad. */
+  mapFilterAvailableOpenOffices?: boolean;
+  /** Dev: selected hex for open-office pad editing. */
+  mapDevOpenOfficeEditTarget?: { q: number; r: number };
   /** Dev: region brush for paint mode */
   mapDevRegionBrush?: MapRegion;
   /** Dev: axialKey → region override (paint tool) */
@@ -691,7 +750,25 @@ export type GameAction =
   | { type: "SELECT_OFFICE"; officeId: OfficeSelectionId }
   | { type: "SELECT_TOWER"; towerId: TowerId | null }
   | { type: "SELECT_COMMERCIAL_HEX"; coord: AxialCoord | null }
-  | { type: "ESTABLISH_BRANCH"; coord?: AxialCoord | null; slotIndex?: number }
+  | {
+      type: "ESTABLISH_BRANCH";
+      coord?: AxialCoord | null;
+      slotIndex?: number;
+      branchName?: string;
+    }
+  | {
+      type: "SEND_BRANCH_ESTABLISH";
+      coord: AxialCoord;
+      padIndex: number;
+      fromOfficeId: OfficeLocationId;
+      openingCost: ResourceCost;
+      branchName?: string;
+    }
+  | { type: "CANCEL_BRANCH_ESTABLISHMENT"; transitId: string }
+  | { type: "CANCEL_BRANCH_CLOSE"; officeId: OfficeLocationId }
+  | { type: "START_BRANCH_CLOSE"; officeId: OfficeLocationId }
+  | { type: "SET_ACTIVE_OFFICE"; officeId: OfficeLocationId }
+  | { type: "SYNC_WORLD_BRANCHES"; branchSites: EstablishedBranchSite[]; worldBranchNameSeq: number }
   | { type: "RENAME_BRANCH"; name: string; officeId?: OfficeLocationId }
   | { type: "RECRUIT_CONTRACTOR"; unitId: UnitId }
   | {
@@ -748,6 +825,7 @@ export type GameAction =
   | { type: "UPDATE_PLAYER_NOTES"; notes: string }
   | { type: "UPDATE_SETTINGS"; settings: Partial<GameSettings> }
   | { type: "DEV_SKIP_TIME"; minutes: number }
+  | { type: "DEV_REMOVE_BRANCH"; officeId: OfficeLocationId }
   | { type: "LOAD"; state: GameState }
   | {
       type: "SYNC_SHARED_JOBS";

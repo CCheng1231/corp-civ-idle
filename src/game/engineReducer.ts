@@ -51,14 +51,15 @@ import {
   isOnlineMode
 } from "../multiplayer/playerHq";
 import {
-  branchSlotAt,
   branchOpeningCostForPad,
   branchManagementResearched,
-  branchManagerAvailable,
   canEstablishBranchPad,
   commercialSiteAt,
-  defaultBranchSiteName
 } from "./mapWorld";
+import {
+  applySendBranchEstablishment,
+  cancelBranchEstablishment,
+} from "./branchEstablishment";
 import { normalizeCommercialLotBranchSlots } from "./branchCommercial";
 import {
   branchOfficeIdForSite,
@@ -91,10 +92,8 @@ import type {
   GameState,
   HomeHubResume,
   ResourceCost,
-  EstablishedBranchSite,
 } from "./types";
 import {
-  appendBranchOffice,
   getResearchDef,
   getStructureDef,
   newQueueJobId,
@@ -111,11 +110,18 @@ import {
   finalizeOnlineSyncState,
   mergeOnlineRemoteState
 } from "./engineTick";
+import { removeBranchOfficeForDev } from "./devRemoveBranch";
 
 /** Economy/world actions — trigger immediate online Firestore sync (not UI nav). */
 export const WORLD_PERSIST_ACTIONS = new Set<GameAction["type"]>([
   "ESTABLISH_BRANCH",
+  "SEND_BRANCH_ESTABLISH",
+  "CANCEL_BRANCH_ESTABLISHMENT",
+  "SYNC_WORLD_BRANCHES",
+  "START_BRANCH_CLOSE",
+  "CANCEL_BRANCH_CLOSE",
   "RENAME_BRANCH",
+  "DEV_REMOVE_BRANCH",
   "BUY_STRUCTURE",
   "CANCEL_STRUCTURE_JOB",
   "DOWNGRADE_STRUCTURE",
@@ -450,65 +456,72 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "SELECT_COMMERCIAL_HEX":
       return { ...state, selectedCommercialHex: action.coord };
 
+    case "SEND_BRANCH_ESTABLISH": {
+      const { coord, padIndex, fromOfficeId, openingCost, branchName } = action;
+      const applied = applySendBranchEstablishment(state, {
+        coord,
+        padIndex,
+        fromOfficeId,
+        openingCost,
+        plannedBranchName: branchName,
+        now: Date.now(),
+      });
+      return applied ?? state;
+    }
+
+    case "CANCEL_BRANCH_ESTABLISHMENT":
+      return cancelBranchEstablishment(state, action.transitId);
+
+    case "SYNC_WORLD_BRANCHES":
+      return withDerivedStats({
+        ...state,
+        branchSites: action.branchSites,
+        worldBranchNameSeq: action.worldBranchNameSeq,
+      });
+
+    case "SET_ACTIVE_OFFICE": {
+      const now = Date.now();
+      if (now < state.officeSwitchAvailableAt) return state;
+      const officeId = action.officeId;
+      if (isBranchOfficeId(officeId) && !branchSiteForOfficeId(state, officeId)) {
+        return state;
+      }
+      const cooldownMs = 24 * 60 * 60 * 1000;
+      return {
+        ...state,
+        selectedOffice: officeId,
+        lastSelectedOffice: officeId,
+        officeSwitchAvailableAt: now + cooldownMs,
+        settings: {
+          ...state.settings,
+          mapMainOffice: officeId === "hq" ? "hq" : "branch",
+          mapReferenceOfficeId: officeId,
+        },
+      };
+    }
+
     case "ESTABLISH_BRANCH": {
-      if (!branchManagementResearched(state)) return state;
-      if (branchManagerAvailable(state) < 1) return state;
       const pick = action.coord ?? state.selectedCommercialHex;
-      const site = pick ? commercialSiteAt(pick) : undefined;
-      if (!site) return state;
+      const site = pick ? commercialSiteAt(pick, state.settings) : undefined;
+      if (!site || !pick) return state;
 
       const slotIndex = Math.min(
         normalizeCommercialLotBranchSlots(site.branchSlots).length - 1,
         Math.max(0, action.slotIndex ?? 0),
       );
-      if (!canEstablishBranchPad(state, site.id, slotIndex)) return state;
-
-      const slot = branchSlotAt(site.id, slotIndex);
-      if (!slot) return state;
+      if (!canEstablishBranchPad(state, site.id, slotIndex, pick)) return state;
 
       const openingCost = branchOpeningCostForPad(site.id, slotIndex);
-
-      const branchSite: EstablishedBranchSite = {
-        commercialLotId: site.id,
-        slotIndex,
-        name: defaultBranchSiteName(
-          site.id,
-          slotIndex,
-          state.branchSites.length + 1,
-        ),
-        officeSpaceBase: slot.officeSpace
-};
-      const officeId = branchOfficeIdForSite(branchSite);
-
-      let next = applyOfficeCost(state, "hq", openingCost);
-      next.contractorsByLocation = {
-        ...next.contractorsByLocation,
-        hq: {
-          ...next.contractorsByLocation.hq,
-          branch_manager: Math.max(
-            0,
-            (next.contractorsByLocation.hq.branch_manager ?? 0) - 1,
-          )
-}
-};
-      next = appendBranchOffice(next, branchSite);
-      next.selectedCommercialHex = null;
-      next.selectedOffice = "all";
-      next.lastSelectedOffice = officeId;
-      return appendActivityLogs(withDerivedStats(next), [
-        {
-          category: "research",
-          summary: `Opened ${branchSite.name} at ${site.label}`,
-          officeId,
-          spent: openingCost,
-          impacts: [
-            "Consumed 1 Branch Manager",
-            `${slot.label} pad · ${slot.officeSpace} office space (expands to ${slot.expansionCap})`,
-            "Branch office now on the regional map",
-            "Manage structures and staff at the new site",
-          ]
-},
-      ]);
+      const applied = applySendBranchEstablishment(state, {
+        coord: pick,
+        padIndex: slotIndex,
+        fromOfficeId: "hq",
+        openingCost,
+        plannedBranchName: action.branchName,
+        now: Date.now(),
+      });
+      if (!applied) return state;
+      return { ...applied, selectedOffice: "all" };
     }
 
     case "RENAME_BRANCH": {
@@ -568,6 +581,11 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "DEV_SKIP_TIME":
       if (isOnlineMode(state)) return state;
       return devSkipTime(state, action.minutes);
+
+    case "DEV_REMOVE_BRANCH": {
+      const removed = removeBranchOfficeForDev(state, action.officeId);
+      return removed ?? state;
+    }
 
     case "BUY_STRUCTURE": {
       const def = getStructureDef(action.structureId);

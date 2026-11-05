@@ -1,6 +1,11 @@
 import { useEffect, useState, type Dispatch } from "react";
 import { formatNumber } from "../game/constants";
 import {
+  branchEstablishmentPhase,
+  branchEstablishmentStatusLabel,
+} from "../game/branchEstablishment";
+import { activePlayerId } from "../multiplayer/playerHq";
+import {
   engagementStatusLabel,
   jobDefinitionById,
 } from "../game/jobs";
@@ -32,6 +37,8 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
   const { active, cap } = secretaryJobSummary(state);
   const now = Date.now();
   const [workTab, setWorkTab] = useState<SecretaryWorkTab>(initialSecretaryWorkTab);
+  const displayWorkTab: SecretaryWorkTab =
+    state.jobFocusPostingId != null ? "board" : workTab;
 
   useEffect(() => {
     if (state.jobFocusPostingId) {
@@ -47,6 +54,13 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
     />
   );
 
+  const ownerId = activePlayerId(state);
+  const branchTransits = state.branchEstablishmentTransits.filter(
+    (t) => t.ownerPlayerId === ownerId,
+  );
+  const showTaskForceList =
+    state.jobEngagements.length > 0 || branchTransits.length > 0;
+
   const secretaryTaskForces = (
     <section
       className="secretary-task-forces-beside tab-queue-section tab-compact-queue"
@@ -58,9 +72,46 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
             {active}/{cap}
           </span>
         </div>
-        {state.jobEngagements.length > 0 ? (
+        {showTaskForceList ? (
           <div className="build-queue-slot" data-max-slots={cap}>
             <ul className="build-queue">
+              {branchTransits.map((transit) => {
+                const phase = branchEstablishmentPhase(transit);
+                const status = branchEstablishmentStatusLabel(
+                  state,
+                  transit,
+                  now,
+                );
+                const tip = `Branch Manager · new branch · ${status}`;
+                return (
+                  <li
+                    key={transit.id}
+                    className="build-queue-row-with-cancel secretary-task-force-row secretary-task-force-row-branch-establish"
+                    data-tip={tip}
+                    aria-label={tip}
+                  >
+                    <TaskForceStatusIcon phase={phase} />
+                    <div className="secretary-task-force-row-body">
+                      <span className="queue-name">Branch Manager</span>
+                      <span className="queue-status">{status}</span>
+                    </div>
+                    {phase === "outbound" ? (
+                      <button
+                        type="button"
+                        className="map-hex-job-send queue-cancel-btn"
+                        onClick={() =>
+                          dispatch({
+                            type: "CANCEL_BRANCH_ESTABLISHMENT",
+                            transitId: transit.id,
+                          })
+                        }
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
               {state.jobEngagements.map((engagement) => {
                 const def = jobDefinitionById(engagement.definitionId);
                 const units = totalAssigned(engagement.crewAssigned);
@@ -108,7 +159,7 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
 
   return (
     <div
-      className={`main-view-panel location-view-panel secretary-view secretary-view--work-${workTab} hub-synced-tab-view`}
+      className={`main-view-panel location-view-panel secretary-view secretary-view--work-${displayWorkTab} hub-synced-tab-view`}
     >
       <HubSyncedTabBackground
         chiefId={state.chiefOfStaffId}
@@ -132,7 +183,7 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
           <SecretaryBriefing
             state={state}
             dispatch={dispatch}
-            workTab={workTab}
+            workTab={displayWorkTab}
             onWorkTabChange={setWorkTab}
           />
         </div>

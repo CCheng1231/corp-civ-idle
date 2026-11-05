@@ -430,10 +430,10 @@ export const RESEARCH_DEFINITIONS: ResearchDefinition[] = [
     },
     "costScale": 1.15,
     "buildTimeHoursPerLevel": [
-      0.48,
-      0.48,
-      0.48,
-      0.48
+      0.0002777777777777778,
+      0.0002777777777777778,
+      0.0002777777777777778,
+      0.0002777777777777778
     ],
     "requires": [
       {

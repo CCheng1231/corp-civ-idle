@@ -8,6 +8,7 @@ import { ShortcutSidebar } from "./components/ShortcutSidebar";
 import { MainContent } from "./components/MainContent";
 import { gameReducer } from "./game/engine";
 import { loadGameState, saveGameState } from "./game/save";
+import { consumeLastSaveIntegrityEvent } from "./game/saveIntegrity";
 import { WIN_NET_WORTH, formatNumber } from "./game/constants";
 import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
@@ -37,6 +38,9 @@ function GameShell({
   const stateRef = useRef(state);
   stateRef.current = state;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [saveIntegrityMessage, setSaveIntegrityMessage] = useState<string | null>(
+    null,
+  );
   const viewportPreview = state.settings.viewportPreview ?? "auto";
   const mobilePreview = viewportPreview === "mobile";
   const mobileNav = useMobileNavLayout(viewportPreview);
@@ -70,6 +74,10 @@ function GameShell({
 
   useLayoutEffect(() => {
     saveGameState(state, session);
+    const integrity = consumeLastSaveIntegrityEvent();
+    if (integrity) {
+      setSaveIntegrityMessage(integrity.message);
+    }
   }, [state, session]);
 
   useEffect(() => {
@@ -116,6 +124,27 @@ function GameShell({
       />
       <div className="app-top-chrome">
         <ResourceBar state={state} />
+        {saveIntegrityMessage ? (
+          <div className="online-status-banner online-status-error" role="alert">
+            Save protected: {saveIntegrityMessage} Check Settings → Save or the
+            browser console (tag{" "}
+            <code>save-integrity</code>).
+          </div>
+        ) : null}
+        {state.saveRestoredFromBackup ? (
+          <div className="online-status-banner online-status-connected" role="status">
+            Loaded from automatic save backup. Save normally to keep this
+            progress on the primary slot.
+          </div>
+        ) : null}
+        {state.saveLoadFailed ? (
+          <div className="online-status-banner online-status-error" role="alert">
+            Offline save could not be loaded (check the browser console). Your
+            save file in localStorage was not overwritten — try another account
+            on the gate, or restore from a backup key. Settings → Switch account
+            to re-pick Tim/Chris.
+          </div>
+        ) : null}
         {(online && state.onlineConnectionStatus) || state.view === "world" ? (
           <div className="app-status-row">
             {online && state.onlineConnectionStatus ? (

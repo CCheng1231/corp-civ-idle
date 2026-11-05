@@ -2467,6 +2467,8 @@
 .map-presentation-player .map-hex-drawer-head {
   border-bottom-color: rgba(26, 26, 26, 0.1);
   padding: 0.28rem 0.45rem 0.28rem;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
 }
 
 .map-presentation-player .map-hex-drawer-kind {
@@ -2501,6 +2503,8 @@
 
 .map-presentation-player .map-hex-drawer-body {
   padding: 0.28rem 0.45rem 0.38rem;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
 }
 
 .map-presentation-player .map-hex-job-row {
@@ -2584,6 +2588,83 @@
 
 .map-presentation-player .map-hex-drawer .map-hex-commercial-row + .map-hex-commercial-row {
   border-top-color: rgba(26, 26, 26, 0.08);
+}
+
+/* Branch accordion — site bonus + pad rows: stronger type on light map drawer. */
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-contracts-body
+  .map-hex-commercial-label {
+  font-size: 0.56rem;
+  font-weight: 650;
+  color: var(--map-hex-body);
+  letter-spacing: 0.02em;
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-contracts-body
+  .map-hex-commercial-value {
+  font-size: 0.58rem;
+  line-height: 1.32;
+  color: var(--map-hex-body);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-branch-pad-line-title {
+  font-size: 0.58rem;
+  line-height: 1.32;
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-branch-pad-name {
+  color: var(--map-hex-body);
+}
+
+.map-presentation-player .map-hex-drawer .map-hex-branch-pad-meta {
+  color: var(--map-hex-body);
+  font-weight: 500;
+  opacity: 0.88;
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost.structure-cost-primary {
+  font-size: 0.58rem;
+  line-height: 1.32;
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost
+  .map-hex-branch-cost-word {
+  color: var(--map-hex-body);
+  font-weight: 700;
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost
+  .map-hex-branch-cost-sep,
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost
+  .structure-cost-sep {
+  color: var(--map-hex-label);
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost
+  .structure-cost-affordable {
+  color: #2d6a4a;
+  font-weight: 650;
+}
+
+.map-presentation-player
+  .map-hex-drawer
+  .map-hex-branch-pad-cost
+  .structure-cost-unaffordable {
+  color: #b05a45;
+  font-weight: 650;
 }
 
 .map-hex-facts-compact {
@@ -2952,6 +3033,19 @@
   color: #e8f4fc;
 }
 
+.map-hex-job-supply-on-complete {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.54rem;
+  font-weight: 600;
+  line-height: 1.22;
+  color: var(--muted);
+}
+
+.map-presentation-player .map-hex-job-supply-on-complete {
+  font-size: 0.52rem;
+  color: var(--map-hex-body);
+}
+
 .map-hex-drawer .map-hex-job-completion-tip .job-info-tip-panel {
   top: auto;
   bottom: calc(100% + 0.25rem);
@@ -3098,8 +3192,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.12rem;
-  font-size: 0.5rem;
-  line-height: 1.2;
+  font-size: 0.54rem;
+  line-height: 1.28;
 }
 
 .map-hex-branch-pad-line-detail {
@@ -3121,8 +3215,13 @@
 }
 
 .map-hex-branch-pad-meta {
-  font-weight: 400;
-  color: var(--muted);
+  font-weight: 500;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.map-hex-branch-pad-cost .map-hex-branch-cost-word {
+  font-weight: 700;
 }
 
 .map-hex-branch-pad-cost.structure-cost-primary {
@@ -3130,9 +3229,9 @@
   min-width: 0;
   margin: 0;
   font-family: inherit;
-  font-size: 0.54rem;
+  font-size: 0.56rem;
   font-weight: 650;
-  line-height: 1.2;
+  line-height: 1.28;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3140,6 +3239,23 @@
   margin: 0;
   font-size: 0.5rem;
   line-height: 1.2;
+}
+
+.map-hex-dev-branch-remove {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(255, 120, 80, 0.45);
+}
+
+.map-hex-dev-branch-remove-hint {
+  margin: 0 0 0.25rem;
+  font-size: 0.48rem;
+  line-height: 1.25;
+}
+
+.map-hex-dev-branch-remove-btn {
+  min-height: 2.75rem;
+  font-size: 0.52rem;
 }
 
 .map-hex-establish-wrap-pad {
@@ -3500,11 +3616,34 @@
 }
 
 .confirm-dialog {
-  max-width: 28rem;
+  width: min(22rem, 100%);
+  max-width: 22rem;
+  padding: 0.85rem 1rem 1rem;
+}
+
+.confirm-dialog .modal-header {
+  margin-bottom: 0.5rem;
+}
+
+.confirm-dialog .modal-header h2 {
+  font-size: 0.92rem;
+  line-height: 1.25;
 }
 
 .confirm-dialog-body {
-  padding: 0 1rem 1rem;
+  padding: 0 0 0.75rem;
+}
+
+.confirm-dialog-message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.confirm-dialog-message p {
+  margin: 0;
+  line-height: 1.35;
+  font-size: 0.78rem;
 }
 
 .confirm-dialog-refund {
@@ -3515,7 +3654,161 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 0 1rem 1rem;
+  padding: 0;
+}
+
+.confirm-dialog-establish-branch.modal.confirm-dialog {
+  --map-hex-label: #3a3a3a;
+  --map-hex-body: #1a1a1a;
+  background: rgba(247, 243, 236, 0.96);
+  border: 1px solid rgba(26, 26, 26, 0.16);
+  color: var(--map-hex-body);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow:
+    0 2px 6px rgba(26, 26, 26, 0.08),
+    0 6px 16px rgba(26, 26, 26, 0.07);
+}
+
+/* Dim overlay — portaled to webview/root so it covers the full map tab. */
+.device-preview-webview .map-establish-confirm-backdrop {
+  border-radius: 32px;
+}
+
+.map-presentation-player .map-establish-confirm-backdrop {
+  background: rgba(26, 26, 26, 0.38);
+}
+
+.confirm-dialog-establish-branch .modal-header {
+  margin-bottom: 0.35rem;
+}
+
+.confirm-dialog-establish-branch .modal-header h2 {
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--map-hex-body);
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-message {
+  gap: 0.4rem;
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-establish-facts {
+  margin: 0;
+  border-color: rgba(26, 26, 26, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.confirm-dialog-establish-branch .map-hex-commercial-label {
+  color: var(--map-hex-body);
+  font-weight: 650;
+  font-size: 0.56rem;
+  letter-spacing: 0.02em;
+}
+
+.confirm-dialog-establish-branch .map-hex-commercial-value {
+  color: var(--map-hex-body);
+  font-size: 0.58rem;
+  line-height: 1.32;
+}
+
+.confirm-dialog-establish-branch .map-hex-commercial-value.muted {
+  color: var(--map-hex-label);
+}
+
+.confirm-dialog-establish-branch .map-hex-commercial-row + .map-hex-commercial-row {
+  border-top-color: rgba(26, 26, 26, 0.08);
+}
+
+.confirm-dialog-establish-branch .map-hex-commercial-value-cost {
+  margin: 0;
+}
+
+.confirm-dialog-establish-branch
+  .map-hex-commercial-value-cost
+  .structure-cost-label {
+  display: none;
+}
+
+.confirm-dialog-establish-branch
+  .map-hex-branch-pad-cost.structure-cost-primary {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.32;
+}
+
+.confirm-dialog-establish-branch
+  .map-hex-branch-pad-cost
+  .structure-cost-affordable {
+  color: #2d6a4a;
+  font-weight: 650;
+}
+
+.confirm-dialog-establish-branch
+  .map-hex-branch-pad-cost
+  .structure-cost-unaffordable {
+  color: #b05a45;
+  font-weight: 650;
+}
+
+.confirm-dialog-establish-branch .structure-cost-label {
+  color: var(--map-hex-label);
+  font-weight: 600;
+}
+
+.confirm-dialog-establish-branch .structure-cost-sep {
+  color: var(--map-hex-label);
+}
+
+.confirm-dialog-establish-branch .structure-cost-affordable {
+  color: #2d6a4a;
+}
+
+.confirm-dialog-establish-branch .structure-cost-unaffordable {
+  color: #b05a45;
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-establish-travel-row
+  .map-hex-commercial-label,
+.confirm-dialog-establish-branch .confirm-dialog-establish-travel-value {
+  font-size: 0.5rem;
+  line-height: 1.2;
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-establish-name {
+  margin: 0.05rem 0 0;
+  font-size: 0.54rem;
+  gap: 0.15rem;
+  color: var(--map-hex-label);
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-establish-name input {
+  font-size: 0.58rem;
+  padding: 0.28rem 0.4rem;
+  border-color: rgba(26, 26, 26, 0.18);
+  background: #fff;
+  color: var(--map-hex-body);
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-actions .tab,
+.confirm-dialog-establish-branch .confirm-dialog-actions .btn {
+  font-size: 0.58rem;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.55rem;
+  border-color: rgba(26, 26, 26, 0.18);
+  background: #fff;
+  color: var(--map-hex-body);
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-actions .tab:hover,
+.confirm-dialog-establish-branch .confirm-dialog-actions .btn.primary:hover {
+  background: rgba(45, 106, 74, 0.12);
+}
+
+.confirm-dialog-establish-branch .confirm-dialog-actions .btn.primary {
+  font-weight: 650;
 }
 
 .offline-welcome-backdrop {

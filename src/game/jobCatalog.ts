@@ -1,6 +1,7 @@
 import { JOB_DEFINITIONS } from "./jobHubData";
 import { totalAssigned, unitDefinition } from "./unitEffects";
 import { requiredMinUnitTierForJob } from "./jobUnitTier";
+import { activePlayerId } from "../multiplayer/playerHq";
 import type {
   CommercialLotId,
   CompletionBand,
@@ -89,8 +90,19 @@ export function maxJobEngagements(state: GameState): number {
   );
 }
 
+export function activeBranchEstablishmentTransitCount(
+  state: GameState,
+): number {
+  const owner = activePlayerId(state);
+  return state.branchEstablishmentTransits.filter(
+    (t) => t.ownerPlayerId === owner,
+  ).length;
+}
+
 export function activeEngagementCount(state: GameState): number {
-  return state.jobEngagements.length;
+  return (
+    state.jobEngagements.length + activeBranchEstablishmentTransitCount(state)
+  );
 }
 
 export function canEngageMoreJobs(state: GameState): boolean {

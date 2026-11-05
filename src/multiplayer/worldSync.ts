@@ -6,6 +6,7 @@ export {
   seedSharedJobPostingsIfNeeded,
   ensureSharedJobDefinitionsSynced,
 } from "./worldMeta";
+export { SaveRegressionError } from "../game/saveIntegrity";
 export {
   authorizeOnlineSaveState,
   isPrivateStateStale,

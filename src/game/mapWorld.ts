@@ -6,13 +6,22 @@ import {
   normalizeCommercialLotBranchSlots,
 } from "./branchCommercial";
 import {
+  branchEstablishmentInTransitToPad,
+  canSendBranchEstablishment,
+} from "./branchEstablishment";
+import { canEngageMoreJobs, maxJobEngagements } from "./jobCatalog";
+import { axialKey } from "./openOffice";
+import {
   branchOfficeIdForSite,
   branchOfficeIds,
+  branchSiteCoord,
+  branchSiteCoordForOffice,
   branchSiteForOfficeId,
   establishedBranchAtPad,
   hasBranchOffices,
   isBranchOfficeId,
 } from "./branchSites";
+import { canOpenAnotherBranch, companyOfficeSiteFraction, maxCompanyOfficeSites } from "./branchCap";
 import {
   axialDistance,
   axialEquals,
@@ -29,7 +38,6 @@ import type {
   CommercialLotBranchSlot,
   CommercialLotDefinition,
   CommercialLotId,
-  EstablishedBranchSite,
   GameSettings,
   GameState,
   JobDefinition,
@@ -48,7 +56,6 @@ import {
   majorHubCoord,
 } from "./worldMapMajorHubs";
 import {
-  canAffordAtOffice,
   formatNumber,
   OFFICE_LABELS,
   powerAvailable,
@@ -60,8 +67,6 @@ import {
   CHRIS_HQ,
   hqCoordForState,
   officeAtForState,
-  playerHqCoord,
-  resolveOnlineSession,
 } from "../multiplayer/playerHq";
 import type { OnlineSession } from "../multiplayer/types";
 
@@ -660,9 +665,10 @@ export function siteRateBonusesForState(
   };
   for (const site of state.branchSites) {
     const officeId = branchOfficeIdForSite(site);
-    bonuses[officeId] = siteRateBonusForRegion(
-      commercialLotById(site.commercialLotId).region,
-    );
+    const region = site.commercialLotId
+      ? commercialLotById(site.commercialLotId).region
+      : regionAtCoord(branchSiteCoord(site, state.settings), state.settings);
+    bonuses[officeId] = siteRateBonusForRegion(region);
   }
   return bonuses;
 }
@@ -723,17 +729,7 @@ export function defaultBranchName(coord: AxialCoord, branchIndex = 1): string {
   return `Branch ${branchIndex} @ ${REGION_LABELS[region]}`;
 }
 
-export function branchSiteCoord(site: EstablishedBranchSite): AxialCoord {
-  return { ...commercialLotById(site.commercialLotId).coord };
-}
-
-export function branchSiteCoordForOffice(
-  state: GameState,
-  officeId: OfficeLocationId,
-): AxialCoord | null {
-  const site = branchSiteForOfficeId(state, officeId);
-  return site ? branchSiteCoord(site) : null;
-}
+export { branchSiteCoord, branchSiteCoordForOffice } from "./branchSites";
 
 export function defaultBranchSiteName(
   commercialLotId: CommercialLotId,
@@ -750,11 +746,9 @@ export function branchManagementResearched(state: GameState): boolean {
   return state.researchLevels.branch_management >= 1;
 }
 
-/** First branch from Branch Management; further slots from Massive Expansion. */
+/** Max branch offices this company may own (excludes HQ). */
 export function maxBranchSlots(state: GameState): number {
-  if (!branchManagementResearched(state)) return 0;
-  const extra = state.researchLevels.massive_expansion ?? 0;
-  return 1 + extra;
+  return Math.max(0, maxCompanyOfficeSites(state) - 1);
 }
 
 export function branchManagerAvailable(state: GameState): number {
@@ -765,14 +759,14 @@ export function canEstablishBranchPad(
   state: GameState,
   commercialLotId: CommercialLotId,
   slotIndex: number,
+  coord: AxialCoord,
 ): boolean {
   if (establishedBranchAtPad(state, commercialLotId, slotIndex)) return false;
-  if (!branchManagementResearched(state)) return false;
-  if (state.branchSites.length >= maxBranchSlots(state)) return false;
-  if (branchManagerAvailable(state) < 1) return false;
-  return canAffordAtOffice(
+  return canSendBranchEstablishment(
     state,
     "hq",
+    coord,
+    slotIndex,
     branchOpeningCostForPad(commercialLotId, slotIndex),
   );
 }
@@ -783,9 +777,9 @@ export function canEstablishBranch(
   coord: AxialCoord | null | undefined,
   slotIndex = 0,
 ): boolean {
-  const site = coord ? commercialSiteAt(coord) : undefined;
-  if (!site) return false;
-  return canEstablishBranchPad(state, site.id, slotIndex);
+  const site = coord ? commercialSiteAt(coord, state.settings) : undefined;
+  if (!site || !coord) return false;
+  return canEstablishBranchPad(state, site.id, slotIndex, coord);
 }
 
 /** Human-readable reasons the player cannot open a branch pad yet. */
@@ -793,28 +787,34 @@ export function branchEstablishBlockersForPad(
   state: GameState,
   commercialLotId: CommercialLotId,
   slotIndex: number,
+  coord: AxialCoord,
 ): string[] {
   if (establishedBranchAtPad(state, commercialLotId, slotIndex)) {
     return ["Pad already open"];
+  }
+  const hexKey = axialKey(coord);
+  if (branchEstablishmentInTransitToPad(state, hexKey, slotIndex)) {
+    return ["Branch Manager already traveling to this pad"];
   }
   const blockers: string[] = [];
   if (!branchManagementResearched(state)) {
     blockers.push("Research Branch Management (Research tab)");
   }
-  if (state.branchSites.length >= maxBranchSlots(state)) {
+  if (!canOpenAnotherBranch(state)) {
+    const { open, max } = companyOfficeSiteFraction(state);
+    blockers.push(`Branch office cap reached (${open}/${max})`);
+  }
+  if (!canEngageMoreJobs(state)) {
     blockers.push(
-      `Branch office cap reached (${state.branchSites.length}/${maxBranchSlots(state)})`,
+      `Task force cap reached (${maxJobEngagements(state)} slots — finish or cancel a job first)`,
     );
   }
   if (branchManagerAvailable(state) < 1) {
-    blockers.push("Hire a Branch Manager at HQ (consumed on establish)");
+    blockers.push("Hire a Branch Manager at HQ (sent on establish)");
   }
   const openingCost = branchOpeningCostForPad(commercialLotId, slotIndex);
   if (
-    canAffordAtOffice(state, "hq", openingCost) &&
-    branchManagerAvailable(state) >= 1 &&
-    branchManagementResearched(state) &&
-    state.branchSites.length < maxBranchSlots(state)
+    canSendBranchEstablishment(state, "hq", coord, slotIndex, openingCost)
   ) {
     return blockers;
   }
@@ -847,11 +847,11 @@ export function branchEstablishBlockers(
   coord: AxialCoord | null | undefined,
   slotIndex = 0,
 ): string[] {
-  const site = coord ? commercialSiteAt(coord) : undefined;
-  if (!site) {
+  const site = coord ? commercialSiteAt(coord, state.settings) : undefined;
+  if (!site || !coord) {
     return ["Select a yellow commercial lot on the map"];
   }
-  return branchEstablishBlockersForPad(state, site.id, slotIndex);
+  return branchEstablishBlockersForPad(state, site.id, slotIndex, coord);
 }
 
 export function commercialHexEquals(
@@ -872,60 +872,78 @@ export function hexDistanceFromHqForState(
   return axialDistance(hqCoordForState(state), coord);
 }
 
-/** Resolved main office for map distance and focus (falls back to HQ). */
-export function mapMainOfficeId(state: GameState): "hq" | "branch" {
+/** Resolved office for map distance rings and Home focus. */
+export function mapReferenceOfficeId(state: GameState): OfficeLocationId {
+  const raw = state.settings.mapReferenceOfficeId;
+  if (raw === "hq") return "hq";
+  if (raw && isBranchOfficeId(raw) && branchSiteForOfficeId(state, raw)) {
+    return raw;
+  }
   if (state.settings.mapMainOffice === "branch" && hasBranchOffices(state)) {
-    return "branch";
+    if (
+      isBranchOfficeId(state.lastSelectedOffice) &&
+      branchSiteForOfficeId(state, state.lastSelectedOffice)
+    ) {
+      return state.lastSelectedOffice;
+    }
+    return branchOfficeIds(state)[0] ?? "hq";
   }
   return "hq";
+}
+
+/** @deprecated use mapReferenceOfficeId */
+export function mapMainOfficeId(state: GameState): "hq" | "branch" {
+  return mapReferenceOfficeId(state) === "hq" ? "hq" : "branch";
 }
 
 export function mapMainOfficeCoord(
   state: GameState,
   session?: OnlineSession | null,
 ): AxialCoord {
-  const hq = hqCoordForState(state, session);
-  if (mapMainOfficeId(state) === "hq") {
-    return hq;
-  }
-  const preferred = isBranchOfficeId(state.lastSelectedOffice)
-    ? state.lastSelectedOffice
-    : branchOfficeIds(state)[0];
-  const coord =
-    (preferred && branchSiteCoordForOffice(state, preferred)) ?? hq;
-  return isCoordOnMapGrid(coord) ? coord : hq;
+  return officeMapCoord(state, mapReferenceOfficeId(state), session);
 }
 
-/** Map home/focus target — online always uses authored HQ hexes, not stale save anchors. */
-export function mapFocusCoord(
+export function officeMapCoord(
   state: GameState,
+  officeId: OfficeLocationId,
   session?: OnlineSession | null,
 ): AxialCoord {
-  const onlineSession = resolveOnlineSession(state, session);
-  if (onlineSession) {
-    return playerHqCoord(onlineSession.accountId);
+  if (officeId === "hq") {
+    return hqCoordForState(state, session);
   }
-  return mapMainOfficeCoord(state, session);
+  const coord = branchSiteCoordForOffice(state, officeId);
+  if (coord && isCoordOnMapGrid(coord)) {
+    return coord;
+  }
+  return hqCoordForState(state, session);
 }
 
-/** Focus the HQ hex actually rendered on the map (matches landmark + HQ button). */
+/** Center map Home on a specific owned office hex when rendered. */
+export function officeMapCoordForFocus(
+  cells: AxialCoord[],
+  state: GameState,
+  officeId: OfficeLocationId,
+  session?: OnlineSession | null,
+): AxialCoord {
+  for (const coord of cells) {
+    if (officeAtForState(coord, state, session) === officeId) {
+      return coord;
+    }
+  }
+  const canonical = officeMapCoord(state, officeId, session);
+  if (isCoordOnMapGrid(canonical)) {
+    return canonical;
+  }
+  return hqCoordForState(state, session);
+}
+
+/** Focus the HQ hex actually rendered on the map (matches landmark + Home button when HQ selected). */
 export function hqMapCoordForFocus(
   cells: AxialCoord[],
   state: GameState,
   session?: OnlineSession | null,
 ): AxialCoord {
-  for (const coord of cells) {
-    if (officeAtForState(coord, state, session) === "hq") {
-      return coord;
-    }
-  }
-
-  const canonical = mapFocusCoord(state, session);
-  if (isCoordOnMapGrid(canonical)) {
-    return canonical;
-  }
-
-  return mapMainOfficeCoord(state, session);
+  return officeMapCoordForFocus(cells, state, "hq", session);
 }
 
 export function mainOfficeCoordForState(

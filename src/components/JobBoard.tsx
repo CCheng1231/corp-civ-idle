@@ -89,6 +89,36 @@ interface JobBoardProps {
   embeddedActive?: boolean;
 }
 
+function secretaryJobBoardScroller(): HTMLElement | null {
+  return document.querySelector(
+    ".secretary-view.hub-synced-tab-view .hub-synced-tab-scroll-body",
+  );
+}
+
+function scrollToJobPostingFocus(focusId: string) {
+  const scroller = secretaryJobBoardScroller();
+  const board =
+    document.getElementById("secretary-panel-board") ??
+    document.querySelector(".secretary-job-work");
+
+  if (scroller && board) {
+    const top =
+      board.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop -
+      6;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  } else {
+    board?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  window.setTimeout(() => {
+    document
+      .querySelector(`[data-job-posting-id="${focusId}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, 220);
+}
+
 export function JobBoard({
   state,
   dispatch,
@@ -109,6 +139,7 @@ export function JobBoard({
   >({});
   /** Map/secretary handoff — apply focus once; job tick updates must not reopen drawer. */
   const appliedJobFocusIdRef = useRef<string | null>(null);
+  const scrolledForFocusRef = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -173,6 +204,7 @@ export function JobBoard({
       return;
     }
     appliedJobFocusIdRef.current = focusId;
+    scrolledForFocusRef.current = null;
 
     const def = jobDefinitionForPosting(posting);
     const region = jobSiteRegionForPosting(posting, def);
@@ -183,21 +215,35 @@ export function JobBoard({
     });
     setSelectedPostingId(focusId);
 
-    const scrollTimer = window.setTimeout(() => {
-      document
-        .querySelector(`[data-job-posting-id="${focusId}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 80);
-
     const clearTimer = window.setTimeout(() => {
       dispatch({ type: "CLEAR_JOB_FOCUS" });
     }, 4000);
 
     return () => {
-      window.clearTimeout(scrollTimer);
       window.clearTimeout(clearTimer);
     };
   }, [state.jobFocusPostingId, state.jobPostings, dispatch]);
+
+  useLayoutEffect(() => {
+    const focusId = state.jobFocusPostingId;
+    if (!focusId || appliedJobFocusIdRef.current !== focusId) {
+      return;
+    }
+    if (scrolledForFocusRef.current === focusId) {
+      return;
+    }
+    if (!visible.some((posting) => posting.id === focusId)) {
+      return;
+    }
+    scrolledForFocusRef.current = focusId;
+    scrollToJobPostingFocus(focusId);
+  }, [visible, state.jobFocusPostingId]);
+
+  useEffect(() => {
+    if (!state.jobFocusPostingId) {
+      scrolledForFocusRef.current = null;
+    }
+  }, [state.jobFocusPostingId]);
 
   const selectedPosting =
     visible.find((posting) => posting.id === selectedPostingId) ?? null;

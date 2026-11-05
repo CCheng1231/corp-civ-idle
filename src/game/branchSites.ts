@@ -7,6 +7,11 @@ import type {
 } from "./types";
 import { commercialLotById } from "./mapWorld";
 import { effectiveLandmarkCoord } from "./mapDevLayout";
+import { parseAxialKey } from "./openOffice";
+import {
+  branchOfficeIdForCommercialPad,
+  branchOfficeIdForOpenPad,
+} from "./branchOfficeIds";
 
 export type BranchOfficeId = `branch:${string}`;
 
@@ -16,6 +21,9 @@ export function isEstablishedBranchSiteOnMap(
   return true;
 }
 
+export function branchSitePadIndex(site: EstablishedBranchSite): number {
+  return site.padIndex ?? site.slotIndex ?? 0;
+}
 
 export function branchSiteKey(
   commercialLotId: CommercialLotId,
@@ -28,11 +36,17 @@ export function branchOfficeIdForPad(
   commercialLotId: CommercialLotId,
   slotIndex: number,
 ): BranchOfficeId {
-  return `branch:${branchSiteKey(commercialLotId, slotIndex)}`;
+  return branchOfficeIdForCommercialPad(commercialLotId, slotIndex);
 }
 
 export function branchOfficeIdForSite(site: EstablishedBranchSite): BranchOfficeId {
-  return branchOfficeIdForPad(site.commercialLotId, site.slotIndex);
+  if (site.hexKey) {
+    return branchOfficeIdForOpenPad(site.hexKey, branchSitePadIndex(site));
+  }
+  if (site.commercialLotId) {
+    return branchOfficeIdForPad(site.commercialLotId, branchSitePadIndex(site));
+  }
+  throw new Error("Branch site missing hexKey and commercialLotId");
 }
 
 export function isBranchOfficeId(
@@ -43,15 +57,22 @@ export function isBranchOfficeId(
 
 export function parseBranchOfficeId(
   officeId: OfficeLocationId,
-): { commercialLotId: CommercialLotId; slotIndex: number } | null {
+): {
+  hexKey?: string;
+  commercialLotId?: CommercialLotId;
+  slotIndex: number;
+} | null {
   if (!isBranchOfficeId(officeId)) return null;
   const key = officeId.slice("branch:".length);
   const sep = key.lastIndexOf(":");
   if (sep <= 0) return null;
-  const commercialLotId = key.slice(0, sep) as CommercialLotId;
+  const idPart = key.slice(0, sep);
   const slotIndex = Number(key.slice(sep + 1));
   if (!Number.isFinite(slotIndex)) return null;
-  return { commercialLotId, slotIndex };
+  if (parseAxialKey(idPart)) {
+    return { hexKey: idPart, slotIndex };
+  }
+  return { commercialLotId: idPart as CommercialLotId, slotIndex };
 }
 
 export function branchSitesForLot(
@@ -70,7 +91,22 @@ export function establishedBranchAtPad(
 ): EstablishedBranchSite | undefined {
   return state.branchSites.find(
     (site) =>
-      site.commercialLotId === commercialLotId && site.slotIndex === slotIndex,
+      site.commercialLotId === commercialLotId &&
+      branchSitePadIndex(site) === slotIndex &&
+      !site.closingStartedAt,
+  );
+}
+
+export function establishedBranchAtOpenPad(
+  state: GameState,
+  hexKey: string,
+  padIndex: number,
+): EstablishedBranchSite | undefined {
+  return state.branchSites.find(
+    (site) =>
+      site.hexKey === hexKey &&
+      branchSitePadIndex(site) === padIndex &&
+      !site.closingStartedAt,
   );
 }
 
@@ -80,15 +116,23 @@ export function branchSiteForOfficeId(
 ): EstablishedBranchSite | undefined {
   const parsed = parseBranchOfficeId(officeId);
   if (!parsed) return undefined;
-  return establishedBranchAtPad(
-    state,
-    parsed.commercialLotId,
-    parsed.slotIndex,
-  );
+  if (parsed.hexKey) {
+    return establishedBranchAtOpenPad(state, parsed.hexKey, parsed.slotIndex);
+  }
+  if (parsed.commercialLotId) {
+    return establishedBranchAtPad(
+      state,
+      parsed.commercialLotId,
+      parsed.slotIndex,
+    );
+  }
+  return undefined;
 }
 
 export function branchOfficeIds(state: GameState): BranchOfficeId[] {
-  return state.branchSites.map(branchOfficeIdForSite);
+  return state.branchSites
+    .filter((s) => !s.closingStartedAt)
+    .map(branchOfficeIdForSite);
 }
 
 export function ownedOfficeIds(state: GameState): OfficeLocationId[] {
@@ -96,17 +140,26 @@ export function ownedOfficeIds(state: GameState): OfficeLocationId[] {
 }
 
 export function hasBranchOffices(state: GameState): boolean {
-  return state.branchSites.length > 0;
+  return state.branchSites.some((s) => !s.closingStartedAt);
 }
 
 export function branchSiteCoord(
   site: EstablishedBranchSite,
   settings?: GameState["settings"],
 ): AxialCoord {
-  const lot = commercialLotById(site.commercialLotId);
-  return (
-    effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? { ...lot.coord }
-  );
+  if (site.hexKey) {
+    const parsed = parseAxialKey(site.hexKey);
+    if (parsed) return parsed;
+  }
+  if (site.commercialLotId) {
+    const lot = commercialLotById(site.commercialLotId);
+    return (
+      effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? {
+        ...lot.coord,
+      }
+    );
+  }
+  return { q: 0, r: 0 };
 }
 
 export function branchSiteCoordForOffice(

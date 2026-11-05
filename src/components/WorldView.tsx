@@ -15,9 +15,10 @@ import {
 } from "../game/worldMapMajorHubs";
 import {
   isAvailableCommercialLot,
-  hqMapCoordForFocus,
-  mapMainOfficeId,
+  mapReferenceOfficeId,
   officeDisplayName,
+  officeMapCoordForFocus,
+  ownedOfficeIds,
   regionAtCoord,
   towerAtCoord,
   officeTowerMapSites,
@@ -25,11 +26,7 @@ import {
   worldMapHexBounds,
   worldMapHexTileRadius,
 } from "../game/mapWorld";
-import {
-  branchOfficeIds,
-  hasBranchOffices,
-  isBranchOfficeId,
-} from "../game/branchSites";
+import { isBranchOfficeId } from "../game/branchSites";
 import {
   clampMapPan,
   clampMapZoomRel,
@@ -70,7 +67,11 @@ import {
   hexPolygonPoints,
 } from "../game/hexLayout";
 import {
+  branchEstablishmentTravelProgress,
+} from "../game/branchEstablishment";
+import {
   hexPath,
+  branchEstablishmentCoords,
   jobSiteCoordsForEngagement,
   pointAlongPolyline,
 } from "../game/mapTravel";
@@ -80,6 +81,7 @@ import {
 import { jobDefinitionForPosting } from "../game/jobs";
 import {
   authoredPlayerHqSites,
+  activePlayerId,
   hqCoordForState,
   officeAtForState,
   playerHqCoord as hqCoordForPlayer,
@@ -91,6 +93,7 @@ import type {
   GameState,
   JobEngagement,
   JobPosting,
+  OfficeLocationId,
 } from "../game/types";
 import { MapHexDrawer } from "./MapHexDrawer";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
@@ -354,16 +357,11 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     return { x: mapped.x, y: mapped.y };
   }
 
-  const mainOfficeId = mapMainOfficeId(state);
-  const mainOfficeLocationId =
-    mainOfficeId === "branch"
-      ? (branchOfficeIds(state)[0] ?? "hq")
-      : "hq";
+  const mapReferenceOffice = mapReferenceOfficeId(state);
   const mapFocusCoordValue = useMemo(
-    () => hqMapCoordForFocus(cells, state, session),
-    [cells, state, session],
+    () => officeMapCoordForFocus(cells, state, mapReferenceOffice, session),
+    [cells, state, session, mapReferenceOffice],
   );
-  const mainOfficeCoord = mapFocusCoordValue;
   const myHqCoord = useMemo(
     () => hqCoordForState(state, session),
     [state, session],
@@ -692,7 +690,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     setFitZoom(measured.fitZoom);
     setMapZoomRel(MAP_HQ_FOCUS_ZOOM_REL);
 
-    const focusCoord = hqMapCoordForFocus(cells, state, session);
+    const focusCoord = officeMapCoordForFocus(
+      cells,
+      state,
+      mapReferenceOfficeId(state),
+      session,
+    );
 
     const centerOnHqHex = () => {
       const vp = mapViewportRef.current;
@@ -1065,6 +1068,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       e.phase === "working" ||
       e.phase === "returning",
   );
+  const branchEstablishmentTransits = useMemo(
+    () =>
+      state.branchEstablishmentTransits.filter(
+        (t) => t.ownerPlayerId === activePlayerId(state),
+      ),
+    [state.branchEstablishmentTransits, state.onlineSession, state],
+  );
   const workingSiteCoords = useMemo(() => {
     const seen = new Set<string>();
     const coords: AxialCoord[] = [];
@@ -1215,23 +1225,24 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
               <span className="sr-only">Distance from</span>
               <select
                 className="world-map-main-office"
-                value={mainOfficeId}
+                value={mapReferenceOffice}
                 aria-label="Distance from office"
-                onChange={(e) =>
+                onChange={(e) => {
+                  const officeId = e.target.value as OfficeLocationId;
                   dispatch({
                     type: "UPDATE_SETTINGS",
                     settings: {
-                      mapMainOffice: e.target.value as "hq" | "branch",
+                      mapReferenceOfficeId: officeId,
+                      mapMainOffice: officeId === "hq" ? "hq" : "branch",
                     },
-                  })
-                }
+                  });
+                }}
               >
-                <option value="hq">{officeDisplayName(state, "hq")}</option>
-                {hasBranchOffices(state) ? (
-                  <option value="branch">
-                    {officeDisplayName(state, branchOfficeIds(state)[0]!)}
+                {ownedOfficeIds(state).map((officeId) => (
+                  <option key={officeId} value={officeId}>
+                    {officeDisplayName(state, officeId)}
                   </option>
-                ) : null}
+                ))}
               </select>
             </label>
             {isDev ? (
@@ -1264,14 +1275,10 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
           <button
             type="button"
             className="map-hq-btn"
-            aria-label={`Center map on ${officeDisplayName(state, mainOfficeLocationId)} at 100% zoom`}
+            aria-label={`Center map on ${officeDisplayName(state, mapReferenceOffice)} at 100% zoom`}
             onClick={focusOnMainOffice}
           >
-            {session?.playMode === "online"
-              ? "HQ"
-              : mainOfficeId === "branch"
-                ? officeDisplayName(state, mainOfficeLocationId)
-                : "HQ"}
+            Home
           </button>
           {!isDev ? (
             <MapWorldLandmarkFilterControl
@@ -1435,11 +1442,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                   hexMoveHoverCoord !== null &&
                   axialEquals(coord, hexMoveHoverCoord);
                 const isPlayerMainOffice =
-                  session?.playMode === "online"
-                    ? officeId === "hq" &&
-                      axialEquals(coord, mapFocusCoordValue)
-                    : officeId === mainOfficeId &&
-                      axialEquals(coord, mainOfficeCoord);
+                  officeId != null &&
+                  officeId === mapReferenceOffice &&
+                  axialEquals(coord, mapFocusCoordValue);
                 const hqFlashing = isPlayerMainOffice && hqFlashActive;
                 const hexTileR = worldMapHexTileRadius(coord);
                 const onJobHex = jobSiteCoordKeys.has(axialKey(coord));
@@ -1602,6 +1607,42 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                         fill="none"
                       />
                       {pos ? <RunningIcon x={pos.x} y={pos.y} /> : null}
+                    </g>
+                  );
+                })}
+                {branchEstablishmentTransits.map((transit) => {
+                  const { from, to } = branchEstablishmentCoords(state, transit);
+                  const phase = transit.phase ?? "outbound";
+                  const pathCoords = isDev
+                    ? hexPath(from, to)
+                    : [from, to];
+                  const pixels = pathCoords.map((c) =>
+                    worldMapPresentationPixel(c, state.settings),
+                  );
+                  const pointsAttr = pixels
+                    .map((p) => `${p.x},${p.y}`)
+                    .join(" ");
+                  const pos = pointAlongPolyline(
+                    pixels,
+                    branchEstablishmentTravelProgress(transit, now),
+                  );
+                  return (
+                    <g key={transit.id}>
+                      <polyline
+                        points={pointsAttr}
+                        className="map-travel-path map-travel-path-halo"
+                        fill="none"
+                      />
+                      <polyline
+                        points={pointsAttr}
+                        className={`map-travel-path${
+                          isDev
+                            ? " map-travel-path-hex"
+                            : " map-travel-path-straight"
+                        } map-travel-path-${phase} map-travel-path-branch-establish`}
+                        fill="none"
+                      />
+                      <RunningIcon x={pos.x} y={pos.y} />
                     </g>
                   );
                 })}

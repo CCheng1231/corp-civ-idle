@@ -3,7 +3,7 @@ import {
   RESEARCH,
   STRUCTURES,
   WIN_NET_WORTH,
-  formatNumber,
+  formatInteger,
   formatResourceShort,
   projectedResearchLevels,
   rosterAt,
@@ -203,7 +203,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
         {staffTotal > 0 ? (
           <p className="muted overview-staff-total">
             {showAll ? "Firm total: " : "Total on site: "}
-            {formatNumber(staffTotal)}
+            {formatInteger(staffTotal)}
           </p>
         ) : null}
       </section>

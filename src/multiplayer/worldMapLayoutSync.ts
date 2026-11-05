@@ -92,6 +92,11 @@ export function parseWorldMapLayoutDoc(
     store.mapDevRegionBrush = brush as MapRegion;
   }
 
+  const openOffices = layoutObj.mapDevOpenOffices;
+  if (openOffices && typeof openOffices === "object") {
+    store.mapDevOpenOffices = openOffices as WorldMapDevLayoutStore["mapDevOpenOffices"];
+  }
+
   return { layout: store, updatedAt, updatedBy: raw.updatedBy as OnlineAccountId };
 }
 
@@ -103,6 +108,7 @@ export function layoutSettingsPatchFromStore(
     mapDevExtraHexes: store.mapDevExtraHexes,
     mapDevRegionOverrides: store.mapDevRegionOverrides,
     mapDevRegionBrush: store.mapDevRegionBrush,
+    mapDevOpenOffices: store.mapDevOpenOffices,
   };
 }
 
@@ -112,6 +118,7 @@ export function storeFromSettings(settings: GameSettings): WorldMapDevLayoutStor
     mapDevExtraHexes: settings.mapDevExtraHexes,
     mapDevRegionOverrides: settings.mapDevRegionOverrides,
     mapDevRegionBrush: settings.mapDevRegionBrush,
+    mapDevOpenOffices: settings.mapDevOpenOffices,
   };
 }
 

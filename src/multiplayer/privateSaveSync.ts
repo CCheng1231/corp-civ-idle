@@ -8,7 +8,14 @@ import {
 } from "firebase/firestore";
 import type { GameState } from "../game/types";
 import { createFreshOnlineState, loadOnlineStateFromRemote } from "../game/save";
-import { clearOnlineLocalCache, serializePrivateState } from "./companySave";
+import {
+  SaveRegressionError,
+  saveWriteWouldRegress,
+  rotateLocalBackup,
+  writeProtectedLocalSaveBlob,
+} from "../game/saveIntegrity";
+import { clearOnlineLocalCache, onlineCacheKey, serializePrivateState } from "./companySave";
+
 import { getDb } from "./firebase";
 import type { OnlineSession, WorldId, WorldMeta } from "./types";
 import {
@@ -131,13 +138,32 @@ export async function writeFreshPrivateState(
   saveSessionId: string,
 ): Promise<void> {
   const playerSession: OnlineSession = { ...session, accountId };
-  await setDoc(
-    privateStateRef(accountId, session.worldId),
-    serializePrivateState(
-      createFreshOnlineState(playerSession, resetAt, saveSessionId),
-      resetAt,
-      resetAt,
-    ),
+  const payload = serializePrivateState(
+    createFreshOnlineState(playerSession, resetAt, saveSessionId),
+    resetAt,
+    resetAt,
+  );
+  const ref = privateStateRef(accountId, session.worldId);
+  const remote = await loadPrivateState(playerSession);
+  if (remote) {
+    archiveOnlinePrivateSnapshot(session, remote, "server-reset");
+  }
+  await setDoc(ref, payload);
+}
+
+function archiveOnlinePrivateSnapshot(
+  session: OnlineSession,
+  remote: Record<string, unknown>,
+  reason: string,
+): void {
+  if (typeof localStorage === "undefined") return;
+  const cacheKey = onlineCacheKey(session);
+  const raw = JSON.stringify(remote);
+  rotateLocalBackup(`firestore-mirror-${cacheKey}`, raw);
+  writeProtectedLocalSaveBlob(
+    `${cacheKey}-firestore-backup`,
+    { reason, mirroredAt: Date.now(), remote },
+    { rejectStale: false, skipBackup: true },
   );
 }
 
@@ -264,17 +290,6 @@ export async function savePrivateState(
       } else if (localSessionId !== expectedSessionId) {
         throw new OnlineSaveRejectedError(requiredGeneration);
       }
-      const remoteSnap = await tx.get(ref);
-      if (remoteSnap.exists()) {
-        const remote = remoteSnap.data() as Record<string, unknown>;
-        const remoteSessionId = remote.onlineSaveSessionId;
-        if (
-          typeof remoteSessionId === "string" &&
-          remoteSessionId !== expectedSessionId
-        ) {
-          throw new OnlineSaveRejectedError(requiredGeneration);
-        }
-      }
     }
 
     const generation = Math.max(localGeneration, requiredGeneration);
@@ -285,6 +300,31 @@ export async function savePrivateState(
       updatedAt,
       generation,
     );
+
+    const remoteSnap = await tx.get(ref);
+    if (remoteSnap.exists()) {
+      const remote = remoteSnap.data() as Record<string, unknown>;
+      if (expectedSessionId) {
+        const remoteSessionId = remote.onlineSaveSessionId;
+        if (
+          typeof remoteSessionId === "string" &&
+          remoteSessionId !== expectedSessionId
+        ) {
+          throw new OnlineSaveRejectedError(requiredGeneration);
+        }
+      }
+      if (
+        saveWriteWouldRegress(
+          JSON.stringify(remote),
+          payload as Record<string, unknown>,
+        )
+      ) {
+        throw new SaveRegressionError(
+          "Firestore save rejected: local state regresses remote progress",
+        );
+      }
+    }
+
     tx.set(ref, payload);
     return { updatedAt, generation };
   });

@@ -4,7 +4,9 @@ import {
   activeJobBoardFilterSummaries,
   countActiveJobBoardFilters,
   filterAndSortJobPostings,
+  JOB_SITE_KIND_FILTER_LABELS,
   jobBoardFilterOptions,
+  type JobSiteKindFilter,
   openJobPostings,
   sortJobPostingsByDistanceFromMainOffice,
   type JobBoardFilters,
@@ -51,10 +53,12 @@ export function MapJobFilterPanel({
   const activeCount = countActiveJobBoardFilters(filters);
   const activeSummaries = activeJobBoardFilterSummaries(filters);
 
-  const towerOptions =
-    filters.region === "all"
-      ? options.towers
-      : options.towers.filter((tower) => tower.region === filters.region);
+  const siteTypeOptions: JobSiteKindFilter[] = [
+    "tower",
+    "major_hub",
+    "commercial_lot",
+    "gov",
+  ];
 
   function updateFilter<K extends keyof JobBoardFilters>(
     key: K,
@@ -200,20 +204,20 @@ export function MapJobFilterPanel({
               </select>
             </label>
             <label className="map-job-filter-field map-job-filter-field--select-long">
-              <span>Tower</span>
+              <span>Type</span>
               <select
-                value={filters.towerId}
+                value={filters.siteType}
                 onChange={(e) =>
                   updateFilter(
-                    "towerId",
-                    e.target.value as JobBoardFilters["towerId"],
+                    "siteType",
+                    e.target.value as JobBoardFilters["siteType"],
                   )
                 }
               >
                 <option value="all">All</option>
-                {towerOptions.map((tower) => (
-                  <option key={tower.id} value={tower.id}>
-                    {tower.label}
+                {siteTypeOptions.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {JOB_SITE_KIND_FILTER_LABELS[kind]}
                   </option>
                 ))}
               </select>

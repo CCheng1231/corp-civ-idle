@@ -5,10 +5,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
+import {
+  branchEstablishmentInTransitToPad,
+  branchEstablishmentStatusLabel,
+  branchEstablishmentTravelSummary,
+} from "../game/branchEstablishment";
+import { axialKey } from "../game/openOffice";
 import {
   establishedBranchAtPad,
   isBranchOfficeId,
+  branchOfficeIdForPad,
+  branchOfficeIdForSite,
 } from "../game/branchSites";
 import {
   REGION_LABELS,
@@ -30,7 +39,10 @@ import {
   canAffordCostPart,
   formatNumber,
   resourceCostParts,
+  unitAvailableAt,
 } from "../game/constants";
+import { defaultPlayerBranchName } from "../game/branchNaming";
+import { activePlayerId } from "../multiplayer/playerHq";
 import {
   formatJobDurationSec,
   formatJobPostingExpiresLabel,
@@ -234,6 +246,58 @@ function PlayerHqDrawerSection({
   );
 }
 
+function DevRemoveBranchControl({
+  state,
+  dispatch,
+  officeId,
+}: {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+  officeId: OfficeLocationId;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const site = state.branchSites.find(
+    (s) => branchOfficeIdForSite(s) === officeId,
+  );
+  const label = officeDisplayName(state, officeId);
+  const ownerLabel =
+    site?.ownerPlayerId != null
+      ? (PLAYER_LABELS[site.ownerPlayerId as PlayerId] ?? site.ownerPlayerId)
+      : null;
+
+  if (state.settings.mapPresentation !== "dev" || !site) return null;
+
+  return (
+    <>
+      <div className="map-hex-dev-branch-remove">
+        <p className="muted map-hex-dev-branch-remove-hint">
+          Dev only — deletes branch state{ownerLabel ? ` (${ownerLabel})` : ""}.
+          Staff return to HQ.
+        </p>
+        <button
+          type="button"
+          className="btn map-hex-dev-branch-remove-btn"
+          onClick={() => setConfirmOpen(true)}
+        >
+          Remove branch
+        </button>
+      </div>
+      {confirmOpen ? (
+        <ConfirmDialog
+          title="Remove branch (dev)"
+          message={`Remove ${label} from the map and wipe its structures, research, and staff?`}
+          confirmLabel="Remove"
+          onConfirm={() => {
+            dispatch({ type: "DEV_REMOVE_BRANCH", officeId });
+            setConfirmOpen(false);
+          }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function OfficeDrawerSection({
   state,
   dispatch,
@@ -289,6 +353,13 @@ function OfficeDrawerSection({
           />
         </label>
       )}
+      {isBranchOfficeId(officeId) ? (
+        <DevRemoveBranchControl
+          state={state}
+          dispatch={dispatch}
+          officeId={officeId}
+        />
+      ) : null}
     </>
   );
 }
@@ -325,6 +396,10 @@ function HexContractsSection({
     row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [highlightHere, contractsOpen, highlightPostingId, coord.q, coord.r]);
 
+  if (postings.length === 0) {
+    return null;
+  }
+
   return (
     <section className="map-hex-contracts-section" aria-label="Contracts">
       <button
@@ -341,10 +416,8 @@ function HexContractsSection({
 
       {contractsOpen ? (
         <div className="map-hex-contracts-body">
-          {postings.length > 0 ? (
-            <>
-              <ul className="map-hex-job-list" ref={listRef}>
-                {postings.map((posting) => {
+          <ul className="map-hex-job-list" ref={listRef}>
+            {postings.map((posting) => {
                   const def = jobDefinitionForPosting(posting);
                   const engaged = isEngaged(posting.id);
                   const selected = posting.id === highlightPostingId;
@@ -390,14 +463,13 @@ function HexContractsSection({
                                 band={band}
                               />{" "}
                               · ${formatNumber(jobPayoutPerHour(posting))}/hr
-                              {jobCompletionSupplyBonus(def) > 0 ? (
-                                <>
-                                  {" "}
-                                  · +{formatNumber(jobCompletionSupplyBonus(def))}{" "}
-                                  supply complete
-                                </>
-                              ) : null}
                             </span>
+                            {jobCompletionSupplyBonus(def) > 0 ? (
+                              <span className="map-hex-job-supply-on-complete">
+                                {formatNumber(jobCompletionSupplyBonus(def))}{" "}
+                                supply upon completion
+                              </span>
+                            ) : null}
                           </div>
                           <button
                             type="button"
@@ -411,11 +483,7 @@ function HexContractsSection({
                     </li>
                   );
                 })}
-              </ul>
-            </>
-          ) : (
-            <p className="muted map-hex-empty">No open postings right now.</p>
-          )}
+          </ul>
         </div>
       ) : null}
     </section>
@@ -501,17 +569,33 @@ function TowerContractsSection({
   );
 }
 
+/** Full-screen dim for map modals — outside hex drawer so overflow does not clip it. */
+function mapModalPortalRoot(): HTMLElement {
+  if (typeof document === "undefined") {
+    return null as unknown as HTMLElement;
+  }
+  return (
+    document.querySelector(".device-preview-webview") ??
+    document.getElementById("root") ??
+    document.body
+  );
+}
+
 function BranchOpeningCostLine({
   state,
   cost,
+  fromOfficeId = "hq",
   className = "",
+  showLabel = true,
 }: {
   state: GameState;
   cost: ResourceCost;
+  fromOfficeId?: OfficeLocationId;
   className?: string;
+  showLabel?: boolean;
 }) {
   const parts = resourceCostParts(cost);
-  if (parts.length === 0) return null;
+  const hasBm = unitAvailableAt(state, fromOfficeId, "branch_manager") >= 1;
 
   return (
     <span
@@ -519,13 +603,20 @@ function BranchOpeningCostLine({
         .filter(Boolean)
         .join(" ")}
     >
-      <span className="structure-cost-label">Cost:</span>{" "}
+      {showLabel ? (
+        <>
+          <span className="structure-cost-label map-hex-branch-cost-word">
+            Cost
+          </span>
+          <span className="structure-cost-sep map-hex-branch-cost-sep"> · </span>
+        </>
+      ) : null}
       {parts.map((part, index) => (
         <span key={part.key} className="structure-cost-part">
           {index > 0 ? <span className="structure-cost-sep"> · </span> : null}
           <span
             className={
-              canAffordCostPart(state, "hq", part)
+              canAffordCostPart(state, fromOfficeId, part)
                 ? "structure-cost-affordable"
                 : "structure-cost-unaffordable"
             }
@@ -534,6 +625,18 @@ function BranchOpeningCostLine({
           </span>
         </span>
       ))}
+      {parts.length > 0 ? (
+        <span className="structure-cost-sep"> · </span>
+      ) : null}
+      <span
+        className={
+          hasBm
+            ? "structure-cost-affordable"
+            : "structure-cost-unaffordable"
+        }
+      >
+        1 Branch Manager
+      </span>
     </span>
   );
 }
@@ -555,6 +658,7 @@ function CommercialLotSection({
   const [branchOpen, setBranchOpen] = useState(false);
   const [openTipPad, setOpenTipPad] = useState<number | null>(null);
   const [confirmPadIndex, setConfirmPadIndex] = useState<number | null>(null);
+  const [confirmBranchName, setConfirmBranchName] = useState("");
   const postings = postingsForCommercialLot(state, info.commercialLotId);
   const activePostingIds = new Set(
     state.jobEngagements
@@ -571,6 +675,26 @@ function CommercialLotSection({
     confirmPadIndex != null
       ? branchOpeningCostForPad(info.commercialLotId, confirmPadIndex)
       : null;
+  const confirmTravel =
+    confirmPadIndex != null
+      ? branchEstablishmentTravelSummary(state, "hq", coord)
+      : null;
+  const defaultEstablishBranchName = defaultPlayerBranchName(
+    activePlayerId(state),
+    state.worldBranchNameSeq,
+  );
+  const mapNow = state.lastTickAt || Date.now();
+
+  useEffect(() => {
+    if (confirmPadIndex != null) {
+      setConfirmBranchName(
+        defaultPlayerBranchName(
+          activePlayerId(state),
+          state.worldBranchNameSeq,
+        ),
+      );
+    }
+  }, [confirmPadIndex, state.worldBranchNameSeq, state.onlineSession]);
 
   useEffect(() => {
     setBranchOpen(false);
@@ -623,6 +747,12 @@ function CommercialLotSection({
             {branchSlots.length > 0 ? (
               <ul className="map-hex-branch-pad-list" aria-label="Branch pads">
                 {branchSlots.map((slot, index) => {
+                  const padHexKey = axialKey(coord);
+                  const enRoute = branchEstablishmentInTransitToPad(
+                    state,
+                    padHexKey,
+                    index,
+                  );
                   const established = establishedBranchAtPad(
                     state,
                     info.commercialLotId,
@@ -631,11 +761,13 @@ function CommercialLotSection({
                   const canEstablish =
                     !branchLocked &&
                     !established &&
-                    canEstablishBranchPad(state, info.commercialLotId, index);
+                    !enRoute &&
+                    canEstablishBranchPad(state, info.commercialLotId, index, coord);
                   const blockers = branchEstablishBlockersForPad(
                     state,
                     info.commercialLotId,
                     index,
+                    coord,
                   );
                   const openingCost = branchOpeningCostForPad(
                     info.commercialLotId,
@@ -647,7 +779,7 @@ function CommercialLotSection({
                   return (
                     <li
                       key={slot.size}
-                      className={`map-hex-branch-pad${established ? " is-open" : ""}`}
+                      className={`map-hex-branch-pad${established || enRoute ? " is-open" : ""}`}
                     >
                       <div className="map-hex-branch-pad-info">
                         <div className="map-hex-branch-pad-line map-hex-branch-pad-line-title">
@@ -656,14 +788,35 @@ function CommercialLotSection({
                           </span>
                           {!established ? (
                             <span className="map-hex-branch-pad-meta">
-                              · {slot.officeSpace} space · to {slot.expansionCap}
+                              · {slot.officeSpace} space → {slot.expansionCap}
                             </span>
                           ) : null}
                         </div>
-                        {established ? (
+                        {enRoute ? (
                           <p className="map-hex-branch-pad-status muted">
-                            Open · {established.name}
+                            Branch Manager en route ·{" "}
+                            {branchEstablishmentStatusLabel(
+                              state,
+                              enRoute,
+                              mapNow,
+                            )}
                           </p>
+                        ) : established ? (
+                          <>
+                            <p className="map-hex-branch-pad-status muted">
+                              Open · {established.name}
+                            </p>
+                            {state.settings.mapPresentation === "dev" ? (
+                              <DevRemoveBranchControl
+                                state={state}
+                                dispatch={dispatch}
+                                officeId={branchOfficeIdForPad(
+                                  info.commercialLotId,
+                                  index,
+                                )}
+                              />
+                            ) : null}
+                          </>
                         ) : (
                           <div className="map-hex-branch-pad-line map-hex-branch-pad-line-detail">
                             <BranchOpeningCostLine
@@ -738,30 +891,81 @@ function CommercialLotSection({
         ) : null}
       </section>
 
-      {confirmPadIndex != null && confirmSlot && confirmCost ? (
-        <ConfirmDialog
-          title={`Open ${confirmSlot.label} pad?`}
-          message={
-            <>
-              Pay <BranchOpeningCostLine state={state} cost={confirmCost} /> at
-              HQ. Consumes 1 Branch Manager. {confirmSlot.officeSpace} office
-              space (expands to {confirmSlot.expansionCap}).
-            </>
-          }
-          confirmLabel="Establish branch"
-          cancelLabel="Cancel"
-          confirmTone="primary"
-          onConfirm={() => {
-            dispatch({
-              type: "ESTABLISH_BRANCH",
-              coord,
-              slotIndex: confirmPadIndex,
-            });
-            setConfirmPadIndex(null);
-          }}
-          onCancel={() => setConfirmPadIndex(null)}
-        />
-      ) : null}
+      {confirmPadIndex != null && confirmSlot && confirmCost
+        ? createPortal(
+            <ConfirmDialog
+              dialogClassName="confirm-dialog-establish-branch"
+              backdropClassName="map-establish-confirm-backdrop"
+              title="Establish New branch"
+              message={
+                <div className="confirm-dialog-establish-branch-body">
+                  <div className="map-hex-commercial-facts confirm-dialog-establish-facts">
+                    <div className="map-hex-commercial-row">
+                      <span className="map-hex-commercial-label">Pad</span>
+                      <span className="map-hex-commercial-value">
+                        {confirmSlot.label} · {confirmSlot.officeSpace} space →{" "}
+                        {confirmSlot.expansionCap}
+                      </span>
+                    </div>
+                    <div className="map-hex-commercial-row">
+                      <span className="map-hex-commercial-label">Cost</span>
+                      <span className="map-hex-commercial-value map-hex-commercial-value-cost">
+                        <BranchOpeningCostLine
+                          state={state}
+                          cost={confirmCost}
+                          showLabel={false}
+                        />
+                      </span>
+                    </div>
+                    <div className="map-hex-commercial-row">
+                      <span className="map-hex-commercial-label">
+                        Branch Manager
+                      </span>
+                      <span className="map-hex-commercial-value">
+                        Consumed when the branch opens
+                      </span>
+                    </div>
+                    {confirmTravel ? (
+                      <div className="map-hex-commercial-row confirm-dialog-establish-travel-row">
+                        <span className="map-hex-commercial-label">Travel</span>
+                        <span className="map-hex-commercial-value muted confirm-dialog-establish-travel-value">
+                          {confirmTravel.durationLabel} · {confirmTravel.hexes}{" "}
+                          Hx
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <label className="branch-rename-field confirm-dialog-establish-name">
+                    Branch name
+                    <input
+                      type="text"
+                      maxLength={48}
+                      value={confirmBranchName}
+                      onChange={(e) => setConfirmBranchName(e.target.value)}
+                      placeholder={defaultEstablishBranchName}
+                    />
+                  </label>
+                </div>
+              }
+              confirmLabel="Send Branch Manager"
+              cancelLabel="Back"
+              confirmTone="primary"
+              onConfirm={() => {
+                const name =
+                  confirmBranchName.trim() || defaultEstablishBranchName;
+                dispatch({
+                  type: "ESTABLISH_BRANCH",
+                  coord,
+                  slotIndex: confirmPadIndex,
+                  branchName: name,
+                });
+                setConfirmPadIndex(null);
+              }}
+              onCancel={() => setConfirmPadIndex(null)}
+            />,
+            mapModalPortalRoot(),
+          )
+        : null}
 
       <HexContractsSection
         coord={coord}

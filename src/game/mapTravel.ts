@@ -11,8 +11,10 @@ import {
   towerById,
 } from "./mapWorld";
 import { jobDefinitionById } from "./jobs";
+import { parseAxialKey } from "./openOffice";
 import type {
   AxialCoord,
+  BranchEstablishmentTransit,
   GameState,
   JobDefinition,
   JobEngagement,
@@ -139,6 +141,18 @@ export function officeJobSiteCoords(
   target: AxialCoord,
 ): { from: AxialCoord; to: AxialCoord } {
   return jobSiteCoords(state, officeId, target);
+}
+
+export function branchEstablishmentCoords(
+  state: GameState,
+  transit: BranchEstablishmentTransit,
+): { from: AxialCoord; to: AxialCoord } {
+  const to = parseAxialKey(transit.hexKey) ?? hqCoordForState(state);
+  const leg = jobSiteCoords(state, transit.fromOfficeId, to);
+  if (transit.phase === "returning") {
+    return { from: leg.to, to: leg.from };
+  }
+  return leg;
 }
 
 export function jobSiteCoordsForEngagement(

@@ -147,10 +147,23 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
 
   useEffect(() => {
     if (!focusUnitId) return;
-    const el = document.getElementById(`recruit-unit-${focusUnitId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const unit = RECRUITMENT_UNITS.find((entry) => entry.id === focusUnitId);
+    if (unit) {
+      setCategoryOpen((prev) => ({ ...prev, [unit.category]: true }));
+      setRecruitCategoryOpen(officeId, unit.category, true);
     }
+    let cancelled = false;
+    const scrollToCard = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          document
+            .getElementById(`recruit-unit-${focusUnitId}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      });
+    };
+    scrollToCard();
     const clearId = window.setTimeout(() => {
       dispatch({
         type: "SET_VIEW",
@@ -158,8 +171,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         recruitFocusUnitId: null,
       });
     }, 2500);
-    return () => window.clearTimeout(clearId);
-  }, [focusUnitId, dispatch]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(clearId);
+    };
+  }, [focusUnitId, officeId, dispatch]);
 
   useEffect(() => {
     const seeded: Partial<Record<ContractorCategoryId, boolean>> = {};

@@ -41,7 +41,14 @@ export function hqStartStructureLevels(): StructureLevels {
 }
 
 export function branchStartStructureLevels(): StructureLevels {
-  return { ...ZERO_LEVELS };
+  return {
+    ...ZERO_LEVELS,
+    office_desk: 1,
+    bank_account: 1,
+    office_supply: 1,
+    storage_room: 1,
+    power_panel: 1,
+  };
 }
 
 /** REP/GREP holding cap before any Company Statue is built (any site). */

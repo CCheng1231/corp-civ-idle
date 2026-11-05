@@ -10,6 +10,8 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 
 **Balance numbers:** Committed in `src/game/structureBalanceData.ts`, `researchData.ts`, `jobHubData.ts` (code is source of truth). Optional reference sync: `node scripts/import-balance-from-workbook.mjs` (workbook: `Corp Idle Working.xlsx`). Metrics: `node scripts/balance-report.mjs` → `docs/balance-report.md`. See [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc).
 
+**Save integrity (mandatory):** [`docs/save-integrity.md`](docs/save-integrity.md) + [`src/game/saveIntegrity.ts`](src/game/saveIntegrity.ts). Never persist economy state outside `writeProtectedLocalSaveBlob` (offline/cache) or `savePrivateState` (Firestore). Load failures must set `saveLoadFailed` and quarantine — never auto-overwrite primary with `createInitialState()`.
+
 **Session changelog:** **ChangeLog** tab in [`Corp Idle Working.xlsx`](Corp%20Idle%20Working.xlsx). Append via `scripts/append-changelog-*.mjs` (close Excel first if EBUSY).
 
 **Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Access via **access keys** (`src/multiplayer/onlineAccess.ts`) — playtester enters key once; browser binds via Anonymous Auth + `worlds/dev/bindings/{uid}`. Devs create keys in Settings or `scripts/create-access-key.mjs`. Read `useOnlineWorld.ts`, `worldSync.ts`, `browserLease.ts` before changing sync. **Firestore rules:** `firestore.rules` + [`docs/firestore-security.md`](docs/firestore-security.md). One browser tab per online account (lease on world meta).

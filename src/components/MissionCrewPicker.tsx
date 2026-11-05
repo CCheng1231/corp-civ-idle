@@ -77,6 +77,8 @@ export function MissionCrewPicker({
               <button
                 type="button"
                 className="btn linkish mission-crew-unit-link"
+                aria-label={`Recruit ${unit.name}`}
+                title={`Open Recruit tab — ${unit.name}`}
                 onClick={() => openRecruitment(unit.id)}
               >
                 {unit.name}

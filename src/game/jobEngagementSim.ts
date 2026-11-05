@@ -259,29 +259,24 @@ function cancelOutboundEngagement(
   engagementId: string,
   now: number,
 ): GameState {
-  const next = structuredClone(state);
-  const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
-  if (idx < 0) return next;
-  const current = next.jobEngagements[idx];
-  if (current.phase !== "outbound") return next;
+  const idx = state.jobEngagements.findIndex((e) => e.id === engagementId);
+  if (idx < 0) return state;
+  const current = state.jobEngagements[idx];
+  if (current.phase !== "outbound") return state;
   const def = jobDefinitionById(current.definitionId);
-  next.contractorsByLocation[current.officeId] = addAssignmentToRoster(
-    next.contractorsByLocation[current.officeId],
-    current.crewAssigned,
-  );
-  next.jobEngagements.splice(idx, 1);
-  return logUnitsReturned(
-    next,
+  const withLog = logUnitsReturned(
+    state,
     {
       engagement: current,
       def,
       gained: {},
       category: "job_cancel",
       summary: `Recalled from ${def.title} (before arrival)`,
-      impacts: ["No work started", "Crew back at office"],
+      impacts: ["No work started", "Crew heading home"],
     },
     now,
   );
+  return beginReturnTravel(withLog, engagementId, now, {});
 }
 
 function jobPayoutGained(

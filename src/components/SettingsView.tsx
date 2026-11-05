@@ -4,6 +4,10 @@ import {
   ALERT_AUTO_DISMISS_SEC_MIN,
   clampAlertAutoDismissSec,
   resetGameState,
+  hasOfflineSaveBackup,
+  restoreOfflineSaveFromBackup,
+  hasOnlinePrivateCache,
+  restoreOfflineFromOnlineCache,
 } from "../game/save";
 import {
   UI_SCALE_DEFAULT,
@@ -626,6 +630,51 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
       {!online ? (
         <section className="settings-block">
           <h3>Save</h3>
+          <p className="muted setting-hint">
+            Offline progress lives in this browser only (
+            <code>corp-civ-idle-save-v2-{session?.accountId ?? "tim"}</code>
+            ). Backups: <code>-backup</code>, <code>-backup-prev</code>.
+            Failed loads/quarantined writes: <code>-quarantine-*</code> (see{" "}
+            <code>docs/save-integrity.md</code>).
+          </p>
+          {session && hasOfflineSaveBackup(session) ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const restored = restoreOfflineSaveFromBackup(session);
+                if (restored) {
+                  dispatch({ type: "LOAD", state: restored });
+                } else {
+                  window.alert(
+                    "Could not read the automatic backup. Check the browser console.",
+                  );
+                }
+              }}
+            >
+              Restore from automatic backup
+            </button>
+          ) : null}
+          {session &&
+          session.accountId &&
+          hasOnlinePrivateCache(session.accountId as PlayerId) ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const restored = restoreOfflineFromOnlineCache(session);
+                if (restored) {
+                  dispatch({ type: "LOAD", state: restored });
+                } else {
+                  window.alert(
+                    "Could not import from the online browser cache.",
+                  );
+                }
+              }}
+            >
+              Restore from online browser cache
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn danger-btn"

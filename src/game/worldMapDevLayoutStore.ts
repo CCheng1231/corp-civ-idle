@@ -11,6 +11,7 @@ export type WorldMapDevLayoutStore = {
   mapDevExtraHexes?: Array<{ q: number; r: number }>;
   mapDevRegionOverrides?: Record<string, MapRegion>;
   mapDevRegionBrush?: MapRegion;
+  mapDevOpenOffices?: Record<string, import("./types").DevOpenOfficeHex>;
 };
 
 export function readWorldMapDevLayoutStore(): WorldMapDevLayoutStore | null {
@@ -55,7 +56,10 @@ export function worldMapDevLayoutFromSettings(
   const hasRegions =
     settings.mapDevRegionOverrides &&
     Object.keys(settings.mapDevRegionOverrides).length > 0;
-  if (!hasLandmarks && !hasExtra && !hasRegions) {
+  const hasOpenOffices =
+    settings.mapDevOpenOffices &&
+    Object.keys(settings.mapDevOpenOffices).length > 0;
+  if (!hasLandmarks && !hasExtra && !hasRegions && !hasOpenOffices) {
     return null;
   }
   return {
@@ -63,6 +67,7 @@ export function worldMapDevLayoutFromSettings(
     mapDevExtraHexes: settings.mapDevExtraHexes,
     mapDevRegionOverrides: settings.mapDevRegionOverrides,
     mapDevRegionBrush: settings.mapDevRegionBrush,
+    mapDevOpenOffices: settings.mapDevOpenOffices,
   };
 }
 

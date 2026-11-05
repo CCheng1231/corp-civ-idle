@@ -28,6 +28,7 @@ import { DEFAULT_CHIEF_OF_STAFF_ID } from "./secretaryData";
 import {
   branchOfficeIdForSite,
   branchSiteCoordForOffice,
+  branchSiteForOfficeId,
   ownedOfficeIds,
 } from "./branchSites";
 import { axialDistance } from "./hexLayout";
@@ -679,6 +680,9 @@ export function createInitialState(now = Date.now()): GameState {
     selectedOffice: "hq",
     lastSelectedOffice: "hq",
     branchSites: [],
+    branchEstablishmentTransits: [],
+    worldBranchNameSeq: 1,
+    officeSwitchAvailableAt: 0,
     selectedTowerId: null,
     selectedCommercialHex: null,
     won: false,
@@ -721,6 +725,7 @@ export function createInitialState(now = Date.now()): GameState {
       mapPlayerGround: "hybrid",
       mapRegionOutlines: true,
       mapMainOffice: "hq",
+      mapReferenceOfficeId: "hq",
     },
   };
 
@@ -902,9 +907,41 @@ export function canBuildStructure(
   const levels = projectedStructureLevels(state, locationId);
   const level = levels[structureId];
   if (level >= def.maxLevel) return false;
-  const capacity = officeSpaceCapacityForLevels(levels);
+  const capacity = officeSpaceCapacityForOffice(state, locationId, levels);
   const used = officeSpaceUsedForLevels(levels);
   return used <= capacity;
+}
+
+export function officeSpaceBaseForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): number {
+  if (officeId === "hq") return BASE_OFFICE_SPACE;
+  const site = branchSiteForOfficeId(state, officeId);
+  return site?.officeSpaceBase ?? BASE_OFFICE_SPACE;
+}
+
+/** Total space capacity at site (base + office_expansion bonus). */
+export function officeSpaceCapacityForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+  levels: StructureLevels,
+): number {
+  return (
+    officeSpaceBaseForOffice(state, officeId) +
+    officeSpaceBonusFromLevels(levels)
+  );
+}
+
+/** Hard cap from office_expansion max level at this site (model A). */
+export function officeSpaceMaxCapForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): number {
+  const def = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
+  const maxLevels = { ...projectedStructureLevels(state, officeId) };
+  maxLevels.office_expansion = def.maxLevel;
+  return officeSpaceCapacityForOffice(state, officeId, maxLevels);
 }
 
 export function researchUnlockForStructure(
@@ -1056,6 +1093,15 @@ export function formatNumber(value: number): string {
   if (value >= 10_000) return `${(value / 1_000).toFixed(1)}K`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`;
   return value.toFixed(value < 10 ? 1 : 0);
+}
+
+/** Headcount / unit totals — always whole numbers (no 4.0). */
+export function formatInteger(value: number): string {
+  const n = Math.round(value);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
+  return String(n);
 }
 
 export function formatResourceCost(cost: ResourceCost): string {

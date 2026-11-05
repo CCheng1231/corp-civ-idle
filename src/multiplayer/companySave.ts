@@ -9,6 +9,14 @@ export function offlineSaveKey(playerId: string): string {
   return `${OFFLINE_SAVE_PREFIX}-${playerId}`;
 }
 
+export function offlineSaveBackupKey(playerId: string): string {
+  return `${offlineSaveKey(playerId)}-backup`;
+}
+
+export function saveBlobBackupKey(primaryKey: string): string {
+  return `${primaryKey}-backup`;
+}
+
 export function onlineCacheKey(session: OnlineSession): string {
   return `${ONLINE_CACHE_PREFIX}-${session.worldId}-${session.accountId}`;
 }
@@ -45,6 +53,7 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     onlineConnectionStatus: _conn,
     onlineResetGeneration: _resetGen,
     onlineSession: _session,
+    saveLoadFailed: _saveLoadFailed,
     ...persistable
   } = state;
   return persistable;

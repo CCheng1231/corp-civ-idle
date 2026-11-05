@@ -12,6 +12,7 @@ import {
   loadPrivateState,
   loadWorldMeta,
   OnlineSaveRejectedError,
+  SaveRegressionError,
   playerResetTimestamp,
   playerSaveSessionId,
   repairPrivateStateIfStale,
@@ -652,6 +653,11 @@ export function useOnlineWorld({
             });
           }
         } catch (err) {
+          if (err instanceof SaveRegressionError) {
+            console.error(err.message);
+            dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "error" });
+            return;
+          }
           if (err instanceof OnlineSaveRejectedError) {
             lastAckResetAtRef.current = err.requiredGeneration;
             lastExpectedSessionIdRef.current = expectedSessionId;

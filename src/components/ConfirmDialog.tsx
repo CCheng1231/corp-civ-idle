@@ -10,6 +10,10 @@ interface ConfirmDialogProps {
   refund?: ResourceCost;
   refundNote?: string;
   confirmTone?: "danger" | "primary";
+  /** Extra class on the modal shell (e.g. compact layout variants). */
+  dialogClassName?: string;
+  /** Extra class on the full-screen backdrop (e.g. map-scoped dim). */
+  backdropClassName?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,13 +26,21 @@ export function ConfirmDialog({
   refund,
   refundNote = "(Power 100%, other resources 95%)",
   confirmTone = "danger",
+  dialogClassName,
+  backdropClassName,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   return (
-    <div className="modal-backdrop" onClick={onCancel} role="presentation">
+    <div
+      className={["modal-backdrop", backdropClassName].filter(Boolean).join(" ")}
+      onClick={onCancel}
+      role="presentation"
+    >
       <div
-        className="modal confirm-dialog"
+        className={["modal", "confirm-dialog", dialogClassName]
+          .filter(Boolean)
+          .join(" ")}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-labelledby="confirm-dialog-title"
@@ -37,7 +49,7 @@ export function ConfirmDialog({
           <h2 id="confirm-dialog-title">{title}</h2>
         </header>
         <div className="confirm-dialog-body">
-          <p>{message}</p>
+          <div className="confirm-dialog-message">{message}</div>
           {refund && Object.keys(refund).length > 0 && (
             <p className="confirm-dialog-refund">
               Refund: {formatResourceCost(refund)}

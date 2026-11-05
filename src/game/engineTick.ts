@@ -26,6 +26,7 @@ import {
   processStructureQueues,
   withDerivedStats
 } from "./engineQueues";
+import { processBranchEstablishmentTransits } from "./branchEstablishmentProcess";
 
 export function finalizeLoadedState(state: GameState, now: number): GameState {
   const previousTickAt = state.lastTickAt;
@@ -212,6 +213,7 @@ export function advanceSimulatedTime(
   next = processStructureQueues(next, input.eventNow, true);
   next = processResearchQueues(next, input.eventNow, true);
   next = processContractorTransfers(next, input.eventNow);
+  next = processBranchEstablishmentTransits(next, input.eventNow);
   next = processRecruitmentJobs(next, input.eventNow, true);
   next = runJobSimulation(next, input.eventNow);
   next.lastTickAt = input.lastTickAt;

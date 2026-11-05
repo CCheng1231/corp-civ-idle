@@ -16,12 +16,39 @@ import type {
   BusinessType,
   ContractorCategoryId,
   GameState,
+  JobDefinition,
   JobPosting,
   JobSize,
   JobTier,
   MapRegion,
   TowerId,
 } from "./types";
+
+/** Map / site bucket for job filters (not the same as business type). */
+export type JobSiteKindFilter =
+  | "tower"
+  | "major_hub"
+  | "commercial_lot"
+  | "gov";
+
+export const JOB_SITE_KIND_FILTER_LABELS: Record<JobSiteKindFilter, string> = {
+  tower: "Tower",
+  major_hub: "Major hub",
+  commercial_lot: "Commercial lot",
+  gov: "Gov't",
+};
+
+export function jobSiteKindForPosting(
+  posting: JobPosting,
+  def: JobDefinition,
+): JobSiteKindFilter {
+  if (def.businessType === "gov") return "gov";
+  const commercialLotId = posting.commercialLotId ?? def.commercialLotId;
+  if (commercialLotId) return "commercial_lot";
+  const majorHubId = posting.majorHubId ?? def.majorHubId;
+  if (majorHubId) return "major_hub";
+  return "tower";
+}
 
 export type JobBoardSort =
   | "expires_soon"
@@ -36,6 +63,8 @@ export type JobBoardSort =
 export interface JobBoardFilters {
   region: MapRegion | "all";
   towerId: TowerId | "all";
+  /** World map job filter — physical site bucket. */
+  siteType: JobSiteKindFilter | "all";
   businessType: BusinessType | "all";
   tier: JobTier | "all";
   size: JobSize | "all";
@@ -45,6 +74,7 @@ export interface JobBoardFilters {
 export const DEFAULT_JOB_BOARD_FILTERS: JobBoardFilters = {
   region: "all",
   towerId: "all",
+  siteType: "all",
   businessType: "all",
   tier: "all",
   size: "all",
@@ -55,6 +85,7 @@ export function countActiveJobBoardFilters(filters: JobBoardFilters): number {
   let count = 0;
   if (filters.region !== "all") count++;
   if (filters.towerId !== "all") count++;
+  if (filters.siteType !== "all") count++;
   if (filters.businessType !== "all") count++;
   if (filters.tier !== "all") count++;
   if (filters.size !== "all") count++;
@@ -84,6 +115,12 @@ export function activeJobBoardFilterSummaries(
     summaries.push({
       key: "towerId",
       label: towerById(filters.towerId).name,
+    });
+  }
+  if (filters.siteType !== "all") {
+    summaries.push({
+      key: "siteType",
+      label: JOB_SITE_KIND_FILTER_LABELS[filters.siteType],
     });
   }
   if (filters.businessType !== "all") {
@@ -147,6 +184,11 @@ export function filterAndSortJobPostings(
 
     if (filters.region !== "all" && region !== filters.region) {
       return false;
+    }
+    if (filters.siteType !== "all") {
+      if (jobSiteKindForPosting(posting, def) !== filters.siteType) {
+        return false;
+      }
     }
     if (filters.towerId !== "all") {
       if (posting.commercialLotId) return false;
