@@ -12,6 +12,8 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 
 **Save integrity (mandatory):** [`docs/save-integrity.md`](docs/save-integrity.md) + [`src/game/saveIntegrity.ts`](src/game/saveIntegrity.ts). Never persist economy state outside `writeProtectedLocalSaveBlob` (offline/cache) or `savePrivateState` (Firestore). Load failures must set `saveLoadFailed` and quarantine — never auto-overwrite primary with `createInitialState()`.
 
+**Agent learnings (repeat mistakes):** [`docs/agent-session-learnings.md`](docs/agent-session-learnings.md) — append after playtest corrections (shell, save, branch/map UI, process). Read at session start with this file.
+
 **Session changelog:** **ChangeLog** tab in [`Corp Idle Working.xlsx`](Corp%20Idle%20Working.xlsx). Append via `scripts/append-changelog-*.mjs` (close Excel first if EBUSY).
 
 **Online multiplayer:** Firestore `worlds/dev` — private saves, shared job board, map presence. Access via **access keys** (`src/multiplayer/onlineAccess.ts`) — playtester enters key once; browser binds via Anonymous Auth + `worlds/dev/bindings/{uid}`. Devs create keys in Settings or `scripts/create-access-key.mjs`. Read `useOnlineWorld.ts`, `worldSync.ts`, `browserLease.ts` before changing sync. **Firestore rules:** `firestore.rules` + [`docs/firestore-security.md`](docs/firestore-security.md). One browser tab per online account (lease on world meta).
