@@ -25,6 +25,7 @@ import type {
   UnitRoster,
 } from "./types";
 import { DEFAULT_CHIEF_OF_STAFF_ID } from "./secretaryData";
+import { createInitialGovProgram } from "./govProgram";
 import {
   branchOfficeIdForSite,
   branchSiteCoordForOffice,
@@ -33,7 +34,14 @@ import {
 } from "./branchSites";
 import { axialDistance } from "./hexLayout";
 import { hqCoordForState } from "../multiplayer/playerHq";
-import { travelDurationMs, travelSupplyCost } from "./mapTravel";
+import { MIN_TRAVEL_MS, travelDurationMs, travelSupplyCost } from "./mapTravel";
+import {
+  chiefOfficeProductionMult,
+  chiefRecruitCostMult,
+  chiefTravelDurationMs,
+  recruitmentOrderDurationMsForChief,
+  scaleResourceCost,
+} from "./secretaryEffects";
 import {
   HQ_BASE_OFFICE_SPACE,
   HQ_BASE_POWER,
@@ -104,7 +112,17 @@ export function recruitmentOrderBuildTimeHours(count: number): number {
 export function recruitmentOrderDurationMs(count: number): number {
   return recruitmentOrderBuildTimeHours(count) * 3600 * 1000;
 }
-export const MAX_RECRUIT_BATCH = 100;
+
+export function recruitmentOrderDurationMsForState(
+  state: Pick<GameState, "chiefOfStaffId">,
+  count: number,
+): number {
+  return recruitmentOrderDurationMsForChief(
+    state,
+    recruitmentOrderDurationMs(count),
+  );
+}
+export const MAX_RECRUIT_BATCH = 10_000;
 
 export function defaultOfficeSiteSections(): GameState["settings"]["officeSiteSections"] {
   return {
@@ -297,7 +315,11 @@ export function contractorTransferDurationMs(
     unitId ?? "janitor",
     count,
   );
-  return travelDurationMs(hexes);
+  return chiefTravelDurationMs(
+    state,
+    travelDurationMs(hexes),
+    MIN_TRAVEL_MS,
+  );
 }
 
 export function contractorTransferSupplyCost(
@@ -486,14 +508,14 @@ function structurePlayerDescription(structureId: StructureId): string {
   const copy: Partial<Record<StructureId, string>> = {
     office_desk:
       "Desks and workstations — your main source of Cash/hr at this site.",
-    bank_account:
-      "Corporate vault — raises how much Cash you can hold before gains stop.",
+    dept_finance:
+      "Finance department — sets how much Cash you can hold before gains stop.",
     office_supply:
       "Supply closets and vendors — generates SUP/hr for builds and jobs.",
-    storage_room:
-      "Overflow shelving — raises your SUP holding cap.",
-    dept_b2b:
-      "Business development floor — generates Connection/hr for outreach.",
+    dept_logistics:
+      "Logistics department — raises your SUP holding cap.",
+    outreach_program:
+      "Outreach program — generates Connection/hr for external deals.",
     break_room:
       "Coffee, couches, and water-cooler talk — generates Mood/hr.",
     social_media:
@@ -523,17 +545,17 @@ function structurePlayerDescription(structureId: StructureId): string {
 function structureCategoryForId(structureId: StructureId): StructureCategory {
   switch (structureId) {
     case "office_desk":
-    case "bank_account":
     case "office_supply":
-    case "storage_room":
-    case "company_statue":
-      return "essentials";
-    case "dept_b2b":
+    case "outreach_program":
     case "break_room":
     case "social_media":
     case "video_production_studio":
     case "press_room":
+      return "essentials";
     case "office_expansion":
+    case "dept_finance":
+    case "dept_logistics":
+    case "company_statue":
       return "departments";
     case "power_panel":
     case "electricity_generator":
@@ -560,6 +582,36 @@ export const STRUCTURE_CATEGORY_LABELS: Record<StructureCategory, string> = {
   infrastructure: "Power & research",
   staffing: "Recruitment",
 };
+
+const STRUCTURE_CARD_ORDER: Partial<Record<StructureCategory, StructureId[]>> = {
+  essentials: [
+    "office_desk",
+    "office_supply",
+    "outreach_program",
+    "break_room",
+    "social_media",
+    "video_production_studio",
+    "press_room",
+  ],
+  departments: [
+    "office_expansion",
+    "dept_finance",
+    "dept_logistics",
+    "company_statue",
+  ],
+};
+
+export function sortStructuresForBuildTab<T extends { id: StructureId }>(
+  category: StructureCategory,
+  structures: T[],
+): T[] {
+  const order = STRUCTURE_CARD_ORDER[category];
+  if (!order?.length) return structures;
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...structures].sort(
+    (a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999),
+  );
+}
 
 export const STRUCTURES: StructureDefinition[] = PHASE_A_PLACEHOLDER_ROWS.map(
   (row) => ({
@@ -663,6 +715,7 @@ export function createInitialState(now = Date.now()): GameState {
     structureLevelsByLocation,
     contractorsByLocation,
     researchLevels,
+    chiefOfStaffId: DEFAULT_CHIEF_OF_STAFF_ID,
   });
 
   const state: GameState = {
@@ -700,6 +753,7 @@ export function createInitialState(now = Date.now()): GameState {
     activityLog: [],
     dismissedJobReportIds: [],
     logbookFilterId: "all",
+    govProgram: createInitialGovProgram(),
     lastTickAt: now,
     persistRevision: 0,
     worldPersistRevision: 0,
@@ -786,15 +840,28 @@ export function recomputeDerivedStats(state: {
   structureLevelsByLocation: GameState["structureLevelsByLocation"];
   contractorsByLocation: ContractorsByLocation;
   researchLevels: GameState["researchLevels"];
+  chiefOfStaffId?: GameState["chiefOfStaffId"];
   /** Region site bonus on structure passives; defaults to countryside HQ (0%). */
   siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): { rates: ProductionRates } {
-  const rates = recomputeProductionRates({
-    ...state,
+  const structureRates = recomputeProductionRates({
+    structureLevelsByLocation: state.structureLevelsByLocation,
     siteRateBonusByOffice: state.siteRateBonusByOffice ?? {
       hq: 0,
     },
   });
+  const officeProductionMult = state.chiefOfStaffId
+    ? chiefOfficeProductionMult(state.chiefOfStaffId)
+    : 1;
+
+  const rates: ProductionRates = {
+    cash: structureRates.cash * officeProductionMult,
+    supply: structureRates.supply * officeProductionMult,
+    connection: structureRates.connection * officeProductionMult,
+    mood: structureRates.mood * officeProductionMult,
+    reputation: structureRates.reputation * officeProductionMult,
+    govReputation: structureRates.govReputation * officeProductionMult,
+  };
 
   for (const def of RESEARCH) {
     const level = state.researchLevels[def.id];
@@ -1052,6 +1119,17 @@ export function recruitBatchCost(
     total[k] = (val ?? 0) * count;
   }
   return total;
+}
+
+export function recruitBatchCostForState(
+  state: Pick<GameState, "chiefOfStaffId">,
+  unitId: UnitId,
+  count: number,
+): ResourceCost {
+  return scaleResourceCost(
+    recruitBatchCost(unitId, count),
+    chiefRecruitCostMult(state.chiefOfStaffId),
+  );
 }
 
 /** @deprecated */

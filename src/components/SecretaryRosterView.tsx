@@ -1,7 +1,7 @@
 import { useEffect, useState, type Dispatch } from "react";
 import {
   secretaryById,
-  SECRETARIES,
+  secretariesInPlayerRoster,
   type SecretaryDefinition,
 } from "../game/secretaryData";
 import { secretaryRosterPortraitSrc } from "../game/secretaryAssets";
@@ -17,15 +17,15 @@ import {
   selectedUnitPortraitSkinId,
 } from "../game/unitPortraitAssets";
 import {
-  getRoasterSectionOpen,
-  setRoasterSectionOpen,
+  getRosterSectionOpen,
+  setRosterSectionOpen,
 } from "../game/officeCategoryOpen";
 import type { GameAction, GameState, SecretaryId, UnitId } from "../game/types";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { ProgressionCategorySection } from "./progressionUi";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
 import { SecretaryDetailDialog } from "./SecretaryDetailDialog";
 
 const SECRETARY_ROSTER_PORTRAIT_SIZE_KEY =
@@ -53,7 +53,10 @@ export function SecretaryRosterView({
 }: SecretaryRosterViewProps) {
   const chiefId = state.chiefOfStaffId;
   const chief = secretaryById(chiefId);
-  const rosterEntries = sortSecretariesForRoster(SECRETARIES, chiefId);
+  const rosterEntries = sortSecretariesForRoster(
+    secretariesInPlayerRoster(state.govProgram?.gessesaUnlocked ?? false),
+    chiefId,
+  );
   const officeFilteredEntries = secretariesForOfficeFilter(
     rosterEntries,
     state.selectedOffice,
@@ -62,10 +65,10 @@ export function SecretaryRosterView({
   const [rosterViewMode, setRosterViewMode] = useState<RosterViewMode>("detail");
   const [hideUsed, setHideUsed] = useState(false);
   const [secretariesOpen, setSecretariesOpen] = useState<boolean>(
-    () => getRoasterSectionOpen("secretaries") ?? true,
+    () => getRosterSectionOpen("secretaries") ?? true,
   );
   const [unitSkinsOpen, setUnitSkinsOpen] = useState<boolean>(
-    () => getRoasterSectionOpen("unit_skins") ?? false,
+    () => getRosterSectionOpen("unit_skins") ?? false,
   );
 
   const detailSecretary = detailId ? secretaryById(detailId) : null;
@@ -125,17 +128,17 @@ export function SecretaryRosterView({
         open={secretariesOpen}
         onOpenChange={(next) => {
           setSecretariesOpen(next);
-          setRoasterSectionOpen("secretaries", next);
+          setRosterSectionOpen("secretaries", next);
         }}
         maxedCount={0}
         totalCount={visibleEntries.length}
       >
         <section
           className="secretary-roster-picker secretary-roster-panel"
-          aria-label="Secretary roaster"
+          aria-label="Secretary roster"
         >
           <header className="secretary-roster-toolbar">
-            <h3 className="secretary-roster-toolbar-title">Roaster</h3>
+            <h3 className="secretary-roster-toolbar-title">Roster</h3>
             <div className="secretary-roster-toolbar-actions">
               <button
                 type="button"
@@ -269,7 +272,7 @@ export function SecretaryRosterView({
         open={unitSkinsOpen}
         onOpenChange={(next) => {
           setUnitSkinsOpen(next);
-          setRoasterSectionOpen("unit_skins", next);
+          setRosterSectionOpen("unit_skins", next);
         }}
         maxedCount={0}
         totalCount={skinnableUnits.length}
@@ -338,8 +341,15 @@ export function SecretaryRosterView({
   );
 
   return (
-    <div className="main-view-panel location-view-panel secretary-view hub-synced-tab-view secretary-roster-view">
+    <div className="main-view-panel location-view-panel secretary-view hub-synced-tab-view hub-synced-tab-view--progression-freeze secretary-roster-view">
       <HubSyncedTabBackground chiefId={chiefId} portraitSource="secretary" />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          secretaryHubTab="roster"
+          state={state}
+          dispatch={dispatch}
+        />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey={SECRETARY_ROSTER_PORTRAIT_SIZE_KEY}
@@ -350,11 +360,7 @@ export function SecretaryRosterView({
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          <TabSiteHeader
-            secretaryHubTab="roaster"
-            state={state}
-            dispatch={dispatch}
-          />
+          {null}
         </TabPortraitLayout>
         <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         {rosterChiefBanner}

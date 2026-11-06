@@ -1,5 +1,6 @@
 import { useEffect, useState, type Dispatch, type ReactNode } from "react";
 import {
+  sortStructuresForBuildTab,
   structurePanelStructures,
   STRUCTURE_CATEGORY_LABELS,
   STRUCTURE_CATEGORY_ORDER,
@@ -30,6 +31,7 @@ import {
 } from "../game/engine";
 import { formatQueueTimeHours } from "../game/timers";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
 import { ProgressionDetailDialog } from "./ProgressionDetailDialog";
 import { buildStructureDetailModel } from "./progressionDetailModel";
 import {
@@ -171,9 +173,26 @@ export function structureUpgradeBlockerDisplay(
   blocker: string | null,
 ): string | null {
   if (!blocker) return null;
+  if (/Build queue full/i.test(blocker)) return null;
   if (/Power at this site/i.test(blocker)) return null;
   if (/Need \d/.test(blocker) && /\(have /i.test(blocker)) return null;
   return blocker;
+}
+
+export function structureUpgradeButtonLabel(params: {
+  unlocked: boolean;
+  readOnly: boolean;
+  maxed: boolean;
+  inProgress: boolean;
+  queueFull: boolean;
+}): string {
+  const { unlocked, readOnly, maxed, inProgress, queueFull } = params;
+  if (!unlocked) return "Locked";
+  if (readOnly) return "Pick an office";
+  if (maxed) return "Max";
+  if (inProgress) return "In progress";
+  if (queueFull) return "Queue max";
+  return "Upgrade";
 }
 
 interface OfficeStructurePanelProps {
@@ -193,8 +212,6 @@ interface OfficeBuildQueueSectionProps {
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
   compact?: boolean;
-  hideCompleted: boolean;
-  onHideCompletedChange: (value: boolean) => void;
 }
 
 export function OfficeBuildQueueSection({
@@ -202,8 +219,6 @@ export function OfficeBuildQueueSection({
   dispatch,
   officeId,
   compact = false,
-  hideCompleted,
-  onHideCompletedChange,
 }: OfficeBuildQueueSectionProps) {
   const buildQueue = state.structureQueues[officeId];
   const now = Date.now();
@@ -215,9 +230,6 @@ export function OfficeBuildQueueSection({
           title="Structure in progress"
           count={`${buildQueue.length}/${MAX_STRUCTURE_QUEUE}`}
           countAriaLabel={`Structure queue ${buildQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
-          hideLabel="Hide maxed"
-          hideChecked={hideCompleted}
-          onHideChange={onHideCompletedChange}
         />
         <StructureBuildQueueList
           state={state}
@@ -238,16 +250,6 @@ export function OfficeBuildQueueSection({
       count={buildQueue.length}
       max={MAX_STRUCTURE_QUEUE}
       className="location-queue-section office-build-queue-section"
-      headerExtra={
-        <label className="progression-hide-completed-check">
-          <input
-            type="checkbox"
-            checked={hideCompleted}
-            onChange={(event) => onHideCompletedChange(event.target.checked)}
-          />
-          Hide maxed
-        </label>
-      }
     >
       <StructureBuildQueueList
         state={state}
@@ -396,13 +398,16 @@ export function OfficeStructurePanel({
     const levelLabel =
       structure.maxLevel > 1 ? `Lv ${level}/${structure.maxLevel}` : `Lv ${level}`;
 
-    const upgradeButtonLabel = !unlocked
-      ? "Locked"
-      : readOnly
-        ? "Pick an office"
-        : inProgress
-          ? "In progress"
-          : "Upgrade";
+    const upgradeButtonLabel = structureUpgradeButtonLabel({
+      unlocked,
+      readOnly,
+      maxed,
+      inProgress,
+      queueFull,
+    });
+
+    const showBlockerMessage =
+      Boolean(blockerMessage) && !maxed && !inProgress && unlocked && !queueFull;
 
     const portraitCardClasses = withPortrait
       ? " recruitment-card-compact recruitment-card-with-portrait"
@@ -420,11 +425,6 @@ export function OfficeStructurePanel({
               <span className="structure-level-current">
                 Lv {level} → {targetLevel}
               </span>
-              {structure.maxLevel > 1 ? (
-                <span className="structure-level-max">
-                  Max: {structure.maxLevel}
-                </span>
-              ) : null}
             </div>
           ) : (
             <span>Locked</span>
@@ -485,7 +485,7 @@ export function OfficeStructurePanel({
         <>
           {headBlock}
           {metaBlock}
-          {blockerMessage && !maxed && !inProgress && unlocked ? (
+          {showBlockerMessage ? (
             <p className="structure-blocker">{blockerMessage}</p>
           ) : null}
           {structure.officeSlotsWhenBuilt > 0 ? (
@@ -505,6 +505,59 @@ export function OfficeStructurePanel({
     }
 
     if (maxed) {
+      if (withPortrait) {
+        const maxedCompactBody = (
+          <>
+            <div className="structure-head">
+              <ProgressionNameButton
+                name={structure.name}
+                onClick={() => openStructureDetail(structure)}
+              />
+              <div className="structure-level-meta">
+                <span className="structure-level-current">{levelLabel}</span>
+              </div>
+            </div>
+            <div className="recruitment-hire-meta">
+              <div className="recruitment-hire-actions structure-build-actions">
+                <button
+                  type="button"
+                  className="btn primary recruitment-queue-btn"
+                  disabled
+                >
+                  Max
+                </button>
+              </div>
+            </div>
+            <p
+              className="structure-desc muted recruitment-role recruitment-role-footer"
+              title={structure.description}
+            >
+              {structure.description}
+            </p>
+          </>
+        );
+
+        return (
+          <li
+            key={structure.id}
+            id={`structure-card-${structure.id}`}
+            className={`structure-card structure-card-upgrade research-card-completed progression-card-maxed${portraitCardClasses}${
+              focused ? " progression-focus-target" : ""
+            }`}
+          >
+            <div className="recruitment-card-split">
+              <ProgressionCardPortraitColumn
+                portrait={portraitEl}
+                lockLines={lockLines}
+                dispatch={dispatch}
+                showLockOverlay={false}
+              />
+              <div className="recruitment-card-main">{maxedCompactBody}</div>
+            </div>
+          </li>
+        );
+      }
+
       const maxedBody = (
         <>
         <ProgressionMaxedCard
@@ -602,11 +655,6 @@ export function OfficeStructurePanel({
               <span className="structure-level-current">
                 Lv {level} → {targetLevel}
               </span>
-              {structure.maxLevel > 1 ? (
-                <span className="structure-level-max">
-                  Max: {structure.maxLevel}
-                </span>
-              ) : null}
             </div>
           ) : (
             <span>Locked</span>
@@ -656,9 +704,9 @@ export function OfficeStructurePanel({
             </div>
           </div>
         )}
-        {blockerMessage && !maxed && !inProgress && unlocked && (
+        {showBlockerMessage ? (
           <p className="structure-blocker">{blockerMessage}</p>
-        )}
+        ) : null}
         <p className="structure-desc muted">{structure.description}</p>
         {!unlocked && lockLines.length > 0 && !withPortrait ? (
           <ProgressionLockRequirements lines={lockLines} dispatch={dispatch} />
@@ -682,13 +730,7 @@ export function OfficeStructurePanel({
               })
             }
           >
-            {!unlocked
-              ? "Locked"
-              : readOnly
-                ? "Pick an office"
-              : inProgress
-                ? "In progress"
-                : "Upgrade"}
+            {upgradeButtonLabel}
           </button>
           {level > 0 && (
             <button
@@ -761,25 +803,25 @@ export function OfficeStructurePanel({
           state={state}
           dispatch={dispatch}
           officeId={officeId}
-          hideCompleted={hideCompleted}
-          onHideCompletedChange={onHideCompletedChange}
         />
       ) : null}
       {siteSummary}
       {!readOnly ? (
-        <div className="office-structures-catalog-toolbar">
-          <button
-            type="button"
-            className="office-collapse-all"
-            onClick={collapseAllStructureCategories}
-          >
-            Collapse all
-          </button>
-        </div>
+        <ProgressionCatalogToolbar
+          onCollapseAll={collapseAllStructureCategories}
+          filterToggle={{
+            label: "Hide maxed",
+            checked: hideCompleted,
+            onChange: onHideCompletedChange,
+          }}
+        />
       ) : null}
       {STRUCTURE_CATEGORY_ORDER.map((category) => {
-        const items = structurePanelStructures().filter(
-          (structure) => structure.category === category,
+        const items = sortStructuresForBuildTab(
+          category,
+          structurePanelStructures().filter(
+            (structure) => structure.category === category,
+          ),
         ).filter(
           (structure) =>
             !hideCompleted ||

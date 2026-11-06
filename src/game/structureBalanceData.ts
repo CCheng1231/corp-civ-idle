@@ -31,10 +31,10 @@ export interface StructureLevelBalanceRow {
 
 export const STRUCTURE_EFFECT_KIND: Record<StructureId, StructureEffectKind> = {
   "office_desk": "cash_per_hour",
-  "bank_account": "cash_holding",
+  "dept_finance": "cash_holding",
   "office_supply": "supply_per_hour",
-  "storage_room": "supply_holding",
-  "dept_b2b": "connection_per_hour",
+  "dept_logistics": "supply_holding",
+  "outreach_program": "connection_per_hour",
   "break_room": "mood_per_hour",
   "social_media": "connection_per_hour",
   "video_production_studio": "reputation_per_hour",
@@ -274,7 +274,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "effect": 46325.03906
     }
   ],
-  "bank_account": [
+  "dept_finance": [
     {
       "level": 1,
       "buildTimeHours": 0.0038888888888888888,
@@ -718,7 +718,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "effect": 10191.50859
     }
   ],
-  "storage_room": [
+  "dept_logistics": [
     {
       "level": 1,
       "buildTimeHours": 0.0038888888888888888,
@@ -940,7 +940,7 @@ export const STRUCTURE_BALANCE_TABLES: Record<
       "effect": 254787.7148
     }
   ],
-  "dept_b2b": [
+  "outreach_program": [
     {
       "level": 1,
       "buildTimeHours": 0.0007777777777777778,

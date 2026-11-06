@@ -352,13 +352,13 @@ export function computeResourceCaps(state: {
 
   for (const officeId of structureOfficeIds(state.structureLevelsByLocation)) {
     const levels = state.structureLevelsByLocation[officeId];
-    const bankLevel = levels.bank_account;
+    const bankLevel = levels.dept_finance;
     if (bankLevel > 0) {
-      cashCap += effectAtStructureLevel("bank_account", bankLevel);
+      cashCap += effectAtStructureLevel("dept_finance", bankLevel);
     }
-    const storageLevel = levels.storage_room;
+    const storageLevel = levels.dept_logistics;
     if (storageLevel > 0) {
-      supplyCap += effectAtStructureLevel("storage_room", storageLevel);
+      supplyCap += effectAtStructureLevel("dept_logistics", storageLevel);
     }
     const statueLevel = levels.company_statue;
     if (statueLevel > 0) {

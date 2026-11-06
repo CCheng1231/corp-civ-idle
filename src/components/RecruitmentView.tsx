@@ -4,9 +4,9 @@ import {
   MAX_RECRUIT_QUEUE,
   canAffordAtOffice,
   isRecruitmentQueueFull,
-  recruitBatchCost,
+  recruitBatchCostForState,
   recruitmentJobsAtOffice,
-  recruitmentOrderBuildTimeHours,
+  recruitmentOrderDurationMsForState,
   rosterAt,
   totalWorkforce,
 } from "../game/constants";
@@ -22,10 +22,12 @@ import {
   setRecruitCategoryOpen,
 } from "../game/officeCategoryOpen";
 import { CompactQueueHeading } from "./CompactQueueHeading";
+import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
+import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { RecruitmentQueueList } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { SceneBanner } from "./SceneBanner";
@@ -120,6 +122,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const [counts, setCounts] = useState<Partial<Record<UnitId, number>>>({});
   const [rosterOpen, setRosterOpen] = useState(false);
   const [hideLocked, setHideLocked] = useState(false);
+  const [tabInfoOpen, setTabInfoOpen] = useState(false);
   const [detailUnit, setDetailUnit] = useState<RecruitmentUnitDefinition | null>(
     null,
   );
@@ -214,14 +217,18 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
 
   function renderUnitCard(unit: RecruitmentUnitDefinition) {
     const count = counts[unit.id] ?? 1;
-    const cost = recruitBatchCost(unit.id, count);
+    const cost = recruitBatchCostForState(state, unit.id, count);
     const lockLines = recruitmentUnitProgressionLockNav(state, unit.id);
     const researchLocked = lockLines.length > 0;
     const affordable =
       !actionsLocked &&
       !researchLocked &&
       canAffordAtOffice(state, officeId, cost);
-    const orderHours = recruitmentOrderBuildTimeHours(count);
+    const unitQueued = recruitmentJobsAtOffice(state, officeId).some(
+      (job) => job.unitId === unit.id,
+    );
+    const orderHours =
+      recruitmentOrderDurationMsForState(state, count) / (3600 * 1000);
     const lockedTitle = recruitmentLockedButtonTitle(lockLines);
 
     const focused = focusUnitId === unit.id;
@@ -264,6 +271,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               type="number"
               min={1}
               max={MAX_RECRUIT_BATCH}
+              inputMode="numeric"
+              className="recruit-count-input"
               value={count}
               disabled={actionsLocked || queueFull || researchLocked}
               onChange={(e) => {
@@ -282,12 +291,20 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             <button
               type="button"
               className="btn primary recruitment-queue-btn"
-              disabled={!affordable || queueFull || researchLocked}
-              title={lockedTitle}
+              disabled={
+                !affordable || queueFull || researchLocked || unitQueued
+              }
+              title={
+                unitQueued
+                  ? "This unit is already in the hiring queue"
+                  : lockedTitle
+              }
               aria-label={
                 researchLocked
                   ? `Locked. ${lockedTitle ?? "Requirements not met"}`
-                  : undefined
+                  : unitQueued
+                    ? "Already in hiring queue"
+                    : undefined
               }
               onClick={() => hire(unit.id)}
             >
@@ -295,9 +312,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
                 ? "Pick an office"
                 : researchLocked
                   ? "Locked"
-                  : queueFull
-                    ? "Queue full"
-                    : "Queue order"}
+                  : unitQueued
+                    ? "In queue"
+                    : queueFull
+                      ? "Queue full"
+                      : "Queue order"}
             </button>
           </span>
         </div>
@@ -363,7 +382,6 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
 
   const recruitBesidePortrait = (
     <>
-      <TabSiteHeader homeHubTab="recruitment" state={state} dispatch={dispatch} />
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = recruitmentJobsAtOffice(state, siteId);
@@ -399,9 +417,6 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             title="Hiring in progress"
             count={`${hireQueueCount}/${MAX_RECRUIT_QUEUE}`}
             countAriaLabel={`Hiring queue ${hireQueueCount} of ${MAX_RECRUIT_QUEUE}`}
-            hideLabel="Hide locked"
-            hideChecked={hideLocked}
-            onHideChange={setHideLocked}
           />
           <RecruitmentQueueList
             state={state}
@@ -477,15 +492,14 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           </div>
         ) : null}
       </div>
-      <div className="office-structures-catalog-toolbar">
-        <button
-          type="button"
-          className="office-collapse-all"
-          onClick={collapseAllRecruitCategories}
-        >
-          Collapse all
-        </button>
-      </div>
+      <ProgressionCatalogToolbar
+        onCollapseAll={collapseAllRecruitCategories}
+        filterToggle={{
+          label: "Hide locked",
+          checked: hideLocked,
+          onChange: setHideLocked,
+        }}
+      />
       {RECRUITMENT_CATEGORY_ORDER.map((category) => {
         const units = RECRUITMENT_UNITS.filter(
           (unit) => unit.category === category,
@@ -530,8 +544,16 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel recruitment-view hub-synced-tab-view">
+    <div className="main-view-panel location-view-panel recruitment-view hub-synced-tab-view hub-synced-tab-view--progression-freeze">
       <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          homeHubTab="recruitment"
+          state={state}
+          dispatch={dispatch}
+          onInfo={() => setTabInfoOpen(true)}
+        />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey="corp-civ-idle-recruitment-portrait-size"
@@ -546,6 +568,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         </TabPortraitLayout>
         <div className="tab-below-portrait">{recruitBelowPortrait}</div>
       </HubSyncedTabScrollBody>
+      {tabInfoOpen ? (
+        <ProgressionCatalogInfoDialog
+          kind="recruitment"
+          onClose={() => setTabInfoOpen(false)}
+        />
+      ) : null}
       {detailUnit ? (
         <ProgressionDetailDialog
           {...buildRecruitmentUnitDetailModel(detailUnit, {

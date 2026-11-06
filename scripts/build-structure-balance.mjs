@@ -23,11 +23,14 @@ const COST_SHEET_CANDIDATES = [
 ];
 const NAME_TO_ID = {
   "Office desk": "office_desk",
-  "Office Vault": "bank_account",
-  "Bank account": "bank_account",
+  "Department of Finance": "dept_finance",
+  "Office Vault": "dept_finance",
+  "Bank account": "dept_finance",
   "Office supply": "office_supply",
-  "Storage Room": "storage_room",
-  "Department of B2B": "dept_b2b",
+  "Department of Logistics": "dept_logistics",
+  "Storage Room": "dept_logistics",
+  "Outreach Program": "outreach_program",
+  "Department of B2B": "outreach_program",
   "Break room": "break_room",
   "Social Media": "social_media",
   "Video production studio": "video_production_studio",
@@ -45,16 +48,16 @@ const NAME_TO_ID = {
 
 const STRUCTURE_ORDER = [
   "office_desk",
-  "bank_account",
   "office_supply",
-  "storage_room",
-  "dept_b2b",
+  "outreach_program",
   "break_room",
   "social_media",
   "video_production_studio",
   "press_room",
-  "company_statue",
   "office_expansion",
+  "dept_finance",
+  "dept_logistics",
+  "company_statue",
   "power_panel",
   "electricity_generator",
   "dept_rnd",
@@ -64,6 +67,7 @@ const STRUCTURE_ORDER = [
 
 /** Correct generation/holding totals when sheet copied power-panel effect column by mistake. */
 const EFFECT_COLUMN_FIXES = {
+  "Outreach Program": { header: "CON /hr", l1: 15, scale: 1.25 },
   "Department of B2B": { header: "CON /hr", l1: 15, scale: 1.25 },
   "Break room": { header: "Mood /hr", l1: 25, scale: 1.25 },
   "Social Media": { header: "CON /hr", l1: 8, scale: 1.25 },
@@ -187,10 +191,10 @@ function toEngineRow(r) {
 
 const EFFECT_KIND = {
   office_desk: "cash_per_hour",
-  bank_account: "cash_holding",
+  dept_finance: "cash_holding",
   office_supply: "supply_per_hour",
-  storage_room: "supply_holding",
-  dept_b2b: "connection_per_hour",
+  dept_logistics: "supply_holding",
+  outreach_program: "connection_per_hour",
   break_room: "mood_per_hour",
   social_media: "connection_per_hour",
   video_production_studio: "reputation_per_hour",

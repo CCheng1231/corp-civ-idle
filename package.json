@@ -21,6 +21,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
+    "exceljs": "^4.4.0",
     "firebase-admin": "^14.4.0",
     "sharp": "^0.35.4",
     "typescript": "~5.8.3",

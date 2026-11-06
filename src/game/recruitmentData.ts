@@ -20,7 +20,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 84,
-      "supply": 30
+      "supply": 3
     },
     "detail": "Very cheap, high availability, low fatigue gain",
     "proposedRole": "Cheapest crew. -15% payout on jobs unless crew size is above optimal. Low commitment cost; good filler unit."
@@ -32,7 +32,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 114,
-      "supply": 50
+      "supply": 5
     },
     "detail": "Flexible schedule, low commitment cost.",
     "proposedRole": "-10% contract duration on short jobs (below median duration). No bonus on long or awkward-hour jobs."
@@ -68,7 +68,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 95,
-      "supply": 30
+      "supply": 3
     },
     "detail": "Cheap deterrence, reduces minor disturbance chance",
     "proposedRole": "-5% minor incident chance (future event system). +3% espionage defense per unit."
@@ -80,7 +80,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 95,
-      "supply": 60
+      "supply": 6
     },
     "detail": "Good at passive guarding, low upkeep",
     "proposedRole": "Passive office guard: +4% espionage defense without assignment. Lower upkeep profile."
@@ -116,7 +116,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 110,
-      "supply": 100,
+      "supply": 10,
       "connection": 4
     },
     "detail": "Cheap basic intel, finds public job info",
@@ -129,7 +129,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 110,
-      "supply": 100,
+      "supply": 10,
       "connection": 4
     },
     "detail": "Good at local/soft intel, morale side benefits",
@@ -168,7 +168,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 150,
-      "supply": 100
+      "supply": 10
     },
     "detail": "Small passive recovery bonus, tiny chance to prevent incidents",
     "proposedRole": "Office passive: +0.01 mood/hr per unit. 1% incident-prevention roll (future event system)."
@@ -180,7 +180,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 550,
-      "supply": 200,
+      "supply": 20,
       "reputation": 5
     },
     "detail": "Speeds up job start / supply delivery, small mobility bonus",
@@ -219,7 +219,7 @@ export const RECRUITMENT_UNITS: RecruitmentUnitDefinition[] = [
     "tier": 1,
     "cost": {
       "cash": 800,
-      "supply": 200,
+      "supply": 20,
       "reputation": 10,
       "connection": 8
     },
@@ -246,24 +246,24 @@ export const DEFAULT_TIER1_UNIT: Record<ContractorCategoryId, UnitId> = {
 export const RECRUITMENT_TIER1_COST: Record<ContractorCategoryId, ResourceCost> = {
   "farming": {
     "cash": 84,
-    "supply": 30
+    "supply": 3
   },
   "defense": {
     "cash": 95,
-    "supply": 30
+    "supply": 3
   },
   "intel": {
     "cash": 110,
-    "supply": 100,
+    "supply": 10,
     "connection": 4
   },
   "support": {
     "cash": 150,
-    "supply": 100
+    "supply": 10
   },
   "special": {
     "cash": 800,
-    "supply": 200,
+    "supply": 20,
     "reputation": 10,
     "connection": 8
   }

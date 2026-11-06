@@ -51,8 +51,8 @@ const rows = [
     0,
   ],
   [
-    "bank_account",
-    "Bank account",
+    "dept_finance",
+    "Department of Finance",
     20,
     "L2 ref: 100 cash, 50 SUP",
     1.6,
@@ -79,8 +79,8 @@ const rows = [
     0,
   ],
   [
-    "storage_room",
-    "Storage Room",
+    "dept_logistics",
+    "Department of Logistics",
     20,
     "TBD from sheet",
     1.6,
@@ -93,8 +93,8 @@ const rows = [
     0,
   ],
   [
-    "dept_b2b",
-    "Department of B2B",
+    "outreach_program",
+    "Outreach Program",
     20,
     "PLACEHOLDER",
     1.5,

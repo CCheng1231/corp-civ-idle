@@ -51,12 +51,15 @@ export function ConfirmDialog({
         <div className="confirm-dialog-body">
           <div className="confirm-dialog-message">{message}</div>
           {refund && Object.keys(refund).length > 0 && (
-            <p className="confirm-dialog-refund">
-              Refund: {formatResourceCost(refund)}
+            <div className="confirm-dialog-refund">
+              <span className="confirm-dialog-refund-label">Refund</span>
+              <span className="confirm-dialog-refund-amount">
+                {formatResourceCost(refund)}
+              </span>
               {refundNote ? (
-                <small className="muted"> {refundNote}</small>
+                <span className="confirm-dialog-refund-note">{refundNote}</span>
               ) : null}
-            </p>
+            </div>
           )}
         </div>
         <footer className="confirm-dialog-actions">

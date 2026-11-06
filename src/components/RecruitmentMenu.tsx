@@ -6,7 +6,7 @@ import {
   formatResourceCost,
   officeSiteLabel,
   powerAvailable,
-  recruitBatchCost,
+  recruitBatchCostForState,
 } from "../game/constants";
 import { RECRUITMENT_UNITS, BRANCH_MANAGER_RESEARCH_LOCK_HINT } from "../game/recruitmentData";
 import { resolveOfficeLocation } from "../game/officeSelection";
@@ -54,7 +54,7 @@ export function RecruitmentMenu({
         </header>
         <div className="recruitment-grid">
           {RECRUITMENT_UNITS.map((unit) => {
-            const cost = recruitBatchCost(unit.id, 1);
+            const cost = recruitBatchCostForState(state, unit.id, 1);
             const researchLocked =
               unit.id === "branch_manager" &&
               (state.researchLevels.branch_management ?? 0) < 1;

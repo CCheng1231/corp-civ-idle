@@ -10,6 +10,7 @@ import {
   totalAssigned,
 } from "./unitEffects";
 import { applyOfficeCost, canAffordAtOffice } from "./constants";
+import { govEngageLockActive } from "./govProgram";
 import { resolveOfficeLocation } from "./officeSelection";
 import type { GameState, JobEngagement, UnitAssignment } from "./types";
 import { formatTimerRemaining, scheduleTimerAt } from "./timers";
@@ -40,6 +41,7 @@ export function engageJobPosting(
   crewAssigned: UnitAssignment,
   now: number,
 ): GameState {
+  if (govEngageLockActive(state)) return state;
   if (!canEngageMoreJobs(state)) return state;
   const posting = postingById(state, postingId);
   if (!posting || posting.status !== "open") return state;
@@ -113,6 +115,9 @@ export function validateEngagementAssignment(
   postingId: string,
   crewAssigned: UnitAssignment,
 ): string | null {
+  if (govEngageLockActive(state)) {
+    return "Government charter in progress (Secretary → Gov't Prog)";
+  }
   if (!canEngageMoreJobs(state)) {
     return `Task force cap reached (${activeEngagementCount(state)}/${maxJobEngagements(state)})`;
   }
@@ -142,7 +147,7 @@ export function validateEngagementAssignment(
     outboundSupply > 0 &&
     !canAffordAtOffice(state, state.selectedOffice, { supply: outboundSupply })
   ) {
-    return `Need ${outboundSupply} supply for round trip`;
+    return `Need ${outboundSupply} SUP`;
   }
   return null;
 }

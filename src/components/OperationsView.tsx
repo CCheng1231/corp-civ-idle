@@ -8,9 +8,10 @@ import {
 import { LocationSitePanel } from "./LocationSitePanel";
 import { OfficeBuildQueueSection } from "./OfficeStructurePanel";
 import { OfficeSiteSummary } from "./OfficeSiteSummary";
+import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { StructureBuildQueueList } from "./StructureBuildQueueList";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import type { GameAction, GameState, OfficeLocationId } from "../game/types";
@@ -25,10 +26,10 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
   const showAll = isAllOfficesSelected(state.selectedOffice);
   const officeId: OfficeLocationId = resolveOfficeLocation(state);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [tabInfoOpen, setTabInfoOpen] = useState(false);
 
   const officeBesidePortrait = (
     <>
-      <TabSiteHeader homeHubTab="operations" state={state} dispatch={dispatch} />
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = state.structureQueues[siteId] ?? [];
@@ -64,16 +65,22 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           dispatch={dispatch}
           officeId={officeId}
           compact
-          hideCompleted={hideCompleted}
-          onHideCompletedChange={setHideCompleted}
         />
       )}
     </>
   );
 
   return (
-    <div className="main-view-panel location-view-panel operations-view hub-synced-tab-view">
+    <div className="main-view-panel location-view-panel operations-view hub-synced-tab-view hub-synced-tab-view--progression-freeze">
       <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          homeHubTab="operations"
+          state={state}
+          dispatch={dispatch}
+          onInfo={() => setTabInfoOpen(true)}
+        />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey="corp-civ-idle-operations-portrait-size"
@@ -105,6 +112,12 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           />
         </div>
       </HubSyncedTabScrollBody>
+      {tabInfoOpen ? (
+        <ProgressionCatalogInfoDialog
+          kind="structures"
+          onClose={() => setTabInfoOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

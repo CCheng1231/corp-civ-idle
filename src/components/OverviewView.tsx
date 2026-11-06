@@ -5,6 +5,7 @@ import {
   WIN_NET_WORTH,
   formatInteger,
   formatResourceShort,
+  isResearchQueued,
   projectedResearchLevels,
   rosterAt,
   totalWorkforce,
@@ -40,7 +41,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
   const projectedResearch = projectedResearchLevels(state);
   const researchActive = RESEARCH.filter(
     (def) => projectedResearch[def.id] > 0,
-  );
+  ).filter((def) => !isResearchQueued(state, def.id));
   const staffTotal = showAll
     ? officeIds.reduce(
         (sum, siteId) => sum + totalWorkforce(rosterAt(state, siteId)),
@@ -175,13 +176,6 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
                 <span>{def.name}</span>
                 <strong>
                   Lv {state.researchLevels[def.id]}/{def.maxLevel}
-                  {projectedResearch[def.id] > state.researchLevels[def.id] && (
-                    <span className="muted">
-                      {" "}
-                      (+{projectedResearch[def.id] - state.researchLevels[def.id]}{" "}
-                      queued)
-                    </span>
-                  )}
                 </strong>
               </li>
             ))}

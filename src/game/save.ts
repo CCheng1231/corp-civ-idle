@@ -18,13 +18,21 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState, finalizeOnlineSyncState } from "./engine";
-import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS } from "./secretaryData";
+import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS, secretaryById } from "./secretaryData";
+import { secretaryVisibleOnRoster } from "./secretaryEffects";
+import {
+  lifetimeRecruitsFromRoster,
+  normalizeGovProgram,
+} from "./govProgram";
 import { trimSecretaryJobReports } from "./logbook";
 import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
 import { initializeJobPostings, jobDefinitionById, mergeMissingJobPostings } from "./jobs";
 import { JOB_DEFINITIONS } from "./jobHubData";
-import { branchSiteCoord, isEstablishedBranchSiteOnMap } from "./branchSites";
+import {
+  migrateStructureId,
+  migrateStructureLevelsMap,
+} from "./structureIdMigration";
 import { isCoordOnMapGrid, MAP_BRANCH } from "./hexLayout";
 import {
   commercialSiteAt,
@@ -33,9 +41,11 @@ import {
 } from "./mapWorld";
 import {
   branchOfficeIdForSite,
+  branchSiteCoord,
   branchSiteForOfficeId,
   hasBranchOffices,
   isBranchOfficeId,
+  isEstablishedBranchSiteOnMap,
 } from "./branchSites";
 import {
   migrateLegacyResources,
@@ -156,18 +166,30 @@ function normalizeView(view: unknown): MainView {
   return "operations";
 }
 
-function normalizeChiefOfStaffId(id: unknown): GameState["chiefOfStaffId"] {
+function normalizeChiefOfStaffId(
+  id: unknown,
+  gessesaUnlocked = false,
+): GameState["chiefOfStaffId"] {
+  let chief: GameState["chiefOfStaffId"] = DEFAULT_CHIEF_OF_STAFF_ID;
   if (
     typeof id === "string" &&
     SECRETARY_IDS.includes(id as GameState["chiefOfStaffId"])
   ) {
-    return id as GameState["chiefOfStaffId"];
+    chief = id as GameState["chiefOfStaffId"];
   }
-  return DEFAULT_CHIEF_OF_STAFF_ID;
+  try {
+    if (!secretaryVisibleOnRoster(secretaryById(chief), gessesaUnlocked)) {
+      return DEFAULT_CHIEF_OF_STAFF_ID;
+    }
+  } catch {
+    return DEFAULT_CHIEF_OF_STAFF_ID;
+  }
+  return chief;
 }
 
 function normalizeSecretaryPanel(panel: unknown): SecretaryPanel {
-  if (panel === "roaster") return "roaster";
+  if (panel === "roster" || panel === "roaster") return "roster";
+  if (panel === "govProgram" || panel === "gov") return "govProgram";
   if (panel === "log") return "log";
   return "landing";
 }
@@ -191,12 +213,20 @@ function normalizeHomeHubResume(resume: unknown): HomeHubResume {
     : "landing";
 }
 
-const SECRETARY_HUB_RESUME_IDS = new Set(["landing", "roaster", "job", "log"]);
+const SECRETARY_HUB_RESUME_IDS = new Set([
+  "landing",
+  "roster",
+  "job",
+  "log",
+  "govProgram",
+]);
 
 function normalizeSecretaryHubResume(resume: unknown): SecretaryHubResume {
-  return typeof resume === "string" &&
-    SECRETARY_HUB_RESUME_IDS.has(resume)
-    ? (resume as SecretaryHubResume)
+  const normalized =
+    resume === "roaster" ? "roster" : resume;
+  return typeof normalized === "string" &&
+    SECRETARY_HUB_RESUME_IDS.has(normalized)
+    ? (normalized as SecretaryHubResume)
     : "landing";
 }
 
@@ -376,14 +406,16 @@ function migrateStructureQueues(
       ...structureLevelsByLocation[officeId],
     };
     queues[officeId] = (queues[officeId] ?? []).map((job, index) => {
+      const structureId = migrateStructureId(job.structureId);
       let targetLevel = job.targetLevel;
       if (targetLevel == null) {
-        targetLevel = built[job.structureId] + 1;
+        targetLevel = built[structureId] + 1;
       }
-      built[job.structureId] = Math.max(built[job.structureId], targetLevel);
+      built[structureId] = Math.max(built[structureId], targetLevel);
       return {
         ...job,
-        id: job.id ?? `${officeId}-${job.structureId}-${index}`,
+        id: job.id ?? `${officeId}-${structureId}-${index}`,
+        structureId,
         targetLevel,
         spentCost:
           job.spentCost ??
@@ -500,26 +532,24 @@ function migrateStructureLevels(parsed: LegacySave): GameState["structureLevelsB
 
   if (parsed.structureLevelsByLocation) {
     const result: GameState["structureLevelsByLocation"] = {
-      hq: {
-        ...branchStartStructureLevels(),
-        ...(parsed.structureLevelsByLocation.hq ?? {}),
-      },
+      hq: migrateStructureLevelsMap(
+        parsed.structureLevelsByLocation.hq ?? {},
+      ),
     };
     for (const [officeId, levels] of Object.entries(
       parsed.structureLevelsByLocation,
     )) {
       if (officeId === "hq") continue;
-      result[officeId as OfficeLocationId] = {
-        ...branchStartStructureLevels(),
-        ...(levels as GameState["structureLevelsByLocation"][OfficeLocationId]),
-      };
+      result[officeId as OfficeLocationId] = migrateStructureLevelsMap(
+        levels as Partial<Record<string, number>>,
+      );
     }
     return result;
   }
 
   const legacy =
     parsed.structureLevels ?? parsed.upgradeLevels ?? emptyStructureLevels();
-  base.hq = { ...base.hq, ...legacy };
+  base.hq = migrateStructureLevelsMap(legacy as Partial<Record<string, number>>);
   return base;
 }
 
@@ -983,7 +1013,11 @@ function normalizeSave(
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
     dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
-    chiefOfStaffId: normalizeChiefOfStaffId(parsed.chiefOfStaffId),
+    chiefOfStaffId: normalizeChiefOfStaffId(
+      parsed.chiefOfStaffId,
+      (parsed.govProgram as { gessesaUnlocked?: boolean } | undefined)
+        ?.gessesaUnlocked === true,
+    ),
     secretaryPanel:
       normalizeView(parsed.view) === "logbook"
         ? "log"
@@ -1106,6 +1140,7 @@ function normalizeSave(
     structureLevelsByLocation: merged.structureLevelsByLocation,
     contractorsByLocation: merged.contractorsByLocation,
     researchLevels: merged.researchLevels,
+    chiefOfStaffId: merged.chiefOfStaffId,
     siteRateBonusByOffice: siteRateBonusesForState(merged),
   });
   merged.rates = derived.rates;
@@ -1138,6 +1173,11 @@ function normalizeSave(
 
   merged.settings = applyWorldMapDevLayoutToSettings(
     applyDevMapZ1AlignToSettings(merged.settings),
+  );
+
+  merged.govProgram = normalizeGovProgram(
+    parsed.govProgram,
+    lifetimeRecruitsFromRoster(merged),
   );
 
   const trimmed = trimSecretaryJobReports(merged);
@@ -1384,6 +1424,11 @@ export function saveGameState(
   if (state.saveLoadFailed) return;
   const session = sessionOverride ?? state.onlineSession;
   if (session?.playMode === "online") {
+    // Firestore bootstrap starts from a blank shell; do not touch the online
+    // localStorage cache until remote load completes (see useOnlineWorld).
+    if (state.onlineConnectionStatus !== "connected") {
+      return;
+    }
     const cacheKey = onlineCacheKey(session);
     const blob = serializePrivateState(
       state,

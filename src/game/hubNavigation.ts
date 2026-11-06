@@ -32,8 +32,9 @@ export function snapshotSecretaryHubResume(state: GameState): SecretaryHubResume
     return "job";
   }
   if (state.view === "secretary") {
-    if (state.secretaryPanel === "roaster") return "roaster";
+    if (state.secretaryPanel === "roster") return "roster";
     if (state.secretaryPanel === "log") return "log";
+    if (state.secretaryPanel === "govProgram") return "govProgram";
     return "landing";
   }
   return state.secretaryHubResume;

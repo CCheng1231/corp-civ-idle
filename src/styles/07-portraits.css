@@ -1053,9 +1053,64 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   padding: 0.02rem 0.05rem 0;
 }
 
+.recruitment-view .office-structures-catalog-toolbar {
+  padding: 0.05rem 0.08rem 0;
+}
+
+.operations-view .office-structures-catalog-toolbar,
 .recruitment-view .office-structures-catalog-toolbar,
 .research-view .office-structures-catalog-toolbar {
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.operations-view .office-structures-catalog-toolbar,
+.research-view .office-structures-catalog-toolbar {
   padding: 0.05rem 0.08rem 0;
+}
+
+.operations-view .office-catalog-toolbar-chip,
+.recruitment-view .office-catalog-toolbar-chip,
+.research-view .office-catalog-toolbar-chip {
+  margin: 0;
+  padding: 0.2rem 0.48rem;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 0.62rem;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+}
+
+.operations-view .office-catalog-toolbar-chip:hover,
+.recruitment-view .office-catalog-toolbar-chip:hover,
+.research-view .office-catalog-toolbar-chip:hover {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.operations-view button.office-catalog-toolbar-chip.office-collapse-all,
+.recruitment-view button.office-catalog-toolbar-chip.office-collapse-all,
+.research-view button.office-catalog-toolbar-chip.office-collapse-all {
+  text-decoration: none;
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.operations-view button.office-catalog-toolbar-chip--active,
+.recruitment-view button.office-catalog-toolbar-chip--active,
+.research-view button.office-catalog-toolbar-chip--active {
+  background: rgba(86, 180, 233, 0.22);
+  border-color: rgba(86, 180, 233, 0.45);
+  color: var(--text);
 }
 
 .operations-view .office-structures-catalog-toolbar .office-collapse-all,
@@ -1320,12 +1375,14 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
 }
 
 .recruit-count-field input {
-  max-width: 5rem;
+  max-width: 4.75rem;
   padding: 0.35rem 0.5rem;
   border-radius: 0.45rem;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .branch-rename-field {

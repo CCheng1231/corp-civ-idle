@@ -2,7 +2,7 @@ import {
   createInitialState,
   addResources,
   isResearchUnlocked,
-  recruitBatchCost,
+  recruitBatchCostForState,
   canAffordAtOffice,
   applyOfficeCost,
   applyOfficeRefund,
@@ -24,7 +24,7 @@ import {
   officeSiteLabel,
   MAX_RECRUIT_BATCH,
   OFFICE_EXPANSION_STRUCTURE_ID,
-  recruitmentOrderDurationMs,
+  recruitmentOrderDurationMsForState,
   recruitmentOrderBuildTimeHours,
   clampUiScale
 } from "./constants";
@@ -36,9 +36,13 @@ import {
   snapshotSecretaryHubResume,
 } from "./hubNavigation";
 import { resolveOfficeLocation } from "./officeSelection";
-import { cancelRefundFromSpent } from "./refunds";
+import {
+  cancelRefundFromSpent,
+  recruitmentCancelRefund,
+} from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
-import { SECRETARY_IDS } from "./secretaryData";
+import { SECRETARY_IDS, secretaryById } from "./secretaryData";
+import { jobWorkDurationSec, secretaryVisibleOnRoster } from "./secretaryEffects";
 import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
@@ -78,6 +82,23 @@ import {
   roundTripTravelSupplyCost
 } from "./mapTravel";
 import { appendActivityLogs, cloneResourceCost, queueCancelLogFields } from "./logbook";
+import {
+  govAfterDismissJobReport,
+  govAfterEngageJob,
+  govAfterResearchQueue,
+  govAfterStructureQueueChange,
+  govAcceptGrowthProgram,
+  govClaimDailyQuest,
+  govDeclineGrowthProgram,
+  govDismissIntroModal,
+  govEngageCharter,
+  govEngageLockActive,
+  govOnChiefSelected,
+  govOnMapSiteInspected,
+  govOnOpenGovProgram,
+  govOnOpenRoster,
+  govSkipCharter,
+} from "./govProgram";
 import {
   structureBuildTimeMs,
   structureSellRefundCost,
@@ -233,14 +254,16 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           : action.view === "office"
             ? "job"
             : action.view === "secretary"
-              ? state.secretaryPanel === "roaster"
-                ? "roaster"
+              ? state.secretaryPanel === "roster"
+                ? "roster"
                 : state.secretaryPanel === "log"
                   ? "log"
-                  : "landing"
+                  : state.secretaryPanel === "govProgram"
+                    ? "govProgram"
+                    : "landing"
               : state.secretaryHubResume;
 
-      return {
+      let next: GameState = {
         ...state,
         view: action.view,
         homeHubResume,
@@ -266,6 +289,10 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
             ? (action.researchFocusResearchId ?? null)
             : null,
       };
+      if (action.view === "world") {
+        next = govOnMapSiteInspected(next);
+      }
+      return next;
     }
 
     case "CLEAR_JOB_FOCUS":
@@ -289,10 +316,10 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (dismissed.includes(action.logEntryId)) {
         return state;
       }
-      return {
+      return govAfterDismissJobReport({
         ...state,
-        dismissedJobReportIds: [...dismissed, action.logEntryId]
-};
+        dismissedJobReportIds: [...dismissed, action.logEntryId],
+      });
     }
 
     case "CLEAR_ALL_JOB_REPORTS": {
@@ -313,21 +340,33 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "SELECT_CHIEF_OF_STAFF": {
       if (!SECRETARY_IDS.includes(action.secretaryId)) return state;
+      if (!secretaryVisibleOnRoster(
+        secretaryById(action.secretaryId),
+        state.govProgram?.gessesaUnlocked ?? false,
+      )) {
+        return state;
+      }
       if (state.chiefOfStaffId === action.secretaryId) return state;
-      return { ...state, chiefOfStaffId: action.secretaryId };
+      let next = withDerivedStats({
+        ...state,
+        chiefOfStaffId: action.secretaryId,
+      });
+      return govOnChiefSelected(next);
     }
 
-    case "SET_SECRETARY_PANEL":
-      return {
+    case "SET_SECRETARY_PANEL": {
+      let next: GameState = {
         ...state,
         view: "secretary",
         secretaryPanel: action.panel,
         secretaryHubResume:
-          action.panel === "roaster"
-            ? "roaster"
+          action.panel === "roster"
+            ? "roster"
             : action.panel === "log"
               ? "log"
-              : "landing",
+              : action.panel === "govProgram"
+                ? "govProgram"
+                : "landing",
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
@@ -335,6 +374,37 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           ? { logbookHighlightEntryId: action.logbookHighlightEntryId }
           : {}),
       };
+      if (action.panel === "govProgram") {
+        next = govOnOpenGovProgram(next);
+      }
+      if (action.panel === "roster") {
+        next = govOnOpenRoster(next);
+      }
+      return next;
+    }
+
+    case "GOV_ACCEPT_GROWTH":
+      return govAcceptGrowthProgram(state);
+
+    case "GOV_DECLINE_GROWTH":
+      return govDeclineGrowthProgram(state);
+
+    case "GOV_SKIP_CHARTER":
+      return govSkipCharter(state);
+
+    case "GOV_DISMISS_MODAL":
+      return govDismissIntroModal(state);
+
+    case "GOV_ENGAGE_CHARTER": {
+      const officeId = action.officeId ?? resolveOfficeLocation(state);
+      return govEngageCharter(state, officeId);
+    }
+
+    case "GOV_CLAIM_DAILY":
+      return govClaimDailyQuest(state, action.now);
+
+    case "GOV_MAP_SITE_INSPECTED":
+      return govOnMapSiteInspected(state);
 
     case "SET_HOME_PANEL":
       return {
@@ -387,11 +457,11 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (target === "job") {
         return { ...state, view: "office" };
       }
-      if (target === "roaster") {
+      if (target === "roster") {
         return {
           ...state,
           view: "secretary",
-          secretaryPanel: "roaster",
+          secretaryPanel: "roster",
         };
       }
       if (target === "log") {
@@ -400,6 +470,13 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           view: "secretary",
           secretaryPanel: "log",
         };
+      }
+      if (target === "govProgram") {
+        return govOnOpenGovProgram({
+          ...state,
+          view: "secretary",
+          secretaryPanel: "govProgram",
+        });
       }
       return {
         ...state,
@@ -627,22 +704,24 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         0;
       const isExpansion =
         action.structureId === OFFICE_EXPANSION_STRUCTURE_ID;
-      return appendActivityLogs(next, [
-        {
-          category: "structure_upgrade",
-          summary: isExpansion
-            ? `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`
-            : `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`,
-          officeId: action.locationId,
-          spent: spentSnapshot,
-          impacts: [
-            `Queue ${queue.length}/${MAX_STRUCTURE_QUEUE}`,
-            queue.length === 1
-              ? `Build time ${buildHours} game hr (real-time)`
-              : "Waiting behind earlier queued builds",
-          ]
-},
-      ]);
+      return govAfterStructureQueueChange(
+        appendActivityLogs(next, [
+          {
+            category: "structure_upgrade",
+            summary: isExpansion
+              ? `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`
+              : `Queued ${def.name} at ${officeSiteLabel(next, action.locationId)}`,
+            officeId: action.locationId,
+            spent: spentSnapshot,
+            impacts: [
+              `Queue ${queue.length}/${MAX_STRUCTURE_QUEUE}`,
+              queue.length === 1
+                ? `Build time ${buildHours} game hr (real-time)`
+                : "Waiting behind earlier queued builds",
+            ],
+          },
+        ]),
+      );
     }
 
     case "CANCEL_STRUCTURE_JOB": {
@@ -753,20 +832,22 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 });
       next.researchQueues = { ...next.researchQueues, [officeId]: queue };
       const buildHours = buildMs / (3600 * 1000);
-      return appendActivityLogs(next, [
-        {
-          category: "research",
-          summary: `Queued ${def.name} at ${officeSiteLabel(next, officeId)}`,
-          officeId,
-          spent: spentSnapshot,
-          impacts: [
-            `Queue ${queue.length}/${MAX_RESEARCH_QUEUE}`,
-            queue.length === 1
-              ? `Research time ${buildHours.toFixed(2)} game hr (real-time)`
-              : "Waiting behind earlier queued research",
-          ]
-},
-      ]);
+      return govAfterResearchQueue(
+        appendActivityLogs(next, [
+          {
+            category: "research",
+            summary: `Queued ${def.name} at ${officeSiteLabel(next, officeId)}`,
+            officeId,
+            spent: spentSnapshot,
+            impacts: [
+              `Queue ${queue.length}/${MAX_RESEARCH_QUEUE}`,
+              queue.length === 1
+                ? `Research time ${buildHours.toFixed(2)} game hr (real-time)`
+                : "Waiting behind earlier queued research",
+            ],
+          },
+        ]),
+      );
     }
 
     case "CANCEL_RESEARCH_JOB": {
@@ -811,11 +892,12 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         return state;
       }
       if (isRecruitmentQueueFull(state, officeId)) return state;
-      const cost = recruitBatchCost(unitId, count);
+      const officeJobs = recruitmentJobsForOffice(state, officeId);
+      if (officeJobs.some((j) => j.unitId === unitId)) return state;
+      const cost = recruitBatchCostForState(state, unitId, count);
       if (!canAffordAtOffice(state, officeId, cost)) return state;
 
       const now = Date.now();
-      const officeJobs = recruitmentJobsForOffice(state, officeId);
       const active = officeJobs.length === 0;
       const spentSnapshot = cloneResourceCost(cost) ?? cost;
       const job = {
@@ -826,7 +908,11 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         spentCost: spentSnapshot,
         startedAt: active ? now : null,
         completesAt: active
-          ? scheduleTimerAt(state, now, recruitmentOrderDurationMs(count))
+          ? scheduleTimerAt(
+              state,
+              now,
+              recruitmentOrderDurationMsForState(state, count),
+            )
           : null
 };
       const merged = setRecruitmentJobsForOffice(
@@ -857,7 +943,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       const job = state.recruitmentJobs.find((j) => j.id === action.jobId);
       if (!job) return state;
       const spent = job.spentCost ?? {};
-      const refund = cancelRefundFromSpent(spent);
+      const refund = recruitmentCancelRefund(spent, job);
       const unit = unitDefinition(job.unitId);
       let next = applyOfficeRefund(state, job.officeId, refund);
       next = structuredClone(next);
@@ -942,6 +1028,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     }
 
     case "ENGAGE_JOB": {
+      if (govEngageLockActive(state)) return state;
       const now = Date.now();
       const before = state.jobEngagements.length;
       let next = engageJobPosting(
@@ -951,6 +1038,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         now,
       );
       if (next.jobEngagements.length <= before) return state;
+      next = govAfterEngageJob(next);
       const engagement = next.jobEngagements[next.jobEngagements.length - 1];
       const def = jobDefinitionById(engagement.definitionId);
       const travelHexes = jobTravelHexesToCoord(
@@ -974,7 +1062,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
               ? `${travelSupply} supply · ${travelHexes} hex round trip`
               : `${travelHexes} hex round trip`,
             "Crew en route — work starts on arrival",
-            `Shift ~${Math.round(def.durationSec / 3600)} hr once on site`,
+            `Shift ~${Math.round(jobWorkDurationSec(state, def.durationSec) / 3600)} hr once on site`,
           ]
 },
       ]);

@@ -24,7 +24,7 @@ export const UNIT_PORTRAIT_CARD_FRAMING: Partial<
   branch_manager: { imgScale: 1.08 },
 };
 
-/** Overrides when player picks alternate skins in Secretary → Roaster. */
+/** Overrides when player picks alternate skins in Secretary → Roster. */
 export const UNIT_PORTRAIT_SKIN_FRAMING: Partial<
   Record<UnitId, Partial<Record<string, Partial<UnitPortraitCardFraming>>>>
 > = {

@@ -221,12 +221,55 @@ Engine gate: `isStructureUnlocked()` in `constants.ts`; build blocked in `engine
 
 ---
 
+## Recent session state (Nov 5, 2026 — hub UI pass **complete**)
+
+Chris marked this pass **done**; next work is **Secretary system** (logic/features), not more hub chrome unless requested.
+
+### Progression tabs (Home hub)
+
+- **Toolbar:** `ProgressionCatalogToolbar` — compact chips; filters moved from queue headings to catalog row (Hide locked / Hide maxed / Hide completed as toggles).
+- **Info:** `ProgressionCatalogInfoDialog` + `progressionCatalogInfoContent.ts`; sticky **Info** in `ProgressionTabStickyChrome` (home tabs only).
+- **Sticky / freeze:** `hub-synced-tab-view--progression-freeze` — frozen row is a **sibling above** `HubSyncedTabScrollBody` (not `position: sticky` + opaque bar). Files: `ProgressionTabStickyChrome.tsx`, `05-hub-tabs.css`; views: `OperationsView`, `RecruitmentView`, `ResearchView`.
+- **Structure cards:** `OfficeStructurePanel` — upgrade labels **Max** / **Queue max**; removed redundant max line on cards.
+- **Overview:** `OverviewView` — firm-wide research list excludes items already in the research queue.
+
+### Secretary hub tabs
+
+- Same **freeze** layout on **Roster** (`SecretaryRosterView`), **Job** (`OfficeView`), **Log** (`LogbookView`); Section/Office via `ProgressionTabStickyChrome` with `secretaryHubTab` (no Info chip).
+- **Roster rename:** UI + ids **`roster`** (was `roaster`); `normalizeSecretaryPanel` / `normalizeSecretaryHubResume` in `save.ts`; section collapse `getRosterSectionOpen` / `corp-civ-idle-roster-section-open`.
+
+### World map
+
+- **Info** control top-left; modal kind `worldMap` in `progressionCatalogInfoContent.ts` (`WorldView.tsx`, `09-world-map-ground.css`).
+
+### Handoff for Secretary **system** (new chat)
+
+| Area | Start here |
+|------|------------|
+| Chief / roster data | `src/game/secretaryData.ts`, `secretaryRoles.ts`, `SecretaryRosterView.tsx` |
+| Job tab | `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `jobHubData.ts`, `jobs.ts` |
+| Engagements / task forces | `engineReducer.ts`, `engineTick.ts`, `jobEngagements` in `types.ts` |
+| Briefing copy | `secretaryBriefing.ts` |
+| Online shared board | `useOnlineWorld.ts`, `worldSync.ts` |
+
+**Changelog scripts (Nov 5):** `append-changelog-nov5-structure-reorg.mjs`, `append-changelog-nov5-roster-spelling.mjs` → **ChangeLog** in `Corp Idle Working.xlsx`.
+
+**Resume prompt (Secretary system):**
+
+```
+Continue corp-civ-idle. Read AGENTS.md (Nov 5 hub UI complete; next: Secretary system).
+Hub UI is done — do not rework freeze/toolbars unless asked.
+Task: [specific Secretary gameplay feature]
+```
+
+---
+
 ## Recent session state (Aug 2026)
 
 ### Sep 5 — Home / Secretary landings + tab hero UI
 
 - **Home landing** (`HomeLandingView`): COS portrait, Overview / Structure / Recruit / Research buttons pinned bottom; Overview dashboard via `homePanel`.
-- **Secretary landing** (`SecretaryLandingView`): same layout; Roaster + Job buttons; no Chief of Staff role line.
+- **Secretary landing** (`SecretaryLandingView`): same layout; Roster + Job buttons; no Chief of Staff role line.
 - **Tab hero portraits:** shared `--tab-hero-portrait-*` variables; Job tab uses same scale as other tab-portrait-fit views.
 - **Section dropdown:** `TabSiteHeader` `HOME_HUB_TABS` replaces static h2 on Overview / Structure / Recruit / Research; aligned with Office picker (`.tab-hero-header-hub`).
 - **Compact queue headers:** `CompactQueueHeading` on Structure / Research / Recruit — title row 1, count + hide filter row 2.

@@ -8,6 +8,10 @@ import {
 import { RATE_UNIT_LABEL } from "./phaseA";
 import { applyRatesForStructureLevels } from "./structureBalance";
 import { officePassiveRatesForLocation } from "./unitEffects";
+import {
+  chiefOfStaffRateBreakdownLabel,
+  chiefOfficeProductionMult,
+} from "./secretaryEffects";
 import type { GameState, ProductionRates, ResourceKey } from "./types";
 
 export interface ResourceRateBreakdownLine {
@@ -32,6 +36,10 @@ export function resourceRateBreakdown(
   key: ResourceKey,
 ): ResourceRateBreakdownLine[] {
   const siteBonuses = siteRateBonusesForState(state);
+  const officeProductionMult = chiefOfficeProductionMult(state.chiefOfStaffId);
+  const chiefStructureLabel = chiefOfStaffRateBreakdownLabel(
+    state.chiefOfStaffId,
+  );
   const lines: ResourceRateBreakdownLine[] = [];
   let running = 0;
 
@@ -45,7 +53,7 @@ export function resourceRateBreakdown(
     if (base <= 0) continue;
 
     const siteBonus = siteBonuses[officeId] ?? 0;
-    const adjusted = base * (1 + siteBonus);
+    const adjusted = base * (1 + siteBonus) * officeProductionMult;
     running += adjusted;
 
     const officeLabel = officeDisplayName(state, officeId);
@@ -55,8 +63,18 @@ export function resourceRateBreakdown(
         : "";
     lines.push({
       label: `Structures · ${officeLabel}${bonusNote}`,
-      amount: adjusted,
+      amount: base * (1 + siteBonus),
     });
+  }
+
+  if (chiefStructureLabel && running > 0 && officeProductionMult > 1) {
+    const added = running - running / officeProductionMult;
+    if (added > 0) {
+      lines.push({
+        label: chiefStructureLabel,
+        amount: added,
+      });
+    }
   }
 
   for (const def of RESEARCH) {

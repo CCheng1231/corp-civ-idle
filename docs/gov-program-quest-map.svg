@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1680" viewBox="0 0 920 1680">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 22px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 13px Arial, sans-serif; fill: #475569; }
+      .section { font: 700 14px Arial, sans-serif; fill: #1e40af; }
+      .box { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; rx: 8; }
+      .box-accent { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; rx: 8; }
+      .box-warn { fill: #fff7ed; stroke: #ea580c; stroke-width: 1.5; rx: 8; }
+      .box-pause { fill: #fef3c7; stroke: #d97706; stroke-width: 1.5; rx: 8; }
+      .box-exec { fill: #f0fdf4; stroke: #16a34a; stroke-width: 1.5; rx: 8; }
+      .box-end { fill: #f1f5f9; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .t1 { font: 600 13px Arial, sans-serif; fill: #0f172a; }
+      .t2 { font: 11px Arial, sans-serif; fill: #475569; }
+      .t3 { font: 10px Arial, sans-serif; fill: #64748b; }
+      .line { stroke: #64748b; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .line-dashed { stroke: #94a3b8; stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="920" height="1680" fill="#ffffff"/>
+  <text x="460" y="42" text-anchor="middle" class="title">Regional Growth Program - Quest Map</text>
+  <text x="460" y="64" text-anchor="middle" class="subtitle">Gov Program Growth + Executive sheets | 10 lifetime recruits = fork</text>
+
+  <text x="40" y="98" class="section">Entry (Secretary - Gov&apos;t Prog)</text>
+  <rect x="280" y="108" width="360" height="52" class="box-accent"/>
+  <text x="460" y="130" text-anchor="middle" class="t1">Accept program?</text>
+  <text x="460" y="148" text-anchor="middle" class="t2">Decline = no growth rows; Gessesa at 10 hires only</text>
+
+  <line x1="380" y1="160" x2="200" y2="195" class="line"/>
+  <line x1="540" y1="160" x2="720" y2="195" class="line"/>
+
+  <rect x="60" y="195" width="280" height="48" class="box-end"/>
+  <text x="200" y="216" text-anchor="middle" class="t1">Decline growth</text>
+  <text x="200" y="232" text-anchor="middle" class="t2">At 10 hires: Gessesa intro (no charter lesson)</text>
+
+  <rect x="580" y="195" width="280" height="48" class="box-accent"/>
+  <text x="720" y="216" text-anchor="middle" class="t1">Accept: Growth track</text>
+  <text x="720" y="232" text-anchor="middle" class="t2">Steps 1-8 below (sortOrder)</text>
+
+  <text x="40" y="278" class="section">Growth track (Gov Program Growth)</text>
+
+  <rect x="110" y="290" width="700" height="58" class="box"/>
+  <text x="130" y="312" class="t1">1 growth_structure - Facility stipend</text>
+  <text x="130" y="330" class="t2">Queue/complete structure at HQ | Reward 150 cash, 50 supply</text>
+  <text x="130" y="344" class="t3">autoAdvance Y</text>
+  <line x1="460" y1="348" x2="460" y2="368" class="line"/>
+
+  <rect x="110" y="368" width="700" height="58" class="box"/>
+  <text x="130" y="390" class="t1">2 growth_recruit_push - Workforce grant</text>
+  <text x="130" y="408" class="t2">Reach 10 lifetime recruits | Reward 200 cash, 100 supply</text>
+  <text x="130" y="422" class="t3">autoAdvance N | triggers executive fork if accepted</text>
+  <line x1="460" y1="426" x2="460" y2="446" class="line"/>
+
+  <rect x="110" y="446" width="700" height="58" class="box"/>
+  <text x="130" y="468" class="t1">3 growth_map - Site survey</text>
+  <text x="130" y="486" class="t2">Open World map | Reward 100 cash, 25 connection</text>
+  <line x1="460" y1="504" x2="460" y2="524" class="line"/>
+
+  <rect x="110" y="524" width="700" height="72" class="box-pause"/>
+  <text x="460" y="548" text-anchor="middle" class="t1">Growth PAUSED (full accept path at 10 hires)</text>
+  <text x="460" y="568" text-anchor="middle" class="t2">Complete executive charter OR Skip charter on Gov&apos;t Prog</text>
+  <text x="460" y="584" text-anchor="middle" class="t3">Other job Engages locked until charter done/skipped</text>
+  <line x1="460" y1="596" x2="460" y2="616" class="line"/>
+
+  <text x="40" y="638" class="section">Executive attache (Gov Program Executive - full path)</text>
+
+  <rect x="110" y="648" width="700" height="44" class="box-exec"/>
+  <text x="130" y="676" class="t1">exec_unlock - Open Gov&apos;t Prog at 10 hires</text>
+  <line x1="460" y1="692" x2="460" y2="708" class="line"/>
+  <rect x="110" y="708" width="700" height="44" class="box-exec"/>
+  <text x="130" y="736" class="t1">exec_intro - Meet Gessesa (modal Continue)</text>
+  <line x1="460" y1="752" x2="460" y2="768" class="line"/>
+  <rect x="110" y="768" width="700" height="44" class="box-exec"/>
+  <text x="130" y="796" class="t1">exec_roster - Open Roster | Reward 100 cash, 50 supply</text>
+  <line x1="460" y1="812" x2="460" y2="828" class="line"/>
+  <rect x="110" y="828" width="700" height="52" class="box-warn"/>
+  <text x="130" y="850" class="t1">exec_charter_engage - Charter on Gov&apos;t Prog only (10 units)</text>
+  <text x="130" y="868" class="t2">Instant deploy + payout 300 cash, 100 supply (charter job row)</text>
+  <line x1="460" y1="880" x2="460" y2="896" class="line"/>
+  <rect x="110" y="896" width="700" height="44" class="box-exec"/>
+  <text x="130" y="924" class="t1">exec_charter_return - Reward 400 cash, 150 supply</text>
+  <line x1="460" y1="940" x2="460" y2="956" class="line"/>
+  <rect x="110" y="956" width="700" height="44" class="box-exec"/>
+  <text x="130" y="984" class="t1">exec_lafe_beat - Lafe dialogue</text>
+  <line x1="460" y1="1000" x2="460" y2="1016" class="line"/>
+  <rect x="110" y="1016" width="700" height="44" class="box-exec"/>
+  <text x="130" y="1044" class="t1">exec_chief_switch - Pick Chief on Roster | Reward 150 cash</text>
+
+  <line x1="810" y1="560" x2="860" y2="560" class="line-dashed"/>
+  <rect x="760" y="528" width="140" height="64" class="box-warn"/>
+  <text x="830" y="552" text-anchor="middle" class="t2">Skip charter</text>
+  <text x="830" y="568" text-anchor="middle" class="t3">Gessesa only;</text>
+  <text x="830" y="582" text-anchor="middle" class="t3">no Lafe lesson</text>
+  <line x1="830" y1="592" x2="830" y2="1060" class="line-dashed"/>
+
+  <line x1="460" y1="1060" x2="460" y2="1088" class="line"/>
+  <rect x="110" y="1088" width="700" height="48" class="box-pause"/>
+  <text x="460" y="1110" text-anchor="middle" class="t1">Growth RESUMES</text>
+  <text x="460" y="1128" text-anchor="middle" class="t2">Steps 4-8 (after charter complete or skip/decline path)</text>
+  <line x1="460" y1="1136" x2="460" y2="1160" class="line"/>
+
+  <rect x="110" y="1160" width="700" height="52" class="box"/>
+  <text x="130" y="1182" class="t1">4 growth_job - First contract | Reward 250 cash, 75 supply</text>
+  <text x="130" y="1200" class="t2">Engage normal job (Job board or map)</text>
+  <line x1="460" y1="1212" x2="460" y2="1232" class="line"/>
+  <rect x="110" y="1232" width="700" height="44" class="box"/>
+  <text x="130" y="1260" class="t1">5 growth_report - After-action | Reward 100 cash</text>
+  <line x1="460" y1="1276" x2="460" y2="1296" class="line"/>
+  <rect x="110" y="1296" width="700" height="44" class="box"/>
+  <text x="130" y="1324" class="t1">6 growth_research - R&amp;D voucher | Reward 150 cash, 50 connection</text>
+  <line x1="460" y1="1340" x2="460" y2="1360" class="line"/>
+  <rect x="110" y="1360" width="700" height="44" class="box"/>
+  <text x="130" y="1388" class="t1">7 growth_bm_hint - Optional hint (autoAdvance)</text>
+  <line x1="460" y1="1404" x2="460" y2="1424" class="line"/>
+  <rect x="110" y="1424" width="700" height="44" class="box"/>
+  <text x="130" y="1452" class="t1">8 growth_bm_hired - Optional Branch Manager | Reward 500 cash, 200 supply</text>
+
+  <rect x="110" y="1490" width="700" height="40" class="box-end"/>
+  <text x="460" y="1516" text-anchor="middle" class="t1">Growth track complete (BM steps optional)</text>
+
+  <text x="40" y="1568" class="section">Legend</text>
+  <text x="40" y="1590" class="t2">Blue = entry/accept | Green = executive | Orange = charter/skip | Yellow = pause/resume</text>
+  <text x="40" y="1610" class="t2">Edit Corp Idle Working.xlsx then: node scripts/build-gov-program-data.mjs</text>
+  <text x="40" y="1630" class="t3">Regenerate JPG: node scripts/render-gov-program-quest-map.mjs</text>
+</svg>

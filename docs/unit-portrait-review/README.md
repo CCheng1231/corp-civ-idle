@@ -24,7 +24,7 @@ Contractor roster art for **Recruit → hire cards** (`RecruitmentView.tsx`). Ca
 | Card UI | `UnitCardPortrait.tsx` → `RecruitmentView.tsx` |
 | Strip CSS | `src/styles/06-job-board.css` (`--progression-compact-portrait-*`) |
 
-**All 17 roster roles** have Pass 1/2 skins wired (Oct 29–30, 2026). Player override: **Secretary → Roaster → Unit skins**.
+**All 17 roster roles** have Pass 1/2 skins wired (Oct 29–30, 2026). Player override: **Secretary → Roster → Unit skins**.
 
 ## Scope note
 

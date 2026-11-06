@@ -38,10 +38,10 @@ export interface LocationSnapshot {
 
 export type StructureId =
   | "office_desk"
-  | "bank_account"
+  | "dept_finance"
   | "office_supply"
-  | "storage_room"
-  | "dept_b2b"
+  | "dept_logistics"
+  | "outreach_program"
   | "break_room"
   | "social_media"
   | "video_production_studio"
@@ -518,7 +518,7 @@ export interface GameState {
   homePanel: HomePanel;
   /** Last Home hub destination — restored on bottom-nav Home tap. */
   homeHubResume: HomeHubResume;
-  /** Secretary hub: Chief of Staff landing vs full roaster list. */
+  /** Secretary hub: Chief of Staff landing vs full secretary roster list. */
   secretaryPanel: SecretaryPanel;
   /** Last Secretary hub destination — restored on bottom-nav Secretary tap. */
   secretaryHubResume: SecretaryHubResume;
@@ -531,6 +531,8 @@ export interface GameState {
   dismissedJobReportIds: string[];
   /** Active filter on Notes & logbook (LOG_FILTER_GROUPS id). */
   logbookFilterId: string;
+  /** Government Program — tutorial, executive path, calendar (private save). */
+  govProgram: GovProgramState;
   lastTickAt: number;
   /** Monotonic counter — queue/build actions bump this so tick-only saves cannot clobber them. */
   persistRevision?: number;
@@ -621,7 +623,7 @@ export interface GameSettings {
   >;
   /** Player map: show canon world landmark art (Gov, hubs). Per-account only — does not affect other players. Default on. */
   mapShowWorldLandmarkArt?: boolean;
-  /** Per-unit portrait skin id (Secretary -> Roaster -> Unit skins). */
+  /** Per-unit portrait skin id (Secretary -> Roster -> Unit skins). */
   unitPortraitSkins?: Partial<Record<UnitId, string>>;
   /** Z1 pass-1 raster: locked v5 (ship) or engine-aligned v6 draft (try). */
   mapZ1BakeVariant?: "v5" | "v6-draft";
@@ -695,7 +697,15 @@ export type SecretaryId =
   | "secretary_04"
   | "secretary_05";
 
-export type SecretaryPanel = "landing" | "roaster" | "log";
+/** Chief bonus system target (Secretary Stat: Chief effect target). */
+export type ChiefOfStaffEffectKind =
+  | "officeProduction"
+  | "jobWorkTime"
+  | "recruitCost"
+  | "recruitTime"
+  | "travelTime";
+
+export type SecretaryPanel = "landing" | "roster" | "job" | "log" | "govProgram";
 
 export type HomePanel = "landing" | "overview";
 
@@ -706,7 +716,39 @@ export type HomeHubResume =
   | "recruitment"
   | "research";
 
-export type SecretaryHubResume = "landing" | "roaster" | "job" | "log";
+export type SecretaryHubResume = "landing" | "roster" | "job" | "log" | "govProgram";
+
+export type GovProgramModalKind = "gessesa_intro" | "lafe_beat" | "decline_growth";
+
+export interface GovProgramCalendarState {
+  activeDailyQuestId: string | null;
+  activeWeeklyQuestId: string | null;
+  activeMonthlyQuestId: string | null;
+  lastDailyClaimAt: number | null;
+  lastWeeklyClaimAt: number | null;
+  lastMonthlyClaimAt: number | null;
+  dailyProgress: number;
+  weeklyProgress: number;
+  monthlyProgress: number;
+}
+
+export interface GovProgramState {
+  growthDeclined: boolean;
+  growthAccepted: boolean;
+  growthStepId: string | null;
+  growthCompletedStepIds: string[];
+  charterSkipped: boolean;
+  charterCompleted: boolean;
+  executiveStepId: string | null;
+  executiveCompletedStepIds: string[];
+  lifetimeRecruits: number;
+  gessesaUnlocked: boolean;
+  gessesaIntroSeen: boolean;
+  pendingModal: GovProgramModalKind | null;
+  chiefLessonPending: boolean;
+  mapSiteInspected: boolean;
+  calendar: GovProgramCalendarState;
+}
 
 export type LogCategory =
   | "structure_upgrade"
@@ -815,6 +857,13 @@ export type GameAction =
   | { type: "CLEAR_ALL_JOB_REPORTS" }
   | { type: "SELECT_CHIEF_OF_STAFF"; secretaryId: SecretaryId }
   | { type: "SET_SECRETARY_PANEL"; panel: SecretaryPanel; logbookFilter?: string; logbookHighlightEntryId?: string | null }
+  | { type: "GOV_ACCEPT_GROWTH" }
+  | { type: "GOV_DECLINE_GROWTH" }
+  | { type: "GOV_SKIP_CHARTER" }
+  | { type: "GOV_DISMISS_MODAL" }
+  | { type: "GOV_ENGAGE_CHARTER"; officeId?: OfficeLocationId }
+  | { type: "GOV_CLAIM_DAILY"; now: number }
+  | { type: "GOV_MAP_SITE_INSPECTED" }
   | { type: "SET_HOME_PANEL"; panel: HomePanel }
   | { type: "RESTORE_HOME_HUB" }
   | { type: "GO_HOME_LANDING" }

@@ -6,9 +6,11 @@ When working on **player-facing UI** or continuing a prior UI session, read firs
 2. [`.cursor/rules/player-view-ui.mdc`](.cursor/rules/player-view-ui.mdc) — auto-applied on `src/components/**` and `src/App.css`
 3. [`.cursor/rules/cross-platform-layout.mdc`](.cursor/rules/cross-platform-layout.mdc) — Android / iOS / PC scaling, safe areas, 48px touch targets
 4. **World map layout / zoom** — [`.cursor/rules/world-map-viewport.mdc`](.cursor/rules/world-map-viewport.mdc) when editing `WorldView`, `mapWorld`, or `mapViewport`; art direction **v0.1** — [`docs/world-map-v0.1.md`](docs/world-map-v0.1.md)
-5. **Unit portrait art bank & skins** — [`docs/unit-art-bank.md`](docs/unit-art-bank.md) for banked higher-tier/Intel/Support contractor portraits (`src/game/unitPortraitAssets.ts`, switchable in **Secretary → Roaster → Unit skins**).
+5. **Unit portrait art bank & skins** — [`docs/unit-art-bank.md`](docs/unit-art-bank.md) for banked higher-tier/Intel/Support contractor portraits (`src/game/unitPortraitAssets.ts`, switchable in **Secretary → Roster → Unit skins**).
 
 **Balance numbers:** Committed in `src/game/structureBalanceData.ts`, `researchData.ts`, `jobHubData.ts` (code is source of truth). Optional reference sync: `node scripts/import-balance-from-workbook.mjs` (workbook: `Corp Idle Working.xlsx`). Metrics: `node scripts/balance-report.mjs` → `docs/balance-report.md`. See [`.cursor/rules/google-sheets-balance.mdc`](.cursor/rules/google-sheets-balance.mdc).
+
+**Government Program quests:** Design [`docs/gov-program-spec.md`](docs/gov-program-spec.md). Excel sheets `Gov Program *` → `node scripts/build-gov-program-data.mjs` → `src/game/govProgramData.ts`. Patch sheets: `node scripts/patch-gov-program-excel.mjs` (close workbook first).
 
 **Save integrity (mandatory):** [`docs/save-integrity.md`](docs/save-integrity.md) + [`src/game/saveIntegrity.ts`](src/game/saveIntegrity.ts). Never persist economy state outside `writeProtectedLocalSaveBlob` (offline/cache) or `savePrivateState` (Firestore). Load failures must set `saveLoadFailed` and quarantine — never auto-overwrite primary with `createInitialState()`.
 
@@ -27,6 +29,8 @@ Online work: useOnlineWorld.ts, worldSync.ts, browserLease.ts — test single ta
 Task: [specific tab or change]
 ```
 
+**Next focus (Nov 5, 2026 — Chris):** **Secretary system** (gameplay/logic, not hub UI polish). Progression + Secretary **hub tab UI pass is done** — see **Recent state (Nov 5, 2026 — hub UI pass complete)** below and `docs/ui-principles.md`. Start with `secretaryData.ts`, `secretaryRoles.ts`, `engineReducer` / job engagement paths, `SecretaryBriefing.tsx`, `JobBoard.tsx`; online job board in `worldSync.ts` if shared postings change.
+
 **World map landmark art (player view):** Mixed art — **baked PNG** (unique/heroes) + **inline SVG** (simple repeats); HQ/office **CSS 3D** stays overlay. Registry `mapLandmarkArtRegistry.ts`, sites `mapLandmarkInstances.ts`, policy `mapLandmarkPolicy.ts`.
 
 **World landmark policy (Chris, Oct 2026):**
@@ -35,6 +39,14 @@ Task: [specific tab or change]
 - **Per-player show/hide** — `settings.mapShowWorldLandmarkArt` in **private save only** (Tim off ≠ Chris off; online = follows that account's devices). **Filter** below HQ. When off, hide landmark art + site rings on that client.
 - **Future cosmetics** — world landmarks stay shared; player skins (e.g. own HQ/office) affect **only that player's view** of their assets, not what others see on the map.
 - **Agent habit:** if unsure canon vs player-owned or shared vs private visibility, **ask Chris** before wiring coords to `GameState`.
+
+**Recent state (Nov 5, 2026 — hub UI pass complete):**
+
+- **Progression tabs (Structure / Recruit / Research):** Catalog toolbar — dark chips; **Info** + **Hide locked/maxed/completed** + **Collapse all** on one row. **Overview** firm-wide research deduped vs queue. Structure cards: no `Max: N` line; buttons **Max** / **Queue max**; maxed portrait cards compact.
+- **Freeze header (Excel-style):** `ProgressionTabStickyChrome` + `hub-synced-tab-view--progression-freeze` — Section/Office (+ Info on home tabs) **outside** scroll; transparent + hairline; no solid sticky mask. Applied to Structure, Recruit, Research, **Secretary Roster / Job / Log**.
+- **World map:** Info top-left (same band as Home); copy in `progressionCatalogInfoContent.ts` (`worldMap`).
+- **Naming:** Secretary tab **Roster** (id `roster`); save + localStorage migrate legacy `roaster`. Assets `Secretary_*_Roster.jpg`.
+- **Changelog (Excel):** `append-changelog-nov5-structure-reorg.mjs`, `append-changelog-nov5-roster-spelling.mjs` (+ earlier Nov UI rows if present). **Do not reopen hub UI unless Chris asks.**
 
 **Recent state (Oct 30, 2026 — Build + Research category art):**
 

@@ -1,13 +1,9 @@
 import type { StructureId } from "./types";
 import type { StructureArtCrop } from "./structureEssentialsArt";
-// Crop defaults: keep in sync with docs/structure-category-review/departments-wire-defaults.js
-// office_expansion crop: docs/structure-category-review/office-expansion-wire-defaults.js
+import essentialsBankAccount from "../assets/structure-art/essentials-bank-account.jpg";
+import essentialsStorageRoom from "../assets/structure-art/essentials-storage-room.jpg";
+import essentialsCompanyStatue from "../assets/structure-art/essentials-company-statue.jpg";
 import departmentsCategoryBanner from "../assets/structure-art/departments-category-banner.jpg";
-import departmentsDeptB2b from "../assets/structure-art/departments-dept-b2b.jpg";
-import departmentsBreakRoom from "../assets/structure-art/departments-break-room.jpg";
-import departmentsSocialMedia from "../assets/structure-art/departments-social-media.jpg";
-import departmentsVideoProductionStudio from "../assets/structure-art/departments-video-production-studio.jpg";
-import departmentsPressRoom from "../assets/structure-art/departments-press-room.jpg";
 import departmentsOfficeExpansion from "../assets/structure-art/departments-office-expansion.jpg";
 
 /** Departments category header (draggable pan). Pass 2 v4 finals. */
@@ -30,29 +26,21 @@ const DEPARTMENTS_PORTRAITS: Partial<
     }
   >
 > = {
-  dept_b2b: {
-    src: departmentsDeptB2b,
-    crop: { panZoomFactor: 1.38, focalYPercent: 32, focalXPercent: 48 },
-  },
-  break_room: {
-    src: departmentsBreakRoom,
-    crop: { panZoomFactor: 1.38, focalYPercent: 84, focalXPercent: 33 },
-  },
-  social_media: {
-    src: departmentsSocialMedia,
-    crop: { panZoomFactor: 1.48, focalYPercent: 34, focalXPercent: 57 },
-  },
-  video_production_studio: {
-    src: departmentsVideoProductionStudio,
-    crop: { panZoomFactor: 1.92, focalYPercent: 30, focalXPercent: 41 },
-  },
-  press_room: {
-    src: departmentsPressRoom,
-    crop: { panZoomFactor: 1.92, focalYPercent: 37, focalXPercent: 54 },
-  },
   office_expansion: {
     src: departmentsOfficeExpansion,
     crop: { panZoomFactor: 1.92, focalYPercent: 53, focalXPercent: 76 },
+  },
+  dept_finance: {
+    src: essentialsBankAccount,
+    crop: { panZoomFactor: 1.7, focalYPercent: 67, focalXPercent: 50 },
+  },
+  dept_logistics: {
+    src: essentialsStorageRoom,
+    crop: { panZoomFactor: 2, focalYPercent: 44, focalXPercent: 29 },
+  },
+  company_statue: {
+    src: essentialsCompanyStatue,
+    crop: { panZoomFactor: 1.82, focalYPercent: 25, focalXPercent: 50 },
   },
 };
 

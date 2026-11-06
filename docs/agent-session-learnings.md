@@ -64,6 +64,16 @@ Living notes from Chris playtests and corrections. **Append after sessions** so 
 
 ---
 
+## Progression hub UI — freeze header (2026-11-05)
+
+| Mistake | Do instead |
+|---------|------------|
+| **`position: sticky` + solid `--bg`** on progression chrome | **Split pane:** `ProgressionTabStickyChrome` in `.progression-tab-frozen-header` **above** `HubSyncedTabScrollBody`; class `hub-synced-tab-view--progression-freeze`; transparent + optional hairline only. |
+| Gap under resource bar on progression views | Override view **`gap: 0`** (`.operations-view` etc. had `gap: 0.85rem` between flex children). |
+| Blur / heavy shadow on freeze row | Chris rejected; use scroll clip (content scrolls under fixed row boundary), not overlay mask. |
+
+---
+
 ## How to update this file
 
 After a session where Chris corrects the agent twice on the same theme, add a row under the right section with date. Keep rows **actionable** (mistake → fix), not narrative.

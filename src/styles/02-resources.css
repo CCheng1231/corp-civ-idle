@@ -455,18 +455,20 @@
 }
 
 .mission-crew-unit-count {
-  width: 2rem;
+  width: 3.5rem;
+  min-width: 3.5rem;
   min-height: 0;
   margin: 0;
-  padding: 0.08rem 0.12rem;
+  padding: 0.12rem 0.32rem;
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   background: var(--panel, #1e222a);
   color: inherit;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.15;
-  text-align: center;
+  text-align: right;
 }
 
 .mission-crew-available {

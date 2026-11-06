@@ -89,7 +89,7 @@ export interface UnitPortraitSkinOption {
   src: string;
 }
 
-/** Pass 2 skin options per unit (shown in Secretary -> Roaster -> Unit skins). */
+/** Pass 2 skin options per unit (shown in Secretary -> Roster -> Unit skins). */
 export const UNIT_PORTRAIT_SKINS: Partial<
   Record<UnitId, UnitPortraitSkinOption[]>
 > = {

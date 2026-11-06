@@ -17,6 +17,7 @@ import {
 } from "../game/jobs";
 import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
 import { formatJobDurationSec } from "../game/jobBoard";
+import { jobWorkDurationSec } from "../game/secretaryEffects";
 import {
   REGION_LABELS,
   jobSiteCoordForPosting,
@@ -168,7 +169,7 @@ export function JobPostingCard({
         </li>
         <li>
           <span className="job-posting-fact-label">Shift</span>
-          <span>{formatJobDurationSec(def.durationSec)}</span>
+          <span>{formatJobDurationSec(jobWorkDurationSec(state, def.durationSec))}</span>
         </li>
         <li>
           <span className="job-posting-fact-label">Payout</span>
@@ -176,8 +177,10 @@ export function JobPostingCard({
         </li>
         {completionSupply > 0 ? (
           <li>
-            <span className="job-posting-fact-label">On complete</span>
-            <span>{formatNumber(completionSupply)} supply</span>
+            <span className="job-posting-fact-label">Bonus</span>
+            <span>
+              {formatNumber(completionSupply)} SUP by completion
+            </span>
           </li>
         ) : null}
         <li>
@@ -196,8 +199,8 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Travel</span>
           <span>
             {unitCount > 0
-              ? `${travelHexes} hex · ${tripSupply} supply round trip`
-              : `${travelHexes} hex · 2 supply/unit round trip`}
+              ? `${travelHexes} hex · ${tripSupply} SUP`
+              : `${travelHexes} hex · 2 SUP/unit`}
           </span>
         </li>
         <li>

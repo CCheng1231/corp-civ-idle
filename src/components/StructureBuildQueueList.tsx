@@ -2,9 +2,13 @@ import { useState, type Dispatch, type ReactNode } from "react";
 import {
   RESEARCH,
   STRUCTURES,
-  recruitmentOrderDurationMs,
+  recruitmentOrderDurationMsForState,
 } from "../game/constants";
-import { cancelRefundFromSpent } from "../game/refunds";
+import {
+  cancelRefundFromSpent,
+  recruitmentCancelRefund,
+  recruitmentJobInProgress,
+} from "../game/refunds";
 import { researchBuildTimeMs } from "../game/researchBalance";
 import {
   formatQueueJobStatus,
@@ -32,6 +36,7 @@ interface PendingCancel {
   officeId: OfficeLocationId;
   label: string;
   refund: ReturnType<typeof cancelRefundFromSpent>;
+  refundNote?: string;
 }
 
 interface QueueSectionProps {
@@ -426,12 +431,16 @@ export function RecruitmentQueueList({
     unitName: string,
   ) {
     const orderCount = job.count ?? 1;
+    const inProgress = recruitmentJobInProgress(job);
     setPending({
       kind: "recruitment",
       jobId: job.id,
       officeId: rowOfficeId,
       label: `${orderCount}× ${unitName}`,
-      refund: cancelRefundFromSpent(job.spentCost),
+      refund: recruitmentCancelRefund(job.spentCost ?? {}, job),
+      refundNote: inProgress
+        ? "Power 100%, other resources 95%"
+        : "Full refund — order has not started",
     });
   }
 
@@ -451,7 +460,10 @@ export function RecruitmentQueueList({
           {(() => {
             const timings: QueueJobTiming[] = rows.map(({ job }) => ({
               completesAt: job.completesAt,
-              durationMs: recruitmentOrderDurationMs(job.count ?? 1),
+              durationMs: recruitmentOrderDurationMsForState(
+                state,
+                job.count ?? 1,
+              ),
             }));
             return rows.map(({ job, officeId: rowOfficeId, siteLabel }, index) => {
               const unit = unitDefinition(job.unitId);
@@ -485,6 +497,7 @@ export function RecruitmentQueueList({
             </>
           }
           refund={pending.refund}
+          refundNote={pending.refundNote}
           onConfirm={confirmCancel}
           onCancel={() => setPending(null)}
         />

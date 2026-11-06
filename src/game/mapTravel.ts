@@ -12,6 +12,7 @@ import {
 } from "./mapWorld";
 import { jobDefinitionById } from "./jobs";
 import { parseAxialKey } from "./openOffice";
+import { chiefTravelDurationMs } from "./secretaryEffects";
 import type {
   AxialCoord,
   BranchEstablishmentTransit,
@@ -80,7 +81,10 @@ export function jobTravelDurationMsToCoord(
   officeId: OfficeLocationId,
   target: AxialCoord,
 ): number {
-  return travelDurationMs(jobTravelHexesToCoord(state, officeId, target));
+  const base = travelDurationMs(
+    jobTravelHexesToCoord(state, officeId, target),
+  );
+  return chiefTravelDurationMs(state, base, MIN_TRAVEL_MS);
 }
 
 export function jobTravelDurationMsForDefinition(

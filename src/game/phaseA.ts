@@ -10,19 +10,19 @@ export const RATE_UNIT_LABEL = "/hr";
 /** HQ starts with six structures at level 1 (Office Concept tab). */
 export const HQ_START_STRUCTURE_LEVELS: Partial<Record<StructureId, number>> = {
   office_desk: 1,
-  bank_account: 1,
+  dept_finance: 1,
   office_supply: 1,
-  storage_room: 1,
+  dept_logistics: 1,
   office_expansion: 1,
   power_panel: 1,
 };
 
 const ZERO_LEVELS: StructureLevels = {
   office_desk: 0,
-  bank_account: 0,
+  dept_finance: 0,
   office_supply: 0,
-  storage_room: 0,
-  dept_b2b: 0,
+  dept_logistics: 0,
+  outreach_program: 0,
   break_room: 0,
   social_media: 0,
   video_production_studio: 0,
@@ -44,9 +44,9 @@ export function branchStartStructureLevels(): StructureLevels {
   return {
     ...ZERO_LEVELS,
     office_desk: 1,
-    bank_account: 1,
+    dept_finance: 1,
     office_supply: 1,
-    storage_room: 1,
+    dept_logistics: 1,
     power_panel: 1,
   };
 }
@@ -99,8 +99,8 @@ export const PHASE_A_PLACEHOLDER_ROWS: {
     officeSlots: 1,
   },
   {
-    structureId: "bank_account",
-    name: "Office Vault",
+    structureId: "dept_finance",
+    name: "Department of Finance",
     maxLevel: 20,
     upgradeBaseCost: "from sheet",
     costScale: 1,
@@ -131,8 +131,8 @@ export const PHASE_A_PLACEHOLDER_ROWS: {
     officeSlots: 1,
   },
   {
-    structureId: "storage_room",
-    name: "Storage Room",
+    structureId: "dept_logistics",
+    name: "Department of Logistics",
     maxLevel: 20,
     upgradeBaseCost: "from sheet",
     costScale: 1,
@@ -147,8 +147,8 @@ export const PHASE_A_PLACEHOLDER_ROWS: {
     officeSlots: 1,
   },
   {
-    structureId: "dept_b2b",
-    name: "Department of B2B",
+    structureId: "outreach_program",
+    name: "Outreach Program",
     maxLevel: 20,
     upgradeBaseCost: "from sheet",
     costScale: 1,

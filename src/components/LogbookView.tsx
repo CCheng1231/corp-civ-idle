@@ -12,7 +12,7 @@ import {
 import type { GameAction, GameState, LogCategory } from "../game/types";
 import { isAllOfficesSelected } from "../game/officeSelection";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -173,10 +173,6 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
     }
     setFilterOpen(false);
   }
-
-  const logbookBesidePortrait = (
-    <TabSiteHeader secretaryHubTab="log" state={state} dispatch={dispatch} />
-  );
 
   const logbookNotes = (
     <section className="logbook-notes-section" aria-label="Player notes">
@@ -394,11 +390,18 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel logbook-view hub-synced-tab-view">
+    <div className="main-view-panel location-view-panel logbook-view hub-synced-tab-view hub-synced-tab-view--progression-freeze">
       <HubSyncedTabBackground
         chiefId={state.chiefOfStaffId}
         portraitSource="secretary"
       />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          secretaryHubTab="log"
+          state={state}
+          dispatch={dispatch}
+        />
+      </div>
       {clearConfirmOpen ? (
         <ConfirmDialog
           title="Clear activity log?"
@@ -423,7 +426,7 @@ export function LogbookView({ state, dispatch }: LogbookViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {logbookBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         <div className="tab-below-portrait">{logbookBelowPortrait}</div>

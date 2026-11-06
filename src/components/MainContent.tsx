@@ -3,6 +3,7 @@ import { HomeLandingView } from "./HomeLandingView";
 import { OverviewView } from "./OverviewView";
 import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
+import { GovernmentProgramView } from "./GovernmentProgramView";
 import { SecretaryLandingView } from "./SecretaryLandingView";
 import { SecretaryRosterView } from "./SecretaryRosterView";
 import { LogbookView } from "./LogbookView";
@@ -36,11 +37,14 @@ export function MainContent({ state, dispatch, session }: MainContentProps) {
     case "research":
       return <ResearchView state={state} dispatch={dispatch} />;
     case "secretary":
-      if (state.secretaryPanel === "roaster") {
+      if (state.secretaryPanel === "roster") {
         return <SecretaryRosterView state={state} dispatch={dispatch} />;
       }
       if (state.secretaryPanel === "log") {
         return <LogbookView state={state} dispatch={dispatch} />;
+      }
+      if (state.secretaryPanel === "govProgram") {
+        return <GovernmentProgramView state={state} dispatch={dispatch} />;
       }
       return <SecretaryLandingView state={state} dispatch={dispatch} />;
     case "office":

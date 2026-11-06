@@ -1,3 +1,121 @@
+/* Sticky Section / Office + Info on progression hub tabs */
+.hub-synced-tab-view--progression-freeze {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  gap: 0;
+}
+
+.operations-view.hub-synced-tab-view--progression-freeze,
+.recruitment-view.hub-synced-tab-view--progression-freeze,
+.research-view.hub-synced-tab-view--progression-freeze,
+.secretary-view.hub-synced-tab-view--progression-freeze,
+.logbook-view.hub-synced-tab-view--progression-freeze,
+.gov-program-view-panel.hub-synced-tab-view--progression-freeze {
+  gap: 0;
+}
+
+.hub-synced-tab-view--progression-freeze > .hub-synced-tab-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0;
+}
+
+.progression-tab-frozen-header {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 0.45rem 0.55rem 0.35rem;
+  box-sizing: border-box;
+  border-bottom: none;
+}
+
+.progression-tab-sticky-chrome {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.65rem;
+  row-gap: 0.28rem;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.progression-tab-sticky-info-slot {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.progression-tab-sticky-chrome .tab-hero-header-hub {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.progression-tab-sticky-info {
+  flex-shrink: 0;
+}
+
+.hub-synced-tab-view .progression-tab-sticky-chrome .progression-tab-sticky-info {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  text-decoration: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome
+  .progression-tab-sticky-info:hover {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.hub-synced-tab-view .progression-tab-sticky-chrome .tab-hero-header-hub .tab-hub-picker-select {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  background: rgba(10, 14, 20, 0.58);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.hub-synced-tab-view .progression-tab-sticky-chrome .tab-hero-header-hub .tab-hub-picker-label {
+  color: rgba(232, 238, 245, 0.92);
+  text-shadow: none;
+}
+
+.hub-synced-tab-view .progression-tab-sticky-chrome .tab-hero-header-hub .tab-hub-picker-hint {
+  color: rgba(200, 212, 228, 0.88);
+  text-shadow: none;
+}
+
+@media (max-width: 960px) {
+  .operations-view.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .recruitment-view.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .research-view.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .secretary-view.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .logbook-view.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .gov-program-view-panel.hub-synced-tab-view .progression-tab-sticky-chrome {
+    grid-template-columns:
+      minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
+      minmax(0, 1fr);
+    column-gap: 0.5rem;
+  }
+}
+
 /* Hub tabs: readable controls on portrait bg */
 .hub-synced-tab-view .tab-hero-header-hub .tab-hub-picker-select {
   min-height: 1.55rem;
@@ -267,10 +385,21 @@
   gap: 0.22rem;
 }
 
+.gov-program-view-panel.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.gov-program-view-panel.hub-synced-tab-view .tab-below-portrait {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .hub-synced-tab-view .hub-synced-tab-portrait-reveal {
   flex: 0 0 auto;
   width: 100%;
-  /* Secretary Roaster / Job / Log — portrait breathing room before tables */
+  /* Secretary Roster / Job / Log — portrait breathing room before tables */
   min-height: clamp(4rem, 18dvh, 12rem);
   pointer-events: none;
 }

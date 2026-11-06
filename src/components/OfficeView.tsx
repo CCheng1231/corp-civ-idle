@@ -20,7 +20,7 @@ import {
   type SecretaryWorkTab,
 } from "./SecretaryBriefing";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { TaskForceStatusIcon } from "./TaskForceStatusIcon";
@@ -45,14 +45,6 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
       setWorkTab("board");
     }
   }, [state.jobFocusPostingId]);
-
-  const secretaryBesidePortrait = (
-    <TabSiteHeader
-      secretaryHubTab="job"
-      state={state}
-      dispatch={dispatch}
-    />
-  );
 
   const ownerId = activePlayerId(state);
   const branchTransits = state.branchEstablishmentTransits.filter(
@@ -159,12 +151,19 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
 
   return (
     <div
-      className={`main-view-panel location-view-panel secretary-view secretary-view--work-${displayWorkTab} hub-synced-tab-view`}
+      className={`main-view-panel location-view-panel secretary-view secretary-view--work-${displayWorkTab} hub-synced-tab-view hub-synced-tab-view--progression-freeze`}
     >
       <HubSyncedTabBackground
         chiefId={state.chiefOfStaffId}
         portraitSource="secretary"
       />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          secretaryHubTab="job"
+          state={state}
+          dispatch={dispatch}
+        />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey={SECRETARY_PORTRAIT_SIZE_KEY}
@@ -175,7 +174,7 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {secretaryBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         <div className="tab-below-portrait">

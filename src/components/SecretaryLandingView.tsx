@@ -14,8 +14,9 @@ interface SecretaryLandingViewProps {
 }
 
 const SECRETARY_DESTINATIONS = [
-  { id: "roaster" as const, label: "Roaster" },
+  { id: "roster" as const, label: "Roster" },
   { id: "job" as const, label: "Job" },
+  { id: "govProgram" as const, label: "Gov't Prog" },
   { id: "log" as const, label: "Log" },
 ];
 
@@ -56,9 +57,13 @@ export function SecretaryLandingView({
     }
   }, [focusRailOpen]);
 
-  function openDestination(id: "roaster" | "job" | "log") {
-    if (id === "roaster") {
-      dispatch({ type: "SET_SECRETARY_PANEL", panel: "roaster" });
+  function openDestination(id: "roster" | "job" | "log" | "govProgram") {
+    if (id === "roster") {
+      dispatch({ type: "SET_SECRETARY_PANEL", panel: "roster" });
+      return;
+    }
+    if (id === "govProgram") {
+      dispatch({ type: "SET_SECRETARY_PANEL", panel: "govProgram" });
       return;
     }
     if (id === "log") {

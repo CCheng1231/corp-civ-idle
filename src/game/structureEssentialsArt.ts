@@ -2,10 +2,12 @@ import type { StructureId } from "./types";
 // Crop defaults: keep in sync with docs/structure-category-review/essentials-wire-defaults.js
 import essentialsCategoryBanner from "../assets/structure-art/essentials-category-banner.png";
 import essentialsOfficeDesk from "../assets/structure-art/essentials-office-desk.jpg";
-import essentialsBankAccount from "../assets/structure-art/essentials-bank-account.jpg";
 import essentialsOfficeSupply from "../assets/structure-art/essentials-office-supply.jpg";
-import essentialsStorageRoom from "../assets/structure-art/essentials-storage-room.jpg";
-import essentialsCompanyStatue from "../assets/structure-art/essentials-company-statue.jpg";
+import departmentsDeptB2b from "../assets/structure-art/departments-dept-b2b.jpg";
+import departmentsBreakRoom from "../assets/structure-art/departments-break-room.jpg";
+import departmentsSocialMedia from "../assets/structure-art/departments-social-media.jpg";
+import departmentsVideoProductionStudio from "../assets/structure-art/departments-video-production-studio.jpg";
+import departmentsPressRoom from "../assets/structure-art/departments-press-room.jpg";
 
 export interface StructureArtCrop {
   panZoomFactor: number;
@@ -37,21 +39,29 @@ const ESSENTIALS_PORTRAITS: Partial<
     src: essentialsOfficeDesk,
     crop: { panZoomFactor: 1.92, focalYPercent: 58, focalXPercent: 55 },
   },
-  bank_account: {
-    src: essentialsBankAccount,
-    crop: { panZoomFactor: 1.7, focalYPercent: 67, focalXPercent: 50 },
-  },
   office_supply: {
     src: essentialsOfficeSupply,
     crop: { panZoomFactor: 2.18, focalYPercent: 47, focalXPercent: 47 },
   },
-  storage_room: {
-    src: essentialsStorageRoom,
-    crop: { panZoomFactor: 2, focalYPercent: 44, focalXPercent: 29 },
+  outreach_program: {
+    src: departmentsDeptB2b,
+    crop: { panZoomFactor: 1.38, focalYPercent: 32, focalXPercent: 48 },
   },
-  company_statue: {
-    src: essentialsCompanyStatue,
-    crop: { panZoomFactor: 1.82, focalYPercent: 25, focalXPercent: 50 },
+  break_room: {
+    src: departmentsBreakRoom,
+    crop: { panZoomFactor: 1.38, focalYPercent: 84, focalXPercent: 33 },
+  },
+  social_media: {
+    src: departmentsSocialMedia,
+    crop: { panZoomFactor: 1.48, focalYPercent: 34, focalXPercent: 57 },
+  },
+  video_production_studio: {
+    src: departmentsVideoProductionStudio,
+    crop: { panZoomFactor: 1.92, focalYPercent: 30, focalXPercent: 41 },
+  },
+  press_room: {
+    src: departmentsPressRoom,
+    crop: { panZoomFactor: 1.92, focalYPercent: 37, focalXPercent: 54 },
   },
 };
 

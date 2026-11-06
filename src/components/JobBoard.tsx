@@ -31,6 +31,7 @@ import {
 import { pruneAssignmentForJob } from "../game/jobUnitTier";
 import { REGION_LABELS, jobSiteLabelForPosting, jobSiteRegionForPosting, towerById } from "../game/mapWorld";
 import { formatTimerRemainingCompact } from "../game/timers";
+import { jobWorkDurationSec } from "../game/secretaryEffects";
 import type { GameAction, GameState } from "../game/types";
 import { JobPostingCard } from "./JobPostingCard";
 import { emptyAssignmentForJob } from "./MissionCrewPicker";
@@ -670,7 +671,9 @@ export function JobBoard({
                           <span className="job-board-row-meta-primary">
                             {BUSINESS_TYPE_LABELS[def.businessType]} ·{" "}
                             {JOB_SIZE_LABELS[def.size]} ·{" "}
-                            {formatJobDurationSec(def.durationSec)}
+                            {formatJobDurationSec(
+                              jobWorkDurationSec(state, def.durationSec),
+                            )}
                           </span>
                           <span className="job-board-row-meta-mobile">
                             {siteLabel} · T{def.tier} · $

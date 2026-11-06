@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
+import { GovProgramModal } from "./components/GovProgramModal";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
 import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
@@ -117,6 +118,7 @@ function GameShell({
           dispatch={dispatch}
         />
       ) : null}
+      <GovProgramModal state={state} dispatch={dispatch} />
       <CompletionAlertToasts
         alerts={state.pendingCompletionAlerts}
         settings={state.settings}

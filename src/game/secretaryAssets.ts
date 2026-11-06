@@ -1,9 +1,9 @@
 import type { SecretaryId } from "./types";
-import secretary01Roster from "../assets/Secretary_info/Secretary_01_Roaster.jpg";
-import secretary02Roster from "../assets/Secretary_info/Secretary_02_Roaster.jpg";
-import secretary03Roster from "../assets/Secretary_info/Secretary_03_Roaster.jpg";
-import secretary04Roster from "../assets/Secretary_info/Secretary_04_Roaster.jpg";
-import secretary05Roster from "../assets/Secretary_info/Secretary_05_Roaster.jpg";
+import secretary01Roster from "../assets/Secretary_info/Secretary_01_Roster.jpg";
+import secretary02Roster from "../assets/Secretary_info/Secretary_02_Roster.jpg";
+import secretary03Roster from "../assets/Secretary_info/Secretary_03_Roster.jpg";
+import secretary04Roster from "../assets/Secretary_info/Secretary_04_Roster.jpg";
+import secretary05Roster from "../assets/Secretary_info/Secretary_05_Roster.jpg";
 import secretary01Home from "../assets/Secretary_info/Secretary_01_Home.jpg";
 import secretary02Home from "../assets/Secretary_info/Secretary_02_Home.jpg";
 import secretary03Home from "../assets/Secretary_info/Secretary_03_Home.jpg";

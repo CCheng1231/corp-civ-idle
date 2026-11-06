@@ -24,10 +24,12 @@ import {
   formatPreviewText,
   formatCompactBonus,
 } from "./upgradePreviewFormat";
+import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
+import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureCostLine } from "./StructureCostLine";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import {
@@ -138,6 +140,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   const projected = projectedResearchLevels(state);
   const now = Date.now();
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [tabInfoOpen, setTabInfoOpen] = useState(false);
   const [detailResearch, setDetailResearch] = useState<ResearchDefinition | null>(
     null,
   );
@@ -539,7 +542,6 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
 
   const researchBesidePortrait = (
     <>
-      <TabSiteHeader homeHubTab="research" state={state} dispatch={dispatch} />
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = researchJobsAtOffice(state, siteId);
@@ -575,9 +577,6 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             title="Research in progress"
             count={`${researchQueue.length}/${MAX_RESEARCH_QUEUE}`}
             countAriaLabel={`Research queue ${researchQueue.length} of ${MAX_RESEARCH_QUEUE}`}
-            hideLabel="Hide completed"
-            hideChecked={hideCompleted}
-            onHideChange={setHideCompleted}
           />
           <ResearchQueueList
             state={state}
@@ -602,15 +601,14 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         <span className="research-progress-label">Firm-wide</span>
         <span className="research-progress-value">{progressLabel}</span>
       </div>
-      <div className="office-structures-catalog-toolbar">
-        <button
-          type="button"
-          className="office-collapse-all"
-          onClick={collapseAllResearchCategories}
-        >
-          Collapse all
-        </button>
-      </div>
+      <ProgressionCatalogToolbar
+        onCollapseAll={collapseAllResearchCategories}
+        filterToggle={{
+          label: "Hide completed",
+          checked: hideCompleted,
+          onChange: setHideCompleted,
+        }}
+      />
       {RESEARCH_CATEGORY_ORDER.map((category) => {
         const items = RESEARCH.filter(
           (research) => research.category === category,
@@ -659,8 +657,16 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel research-view hub-synced-tab-view">
+    <div className="main-view-panel location-view-panel research-view hub-synced-tab-view hub-synced-tab-view--progression-freeze">
       <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome
+          homeHubTab="research"
+          state={state}
+          dispatch={dispatch}
+          onInfo={() => setTabInfoOpen(true)}
+        />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey="corp-civ-idle-research-portrait-size"
@@ -675,6 +681,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         </TabPortraitLayout>
         <div className="tab-below-portrait">{researchBelowPortrait}</div>
       </HubSyncedTabScrollBody>
+      {tabInfoOpen ? (
+        <ProgressionCatalogInfoDialog
+          kind="research"
+          onClose={() => setTabInfoOpen(false)}
+        />
+      ) : null}
       {detailResearch && (
         <ProgressionDetailDialog
           {...buildResearchDetailModel(state, detailResearch)}

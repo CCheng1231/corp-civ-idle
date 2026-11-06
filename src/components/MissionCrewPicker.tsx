@@ -102,6 +102,7 @@ export function MissionCrewPicker({
                   className="mission-crew-unit-count"
                   min={0}
                   max={available}
+                  inputMode="numeric"
                   value={value}
                   disabled={controlsDisabled}
                   aria-label={`Assigned ${unit.name}`}

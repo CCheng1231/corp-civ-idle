@@ -11,7 +11,7 @@ All transparent PNGs and unkeyed studio JPGs live in:
 
 ## Locked Farming Unit Defaults (In-Game)
 
-Configured in `src/game/unitPortraitAssets.ts` (switchable in **Secretary → Roaster → Unit skins**):
+Configured in `src/game/unitPortraitAssets.ts` (switchable in **Secretary → Roster → Unit skins**):
 
 | Unit (`UnitId`) | Default Skin ID | Asset File | Notes |
 |---|---|---|---|
@@ -47,7 +47,7 @@ Configured in `src/game/unitPortraitAssets.ts` (switchable in **Secretary → Ro
 | `junior_team_lead` (T2) | `p1-v1` | `support/support-lead-v1-huddle-chroma.png` | Clipboard, clip on top, empty boxes |
 | `office_mom_dad` (T2) | `p1-v1` | `support/support-momdad-v1-thermos-chroma.png` | Cream cardigan, travel mug |
 
-Skins switchable in **Secretary → Roaster → Unit skins** (`src/game/unitPortraitAssets.ts`).
+Skins switchable in **Secretary → Roster → Unit skins** (`src/game/unitPortraitAssets.ts`).
 
 ### Special (Oct 30, 2026)
 

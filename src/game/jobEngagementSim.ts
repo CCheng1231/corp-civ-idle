@@ -18,6 +18,7 @@ import type {
   ResourceCost,
 } from "./types";
 import { scheduleTimerAt, timerHasElapsed } from "./timers";
+import { jobWorkDurationMs } from "./secretaryEffects";
 import {
   createPostingFromDefinition,
   hiddenTotalCash,
@@ -248,7 +249,11 @@ function startWorkingPhase(
     travelStartedAt: null,
     travelArrivesAt: null,
     startedAt: workStartedAt,
-    endsAt: scheduleTimerAt(next, workStartedAt, def.durationSec * 1000),
+    endsAt: scheduleTimerAt(
+      next,
+      workStartedAt,
+      jobWorkDurationMs(next, def.durationSec),
+    ),
     lastAccruedAt: workStartedAt,
   };
   return next;

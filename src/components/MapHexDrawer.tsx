@@ -60,6 +60,7 @@ import {
   postingsForMajorHub,
   postingsForTower,
 } from "../game/jobs";
+import { jobWorkDurationSec } from "../game/secretaryEffects";
 import type {
   AxialCoord,
   CommercialLotId,
@@ -365,12 +366,14 @@ function OfficeDrawerSection({
 }
 
 function HexContractsSection({
+  gameState,
   coord,
   postings,
   isEngaged,
   onSend,
   highlightPostingId,
 }: {
+  gameState: Pick<GameState, "chiefOfStaffId">;
   coord: AxialCoord;
   postings: JobPosting[];
   isEngaged: (postingId: string) => boolean;
@@ -457,7 +460,11 @@ function HexContractsSection({
                               {BUSINESS_TYPE_LABELS[def.businessType]}
                             </span>
                             <span className="map-hex-job-meta">
-                              Dur: {formatJobDurationSec(def.durationSec)} ·{" "}
+                              Dur:{" "}
+                              {formatJobDurationSec(
+                                jobWorkDurationSec(gameState, def.durationSec),
+                              )}{" "}
+                              ·{" "}
                               <CompletionBandTip
                                 postingId={posting.id}
                                 band={band}
@@ -466,8 +473,8 @@ function HexContractsSection({
                             </span>
                             {jobCompletionSupplyBonus(def) > 0 ? (
                               <span className="map-hex-job-supply-on-complete">
-                                {formatNumber(jobCompletionSupplyBonus(def))}{" "}
-                                supply upon completion
+                                {formatNumber(jobCompletionSupplyBonus(def))} SUP by
+                                completion
                               </span>
                             ) : null}
                           </div>
@@ -520,6 +527,7 @@ function MajorHubContractsSection({
 
   return (
     <HexContractsSection
+      gameState={state}
       coord={coord}
       postings={postings}
       isEngaged={(postingId) => activePostingIds.has(postingId)}
@@ -560,6 +568,7 @@ function TowerContractsSection({
 
   return (
     <HexContractsSection
+      gameState={state}
       coord={coord}
       postings={postings}
       isEngaged={(postingId) => activePostingIds.has(postingId)}
@@ -968,6 +977,7 @@ function CommercialLotSection({
         : null}
 
       <HexContractsSection
+        gameState={state}
         coord={coord}
         postings={postings}
         isEngaged={(postingId) => activePostingIds.has(postingId)}

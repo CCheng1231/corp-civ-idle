@@ -9,7 +9,7 @@ import {
   projectedStructureLevels,
   projectedResearchLevels,
   officeSiteLabel,
-  recruitmentOrderDurationMs,
+  recruitmentOrderDurationMsForState,
   emptyUnitRoster
 } from "./constants";
 import { pushCompletionAlert } from "./completionAlerts";
@@ -25,6 +25,7 @@ import {
   unitDefinition
 } from "./unitEffects";
 import { appendActivityLogs } from "./logbook";
+import { govOnRecruitsCompleted } from "./govProgram";
 import { normalizeResourceCost, branchStartStructureLevels } from "./phaseA";
 import {
   buildTimeMsForQueueJob,
@@ -428,7 +429,7 @@ function startRecruitmentJobTimer(
   job: import("./types").RecruitmentJob,
   activationTime: number,
 ): import("./types").RecruitmentJob {
-  const buildMs = recruitmentOrderDurationMs(job.count ?? 1);
+  const buildMs = recruitmentOrderDurationMsForState(state, job.count ?? 1);
   const timing = scheduleQueueJobTimer(state, job, buildMs, activationTime);
   return { ...job, ...timing };
 }
@@ -485,6 +486,7 @@ export function processRecruitmentJobs(
       const hireCount = job.count ?? 1;
       next.contractorsByLocation[job.officeId][job.unitId] =
         (next.contractorsByLocation[job.officeId][job.unitId] ?? 0) + hireCount;
+      next = govOnRecruitsCompleted(next, hireCount);
       if (jobs.length > 0 && jobs[0].completesAt === null) {
         jobs[0] = startRecruitmentJobTimer(next, jobs[0], queueClock);
       }

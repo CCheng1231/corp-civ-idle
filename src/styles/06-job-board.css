@@ -1526,11 +1526,15 @@
   white-space: nowrap;
 }
 
-.recruitment-card-with-portrait .recruit-count-inline input {
-  width: 2.35rem;
+.recruitment-card-with-portrait .recruit-count-inline input,
+.recruitment-card-with-portrait .recruit-count-inline input.recruit-count-input {
+  width: 4.1rem;
+  min-width: 4.1rem;
   min-height: 1.45rem;
-  padding: 0.1rem 0.24rem;
+  padding: 0.1rem 0.28rem;
   font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .recruitment-card-with-portrait .recruitment-hire-actions .recruitment-queue-btn-hint-wrap {
@@ -1605,6 +1609,20 @@
 
 .structure-build-actions .recruitment-queue-btn {
   width: 100%;
+}
+
+.operations-view .structure-card.recruitment-card-with-portrait .recruitment-card-split {
+  align-items: flex-start;
+}
+
+.operations-view .structure-card.recruitment-card-with-portrait .recruitment-card-portrait-column,
+.operations-view
+  .structure-card.recruitment-card-with-portrait
+  .recruitment-card-portrait-column
+  .recruitment-card-portrait {
+  align-self: flex-start;
+  min-height: var(--progression-compact-portrait-min-height);
+  height: var(--progression-compact-portrait-min-height);
 }
 
 .operations-view .structure-card.recruitment-card-with-portrait .recruitment-card-main {
@@ -1788,8 +1806,14 @@
   color: var(--muted);
 }
 
-.recruit-count-inline input {
-  width: 3.25rem;
+.recruit-count-inline input,
+.recruit-count-field input.recruit-count-input {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  padding: 0.28rem 0.35rem;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .recruitment-site-staff {
@@ -1906,6 +1930,71 @@
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
   text-align: right;
+}
+
+.progression-catalog-info-dialog {
+  width: min(24rem, 100%);
+  max-width: 24rem;
+  padding: 0.85rem 1rem 1rem;
+}
+
+.progression-catalog-info-dialog .modal-header {
+  margin-bottom: 0.45rem;
+}
+
+.progression-catalog-info-dialog .modal-header h2 {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.progression-catalog-info-body {
+  padding: 0 0 0.65rem;
+}
+
+.progression-catalog-info-intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.progression-catalog-info-sections {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.progression-catalog-info-section {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.progression-catalog-info-section h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.progression-catalog-info-section p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.38;
+  color: var(--muted);
+}
+
+.progression-catalog-info-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.15rem;
 }
 
 .queue-site-label {

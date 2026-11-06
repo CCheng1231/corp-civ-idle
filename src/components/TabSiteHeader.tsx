@@ -12,11 +12,12 @@ export const HOME_HUB_TABS: { id: HomeHubTab; label: string }[] = [
   { id: "research", label: "Research" },
 ];
 
-export type SecretaryHubTab = "roaster" | "job" | "log";
+export type SecretaryHubTab = "roster" | "job" | "log" | "govProgram";
 
 export const SECRETARY_HUB_TABS: { id: SecretaryHubTab; label: string }[] = [
-  { id: "roaster", label: "Roaster" },
+  { id: "roster", label: "Roster" },
   { id: "job", label: "Job" },
+  { id: "govProgram", label: "Gov't Prog" },
   { id: "log", label: "Log" },
 ];
 

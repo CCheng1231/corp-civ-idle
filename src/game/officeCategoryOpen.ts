@@ -1,9 +1,28 @@
 const OFFICE_STORAGE_KEY = "corp-civ-idle-office-category-open";
 const RECRUIT_STORAGE_KEY = "corp-civ-idle-recruit-category-open";
 const RESEARCH_STORAGE_KEY = "corp-civ-idle-research-category-open";
-const ROASTER_STORAGE_KEY = "corp-civ-idle-roaster-section-open";
+const ROSTER_STORAGE_KEY = "corp-civ-idle-roster-section-open";
+const LEGACY_ROASTER_SECTION_STORAGE_KEY = "corp-civ-idle-roaster-section-open";
 
 type OpenMap = Record<string, Record<string, boolean>>;
+
+let rosterStorageMigrated = false;
+
+function migrateRosterSectionStorageKey(): void {
+  if (rosterStorageMigrated) return;
+  rosterStorageMigrated = true;
+  try {
+    const legacy = localStorage.getItem(LEGACY_ROASTER_SECTION_STORAGE_KEY);
+    if (legacy && !localStorage.getItem(ROSTER_STORAGE_KEY)) {
+      localStorage.setItem(ROSTER_STORAGE_KEY, legacy);
+    }
+    if (legacy) {
+      localStorage.removeItem(LEGACY_ROASTER_SECTION_STORAGE_KEY);
+    }
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
 
 function readAll(storageKey: string): OpenMap {
   try {
@@ -87,15 +106,17 @@ export function setResearchCategoryOpen(
   setStoredOpen(RESEARCH_STORAGE_KEY, officeId, category, open);
 }
 
-export function getRoasterSectionOpen(
+export function getRosterSectionOpen(
   section: "secretaries" | "unit_skins",
 ): boolean | undefined {
-  return getStoredOpen(ROASTER_STORAGE_KEY, "firm", section);
+  migrateRosterSectionStorageKey();
+  return getStoredOpen(ROSTER_STORAGE_KEY, "firm", section);
 }
 
-export function setRoasterSectionOpen(
+export function setRosterSectionOpen(
   section: "secretaries" | "unit_skins",
   open: boolean,
 ): void {
-  setStoredOpen(ROASTER_STORAGE_KEY, "firm", section, open);
+  migrateRosterSectionStorageKey();
+  setStoredOpen(ROSTER_STORAGE_KEY, "firm", section, open);
 }

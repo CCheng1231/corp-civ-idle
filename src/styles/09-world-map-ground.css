@@ -847,6 +847,16 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
+.map-top-left-controls {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 .map-top-right-controls {
   position: absolute;
   top: 0.45rem;
@@ -3647,7 +3657,34 @@
 }
 
 .confirm-dialog-refund {
-  margin-top: 0.75rem;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 12, 18, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  line-height: 1.35;
+}
+
+.confirm-dialog-refund-label {
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.confirm-dialog-refund-amount {
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.confirm-dialog-refund-note {
+  font-size: 0.68rem;
+  color: var(--muted);
 }
 
 .confirm-dialog-actions {

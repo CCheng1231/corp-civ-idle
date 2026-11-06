@@ -96,6 +96,7 @@ import type {
   OfficeLocationId,
 } from "../game/types";
 import { MapHexDrawer } from "./MapHexDrawer";
+import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
 import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
@@ -255,6 +256,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   const [jobFilterExpanded, setJobFilterExpanded] = useState(
     restoreViewport ? savedViewport.jobFilterExpanded : false,
   );
+  const [mapInfoOpen, setMapInfoOpen] = useState(false);
   const [mapJobFilters, setMapJobFilters] = useState<JobBoardFilters>(
     () => ({ ...DEFAULT_JOB_BOARD_FILTERS }),
   );
@@ -1271,6 +1273,17 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
           />
         ) : null}
 
+        <div className="map-top-left-controls">
+          <button
+            type="button"
+            className="map-hq-btn"
+            aria-haspopup="dialog"
+            onClick={() => setMapInfoOpen(true)}
+          >
+            Info
+          </button>
+        </div>
+
         <div className="map-top-right-controls">
           <button
             type="button"
@@ -1694,6 +1707,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
           />
         )}
       </div>
+      {mapInfoOpen ? (
+        <ProgressionCatalogInfoDialog
+          kind="worldMap"
+          onClose={() => setMapInfoOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
