@@ -15,6 +15,7 @@ import {
 import { resolveOfficeLocation } from "../game/officeSelection";
 import type { GameAction, GameState } from "../game/types";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { GovProgramStepGuidance } from "./GovProgramStepGuidance";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
@@ -91,6 +92,12 @@ export function GovernmentProgramView({
             <>
               <h4>{growthStep.title}</h4>
               <p>{growthStep.body}</p>
+              <GovProgramStepGuidance
+                state={state}
+                dispatch={dispatch}
+                kind="growth"
+                step={growthStep}
+              />
               <p className="muted">
                 Lifetime recruits: {gp.lifetimeRecruits} /{" "}
                 {GOV_RECRUIT_UNLOCK_COUNT}
@@ -107,6 +114,12 @@ export function GovernmentProgramView({
           <h3>Executive attaché</h3>
           <h4>{execStep.title}</h4>
           <p>{execStep.body}</p>
+          <GovProgramStepGuidance
+            state={state}
+            dispatch={dispatch}
+            kind="executive"
+            step={execStep}
+          />
           {execStep.stepId === "exec_charter_engage" ? (
             <>
               <p className="muted">
@@ -185,7 +198,10 @@ export function GovernmentProgramView({
 
   return (
     <div className="main-view-panel location-view-panel operations-view gov-program-view-panel hub-synced-tab-view hub-synced-tab-view--progression-freeze">
-      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <HubSyncedTabBackground
+        chiefId={state.chiefOfStaffId}
+        portraitSource="secretary"
+      />
       <div className="progression-tab-frozen-header">
         <ProgressionTabStickyChrome
           secretaryHubTab="govProgram"
@@ -220,6 +236,7 @@ export function GovernmentProgramView({
         >
           {null}
         </TabPortraitLayout>
+        <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         <div className="tab-below-portrait">{programContent}</div>
       </HubSyncedTabScrollBody>
       {tabInfoOpen ? (

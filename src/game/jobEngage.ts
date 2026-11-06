@@ -22,6 +22,7 @@ import {
   maxJobEngagements,
   postingById,
 } from "./jobCatalog";
+import { isOnlineMode } from "../multiplayer/playerHq";
 import { settleCancelledEngagement } from "./jobEngagementSim";
 
 export function cancelJobEngagement(
@@ -106,6 +107,14 @@ export function engagementStatusLabel(
   }
   if (engagement.phase === "returning") {
     return `Returning · home ${formatTimerRemaining(state, engagement.travelArrivesAt, now)}`;
+  }
+  const posting = state.jobPostings.find((p) => p.id === engagement.postingId);
+  if (
+    isOnlineMode(state) &&
+    engagement.phase === "working" &&
+    posting?.status === "completed"
+  ) {
+    return "On site · settling payout…";
   }
   return `On site · shift ${formatTimerRemaining(state, engagement.endsAt, now)}`;
 }

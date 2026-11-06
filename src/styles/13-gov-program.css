@@ -42,6 +42,18 @@
   margin-top: 0.65rem;
 }
 
+.gov-program-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.55rem 0 0.15rem;
+}
+
+.gov-program-step-go {
+  min-height: 3rem;
+  padding: 0.45rem 0.85rem;
+}
+
 .gov-program-lock-note {
   padding: 0 0.25rem;
   font-size: 0.85rem;

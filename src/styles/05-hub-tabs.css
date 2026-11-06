@@ -37,9 +37,8 @@
 
 .progression-tab-sticky-chrome {
   display: grid;
-  grid-template-columns:
-    minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
-    minmax(0, 1fr);
+  /* Info left, Section / Office right (wide column) */
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   column-gap: 0.65rem;
   row-gap: 0.28rem;
@@ -49,15 +48,85 @@
   background: transparent;
 }
 
-.progression-tab-sticky-info-slot {
-  display: flex;
-  align-items: flex-start;
+/* Info top-left | portrait width slot | Section/Office (aligns with tab-hero-main below) */
+.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub {
+  grid-template-columns:
+    minmax(var(--tab-hero-portrait-col-min), var(--tab-hero-portrait-col-max))
+    minmax(0, 1fr);
+  column-gap: 0.65rem;
+  align-items: start;
+}
+
+/*
+ * With Info: same 2-column track as Overview (portrait | main). Info is absolutely
+ * positioned so it does not steal width from the main column — selector width matches Overview.
+ */
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome--compact-hub:not(.progression-tab-sticky-chrome--no-info) {
+  position: relative;
+}
+
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome--compact-hub:not(.progression-tab-sticky-chrome--no-info)
+  .progression-tab-sticky-info-slot {
+  position: absolute;
+  grid-column: 1;
+  grid-row: 1;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* Portrait spacer + main column: explicit placement so Info (abspos) does not affect track widths. */
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome--compact-hub:not(.progression-tab-sticky-chrome--no-info)
+  .progression-tab-sticky-portrait-slot {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome--compact-hub:not(.progression-tab-sticky-chrome--no-info)
+  .progression-tab-sticky-chrome-main {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.progression-tab-sticky-portrait-slot {
+  min-height: 0.05rem;
+  pointer-events: none;
+}
+
+.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub .progression-tab-sticky-chrome-main {
+  display: block;
   min-width: 0;
 }
 
-.progression-tab-sticky-chrome .tab-hero-header-hub {
+.progression-tab-sticky-info-slot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* Section / Office: default fills the grid cell (e.g. older layouts). */
+.progression-tab-sticky-chrome:not(.progression-tab-sticky-chrome--compact-hub)
+  .tab-hero-header-hub {
   min-width: 0;
   width: 100%;
+  margin: 0;
+}
+
+/* Compact hub: Section / Office matches in-flow tab-hero-header-hub (Overview / hero row). */
+.hub-synced-tab-view
+  .progression-tab-sticky-chrome--compact-hub
+  .progression-tab-sticky-chrome-main
+  > .tab-hero-header-hub {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
   margin: 0;
 }
 
@@ -95,7 +164,10 @@
 
 .hub-synced-tab-view .progression-tab-sticky-chrome .tab-hero-header-hub .tab-hub-picker-select {
   min-height: 1.55rem;
+  min-width: 0;
+  width: 100%;
   padding: 0.12rem 0.38rem;
+  padding-right: 1.6rem;
   font-size: 0.74rem;
   line-height: 1.2;
   background: rgba(10, 14, 20, 0.58);
@@ -124,11 +196,24 @@
   .gov-program-view-panel.hub-synced-tab-view .progression-tab-sticky-chrome,
   .gov-program-view-panel.operations-view.hub-synced-tab-view
     .progression-tab-sticky-chrome {
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.5rem;
+  }
+
+  .operations-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .recruitment-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .research-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .secretary-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .logbook-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .gov-program-view-panel.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
+  .gov-program-view-panel.operations-view.hub-synced-tab-view
+    .progression-tab-sticky-chrome--compact-hub {
     grid-template-columns:
       minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
       minmax(0, 1fr);
     column-gap: 0.5rem;
   }
+
 }
 
 /* Hub tabs: readable controls on portrait bg */
@@ -641,13 +726,66 @@
 
 .secretary-view.hub-synced-tab-view .secretary-job-report {
   display: flex;
-  align-items: center;
-  gap: 0.28rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.18rem;
   padding: 0.12rem 0.3rem;
   margin: 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.35rem;
   background: rgba(8, 12, 18, 0.32);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-toggle:focus-visible {
+  outline: 2px solid rgba(124, 156, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-expanded {
+  padding: 0.12rem 0.18rem 0.22rem;
+  margin: 0 0 0.08rem;
+  border-radius: 0.28rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-detail-line {
+  margin: 0 0 0.28rem;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: rgba(232, 238, 245, 0.92);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report-detail-line:last-child {
+  margin-bottom: 0;
+}
+
+.secretary-view.hub-synced-tab-view .secretary-job-report--expanded {
+  padding-bottom: 0.18rem;
 }
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-job_cancel {
@@ -657,39 +795,42 @@
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-body {
   display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
-  align-items: baseline;
-  gap: 0.3rem;
+  align-items: flex-start;
+  gap: 0.12rem;
   min-width: 0;
-  overflow: hidden;
 }
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-line1,
 .secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
   margin: 0;
-  font-size: 0.62rem;
-  line-height: 1.2;
-  white-space: nowrap;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-line2 {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-line2::before {
-  content: "·";
-  margin-right: 0.25rem;
-  color: var(--muted);
+  content: none;
+  margin-right: 0;
 }
 
 .secretary-view.hub-synced-tab-view .secretary-job-report-dismiss {
   flex: 0 0 auto;
+  align-self: flex-start;
   width: auto;
   min-width: 0;
   padding: 0;
   line-height: 1;
   font-size: 0.85rem;
 }
+

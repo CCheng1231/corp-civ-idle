@@ -477,7 +477,22 @@ function processJobEngagementsPass(
     if (!working || working.phase !== "working") continue;
 
     const posting = next.jobPostings.find((p) => p.id === working.postingId);
-    if (!posting || posting.status !== "open") continue;
+    if (!posting) {
+      /* Online: posting doc may have been replaced after completion — still settle shift. */
+      if (online && shiftHasEnded(next, working, now)) {
+        shiftEndedEngagementIds.push(working.id);
+      }
+      continue;
+    }
+
+    if (online && posting.status === "completed") {
+      /* Firestore can mark the posting complete before ONLINE_HANDLE_COMPLETED_POSTING runs
+       * (listener lag, missed tick). Apply the same payout + return path here. */
+      next = handleOnlinePostingCompleted(next, posting.id, now);
+      continue;
+    }
+
+    if (posting.status !== "open") continue;
 
     next = accrueEngagementThrough(next, working.id, now);
 

@@ -1,13 +1,14 @@
 /**
  * Appends 11/5/2026 changelog — Info button matches Section row height.
- * Uses ExcelJS so the Gov Program Map image stays embedded.
+ * Uses SheetJS (same as the other changelog scripts). ExcelJS rewrites corrupt the workbook.
  * Run: node scripts/append-changelog-nov5-info-button.mjs
  * Close Corp Idle Working.xlsx first if EBUSY.
  */
-import { existsSync } from "node:fs";
-import ExcelJS from "exceljs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import * as XLSXNS from "xlsx";
 import { resolveWorkbookPath } from "./workbook-path.mjs";
 
+const XLSX = XLSXNS.default ?? XLSXNS;
 const workbookPath = resolveWorkbookPath();
 const MARKER = "Info button matches Section dropdown row height";
 
@@ -27,27 +28,18 @@ if (!existsSync(workbookPath)) {
   process.exit(1);
 }
 
-const wb = new ExcelJS.Workbook();
-await wb.xlsx.readFile(workbookPath);
-const ws = wb.getWorksheet("ChangeLog");
-if (!ws) {
-  console.error("ChangeLog sheet missing");
-  process.exit(1);
-}
-
-let already = false;
-ws.eachRow((row) => {
-  const text = String(row.getCell(2).value ?? "");
-  if (text.includes(MARKER)) already = true;
+const wb = XLSX.read(readFileSync(workbookPath), { type: "buffer" });
+const rows = XLSX.utils.sheet_to_json(wb.Sheets.ChangeLog, {
+  header: 1,
+  defval: "",
 });
-if (already) {
+
+if (rows.some((r) => String(r[1] ?? "").includes(MARKER))) {
   console.log("11/5/2026 Info button changelog already present — skipping.");
   process.exit(0);
 }
 
-for (const [date, summary] of NEW_ROWS) {
-  ws.addRow([date, summary]);
-}
-
-await wb.xlsx.writeFile(workbookPath);
+rows.push(...NEW_ROWS);
+wb.Sheets.ChangeLog = XLSX.utils.aoa_to_sheet(rows);
+writeFileSync(workbookPath, XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 console.log(`Appended ${NEW_ROWS.length} rows to ChangeLog in ${workbookPath}`);

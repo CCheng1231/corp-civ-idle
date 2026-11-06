@@ -1,6 +1,7 @@
-import { useEffect, type Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import {
   jobReportBrief,
+  jobReportExpandedLines,
   jobReportHeadline,
   pendingJobReports,
 } from "../game/secretaryBriefing";
@@ -35,6 +36,7 @@ export function SecretaryBriefing({
   onWorkTabChange,
 }: SecretaryBriefingProps) {
   const jobReports = pendingJobReports(state);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -43,6 +45,15 @@ export function SecretaryBriefing({
       /* ignore */
     }
   }, [workTab]);
+
+  useEffect(() => {
+    if (
+      expandedReportId &&
+      !jobReports.some((e) => e.id === expandedReportId)
+    ) {
+      setExpandedReportId(null);
+    }
+  }, [jobReports, expandedReportId]);
 
   function openJobLogbook() {
     dispatch({
@@ -134,34 +145,73 @@ export function SecretaryBriefing({
         >
           {jobReports.length > 0 ? (
             <ul className="secretary-job-reports-list">
-              {jobReports.map((entry) => (
-                <li
-                  key={entry.id}
-                  className={`secretary-job-report secretary-job-report-${entry.category}`}
-                >
-                  <div className="secretary-job-report-body">
-                    <span className="secretary-job-report-line1">
-                      {jobReportHeadline(entry)}
-                    </span>
-                    <span className="secretary-job-report-line2 muted">
-                      {jobReportBrief(entry, state.activityLog)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="secretary-job-report-dismiss"
-                    aria-label="Dismiss report"
-                    onClick={() =>
-                      dispatch({
-                        type: "DISMISS_JOB_REPORT",
-                        logEntryId: entry.id,
-                      })
-                    }
+              {jobReports.map((entry) => {
+                const expanded = expandedReportId === entry.id;
+                const detailLines = jobReportExpandedLines(
+                  entry,
+                  state.activityLog,
+                );
+                return (
+                  <li
+                    key={entry.id}
+                    className={[
+                      "secretary-job-report",
+                      `secretary-job-report-${entry.category}`,
+                      expanded ? "secretary-job-report--expanded" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    ×
-                  </button>
-                </li>
-              ))}
+                    <div className="secretary-job-report-row">
+                      <button
+                        type="button"
+                        className="secretary-job-report-toggle"
+                        aria-expanded={expanded}
+                        onClick={() =>
+                          setExpandedReportId((id) =>
+                            id === entry.id ? null : entry.id,
+                          )
+                        }
+                      >
+                        <div className="secretary-job-report-body">
+                          <span className="secretary-job-report-line1">
+                            {jobReportHeadline(entry)}
+                          </span>
+                          <span className="secretary-job-report-line2 muted">
+                            {jobReportBrief(entry, state.activityLog)}
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="secretary-job-report-dismiss"
+                        aria-label="Dismiss report"
+                        onClick={() =>
+                          dispatch({
+                            type: "DISMISS_JOB_REPORT",
+                            logEntryId: entry.id,
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {expanded && detailLines.length > 0 ? (
+                      <div
+                        className="secretary-job-report-expanded"
+                        role="region"
+                        aria-label="Report details"
+                      >
+                        {detailLines.map((line, i) => (
+                          <p key={i} className="secretary-job-report-detail-line">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="muted secretary-job-reports-empty">

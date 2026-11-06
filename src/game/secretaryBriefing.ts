@@ -8,6 +8,7 @@ import { activeEngagementCount, maxJobEngagements } from "./jobs";
 import { openJobPostings } from "./jobBoard";
 import {
   formatLogCostCell,
+  formatLogResourceCost,
   formatLogTimestamp,
   isPreReturnJobLog,
   MAX_SECRETARY_JOB_REPORTS,
@@ -190,4 +191,41 @@ function jobReportDetail(entry: LogEntry): string {
 /** Line 1: kind + short event title. */
 export function jobReportHeadline(entry: LogEntry): string {
   return `${jobReportKindLabel(entry)} - ${jobReportDetail(entry)}`;
+}
+
+/** Extra lines when a report row is expanded (full summary, impacts, costs). */
+export function jobReportExpandedLines(
+  entry: LogEntry,
+  activityLog?: LogEntry[],
+): string[] {
+  const lines: string[] = [];
+  const payout = activityLog ? relatedJobPayoutLog(activityLog, entry) : null;
+
+  if (entry.summary.trim()) {
+    lines.push(entry.summary.trim());
+  }
+  if (entry.detail?.trim()) {
+    lines.push(entry.detail.trim());
+  }
+  for (const line of entry.impacts ?? []) {
+    if (line?.trim()) lines.push(line.trim());
+  }
+  const gained = formatLogResourceCost(entry.gained, "gained");
+  const spent = formatLogResourceCost(entry.spent, "spent");
+  if (gained) lines.push(gained);
+  if (spent) lines.push(spent);
+  if (!gained && !spent) {
+    const cell = formatLogCostCell(entry.gained);
+    if (cell !== "—") lines.push(`Net: ${cell}`);
+  }
+  if (payout) {
+    const extra = formatLogCostCell(payout.gained);
+    if (extra !== "—") {
+      lines.push(`Shift payout: ${extra}`);
+    }
+    if (payout.summary.trim()) {
+      lines.push(payout.summary.trim());
+    }
+  }
+  return lines;
 }

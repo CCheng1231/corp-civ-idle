@@ -24,11 +24,20 @@ type ProgressionTabStickyChromeProps = {
 
 export function ProgressionTabStickyChrome(props: ProgressionTabStickyChromeProps) {
   const { state, dispatch } = props;
+  const hasInfo = Boolean(props.onInfo);
 
   return (
-    <div className="progression-tab-sticky-chrome">
-      <div className="progression-tab-sticky-info-slot">
-        {props.onInfo ? (
+    <div
+      className={[
+        "progression-tab-sticky-chrome",
+        "progression-tab-sticky-chrome--compact-hub",
+        hasInfo ? null : "progression-tab-sticky-chrome--no-info",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {hasInfo ? (
+        <div className="progression-tab-sticky-info-slot">
           <button
             type="button"
             className="office-collapse-all office-catalog-toolbar-chip progression-tab-sticky-info"
@@ -37,14 +46,17 @@ export function ProgressionTabStickyChrome(props: ProgressionTabStickyChromeProp
           >
             Info
           </button>
-        ) : null}
+        </div>
+      ) : null}
+      <div className="progression-tab-sticky-portrait-slot" aria-hidden="true" />
+      <div className="progression-tab-sticky-chrome-main">
+        <TabSiteHeader
+          homeHubTab={props.homeHubTab}
+          secretaryHubTab={props.secretaryHubTab}
+          state={state}
+          dispatch={dispatch}
+        />
       </div>
-      <TabSiteHeader
-        homeHubTab={props.homeHubTab}
-        secretaryHubTab={props.secretaryHubTab}
-        state={state}
-        dispatch={dispatch}
-      />
     </div>
   );
 }
