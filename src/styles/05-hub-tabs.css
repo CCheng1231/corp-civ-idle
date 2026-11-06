@@ -15,7 +15,8 @@
 .research-view.hub-synced-tab-view--progression-freeze,
 .secretary-view.hub-synced-tab-view--progression-freeze,
 .logbook-view.hub-synced-tab-view--progression-freeze,
-.gov-program-view-panel.hub-synced-tab-view--progression-freeze {
+.gov-program-view-panel.hub-synced-tab-view--progression-freeze,
+.gov-program-view-panel.operations-view.hub-synced-tab-view--progression-freeze {
   gap: 0;
 }
 
@@ -71,6 +72,18 @@
   text-decoration: none;
   appearance: none;
   -webkit-appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: 0;
+  height: 1.55rem;
+  min-height: 1.55rem;
+  max-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
 }
 
 .hub-synced-tab-view
@@ -108,7 +121,9 @@
   .research-view.hub-synced-tab-view .progression-tab-sticky-chrome,
   .secretary-view.hub-synced-tab-view .progression-tab-sticky-chrome,
   .logbook-view.hub-synced-tab-view .progression-tab-sticky-chrome,
-  .gov-program-view-panel.hub-synced-tab-view .progression-tab-sticky-chrome {
+  .gov-program-view-panel.hub-synced-tab-view .progression-tab-sticky-chrome,
+  .gov-program-view-panel.operations-view.hub-synced-tab-view
+    .progression-tab-sticky-chrome {
     grid-template-columns:
       minmax(var(--tab-hero-portrait-col-min-narrow), var(--tab-hero-portrait-col-max-narrow))
       minmax(0, 1fr);
@@ -385,13 +400,13 @@
   gap: 0.22rem;
 }
 
-.gov-program-view-panel.hub-synced-tab-view .hub-synced-tab-scroll-body {
+.gov-program-view-panel.operations-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
   display: flex;
   flex-direction: column;
   gap: 0.22rem;
 }
 
-.gov-program-view-panel.hub-synced-tab-view .tab-below-portrait {
+.gov-program-view-panel.operations-view.hub-synced-tab-view .tab-below-portrait {
   flex: 0 0 auto;
   min-width: 0;
 }

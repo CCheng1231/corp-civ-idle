@@ -857,6 +857,18 @@
   gap: 0.2rem;
 }
 
+/* Info — one row, same height as hub Section dropdown */
+.map-top-left-controls .map-hq-btn,
+.map-presentation-player .map-top-left-controls .map-hq-btn {
+  box-sizing: border-box;
+  height: 1.55rem;
+  min-height: 1.55rem;
+  max-height: 1.55rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
 .map-top-right-controls {
   position: absolute;
   top: 0.45rem;

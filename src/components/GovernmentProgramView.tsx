@@ -184,11 +184,8 @@ export function GovernmentProgramView({
   );
 
   return (
-    <div className="main-view-panel location-view-panel secretary-view gov-program-view-panel hub-synced-tab-view hub-synced-tab-view--progression-freeze">
-      <HubSyncedTabBackground
-        chiefId={state.chiefOfStaffId}
-        portraitSource="secretary"
-      />
+    <div className="main-view-panel location-view-panel operations-view gov-program-view-panel hub-synced-tab-view hub-synced-tab-view--progression-freeze">
+      <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
       <div className="progression-tab-frozen-header">
         <ProgressionTabStickyChrome
           secretaryHubTab="govProgram"
@@ -197,12 +194,6 @@ export function GovernmentProgramView({
           onInfo={() => setTabInfoOpen(true)}
         />
       </div>
-      {tabInfoOpen ? (
-        <ProgressionCatalogInfoDialog
-          kind="govProgram"
-          onClose={() => setTabInfoOpen(false)}
-        />
-      ) : null}
       {declineOpen ? (
         <ConfirmDialog
           title="Decline growth program?"
@@ -229,9 +220,14 @@ export function GovernmentProgramView({
         >
           {null}
         </TabPortraitLayout>
-        <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         <div className="tab-below-portrait">{programContent}</div>
       </HubSyncedTabScrollBody>
+      {tabInfoOpen ? (
+        <ProgressionCatalogInfoDialog
+          kind="govProgram"
+          onClose={() => setTabInfoOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
