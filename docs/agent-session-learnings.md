@@ -74,6 +74,16 @@ Living notes from Chris playtests and corrections. **Append after sessions** so 
 
 ---
 
+## Online map looked brighter on one account (2026-11-07)
+
+| Mistake | Do instead |
+|---------|------------|
+| Assuming Tim vs Chris see the same map because they share `worlds/dev` | **Brightness/busyness** can differ when one save has **Map filter → landmark art off** and/or **Z1 layer filters**, while the other uses defaults (full baked landmarks = “brighter”). |
+| Letting **map layout dev fields** live in each player’s private save online | Canon geometry comes from Firestore `shared/mapLayout` only (`SHARED_WORLD_MAP_SETTING_KEYS`); online **load + sync** strip those keys from private blobs and apply shared layout (`mergeOnlineSettings` / `applySharedWorldLayoutToGameState`). |
+| Carrying **per-account dimming** into online co-play | `sanitizeOnlinePrivateMapClientSettings`: drop `mapZ1LayerFilters`; clear `mapShowWorldLandmarkArt: false` so online uses default **landmarks on** for everyone. |
+
+---
+
 ## How to update this file
 
 After a session where Chris corrects the agent twice on the same theme, add a row under the right section with date. Keep rows **actionable** (mistake → fix), not narrative.
