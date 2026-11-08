@@ -29,6 +29,11 @@ export {
   subscribeCompanies,
 } from "./companyPresenceSync";
 export {
+  upsertMarketLeaderboardEntry,
+  subscribeMarketLeaderboard,
+  clearMarketLeaderboard,
+} from "./marketLeaderboardSync";
+export {
   subscribeJobPostings,
   flushPostingWorkDelta,
   respawnSharedPosting,
@@ -46,3 +51,11 @@ export {
   loadWorldMapDevLayout,
   subscribeWorldMapDevLayout,
 } from "./worldMapLayoutSync";
+export {
+  applySharedBranchesToGameState,
+  loadSharedBranches,
+  saveSharedBranches,
+  subscribeSharedBranches,
+  resetSharedBranches,
+  upliftPrivateBranchesToShared,
+} from "./sharedBranchSync";

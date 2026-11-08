@@ -61,21 +61,34 @@ export function resolvePlayerBuildingLandmarkInstances(
 
   for (const site of state.branchSites) {
     if (!isEstablishedBranchSiteOnMap(site)) continue;
-    if (!site.commercialLotId) continue;
-    const lot = commercialLotById(site.commercialLotId);
-    const slot = branchSlotAtLot(lot, branchSitePadIndex(site));
-    if (!slot) continue;
+    if (site.closingStartedAt) continue;
     const coord = branchSiteCoord(site, state.settings);
     const key = axialKey(coord);
-    const rank = PAD_RANK[slot.size as BranchOfficeSlotSize];
+    let artId: string;
+    let rank: number;
+    let instanceKey: string;
+    if (site.commercialLotId) {
+      const lot = commercialLotById(site.commercialLotId);
+      const slot = branchSlotAtLot(lot, branchSitePadIndex(site));
+      if (!slot) continue;
+      artId = BRANCH_PAD_ART[slot.size as BranchOfficeSlotSize];
+      rank = PAD_RANK[slot.size as BranchOfficeSlotSize];
+      instanceKey = `branch-${site.commercialLotId}-${site.slotIndex ?? site.padIndex}`;
+    } else if (site.hexKey) {
+      artId = BRANCH_PAD_ART.standard;
+      rank = PAD_RANK.standard;
+      instanceKey = `branch-${site.hexKey}-${site.padIndex ?? 0}`;
+    } else {
+      continue;
+    }
     const prev = bestBranchAtCoord.get(key);
     if (prev && prev.rank >= rank) continue;
     bestBranchAtCoord.set(key, {
       rank,
       instance: landmarkArtInstanceSingleHex({
-        instanceKey: `branch-${site.commercialLotId}-${site.slotIndex}`,
+        instanceKey,
         siteId: branchOfficeIdForSite(site),
-        artId: BRANCH_PAD_ART[slot.size as BranchOfficeSlotSize],
+        artId,
         coord,
         siteKind: "branch-pad",
       }),

@@ -53,11 +53,11 @@ export function secretaryTips(state: GameState): string[] {
 
   if (activeJobs < jobCap) {
     tips.push(
-      `${jobCap - activeJobs} task force slot${jobCap - activeJobs === 1 ? "" : "s"} open — open the Job board tab and deploy before postings expire.`,
+      `${jobCap - activeJobs} team slot${jobCap - activeJobs === 1 ? "" : "s"} open — open the Job board tab and deploy before postings expire.`,
     );
   } else {
     tips.push(
-      "Task force cap is full. Wait for crews to return or recall a task force.",
+      "Team cap is full. Wait for crews to return or recall a team.",
     );
   }
 
@@ -79,7 +79,7 @@ export function secretaryTips(state: GameState): string[] {
 
   if (staff > 0 && activeJobs > 0 && activeJobs < jobCap) {
     tips.push(
-      "You can run multiple task forces at once if you have spare units and open slots.",
+      "You can run multiple teams at once if you have spare units and open slots.",
     );
   }
 

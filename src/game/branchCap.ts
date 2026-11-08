@@ -2,11 +2,16 @@ import type { GameState } from "./types";
 import { activePlayerId } from "../multiplayer/playerHq";
 import { branchManagementResearched } from "./mapWorld";
 
-/** Max company sites (HQ + branches) once Branch Management is researched. */
-export function maxCompanyOfficeSites(state: GameState): number {
-  if (!branchManagementResearched(state)) return 1;
+/** Max branch offices (HQ is not included) once Branch Management is researched. */
+export function maxBranchOffices(state: GameState): number {
+  if (!branchManagementResearched(state)) return 0;
   const n = state.researchLevels.massive_expansion ?? 0;
-  return 2 + Math.max(0, n);
+  return 1 + Math.max(0, n);
+}
+
+/** HQ + branch count — UI/travel only; not used for branch cap. */
+export function maxCompanyOfficeSites(state: GameState): number {
+  return 1 + maxBranchOffices(state);
 }
 
 export function ownedBranchSitesForPlayer(
@@ -18,20 +23,19 @@ export function ownedBranchSitesForPlayer(
   ).length;
 }
 
-/** HQ counts as 1; branches count toward cap after BM. */
 export function companyOfficeSiteCount(state: GameState): number {
-  return 1 + ownedBranchSitesForPlayer(state);
+  return ownedBranchSitesForPlayer(state);
 }
 
 export function companyOfficeSiteFraction(state: GameState): {
   open: number;
   max: number;
 } {
-  const open = companyOfficeSiteCount(state);
-  const max = maxCompanyOfficeSites(state);
+  const open = ownedBranchSitesForPlayer(state);
+  const max = maxBranchOffices(state);
   return { open, max };
 }
 
 export function canOpenAnotherBranch(state: GameState): boolean {
-  return companyOfficeSiteCount(state) < maxCompanyOfficeSites(state);
+  return ownedBranchSitesForPlayer(state) < maxBranchOffices(state);
 }

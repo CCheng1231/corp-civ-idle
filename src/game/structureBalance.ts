@@ -14,6 +14,7 @@ import {
 } from "./structureBalanceData";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import { REP_GREP_CAP_WITHOUT_COMPANY_STATUE } from "./phaseA";
+import { chiefStructureBuildTimeMult } from "./secretaryEffects";
 
 function structureOfficeIds(
   structureLevelsByLocation: GameState["structureLevelsByLocation"],
@@ -482,7 +483,11 @@ export function buildTimeMsForQueueJob(
   const targetLevel =
     job.targetLevel ??
     targetLevelForStructureQueueJob(state, officeId, queueIndex);
-  return structureBuildTimeMs(job.structureId, targetLevel);
+  const base = structureBuildTimeMs(job.structureId, targetLevel);
+  return Math.max(
+    1000,
+    Math.round(base * chiefStructureBuildTimeMult(state)),
+  );
 }
 
 const LEGACY_STRUCTURE_BUILD_MS = 5000;

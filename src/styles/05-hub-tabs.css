@@ -281,7 +281,7 @@
   .research-progress-banner,
   .secretary-roster-chief-banner,
   .secretary-roster-panel,
-  .secretary-task-forces-beside,
+  .secretary-teams-beside,
   .secretary-job-work,
   .secretary-panel,
   .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
@@ -300,7 +300,7 @@
   .research-progress-banner,
   .secretary-roster-chief-banner,
   .secretary-roster-panel,
-  .secretary-task-forces-beside,
+  .secretary-teams-beside,
   .secretary-job-work,
   .secretary-panel,
   .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
@@ -327,7 +327,7 @@
   .research-progress-banner,
   .secretary-roster-chief-banner,
   .secretary-roster-panel,
-  .secretary-task-forces-beside,
+  .secretary-teams-beside,
   .secretary-job-work,
   .secretary-panel,
   .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
@@ -568,7 +568,7 @@
   min-height: 0;
 }
 
-.secretary-view.hub-synced-tab-view .secretary-task-forces-beside {
+.secretary-view.hub-synced-tab-view .secretary-teams-beside {
   padding: 0.16rem 0.38rem;
 }
 
@@ -620,7 +620,7 @@
   flex-shrink: 0;
 }
 
-.secretary-view.hub-synced-tab-view .secretary-task-forces-beside .build-queue li {
+.secretary-view.hub-synced-tab-view .secretary-teams-beside .build-queue li {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(8, 12, 18, 0.28);
 }

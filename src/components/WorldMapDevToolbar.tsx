@@ -15,6 +15,7 @@ import type {
 } from "../game/types";
 import { OnlineAccessError } from "../multiplayer/onlineAccess";
 import { publishWorldMapDevLayout } from "../multiplayer/worldMapLayoutSync";
+import { isOnlineMode } from "../multiplayer/playerHq";
 import { readSession } from "../multiplayer/session";
 import type { OnlineSession } from "../multiplayer/types";
 import { isDevAccount } from "../multiplayer/types";
@@ -59,13 +60,18 @@ export function WorldMapDevToolbar({
   async function pushMapLayoutToWorld() {
     setPushError(null);
 
-    if (!isWorldMapDevLayoutSavedToLocalStore(state.settings)) {
+    if (
+      !isOnlineMode(state) &&
+      !isWorldMapDevLayoutSavedToLocalStore(state.settings)
+    ) {
       setPushError("Save layout first — you have unsaved map edits.");
       setPushFlash("err");
       return;
     }
 
-    const publishSettings = settingsFromSavedWorldMapDevLayout(state.settings);
+    const publishSettings = isOnlineMode(state)
+      ? state.settings
+      : settingsFromSavedWorldMapDevLayout(state.settings);
 
     const accountSession =
       session ?? state.onlineSession ?? readSession() ?? null;

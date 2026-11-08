@@ -36,10 +36,12 @@ export function resourceRateBreakdown(
   key: ResourceKey,
 ): ResourceRateBreakdownLine[] {
   const siteBonuses = siteRateBonusesForState(state);
-  const officeProductionMult = chiefOfficeProductionMult(state.chiefOfStaffId);
-  const chiefStructureLabel = chiefOfStaffRateBreakdownLabel(
-    state.chiefOfStaffId,
-  );
+  const chiefCtx = {
+    chiefOfStaffId: state.chiefOfStaffId,
+    secretaryProgress: state.secretaryProgress,
+  };
+  const officeProductionMult = chiefOfficeProductionMult(chiefCtx);
+  const chiefStructureLabel = chiefOfStaffRateBreakdownLabel(chiefCtx);
   const lines: ResourceRateBreakdownLine[] = [];
   let running = 0;
 

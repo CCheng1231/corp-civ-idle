@@ -46,7 +46,11 @@ import {
   resetOnlineSharedWorldPreserveAccounts,
 } from "../multiplayer/worldSync";
 import { saveGameState } from "../game/save";
-import { clearAllOnlineLocalCaches, clearOnlineLocalCache } from "../multiplayer/companySave";
+import {
+  clearAllOnlineLocalCaches,
+  clearOnlineLocalCache,
+  saveAuthoritativeOnlineLocalCache,
+} from "../multiplayer/companySave";
 import { flushPendingOnlineWork } from "../hooks/useOnlineWorld";
 
 const ONLINE_RESET_TIMEOUT_MS = 30_000;
@@ -93,6 +97,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
     setPullingServerSave(true);
     try {
       const loaded = await forceResyncPrivateState(session);
+      saveAuthoritativeOnlineLocalCache(loaded, session);
       dispatch({ type: "LOAD", state: loaded });
       window.alert("Loaded the latest save from Firestore.");
     } catch (err) {
@@ -190,7 +195,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
           )
         : target === "shared-world"
           ? window.confirm(
-              `Reset shared world state (${session.worldId})? This wipes and reseeds the shared job board and clears active task forces for all players. Tim and Chris company progress (structures, resources, research, branches) is kept.`,
+              `Reset shared world state (${session.worldId})? This wipes and reseeds the shared job board and clears active teams for all players. Tim and Chris company progress (structures, resources, research, branches) is kept.`,
             )
           : window.confirm(
               `Reset ${PLAYER_LABELS[target]}'s online account? This deletes their private company save and map presence. The shared job board is kept. This cannot be undone.`,
@@ -472,7 +477,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
           </label>
           <p className="muted setting-hint">
             When on, structure builds, research, recruitment, staff travel, and
-            task force shifts finish immediately. Passive income still runs
+            team shifts finish immediately. Passive income still runs
             normally.
           </p>
           <DevTimeSkip dispatch={dispatch} />

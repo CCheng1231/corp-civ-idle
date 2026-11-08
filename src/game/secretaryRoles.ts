@@ -1,5 +1,8 @@
 import type { SecretaryDefinition } from "./secretaryData";
+import { secretaryById } from "./secretaryData";
+import { jobDefinitionById } from "./jobs";
 import { officeSiteLabel } from "./officeSelection";
+import { teamLeadsOnActiveJobs } from "./secretaryTeamLead";
 import type { GameState, OfficeSelectionId, SecretaryId } from "./types";
 
 /** One active posting shown on the secretary roster row. */
@@ -9,13 +12,9 @@ export interface SecretaryRoleLine {
   emphasis?: boolean;
 }
 
-/**
- * Current secretary postings derived from game state.
- * Extend here when team-lead / department-head assignments are wired in.
- */
 export function secretaryRoleLinesFor(
   secretaryId: SecretaryId,
-  state: Pick<GameState, "chiefOfStaffId">,
+  state: GameState,
 ): SecretaryRoleLine[] {
   const lines: SecretaryRoleLine[] = [];
 
@@ -27,12 +26,22 @@ export function secretaryRoleLinesFor(
     });
   }
 
+  for (const engagement of state.jobEngagements) {
+    if (engagement.teamLeadSecretaryId !== secretaryId) continue;
+    if (engagement.phase === "returning") continue;
+    const def = jobDefinitionById(engagement.definitionId);
+    lines.push({
+      id: `team-lead-${engagement.id}`,
+      text: `Team lead · ${def.title}`,
+    });
+  }
+
   return lines;
 }
 
 export function secretaryIsAssigned(
   secretaryId: SecretaryId,
-  state: Pick<GameState, "chiefOfStaffId">,
+  state: GameState,
 ): boolean {
   return secretaryRoleLinesFor(secretaryId, state).length > 0;
 }
@@ -53,6 +62,9 @@ export function secretaryRosterRoleLines(
   const lines = secretaryRoleLinesFor(entry.id, state);
 
   if (lines.length === 0) {
+    if (teamLeadsOnActiveJobs(state).includes(entry.id)) {
+      return [{ id: "available", text: `Available · ${site}` }];
+    }
     return [{ id: "available", text: `Available · ${site}` }];
   }
 
@@ -71,4 +83,14 @@ export function sortSecretariesForRoster<T extends { id: SecretaryId }>(
     if (b.id === chiefOfStaffId) return 1;
     return 0;
   });
+}
+
+export function secretaryProgressSummary(
+  state: GameState,
+  secretaryId: SecretaryId,
+): string {
+  const progress = state.secretaryProgress[secretaryId];
+  if (!progress) return "Lv 1";
+  const name = secretaryById(secretaryId).name;
+  return `${name} · Lv ${progress.level}`;
 }

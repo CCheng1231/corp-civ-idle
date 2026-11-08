@@ -18,8 +18,15 @@ import {
 } from "./constants";
 import { DEFAULT_TIER1_UNIT, UNIT_IDS } from "./recruitmentData";
 import { finalizeLoadedState, finalizeOnlineSyncState } from "./engine";
-import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS, secretaryById } from "./secretaryData";
-import { secretaryVisibleOnRoster } from "./secretaryEffects";
+import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS } from "./secretaryData";
+import {
+  normalizeChiefAgainstUnlocks,
+  normalizeSecretaryProgressMap,
+  normalizeSecretaryRecruitment,
+  normalizeSecretaryUnlocks,
+  syncLegacyGovUnlocks,
+} from "./secretaryProgress";
+import { checkSecretaryRecruitmentMilestones } from "./secretaryRecruitment";
 import {
   lifetimeRecruitsFromRoster,
   normalizeGovProgram,
@@ -100,7 +107,14 @@ import {
   applyWorldMapDevLayoutToGameState,
   applyWorldMapDevLayoutToSettings,
   syncWorldMapDevLayoutFromSettings,
+  type WorldMapDevLayoutStore,
 } from "./worldMapDevLayoutStore";
+import {
+  applySharedWorldLayoutToGameState,
+  latestSharedWorldMapLayout,
+  sanitizeOnlinePrivateMapClientSettings,
+  stripSharedWorldMapSettings,
+} from "../multiplayer/sharedWorldMap";
 import { parseMapZ1MajorHubMarkers } from "./worldMapZ1Markers";
 import type { GameSettings, MapRegion } from "./types";
 
@@ -168,7 +182,7 @@ function normalizeView(view: unknown): MainView {
 
 function normalizeChiefOfStaffId(
   id: unknown,
-  gessesaUnlocked = false,
+  unlocks: GameState["secretaryUnlocks"],
 ): GameState["chiefOfStaffId"] {
   let chief: GameState["chiefOfStaffId"] = DEFAULT_CHIEF_OF_STAFF_ID;
   if (
@@ -177,19 +191,13 @@ function normalizeChiefOfStaffId(
   ) {
     chief = id as GameState["chiefOfStaffId"];
   }
-  try {
-    if (!secretaryVisibleOnRoster(secretaryById(chief), gessesaUnlocked)) {
-      return DEFAULT_CHIEF_OF_STAFF_ID;
-    }
-  } catch {
-    return DEFAULT_CHIEF_OF_STAFF_ID;
-  }
-  return chief;
+  return normalizeChiefAgainstUnlocks(chief, unlocks);
 }
 
 function normalizeSecretaryPanel(panel: unknown): SecretaryPanel {
   if (panel === "roster" || panel === "roaster") return "roster";
   if (panel === "govProgram" || panel === "gov") return "govProgram";
+  if (panel === "marketResearch" || panel === "market") return "marketResearch";
   if (panel === "log") return "log";
   return "landing";
 }
@@ -219,6 +227,7 @@ const SECRETARY_HUB_RESUME_IDS = new Set([
   "job",
   "log",
   "govProgram",
+  "marketResearch",
 ]);
 
 function normalizeSecretaryHubResume(resume: unknown): SecretaryHubResume {
@@ -662,7 +671,7 @@ function migrateJobFields(
   const sanitized = sanitizeLegacyJobRows(parsed);
   const engagements = sanitized.jobEngagements.map(migrateEngagementRow);
 
-  // Online private saves omit shared jobPostings — still restore task forces.
+  // Online private saves omit shared jobPostings — still restore field teams.
   if (engagements.length > 0) {
     return {
       jobPostings: sanitized.jobPostings.length
@@ -789,7 +798,7 @@ function migrateBranchFields(
 
 function normalizeSave(
   parsed: LegacySave,
-  options?: { skipFinalize?: boolean },
+  options?: { skipFinalize?: boolean; skipLocalWorldMap?: boolean },
 ): GameState {
   const base = createInitialState();
   const now = Date.now();
@@ -1013,11 +1022,7 @@ function normalizeSave(
     playerNotes: parsed.playerNotes ?? "",
     activityLog: parsed.activityLog ?? [],
     dismissedJobReportIds: parsed.dismissedJobReportIds ?? [],
-    chiefOfStaffId: normalizeChiefOfStaffId(
-      parsed.chiefOfStaffId,
-      (parsed.govProgram as { gessesaUnlocked?: boolean } | undefined)
-        ?.gessesaUnlocked === true,
-    ),
+    chiefOfStaffId: DEFAULT_CHIEF_OF_STAFF_ID,
     secretaryPanel:
       normalizeView(parsed.view) === "logbook"
         ? "log"
@@ -1171,16 +1176,40 @@ function normalizeSave(
     delete merged.contractorsByLocation.branch;
   }
 
-  merged.settings = applyWorldMapDevLayoutToSettings(
-    applyDevMapZ1AlignToSettings(merged.settings),
-  );
+  if (options?.skipLocalWorldMap || merged.onlineSession?.playMode === "online") {
+    merged.settings = stripSharedWorldMapSettings(merged.settings);
+  } else {
+    merged.settings = applyWorldMapDevLayoutToSettings(
+      applyDevMapZ1AlignToSettings(merged.settings),
+    );
+  }
 
   merged.govProgram = normalizeGovProgram(
     parsed.govProgram,
     lifetimeRecruitsFromRoster(merged),
   );
 
-  const trimmed = trimSecretaryJobReports(merged);
+  merged.secretaryUnlocks = normalizeSecretaryUnlocks(
+    parsed.secretaryUnlocks,
+    merged.govProgram.xaihiUnlocked,
+  );
+  merged.secretaryProgress = normalizeSecretaryProgressMap(
+    parsed.secretaryProgress,
+    merged.secretaryUnlocks,
+  );
+  merged.secretaryRecruitment = normalizeSecretaryRecruitment(
+    parsed.secretaryRecruitment,
+  );
+  merged.chiefOfStaffId = normalizeChiefOfStaffId(
+    parsed.chiefOfStaffId,
+    merged.secretaryUnlocks,
+  );
+  const afterGovSync = syncLegacyGovUnlocks(merged);
+  Object.assign(merged, afterGovSync);
+
+  const trimmed = checkSecretaryRecruitmentMilestones(
+    trimSecretaryJobReports(merged),
+  );
   if (options?.skipFinalize) return trimmed;
   return finalizeLoadedState(trimmed, Date.now());
 }
@@ -1194,6 +1223,7 @@ export function loadOnlineStateFromRemote(
     GameState,
     "view" | "homePanel" | "secretaryPanel"
   >,
+  sharedLayout?: WorldMapDevLayoutStore | null,
 ): GameState {
   const partial = deserializePrivateState(remote, session);
   const merged = normalizeSave(
@@ -1211,9 +1241,11 @@ export function loadOnlineStateFromRemote(
           ? remote.secretaryPanel
           : fallbackNavigation?.secretaryPanel,
     } as LegacySave,
-    { skipFinalize: true },
+    { skipFinalize: true, skipLocalWorldMap: true },
   );
   merged.onlineSession = session;
+  merged.branchSites = [];
+  merged.worldBranchNameSeq = 1;
   merged.onlineResetGeneration = Math.max(
     Number(remote.resetGeneration ?? 0),
     _knownResetAt ?? 0,
@@ -1222,12 +1254,13 @@ export function loadOnlineStateFromRemote(
   merged.onlineSaveSessionId =
     typeof remoteSessionId === "string" ? remoteSessionId : expectedSessionId;
   const sanitized = sanitizeOnlineMapAnchors(merged);
-  return applyWorldMapDevLayoutToGameState(
-    applyDevMapZ1AlignToGameState(
-      applyOnlineDevRestrictions(
-        finalizeOnlineSyncState(sanitized, Date.now()),
-      ),
+  sanitized.settings = sanitizeOnlinePrivateMapClientSettings(sanitized.settings);
+  const layout = sharedLayout ?? latestSharedWorldMapLayout();
+  return applySharedWorldLayoutToGameState(
+    applyOnlineDevRestrictions(
+      finalizeOnlineSyncState(sanitized, Date.now()),
     ),
+    layout,
   );
 }
 
@@ -1291,6 +1324,7 @@ export function createFreshOnlineState(
   fresh.onlineSession = session;
   fresh.jobPostings = [];
   fresh.companyPresence = {};
+  fresh.marketLeaderboard = {};
   fresh.completedPostingPayouts = [];
   fresh.onlineResetGeneration = resetGeneration;
   fresh.onlineSaveSessionId = saveSessionId;
@@ -1301,13 +1335,9 @@ export function loadGameState(session?: OnlineSession | null): GameState {
   if (session?.playMode === "online") {
     // Firestore bootstrap is authoritative — avoid stale economy cache on first paint.
     // Navigation (view / hub panels) hydrates from local cache until bootstrap completes.
-    return applyWorldMapDevLayoutToGameState(
-      applyDevMapZ1AlignToGameState(
-        hydrateOnlineNavigationFromCache(
-          createFreshOnlineState(session),
-          session,
-        ),
-      ),
+    return hydrateOnlineNavigationFromCache(
+      createFreshOnlineState(session),
+      session,
     );
   }
 
@@ -1378,8 +1408,8 @@ function writeOfflineSaveBlob(
   key: string,
   blob: Record<string, unknown>,
   options?: { rejectStale?: boolean; allowExplicitReset?: boolean },
-): void {
-  writeProtectedLocalSaveBlob(key, blob, options);
+): import("./saveIntegrity").LocalSaveWriteResult {
+  return writeProtectedLocalSaveBlob(key, blob, options);
 }
 
 export function restoreOfflineSaveFromBackup(
@@ -1418,16 +1448,18 @@ function stripOfflinePersistable(state: GameState): Partial<GameState> {
 export function saveGameState(
   state: GameState,
   sessionOverride?: OnlineSession | null,
-): void {
-  syncDevMapZ1AlignFromSettings(state.settings);
-  syncWorldMapDevLayoutFromSettings(state.settings);
-  if (state.saveLoadFailed) return;
+): import("./saveIntegrity").LocalSaveWriteResult | undefined {
+  if (state.saveLoadFailed) return undefined;
   const session = sessionOverride ?? state.onlineSession;
+  if (session?.playMode !== "online") {
+    syncDevMapZ1AlignFromSettings(state.settings);
+    syncWorldMapDevLayoutFromSettings(state.settings);
+  }
   if (session?.playMode === "online") {
     // Firestore bootstrap starts from a blank shell; do not touch the online
     // localStorage cache until remote load completes (see useOnlineWorld).
     if (state.onlineConnectionStatus !== "connected") {
-      return;
+      return undefined;
     }
     const cacheKey = onlineCacheKey(session);
     const blob = serializePrivateState(
@@ -1435,8 +1467,7 @@ export function saveGameState(
       Date.now(),
       state.onlineResetGeneration ?? 0,
     );
-    writeOfflineSaveBlob(cacheKey, blob, { rejectStale: true });
-    return;
+    return writeOfflineSaveBlob(cacheKey, blob, { rejectStale: true });
   }
 
   const key =
@@ -1459,7 +1490,7 @@ export function saveGameState(
     saveRestoredFromBackup: _backupFlag,
     ...persistable
   } = state;
-  writeOfflineSaveBlob(key, persistable as Record<string, unknown>, {
+  return writeOfflineSaveBlob(key, persistable as Record<string, unknown>, {
     rejectStale: true,
   });
 }

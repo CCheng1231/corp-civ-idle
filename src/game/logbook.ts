@@ -29,6 +29,7 @@ export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
   job_cancel: "Job",
   job_complete: "Job",
   phase: "Milestones",
+  secretary: "Secretary",
 };
 
 export const LOG_FILTER_GROUPS: { id: string; label: string; categories: LogCategory[] }[] = [

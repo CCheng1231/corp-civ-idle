@@ -19,6 +19,12 @@ import {
 import type { OnlineAccountId, WorldId } from "./types";
 import { isDevAccount } from "./types";
 import { mapLayoutRef } from "./worldDocs";
+import {
+  layoutSettingsPatchFromStore,
+  worldMapLayoutStoreFromSettings,
+} from "./sharedWorldMap";
+
+export { layoutSettingsPatchFromStore };
 
 export interface WorldMapLayoutDoc {
   layout: WorldMapDevLayoutStore;
@@ -97,29 +103,58 @@ export function parseWorldMapLayoutDoc(
     store.mapDevOpenOffices = openOffices as WorldMapDevLayoutStore["mapDevOpenOffices"];
   }
 
+  const gridNudge = layoutObj.mapDevGridNudge;
+  if (gridNudge && typeof gridNudge === "object") {
+    const dx = Number((gridNudge as { dx?: unknown }).dx);
+    const dy = Number((gridNudge as { dy?: unknown }).dy);
+    if (Number.isFinite(dx) && Number.isFinite(dy)) {
+      store.mapDevGridNudge = { dx, dy };
+    }
+  }
+
+  const hexNudges = layoutObj.mapDevHexNudges;
+  if (hexNudges && typeof hexNudges === "object") {
+    store.mapDevHexNudges = hexNudges as WorldMapDevLayoutStore["mapDevHexNudges"];
+  }
+
+  const siteNudges = layoutObj.mapDevSiteNudges;
+  if (siteNudges && typeof siteNudges === "object") {
+    store.mapDevSiteNudges = siteNudges as WorldMapDevLayoutStore["mapDevSiteNudges"];
+  }
+
+  const bakeVariant = layoutObj.mapZ1BakeVariant;
+  if (bakeVariant === "v5" || bakeVariant === "v6-draft") {
+    store.mapZ1BakeVariant = bakeVariant;
+  }
+
+  const align = layoutObj.mapZ1RasterAlign;
+  if (align && typeof align === "object") {
+    store.mapZ1RasterAlign =
+      align as WorldMapDevLayoutStore["mapZ1RasterAlign"];
+  }
+
+  const alignV6 = layoutObj.mapZ1RasterAlignV6;
+  if (alignV6 && typeof alignV6 === "object") {
+    store.mapZ1RasterAlignV6 =
+      alignV6 as WorldMapDevLayoutStore["mapZ1RasterAlignV6"];
+  }
+
+  if (Array.isArray(layoutObj.mapZ1MajorHubMarkers)) {
+    const markers = layoutObj.mapZ1MajorHubMarkers.flatMap((m) => {
+      if (!m || typeof m !== "object") return [];
+      const x = Number((m as { x?: unknown }).x);
+      const y = Number((m as { y?: unknown }).y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
+      return [{ x, y }];
+    });
+    if (markers.length > 0) store.mapZ1MajorHubMarkers = markers;
+  }
+
   return { layout: store, updatedAt, updatedBy: raw.updatedBy as OnlineAccountId };
 }
 
-export function layoutSettingsPatchFromStore(
-  store: WorldMapDevLayoutStore,
-): Partial<GameSettings> {
-  return {
-    mapDevLandmarkCoords: store.mapDevLandmarkCoords,
-    mapDevExtraHexes: store.mapDevExtraHexes,
-    mapDevRegionOverrides: store.mapDevRegionOverrides,
-    mapDevRegionBrush: store.mapDevRegionBrush,
-    mapDevOpenOffices: store.mapDevOpenOffices,
-  };
-}
-
 export function storeFromSettings(settings: GameSettings): WorldMapDevLayoutStore {
-  return {
-    mapDevLandmarkCoords: settings.mapDevLandmarkCoords,
-    mapDevExtraHexes: settings.mapDevExtraHexes,
-    mapDevRegionOverrides: settings.mapDevRegionOverrides,
-    mapDevRegionBrush: settings.mapDevRegionBrush,
-    mapDevOpenOffices: settings.mapDevOpenOffices,
-  };
+  return worldMapLayoutStoreFromSettings(settings);
 }
 
 function mapLayoutPublishError(err: unknown): OnlineAccessError {
@@ -178,7 +213,6 @@ export async function publishWorldMapDevLayout(
   } catch (err) {
     throw mapLayoutPublishError(err);
   }
-  writeWorldMapDevLayoutStore(layout);
   return doc;
 }
 
@@ -211,6 +245,7 @@ export function subscribeWorldMapDevLayout(
   );
 }
 
+/** Offline-only: mirror published layout into localStorage before offline play. */
 export function applyWorldMapLayoutDocToLocalCache(doc: WorldMapLayoutDoc): void {
   writeWorldMapDevLayoutStore(doc.layout);
 }

@@ -42,7 +42,17 @@ import {
 } from "./refunds";
 import { researchBuildTimeMs } from "./researchBalance";
 import { SECRETARY_IDS, secretaryById } from "./secretaryData";
-import { jobWorkDurationSec, secretaryVisibleOnRoster } from "./secretaryEffects";
+import {
+  jobWorkDurationSec,
+  secretaryVisibleOnRoster,
+} from "./secretaryEffects";
+import {
+  checkSecretaryRecruitmentMilestones,
+  commitSecretaryRecruitment,
+  dismissSecretaryRecruitment,
+  finishRecruitmentAnimation,
+} from "./secretaryRecruitment";
+import { spendSecretarySkillPoint } from "./secretaryProgress";
 import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
@@ -52,8 +62,14 @@ import {
 } from "./jobs";
 import {
   applyOnlineDevRestrictions,
+  canonicalCompanyPresenceMap,
   isOnlineMode
 } from "../multiplayer/playerHq";
+import {
+  applySharedWorldLayoutToGameState,
+  applySharedWorldMapSettings,
+  latestSharedWorldMapLayout,
+} from "../multiplayer/sharedWorldMap";
 import {
   branchOpeningCostForPad,
   branchManagementResearched,
@@ -64,11 +80,13 @@ import {
   applySendBranchEstablishment,
   cancelBranchEstablishment,
 } from "./branchEstablishment";
+import { processBranchEstablishmentTransits } from "./branchEstablishmentProcess";
 import { normalizeCommercialLotBranchSlots } from "./branchCommercial";
 import {
   branchOfficeIdForSite,
   branchSiteForOfficeId,
   hasBranchOffices,
+  isBranchOwnedByActivePlayer,
   isBranchOfficeId
 } from "./branchSites";
 import {
@@ -138,7 +156,6 @@ export const WORLD_PERSIST_ACTIONS = new Set<GameAction["type"]>([
   "ESTABLISH_BRANCH",
   "SEND_BRANCH_ESTABLISH",
   "CANCEL_BRANCH_ESTABLISHMENT",
-  "SYNC_WORLD_BRANCHES",
   "START_BRANCH_CLOSE",
   "CANCEL_BRANCH_CLOSE",
   "RENAME_BRANCH",
@@ -190,6 +207,9 @@ const PERSIST_NEUTRAL_ACTIONS = new Set<GameAction["type"]>([
   "SET_ONLINE_SAVE_SESSION",
   "SYNC_SHARED_JOBS",
   "SYNC_COMPANY_PRESENCE",
+  "SYNC_MARKET_LEADERBOARD",
+  "SYNC_WORLD_BRANCHES",
+  "SYNC_SHARED_WORLD_MAP_LAYOUT",
   "CLEAR_PENDING_SYNC",
   "MARK_POSTING_PAYOUT_DONE",
 ]);
@@ -202,10 +222,16 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "LOAD":
       if (isOnlineMode(action.state) || isOnlineMode(state)) {
-        return finalizeOnlineSyncState(
+        let merged = finalizeOnlineSyncState(
           mergeOnlineRemoteState(state, action.state),
           Date.now(),
         );
+        merged = applyOnlineDevRestrictions(merged);
+        const layout = latestSharedWorldMapLayout();
+        if (layout) {
+          merged = applySharedWorldLayoutToGameState(merged, layout);
+        }
+        return merged;
       }
       return finalizeLoadedState(
         {
@@ -260,7 +286,9 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
                   ? "log"
                   : state.secretaryPanel === "govProgram"
                     ? "govProgram"
-                    : "landing"
+                    : state.secretaryPanel === "marketResearch"
+                      ? "marketResearch"
+                      : "landing"
               : state.secretaryHubResume;
 
       let next: GameState = {
@@ -338,11 +366,34 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 };
     }
 
+    case "SECRETARY_SPEND_SKILL_POINT": {
+      let next = spendSecretarySkillPoint(
+        state,
+        action.secretaryId,
+        action.tree,
+        action.nodeId,
+      );
+      if (next === state) return state;
+      return checkSecretaryRecruitmentMilestones(next, state);
+    }
+
+    case "SECRETARY_RECRUIT_COMMIT": {
+      return commitSecretaryRecruitment(state);
+    }
+
+    case "SECRETARY_RECRUIT_ANIMATION_DONE": {
+      return finishRecruitmentAnimation(state);
+    }
+
+    case "SECRETARY_RECRUIT_DISMISS": {
+      return dismissSecretaryRecruitment(state);
+    }
+
     case "SELECT_CHIEF_OF_STAFF": {
       if (!SECRETARY_IDS.includes(action.secretaryId)) return state;
       if (!secretaryVisibleOnRoster(
         secretaryById(action.secretaryId),
-        state.govProgram?.gessesaUnlocked ?? false,
+        state.secretaryUnlocks,
       )) {
         return state;
       }
@@ -366,7 +417,9 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
               ? "log"
               : action.panel === "govProgram"
                 ? "govProgram"
-                : "landing",
+                : action.panel === "marketResearch"
+                  ? "marketResearch"
+                  : "landing",
         ...(action.logbookFilter !== undefined
           ? { logbookFilterId: action.logbookFilter }
           : {}),
@@ -478,6 +531,13 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           secretaryPanel: "govProgram",
         });
       }
+      if (target === "marketResearch") {
+        return {
+          ...state,
+          view: "secretary",
+          secretaryPanel: "marketResearch",
+        };
+      }
       return {
         ...state,
         view: "secretary",
@@ -535,15 +595,17 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "SEND_BRANCH_ESTABLISH": {
       const { coord, padIndex, fromOfficeId, openingCost, branchName } = action;
+      const now = Date.now();
       const applied = applySendBranchEstablishment(state, {
         coord,
         padIndex,
         fromOfficeId,
         openingCost,
         plannedBranchName: branchName,
-        now: Date.now(),
+        now,
       });
-      return applied ?? state;
+      if (!applied) return state;
+      return processBranchEstablishmentTransits(applied, now);
     }
 
     case "CANCEL_BRANCH_ESTABLISHMENT":
@@ -555,6 +617,15 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         branchSites: action.branchSites,
         worldBranchNameSeq: action.worldBranchNameSeq,
       });
+
+    case "SYNC_SHARED_WORLD_MAP_LAYOUT": {
+      const settings = applySharedWorldMapSettings(
+        state.settings,
+        action.layout ?? undefined,
+      );
+      if (settings === state.settings) return state;
+      return { ...state, settings };
+    }
 
     case "SET_ACTIVE_OFFICE": {
       const now = Date.now();
@@ -589,16 +660,20 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (!canEstablishBranchPad(state, site.id, slotIndex, pick)) return state;
 
       const openingCost = branchOpeningCostForPad(site.id, slotIndex);
+      const now = Date.now();
       const applied = applySendBranchEstablishment(state, {
         coord: pick,
         padIndex: slotIndex,
         fromOfficeId: "hq",
         openingCost,
         plannedBranchName: action.branchName,
-        now: Date.now(),
+        now,
       });
       if (!applied) return state;
-      return { ...applied, selectedOffice: "all" };
+      return processBranchEstablishmentTransits(
+        { ...applied, selectedOffice: "all" },
+        now,
+      );
     }
 
     case "RENAME_BRANCH": {
@@ -608,14 +683,17 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           ? state.lastSelectedOffice
           : null);
       if (!officeId || !isBranchOfficeId(officeId)) return state;
+      const site = branchSiteForOfficeId(state, officeId);
+      if (!site || !isBranchOwnedByActivePlayer(site, state)) return state;
       const name = action.name.trim().slice(0, 48);
       if (!name) return state;
       return {
         ...state,
-        branchSites: state.branchSites.map((site) =>
-          branchOfficeIdForSite(site) === officeId ? { ...site, name } : site,
-        )
-};
+        branchSites: state.branchSites.map((s) =>
+          branchOfficeIdForSite(s) === officeId ? { ...s, name } : s,
+        ),
+        worldPersistRevision: (state.worldPersistRevision ?? 0) + 1,
+      };
     }
 
     case "UPDATE_SETTINGS": {
@@ -635,7 +713,9 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         settings
 };
       if (action.settings.ignoreTimers !== undefined) {
-        return finalizeLoadedState(next, Date.now());
+        const now = Date.now();
+        const finalized = finalizeLoadedState(next, now);
+        return processBranchEstablishmentTransits(finalized, now);
       }
       return next;
     }
@@ -1036,6 +1116,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         action.postingId,
         action.crewAssigned,
         now,
+        action.teamLeadSecretaryId,
       );
       if (next.jobEngagements.length <= before) return state;
       next = govAfterEngageJob(next);
@@ -1086,8 +1167,17 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "SYNC_COMPANY_PRESENCE":
       return {
         ...state,
-        companyPresence: action.companyPresence
-};
+        companyPresence: canonicalCompanyPresenceMap(
+          action.companyPresence,
+          state.settings,
+        ),
+      };
+
+    case "SYNC_MARKET_LEADERBOARD":
+      return {
+        ...state,
+        marketLeaderboard: action.marketLeaderboard,
+      };
 
     case "SET_ONLINE_SESSION":
       return applyOnlineDevRestrictions({

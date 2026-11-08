@@ -25,6 +25,11 @@ import type {
   UnitRoster,
 } from "./types";
 import { DEFAULT_CHIEF_OF_STAFF_ID } from "./secretaryData";
+import {
+  createInitialSecretaryRecruitment,
+  createInitialSecretaryUnlocks,
+  initializeSecretaryProgressMap,
+} from "./secretaryProgress";
 import { createInitialGovProgram } from "./govProgram";
 import {
   branchOfficeIdForSite,
@@ -114,7 +119,7 @@ export function recruitmentOrderDurationMs(count: number): number {
 }
 
 export function recruitmentOrderDurationMsForState(
-  state: Pick<GameState, "chiefOfStaffId">,
+  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
   count: number,
 ): number {
   return recruitmentOrderDurationMsForChief(
@@ -749,6 +754,11 @@ export function createInitialState(now = Date.now()): GameState {
     secretaryPanel: "landing",
     secretaryHubResume: "landing",
     chiefOfStaffId: DEFAULT_CHIEF_OF_STAFF_ID,
+    secretaryUnlocks: createInitialSecretaryUnlocks(),
+    secretaryProgress: initializeSecretaryProgressMap(
+      createInitialSecretaryUnlocks(),
+    ),
+    secretaryRecruitment: createInitialSecretaryRecruitment(),
     playerNotes: "",
     activityLog: [],
     dismissedJobReportIds: [],
@@ -841,6 +851,7 @@ export function recomputeDerivedStats(state: {
   contractorsByLocation: ContractorsByLocation;
   researchLevels: GameState["researchLevels"];
   chiefOfStaffId?: GameState["chiefOfStaffId"];
+  secretaryProgress?: GameState["secretaryProgress"];
   /** Region site bonus on structure passives; defaults to countryside HQ (0%). */
   siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): { rates: ProductionRates } {
@@ -850,9 +861,11 @@ export function recomputeDerivedStats(state: {
       hq: 0,
     },
   });
-  const officeProductionMult = state.chiefOfStaffId
-    ? chiefOfficeProductionMult(state.chiefOfStaffId)
-    : 1;
+  const chiefCtx = {
+    chiefOfStaffId: state.chiefOfStaffId ?? DEFAULT_CHIEF_OF_STAFF_ID,
+    secretaryProgress: state.secretaryProgress ?? {},
+  };
+  const officeProductionMult = chiefOfficeProductionMult(chiefCtx);
 
   const rates: ProductionRates = {
     cash: structureRates.cash * officeProductionMult,
@@ -1122,13 +1135,13 @@ export function recruitBatchCost(
 }
 
 export function recruitBatchCostForState(
-  state: Pick<GameState, "chiefOfStaffId">,
+  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
   unitId: UnitId,
   count: number,
 ): ResourceCost {
   return scaleResourceCost(
     recruitBatchCost(unitId, count),
-    chiefRecruitCostMult(state.chiefOfStaffId),
+    chiefRecruitCostMult(state),
   );
 }
 

@@ -644,6 +644,92 @@
     env(safe-area-inset-left, 0px);
 }
 
+.secretary-skill-screen.secretary-detail-backdrop {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: var(--app-top-chrome-height, 5.25rem);
+  z-index: 180;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  background: transparent;
+}
+
+.secretary-skill-sheet.secretary-detail-dialog {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 20, 25, 0.22) 0%,
+    rgba(15, 20, 25, 0.48) 14%,
+    rgba(15, 20, 25, 0.65) 100%
+  );
+}
+
+.secretary-skill-sheet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 0.85rem 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.secretary-skill-sheet-footer {
+  flex-shrink: 0;
+  padding: 0.55rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 20, 25, 0.82);
+}
+
+.layout-mobile-nav .secretary-skill-screen,
+.app-shell.viewport-preview-mobile .secretary-skill-screen {
+  bottom: var(--mobile-bottom-nav-space, 52px);
+}
+
+.secretary-skill-sheet-footer .secretary-detail-actions {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.secretary-skill-sheet .secretary-detail-skill-panel {
+  flex: 0 1 auto;
+  align-content: start;
+}
+
+.secretary-roster-view--skill-open .hub-synced-tab-scroll-body,
+.secretary-roster-view--skill-open .progression-tab-frozen-header {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.secretary-roster-view--skill-open > .hub-synced-tab-portrait-bg::after {
+  opacity: 0;
+}
+
 .secretary-detail-dialog {
   width: 100%;
   max-width: 100%;
@@ -674,9 +760,11 @@
   cursor: pointer;
 }
 
+/* Legacy modal layout (Chief landing dialog, etc.) */
 .secretary-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
@@ -691,8 +779,9 @@
   align-self: stretch;
   overflow: hidden;
   background: #0a0f14;
-  border-right: 1px solid var(--border);
-  border-radius: 0.85rem 0 0 0.85rem;
+  border-right: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0.85rem 0.85rem 0 0;
 }
 
 .secretary-detail-portrait-frame {
@@ -739,6 +828,49 @@
   overscroll-behavior: contain;
   scrollbar-width: none;
   touch-action: pan-y;
+}
+
+.secretary-detail-bottom-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 0 0 0.85rem 0.85rem;
+}
+
+.secretary-detail-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 0.65rem 1rem;
+  align-items: start;
+}
+
+.secretary-detail-skill-panel {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem 0.85rem;
+  padding: 0.65rem 0 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 0;
+}
+
+.secretary-skill-sheet .secretary-skill-tree {
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.45rem;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.secretary-detail-skill-panel .secretary-skill-tree {
+  min-height: 0;
+}
+
+.secretary-detail-skill-panel .secretary-skill-tree h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .secretary-detail-copy-pane::-webkit-scrollbar {
@@ -857,19 +989,9 @@
     border-radius: 0.35rem;
   }
 
-  .secretary-detail-layout {
+  .secretary-detail-summary,
+  .secretary-detail-skill-panel {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-    min-height: 0;
-    height: 100%;
-  }
-
-  .secretary-detail-portrait-pane {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    border-radius: 0.85rem 0.85rem 0 0;
-    min-height: 0;
-    height: 100%;
   }
 
   .secretary-cos-open-dialog .secretary-detail-layout {
@@ -2025,12 +2147,12 @@
   line-height: 1.15;
 }
 
-.secretary-task-forces-beside {
+.secretary-teams-beside {
   margin: 0;
   min-width: 0;
 }
 
-.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row {
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-team-row {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   min-height: 2.15rem;
@@ -2038,7 +2160,7 @@
   gap: 0.28rem;
 }
 
-.secretary-task-force-icon {
+.secretary-team-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2048,44 +2170,44 @@
   align-self: stretch;
 }
 
-.secretary-task-force-icon-svg {
+.secretary-team-icon-svg {
   display: block;
   width: 1.35rem;
   height: 1.35rem;
 }
 
-.secretary-task-force-icon-disc {
+.secretary-team-icon-disc {
   fill: rgba(23, 30, 39, 0.92);
   stroke: rgba(86, 180, 233, 0.75);
   stroke-width: 1.5;
 }
 
-.secretary-task-force-icon.is-onsite .secretary-task-force-icon-disc {
+.secretary-team-icon.is-onsite .secretary-team-icon-disc {
   stroke: rgba(0, 158, 115, 0.85);
 }
 
-.secretary-task-force-icon.is-traveling {
+.secretary-team-icon.is-traveling {
   color: #8ecae6;
 }
 
-.secretary-task-force-icon.is-onsite {
+.secretary-team-icon.is-onsite {
   color: #6ee7b7;
 }
 
-.secretary-task-force-icon-figure {
+.secretary-team-icon-figure {
   fill: currentColor;
   stroke: currentColor;
 }
 
-.secretary-task-force-icon-spark {
+.secretary-team-icon-spark {
   stroke: currentColor;
 }
 
-.secretary-task-force-icon.is-traveling .secretary-task-force-icon-svg {
-  animation: secretary-task-force-travel 0.85s ease-in-out infinite;
+.secretary-team-icon.is-traveling .secretary-team-icon-svg {
+  animation: secretary-team-travel 0.85s ease-in-out infinite;
 }
 
-@keyframes secretary-task-force-travel {
+@keyframes secretary-team-travel {
   0%,
   100% {
     transform: translateX(-8%);
@@ -2096,19 +2218,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .secretary-task-force-icon.is-traveling .secretary-task-force-icon-svg {
+  .secretary-team-icon.is-traveling .secretary-team-icon-svg {
     animation: none;
   }
 }
 
-.secretary-task-force-row-body {
+.secretary-team-row-body {
   display: flex;
   flex-direction: column;
   gap: 0.04rem;
   min-width: 0;
 }
 
-.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row .queue-name {
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-team-row .queue-name {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2118,7 +2240,7 @@
   line-height: 1.15;
 }
 
-.secretary-view .tab-hero-main .tab-compact-queue .secretary-task-force-row .queue-status {
+.secretary-view .tab-hero-main .tab-compact-queue .secretary-team-row .queue-status {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;

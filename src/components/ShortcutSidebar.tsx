@@ -375,7 +375,7 @@ export const MAIN_VIEW_TITLES: Record<MainView, string> = {
   recruitment: "Recruit contractors",
   research: "R&D — firm-wide tech",
   secretary: "Secretary — Chief of Staff",
-  office: "Job — task forces & board",
+  office: "Job — teams & board",
   logbook: "Notes & logbook",
   settings: "Settings",
 };

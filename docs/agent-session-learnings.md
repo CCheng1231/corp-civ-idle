@@ -31,11 +31,11 @@ Living notes from Chris playtests and corrections. **Append after sessions** so 
 | Office cap label `branches/maxBranches` only | Use **company office sites**: **1/1** before Branch Management research; **1/2** with Branch Management; **1/3** after Massive Expansion L1, etc. (`companyOfficeSiteFraction`). |
 | Treating pads as single-player-only | Pads are **shared-world slots per hex**; multiple players; pad frees when branch closes; Massive Expansion caps **company** branch count, not pad count alone. |
 | Asking whether players see **other players’ research** | Out of scope — players never see others’ research; don’t clutter Q&A. |
-| Missing **BM travel time**, log, and UI while in transit | Establish sends BM from **selected office**; consumed **on arrival**; show transit like jobs/task force. |
+| Missing **BM travel time**, log, and UI while in transit | Establish sends BM from **selected office**; consumed **on arrival**; show transit like jobs/teams. |
 | Map **Home** button renamed to current branch | Label stays **Home**; click **centers map on selected office** (HQ or any branch). |
 | Establish confirm: huge empty layout, wrong palette, square grey overlay | Match **world map tab** tokens; compact type scale; overlay respects **same border-radius** as panel (full cover). |
 | Establish copy too long / wrong order | Title **Establish New branch**; BM cost **below** cash line; “Consumed when branch opens” — drop redundant “not returned to HQ”. |
-| `Send` to Secretary without scrolling | Navigate **and** scroll to task force / crew picker so player doesn’t hunt. |
+| `Send` to Secretary without scrolling | Navigate **and** scroll to team / crew picker so player doesn’t hunt. |
 
 ---
 

@@ -11,6 +11,7 @@ import {
   isPrivateStateStale,
   loadPrivateState,
   loadWorldMeta,
+  loadWorldMapDevLayout,
   OnlineSaveRejectedError,
   SaveRegressionError,
   playerResetTimestamp,
@@ -27,11 +28,25 @@ import {
   subscribePrivateState,
   repairStaleCompanyPresences,
   upsertCompanyPresence,
+  subscribeMarketLeaderboard,
+  applySharedBranchesToGameState,
+  loadSharedBranches,
+  saveSharedBranches,
+  subscribeSharedBranches,
+  upliftPrivateBranchesToShared,
 } from "../multiplayer/worldSync";
+import {
+  applySharedWorldLayoutToGameState,
+  latestSharedWorldMapLayout,
+  setLatestSharedWorldMapLayout,
+} from "../multiplayer/sharedWorldMap";
 import {
   loadOnlineStateFromRemote,
 } from "../game/save";
-import { clearOnlineLocalCache } from "../multiplayer/companySave";
+import {
+  clearOnlineLocalCache,
+  saveAuthoritativeOnlineLocalCache,
+} from "../multiplayer/companySave";
 import { getDb } from "../multiplayer/firebase";
 import {
   ensureOnlineAccess,
@@ -167,10 +182,12 @@ function onlineNavigationFallback(
 }
 
 function applyLoadedOnlineState(
+  session: OnlineSession,
   loaded: GameState,
   stateRef: { current: GameState },
   dispatch: Dispatch<GameAction>,
 ): void {
+  saveAuthoritativeOnlineLocalCache(loaded, session);
   stateRef.current = loaded;
   dispatch({ type: "LOAD", state: loaded });
 }
@@ -202,6 +219,8 @@ export function useOnlineWorld({
   const jobMaintenanceReadyRef = useRef(false);
   const latestSharedPostingsRef = useRef<JobPosting[]>([]);
   const lastFlushedWorldRevRef = useRef(0);
+  const ignoreBranchesUntilRef = useRef(0);
+  const lastAppliedBranchesAtRef = useRef(0);
   const privateFlushInFlightRef = useRef(false);
   const flushOnlineSyncRef = useRef<() => void>(() => {});
   const bootstrapGenerationRef = useRef(0);
@@ -274,6 +293,16 @@ export function useOnlineWorld({
             await seedSharedJobPostingsIfNeeded(session);
             await ensureSharedJobDefinitionsSynced(session);
 
+            const layoutDoc = await loadWorldMapDevLayout(session.worldId);
+            if (layoutDoc) {
+              setLatestSharedWorldMapLayout(
+                layoutDoc.layout,
+                layoutDoc.updatedAt,
+              );
+            }
+
+            let branchesDoc = await loadSharedBranches(session.worldId);
+
             let remote = await loadPrivateState(session);
             if (isStaleBootstrap()) return;
 
@@ -284,6 +313,19 @@ export function useOnlineWorld({
                 resetAt,
                 expectedSessionId,
               );
+              try {
+                branchesDoc = await upliftPrivateBranchesToShared(
+                  session.worldId,
+                  remote,
+                  branchesDoc,
+                );
+              } catch (err) {
+                console.warn("Private branch uplift skipped", err);
+              }
+            }
+
+            if (branchesDoc) {
+              lastAppliedBranchesAtRef.current = branchesDoc.updatedAt;
             }
 
             let loaded: GameState;
@@ -307,6 +349,7 @@ export function useOnlineWorld({
                   resetAt,
                   expectedSessionId,
                   onlineNavigationFallback(stateRef.current),
+                  layoutDoc?.layout ?? null,
                 );
               } catch (err) {
                 console.warn(
@@ -325,13 +368,19 @@ export function useOnlineWorld({
 
             if (isStaleBootstrap()) return;
 
+            loaded = applySharedBranchesToGameState(loaded, branchesDoc);
+            loaded = applySharedWorldLayoutToGameState(
+              loaded,
+              layoutDoc?.layout ?? latestSharedWorldMapLayout(),
+            );
+
             const authorized = authorizeOnlineSaveState(
               loaded,
               resetAt,
               expectedSessionId ?? loaded.onlineSaveSessionId,
             );
             lastExpectedSessionIdRef.current = authorized.onlineSaveSessionId;
-            applyLoadedOnlineState(authorized, stateRef, dispatch);
+            applyLoadedOnlineState(session, authorized, stateRef, dispatch);
 
             if (
               remote &&
@@ -412,6 +461,30 @@ export function useOnlineWorld({
       (err) => console.error("Company listener error", err),
     );
 
+    const unsubLeaderboard = subscribeMarketLeaderboard(
+      session,
+      (entries) => {
+        dispatch({ type: "SYNC_MARKET_LEADERBOARD", marketLeaderboard: entries });
+      },
+      (err) => console.error("Market leaderboard listener error", err),
+    );
+
+    const unsubBranches = subscribeSharedBranches(
+      session.worldId,
+      (doc) => {
+        if (!bootstrapCompleteRef.current || !doc) return;
+        if (Date.now() < ignoreBranchesUntilRef.current) return;
+        if (doc.updatedAt <= lastAppliedBranchesAtRef.current) return;
+        lastAppliedBranchesAtRef.current = doc.updatedAt;
+        dispatch({
+          type: "SYNC_WORLD_BRANCHES",
+          branchSites: doc.sites,
+          worldBranchNameSeq: doc.worldBranchNameSeq,
+        });
+      },
+      (err) => console.error("Shared branches listener error", err),
+    );
+
     const unsubPrivate = subscribePrivateState(
       session,
       (remote) => {
@@ -434,7 +507,7 @@ export function useOnlineWorld({
               onlineNavigationFallback(stateRef.current),
             );
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-            applyLoadedOnlineState(loaded, stateRef, dispatch);
+            applyLoadedOnlineState(session, loaded, stateRef, dispatch);
           } catch (err) {
             console.error("Remote reset generation apply failed", err);
           }
@@ -458,7 +531,7 @@ export function useOnlineWorld({
             onlineNavigationFallback(stateRef.current),
           );
           lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-          applyLoadedOnlineState(loaded, stateRef, dispatch);
+          applyLoadedOnlineState(session, loaded, stateRef, dispatch);
         } catch (err) {
           console.error("Remote private state update rejected", err);
         }
@@ -484,7 +557,7 @@ export function useOnlineWorld({
         void resolveOnlineLoadState(session, resetAt, expectedSessionId).then(
           (loaded) => {
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-            applyLoadedOnlineState(loaded, stateRef, dispatch);
+            applyLoadedOnlineState(session, loaded, stateRef, dispatch);
           },
         );
       },
@@ -502,6 +575,8 @@ export function useOnlineWorld({
       setBootstrapped(false);
       unsubJobs();
       unsubCompanies();
+      unsubLeaderboard();
+      unsubBranches();
       unsubPrivate();
       unsubMeta();
       dispatch({ type: "SET_ONLINE_CONNECTION_STATUS", status: "disconnected" });
@@ -569,7 +644,7 @@ export function useOnlineWorld({
             expectedSessionId,
           );
           lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-          applyLoadedOnlineState(loaded, stateRef, dispatch);
+          applyLoadedOnlineState(session, loaded, stateRef, dispatch);
           return;
         }
 
@@ -589,7 +664,7 @@ export function useOnlineWorld({
             expectedSessionId,
           );
           lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-          applyLoadedOnlineState(loaded, stateRef, dispatch);
+          applyLoadedOnlineState(session, loaded, stateRef, dispatch);
           return;
         }
 
@@ -617,7 +692,7 @@ export function useOnlineWorld({
               expectedSessionId,
             );
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-            applyLoadedOnlineState(loaded, stateRef, dispatch);
+            applyLoadedOnlineState(session, loaded, stateRef, dispatch);
             return;
           }
         }
@@ -671,7 +746,7 @@ export function useOnlineWorld({
               expectedSessionId,
             );
             lastExpectedSessionIdRef.current = loaded.onlineSaveSessionId;
-            applyLoadedOnlineState(loaded, stateRef, dispatch);
+            applyLoadedOnlineState(session, loaded, stateRef, dispatch);
             return;
           }
           console.error("Private state save failed", err);
@@ -684,9 +759,23 @@ export function useOnlineWorld({
     };
 
     const flushOnlineSync = () => {
-      void flushPendingOnlineWork(session, stateRef.current, dispatch).finally(() => {
-        flushPrivate();
-      });
+      void flushPendingOnlineWork(session, stateRef.current, dispatch)
+        .then(async () => {
+          const snapshot = stateRef.current;
+          try {
+            const updatedAt = await saveSharedBranches(session.worldId, {
+              sites: snapshot.branchSites,
+              worldBranchNameSeq: snapshot.worldBranchNameSeq,
+            });
+            lastAppliedBranchesAtRef.current = updatedAt;
+            ignoreBranchesUntilRef.current = updatedAt + IGNORE_OWN_REMOTE_MS;
+          } catch (err) {
+            console.error("Shared branches save failed", err);
+          }
+        })
+        .finally(() => {
+          flushPrivate();
+        });
     };
     flushOnlineSyncRef.current = flushOnlineSync;
 

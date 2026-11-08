@@ -21,7 +21,11 @@ import {
   hasBranchOffices,
   isBranchOfficeId,
 } from "./branchSites";
-import { canOpenAnotherBranch, companyOfficeSiteFraction, maxCompanyOfficeSites } from "./branchCap";
+import {
+  canOpenAnotherBranch,
+  companyOfficeSiteFraction,
+  maxBranchOffices,
+} from "./branchCap";
 import {
   axialDistance,
   axialEquals,
@@ -748,7 +752,7 @@ export function branchManagementResearched(state: GameState): boolean {
 
 /** Max branch offices this company may own (excludes HQ). */
 export function maxBranchSlots(state: GameState): number {
-  return Math.max(0, maxCompanyOfficeSites(state) - 1);
+  return Math.max(0, maxBranchOffices(state));
 }
 
 export function branchManagerAvailable(state: GameState): number {
@@ -806,7 +810,7 @@ export function branchEstablishBlockersForPad(
   }
   if (!canEngageMoreJobs(state)) {
     blockers.push(
-      `Task force cap reached (${maxJobEngagements(state)} slots — finish or cancel a job first)`,
+      `Team cap reached (${maxJobEngagements(state)} slots — finish or cancel a job first)`,
     );
   }
   if (branchManagerAvailable(state) < 1) {

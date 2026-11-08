@@ -26,6 +26,14 @@ import {
 } from "./unitEffects";
 import { appendActivityLogs } from "./logbook";
 import { govOnRecruitsCompleted } from "./govProgram";
+import {
+  onResearchQueueComplete,
+  onStructureQueueComplete,
+} from "./secretaryExp";
+import {
+  checkSecretaryRecruitmentMilestones,
+} from "./secretaryRecruitment";
+import { chiefResearchBuildTimeMult } from "./secretaryEffects";
 import { normalizeResourceCost, branchStartStructureLevels } from "./phaseA";
 import {
   buildTimeMsForQueueJob,
@@ -176,6 +184,7 @@ export function appendBranchOffice(
 }
 
 export function withDerivedStats(state: GameState): GameState {
+  const priorNetWorth = state.netWorth;
   const derived = recomputeDerivedStats({
     ...state,
     siteRateBonusByOffice: siteRateBonusesForState(state)
@@ -188,13 +197,19 @@ export function withDerivedStats(state: GameState): GameState {
 });
   const caps = computeResourceCaps(state);
   const resources = clampResourcesToCaps(state.resources, caps);
-  return {
+  let next: GameState = {
     ...state,
     resources,
     rates: derived.rates,
     locationStats,
     netWorth: computeNetWorth(resources, locationStats)
 };
+  next = checkSecretaryRecruitmentMilestones(next, {
+    ...state,
+    netWorth: priorNetWorth,
+    branchSites: state.branchSites,
+  });
+  return next;
 }
 
 export function applyVictoryCheck(state: GameState): GameState {
@@ -295,6 +310,13 @@ export function processStructureQueues(
 },
         notify,
       );
+      next = onStructureQueueComplete(
+        next,
+        officeId,
+        job.structureId,
+        newLevel,
+        now,
+      );
     }
 
     next = {
@@ -303,7 +325,7 @@ export function processStructureQueues(
 };
   }
 
-  return next;
+  return checkSecretaryRecruitmentMilestones(next);
 }
 
 export function processContractorTransfers(state: GameState, now: number): GameState {
@@ -358,9 +380,13 @@ export function processResearchQueues(
 
     while (queue.length > 0) {
       if (queue[0].completesAt === null) {
-        const buildMs = researchBuildTimeMs(
+        const baseResearchMs = researchBuildTimeMs(
           queue[0].researchId,
           queue[0].targetLevel,
+        );
+        const buildMs = Math.max(
+          1000,
+          Math.round(baseResearchMs * chiefResearchBuildTimeMult(next)),
         );
         const timing = scheduleQueueJobTimer(
           next,
@@ -413,6 +439,7 @@ export function processResearchQueues(
 },
         notify,
       );
+      next = onResearchQueueComplete(next, newLevel, now);
     }
 
     next = {

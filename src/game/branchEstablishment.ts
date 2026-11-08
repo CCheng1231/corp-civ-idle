@@ -22,7 +22,11 @@ import {
   jobTravelHexesToCoord,
 } from "./mapTravel";
 import { applyOfficeCost, applyOfficeRefund, canAffordAtOffice, unitAvailableAt } from "./constants";
-import { formatTimerRemaining, scheduleTimerAt } from "./timers";
+import {
+  formatTimerRemaining,
+  scheduleTimerAt,
+  timerDelayMs,
+} from "./timers";
 import { appendActivityLogs, cloneResourceCost } from "./logbook";
 
 export function branchEstablishmentPhase(
@@ -58,8 +62,11 @@ export function padIsAvailableForEstablish(
   state: GameState,
   hexKey: string,
   padIndex: number,
+  /** When finishing this transit, it must not count as blocking the pad. */
+  exceptTransitId?: string,
 ): boolean {
-  if (branchEstablishmentInTransitToPad(state, hexKey, padIndex)) {
+  const inTransit = branchEstablishmentInTransitToPad(state, hexKey, padIndex);
+  if (inTransit && inTransit.id !== exceptTransitId) {
     return false;
   }
   const coord = parseAxialKey(hexKey);
@@ -102,10 +109,16 @@ export function branchEstablishmentTravelSummary(
   coord: AxialCoord,
 ): { durationLabel: string; hexes: number } {
   const hexes = jobTravelHexesToCoord(state, fromOfficeId, coord);
-  const durationMs = jobTravelDurationMsToCoord(state, fromOfficeId, coord);
+  const durationMs = timerDelayMs(
+    state,
+    jobTravelDurationMsToCoord(state, fromOfficeId, coord),
+  );
   return {
     hexes,
-    durationLabel: formatJobDurationSec(durationMs / 1000),
+    durationLabel:
+      durationMs <= 0
+        ? "Instant"
+        : formatJobDurationSec(durationMs / 1000),
   };
 }
 
@@ -174,7 +187,7 @@ export function applySendBranchEstablishment(
           ? `Opens as ${transit.plannedBranchName}`
           : "Default branch name on arrival",
         `Arrives in ${travel.durationLabel} · ${travel.hexes} Hx from ${fromOfficeId === "hq" ? "HQ" : "office"}`,
-        "Uses 1 task force slot until the manager arrives or returns",
+        "Uses 1 team slot until the manager arrives or returns",
         "Opening cost paid now; branch opens on arrival",
       ],
     },
@@ -191,7 +204,7 @@ export function newBranchEstablishmentTransit(input: {
   now: number;
 }): BranchEstablishmentTransit {
   const hexKey = axialKey(input.coord);
-  const durationMs = jobTravelDurationMsToCoord(
+  const travelMs = jobTravelDurationMsToCoord(
     input.state,
     input.fromOfficeId,
     input.coord,
@@ -207,7 +220,7 @@ export function newBranchEstablishmentTransit(input: {
     ...(plannedBranchName ? { plannedBranchName } : {}),
     phase: "outbound",
     departedAt: input.now,
-    arrivesAt: input.now + durationMs,
+    arrivesAt: scheduleTimerAt(input.state, input.now, travelMs),
   };
 }
 
@@ -267,8 +280,12 @@ export function beginBranchEstablishmentReturn(
       summary: "Branch opening cancelled — Branch Manager returning",
       impacts: [
         "Opening cost held until manager is back at office",
-        "Task force slot in use until return",
-        `Return travel ~${formatJobDurationSec(travelMs / 1000)}`,
+        "Team slot in use until return",
+        `Return travel ~${
+          timerDelayMs(state, travelMs) <= 0
+            ? "Instant"
+            : formatJobDurationSec(travelMs / 1000)
+        }`,
       ],
     },
   ]);
@@ -293,7 +310,7 @@ export function completeBranchEstablishmentReturn(
       impacts: [
         "Opening cost refunded",
         "Branch Manager back at roster",
-        "Task force slot freed",
+        "Team slot freed",
       ],
     },
   ], now);

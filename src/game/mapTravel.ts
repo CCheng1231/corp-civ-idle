@@ -12,7 +12,7 @@ import {
 } from "./mapWorld";
 import { jobDefinitionById } from "./jobs";
 import { parseAxialKey } from "./openOffice";
-import { chiefTravelDurationMs } from "./secretaryEffects";
+import { jobTravelDurationMsForPreview } from "./secretaryEffects";
 import type {
   AxialCoord,
   BranchEstablishmentTransit,
@@ -21,13 +21,14 @@ import type {
   JobEngagement,
   JobPosting,
   OfficeLocationId,
+  SecretaryId,
   TowerId,
 } from "./types";
 
-/** Shared map travel rate (staff transfers + job task forces). */
+/** Shared map travel rate (staff transfers + field teams). */
 export const TRAVEL_SEC_PER_HEX = 30;
 
-/** Floor for all map travel legs (task forces, staff transfers). */
+/** Floor for all map travel legs (field teams, staff transfers). */
 export const MIN_TRAVEL_MS = 10_000;
 
 export function travelDurationMs(hexes: number): number {
@@ -80,22 +81,33 @@ export function jobTravelDurationMsToCoord(
   state: GameState,
   officeId: OfficeLocationId,
   target: AxialCoord,
+  teamLeadSecretaryId?: SecretaryId | null,
 ): number {
   const base = travelDurationMs(
     jobTravelHexesToCoord(state, officeId, target),
   );
-  return chiefTravelDurationMs(state, base, MIN_TRAVEL_MS);
+  if (teamLeadSecretaryId) {
+    return jobTravelDurationMsForPreview(
+      state,
+      officeId,
+      base,
+      teamLeadSecretaryId,
+    );
+  }
+  return Math.max(MIN_TRAVEL_MS, base);
 }
 
 export function jobTravelDurationMsForDefinition(
   state: GameState,
   officeId: OfficeLocationId,
   def: JobDefinition,
+  teamLeadSecretaryId?: SecretaryId | null,
 ): number {
   return jobTravelDurationMsToCoord(
     state,
     officeId,
     jobSiteCoordForDefinition(def, state.settings),
+    teamLeadSecretaryId,
   );
 }
 

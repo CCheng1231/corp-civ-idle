@@ -61,6 +61,7 @@ Playtester flow:
 | `worlds/dev/companies/{accountId}/private/state` | Private company save |
 | `worlds/dev/jobPostings/*` | Shared job board |
 | `worlds/dev/shared/mapLayout` | Shared playtest hex map (dev publish → all players read) |
+| `worlds/dev/shared/marketLeaderboard` | Public net-worth rankings (Market Research) |
 
 Account ids: `tim`, `chris`, or `guest-<random>`.
 

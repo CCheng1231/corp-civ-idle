@@ -101,6 +101,7 @@ import { MapJobFilterPanel } from "./MapJobFilterPanel";
 import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
   DEFAULT_JOB_BOARD_FILTERS,
+  countActiveJobBoardFilters,
   filterAndSortJobPostings,
   sortJobPostingsByDistanceFromMainOffice,
   openJobPostings,
@@ -1119,7 +1120,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     return keys;
   }, [mapVisibleJobPostings, state.settings]);
 
-  const mapJobHighlight = !isDev && mapVisibleJobPostings.length > 0;
+  const mapJobFilterActive = countActiveJobBoardFilters(mapJobFilters) > 0;
+  const mapJobHighlight =
+    !isDev && mapVisibleJobPostings.length > 0 && mapJobFilterActive;
   const playerLandmarkIconsVisible =
     !isDev && playerWorldLandmarkArtVisible(state.settings);
 

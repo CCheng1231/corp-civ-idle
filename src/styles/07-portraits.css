@@ -816,7 +816,7 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
 .operations-view .tab-hero-main .tab-compact-queue .build-queue li,
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue li,
 .research-view .tab-hero-main .tab-compact-queue .build-queue li,
-.secretary-view .tab-hero-main .tab-compact-queue .build-queue li:not(.secretary-task-force-row) {
+.secretary-view .tab-hero-main .tab-compact-queue .build-queue li:not(.secretary-team-row) {
   padding: 0.04rem 0.26rem;
   font-size: 0.58rem;
   gap: 0.22rem;
@@ -1893,14 +1893,14 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
-.modal-backdrop.secretary-detail-backdrop {
+.modal-backdrop.secretary-detail-backdrop:not(.secretary-skill-screen) {
   padding: max(0.2rem, env(safe-area-inset-top))
     env(safe-area-inset-right, 0px)
     max(0.2rem, env(safe-area-inset-bottom))
     env(safe-area-inset-left, 0px);
 }
 
-.modal.secretary-detail-dialog {
+.modal.secretary-detail-dialog:not(.secretary-skill-sheet) {
   width: 100%;
   max-width: 100%;
   height: min(96vh, 800px);

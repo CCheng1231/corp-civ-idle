@@ -314,9 +314,9 @@ function OfficeDrawerSection({
 
   useEffect(() => {
     if (isBranchOfficeId(officeId)) {
-      setDraftName(officeDisplayName(state, officeId));
+      setDraftName(label);
     }
-  }, [officeId, state.branchSites, state]);
+  }, [officeId, label]);
 
   return (
     <>
@@ -373,7 +373,7 @@ function HexContractsSection({
   onSend,
   highlightPostingId,
 }: {
-  gameState: Pick<GameState, "chiefOfStaffId">;
+  gameState: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">;
   coord: AxialCoord;
   postings: JobPosting[];
   isEngaged: (postingId: string) => boolean;
@@ -695,15 +695,16 @@ function CommercialLotSection({
   const mapNow = state.lastTickAt || Date.now();
 
   useEffect(() => {
-    if (confirmPadIndex != null) {
-      setConfirmBranchName(
-        defaultPlayerBranchName(
-          activePlayerId(state),
-          state.worldBranchNameSeq,
-        ),
-      );
-    }
-  }, [confirmPadIndex, state.worldBranchNameSeq, state.onlineSession]);
+    if (confirmPadIndex == null) return;
+    setConfirmBranchName(
+      defaultPlayerBranchName(
+        activePlayerId(state),
+        state.worldBranchNameSeq,
+      ),
+    );
+    // Only seed the name when the establish confirm opens for a pad (not each tick).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [confirmPadIndex]);
 
   useEffect(() => {
     setBranchOpen(false);

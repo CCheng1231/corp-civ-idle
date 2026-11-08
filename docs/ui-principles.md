@@ -16,7 +16,7 @@ When picking up UI work, read in this order (narrow scope; avoid full-repo scans
    - **Structure** → `OperationsView.tsx`, `OfficeStructurePanel.tsx`, `OfficeSiteSummary.tsx`
    - **Recruit** → `RecruitmentView.tsx`
    - **Research** → `ResearchView.tsx`
-   - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `JobPostingCard.tsx`, `MissionCrewPicker.tsx`, `TaskForceStatusIcon.tsx` (embedded job board)
+   - **Secretary** → `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `JobPostingCard.tsx`, `MissionCrewPicker.tsx`, `TeamStatusIcon.tsx` (embedded job board)
    - Map hex drawer (commercial lots / branches) → `MapHexDrawer.tsx`, `mapHexInfo.ts`, `branchCommercial.ts`
 7. **Category open state** — `src/game/officeCategoryOpen.ts` (Structure, Recruit, Research section collapse persists per office).
 8. **Categories & copy** — `src/game/constants.ts` (`RESEARCH_CATEGORY_*`, `STRUCTURE_CATEGORY_*`, `researchDisplayDescription`, `structurePlayerDescription`).
@@ -98,12 +98,12 @@ Tier is a **badge on the card**, not the section header (recruitment).
 | `formatCompactBonus` | `upgradePreviewFormat.ts` | One-line bonus on collapsed maxed cards |
 | `structureUpgradeBlockerDisplay` | `OfficeStructurePanel.tsx` | Filters power + duplicate cost messages from blockers |
 | `SceneBanner` | `SceneBanner.tsx` | Category scene strip (Build, Recruit, Research) |
-| `TaskForceStatusIcon` | `TaskForceStatusIcon.tsx` | Traveling / on-site glyph for Secretary task-force rows |
+| `TeamStatusIcon` | `TeamStatusIcon.tsx` | Traveling / on-site glyph for Secretary team rows |
 | `CompactQueueHeading` | `CompactQueueHeading.tsx` | Stacked queue title (row 1) + count / hide filter (row 2) beside portrait |
 | `TabSiteHeader` | `TabSiteHeader.tsx` | Office picker; home-hub tabs use **Section** dropdown (`HOME_HUB_TABS`) aligned with Office row |
 | Category open persist | `officeCategoryOpen.ts` | Per-office collapse for Structure / Recruit / Research sections |
 
-Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `hub-landing-*`, `tab-hero-header-hub`, `--tab-hero-portrait-`, `tab-queue-heading-stacked`, `secretary-task-forces-beside`, `secretary-task-force-icon`, `job-board-detail-drawer`, `mission-crew-unit-controls`, `office-site-summary-banner`.
+Main stylesheet blocks: search `App.css` for `progression-grid`, `progression-maxed`, `recruitment-grid`, `recruitment-card-compact`, `structure-card-upgrade`, `hub-landing-*`, `tab-hero-header-hub`, `--tab-hero-portrait-`, `tab-queue-heading-stacked`, `secretary-teams-beside`, `secretary-team-icon`, `job-board-detail-drawer`, `mission-crew-unit-controls`, `office-site-summary-banner`.
 
 Panel width: `.main-view-panel { max-width: 960px; }`.
 
@@ -167,13 +167,13 @@ Panel width: `.main-view-panel { max-width: 960px; }`.
 ### Secretary (`OfficeView.tsx`, `SecretaryBriefing.tsx`)
 
 - Nav and title **Secretary** (not Sec).
-- **Task forces** `active/cap` + compact deployment list **below Office picker** (beside portrait).
+- **Teams** `active/cap` + compact deployment list **below Office picker** (beside portrait).
   - Two lines per row: job name · status (`engagementStatusLabel`); units/earnings in `data-tip` only.
-  - Left icon: `TaskForceStatusIcon` — traveling (animated) vs on-site (static); matches world-map task glyphs.
+  - Left icon: `TeamStatusIcon` — traveling (animated) vs on-site (static); matches world-map task glyphs.
   - Cancel uses shared `queue-cancel-btn` pattern.
 - **Reports** count in banner below portrait.
 - Job reports / Job board: compact tab pills; job board **Filters** is link text (`Filters` / `Hide filters`), not a pill button.
-- Embedded job board: no top border (`.job-board.job-board-embedded`); duplicate Task forces panel removed from Job reports tab.
+- Embedded job board: no top border (`.job-board.job-board-embedded`); duplicate Teams panel removed from Job reports tab.
 - **Filters (expanded):** 2-column grid; full width above list in Secretary (not a narrow side column).
 - **Posting drawer** (`JobBoard.tsx` → `JobPostingCard`): fit-content height (no dead space below Engage); compact type; **Larger** / **Smaller** bumps in-drawer font scale.
   - Crew row: `MissionCrewPicker` with **−** / **+** / **Max** steppers (no heavy bordered box).
@@ -248,7 +248,7 @@ Chris marked this pass **done**; next work is **Secretary system** (logic/featur
 |------|------------|
 | Chief / roster data | `src/game/secretaryData.ts`, `secretaryRoles.ts`, `SecretaryRosterView.tsx` |
 | Job tab | `OfficeView.tsx`, `SecretaryBriefing.tsx`, `JobBoard.tsx`, `jobHubData.ts`, `jobs.ts` |
-| Engagements / task forces | `engineReducer.ts`, `engineTick.ts`, `jobEngagements` in `types.ts` |
+| Engagements / field teams | `engineReducer.ts`, `engineTick.ts`, `jobEngagements` in `types.ts` |
 | Briefing copy | `secretaryBriefing.ts` |
 | Online shared board | `useOnlineWorld.ts`, `worldSync.ts` |
 
@@ -285,7 +285,7 @@ Task: [specific Secretary gameplay feature]
 - **Refresh / stale-tab fixes:** Bootstrap no longer races Firestore listeners; online first paint skips localStorage cache; auto-save gated until load completes. Migrations tolerate missing `structureQueues` per office and empty `branchSites`.
 - **Reset / session auth:** World meta `playerResetAt`, `playerSaveSessionId`; save fields `resetGeneration`, `onlineSaveSessionId`, `onlineResetGeneration`. Stale tabs cannot overwrite post-reset progress. Corrupt remote loads repair instead of wipe.
 - **Browser lease:** `src/multiplayer/browserLease.ts` + `useOnlineBrowserLease` — one active browser per Tim/Chris online account; duplicate tab alerts and returns to account gate. `claimGeneration` prevents React StrictMode false kicks; heartbeat reclaims vacant leases.
-- **Settings (online):** Per-player account reset, shared-world reset (job board + task forces only), full world reset, **Pull from Firestore** with timeout UX.
+- **Settings (online):** Per-player account reset, shared-world reset (job board + teams only), full world reset, **Pull from Firestore** with timeout UX.
 - **Map / HQ:** Chris HQ at `{-2,-4}`; `focusViewportOnContentPoint` + DOM rect nudge for reliable HQ button centering.
 - **Misc:** Secretary stats banner counts clickable; blank favicon in `index.html`.
 

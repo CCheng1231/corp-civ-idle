@@ -24,6 +24,7 @@ import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import homeStaffArt from "../assets/Home_Staff.png";
 import homeStructureArt from "../assets/Home_Structure.jpg";
+import { ContractorOfficeRoster } from "./ContractorOfficeRoster";
 import { OverviewQueuePanel } from "./OverviewQueuePanel";
 
 interface OverviewViewProps {
@@ -200,6 +201,10 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
             {formatInteger(staffTotal)}
           </p>
         ) : null}
+      </section>
+
+      <section className="overview-section location-view-section overview-staff-relocate-section">
+        <ContractorOfficeRoster state={state} dispatch={dispatch} />
       </section>
     </>
   );

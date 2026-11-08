@@ -17,6 +17,7 @@ const SECRETARY_DESTINATIONS = [
   { id: "roster" as const, label: "Roster" },
   { id: "job" as const, label: "Job" },
   { id: "govProgram" as const, label: "Gov't Prog" },
+  { id: "marketResearch" as const, label: "Market Research" },
   { id: "log" as const, label: "Log" },
 ];
 
@@ -57,13 +58,19 @@ export function SecretaryLandingView({
     }
   }, [focusRailOpen]);
 
-  function openDestination(id: "roster" | "job" | "log" | "govProgram") {
+  function openDestination(
+    id: "roster" | "job" | "log" | "govProgram" | "marketResearch",
+  ) {
     if (id === "roster") {
       dispatch({ type: "SET_SECRETARY_PANEL", panel: "roster" });
       return;
     }
     if (id === "govProgram") {
       dispatch({ type: "SET_SECRETARY_PANEL", panel: "govProgram" });
+      return;
+    }
+    if (id === "marketResearch") {
+      dispatch({ type: "SET_SECRETARY_PANEL", panel: "marketResearch" });
       return;
     }
     if (id === "log") {

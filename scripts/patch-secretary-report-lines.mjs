@@ -13,13 +13,13 @@ const REPORT_LINES_BY_CODE = {
   Secretary_01:
     "Good morning, Director. I've cleared your morning brief and the floor is running at pace—two contracts need your sign-off when you're ready.",
   Secretary_02:
-    "Director, I tightened today's timelines and protected your afternoon block. Say the word if you want me to pull a task force off the board.",
+    "Director, I tightened today's timelines and protected your afternoon block. Say the word if you want me to pull a team off the board.",
   Secretary_03:
     "Director, recruiting quotes came in under forecast. I held the vendors to our numbers—approve the roster when you want hires moving.",
   Secretary_04:
     "Director, I can have the next cohort on-site Monday if you approve. I've already cut the waiting periods on our side.",
   Secretary_05:
-    "Director, task-force routes are cleaner today. Nobody stays on the road longer than they need to—I kept the board moving.",
+    "Director, team routes are cleaner today. Nobody stays on the road longer than they need to—I kept the board moving.",
 };
 
 const wb = XLSX.read(readFileSync(workbookPath));

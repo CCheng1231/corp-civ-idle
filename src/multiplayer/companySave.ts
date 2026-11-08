@@ -1,6 +1,8 @@
 import type { GameState, JobPosting } from "../game/types";
 import type { OnlineSession, WorldId } from "./types";
 import { PLAYER_IDS } from "./types";
+import { stripSharedWorldMapSettings } from "./sharedWorldMap";
+import { writeProtectedLocalSaveBlob } from "../game/saveIntegrity";
 
 const OFFLINE_SAVE_PREFIX = "corp-civ-idle-save-v2";
 const ONLINE_CACHE_PREFIX = "corp-civ-idle-online-cache";
@@ -39,6 +41,25 @@ export function clearOnlineLocalCache(
   );
 }
 
+/**
+ * After Firestore bootstrap / pull-server / remote LOAD — replace the browser
+ * cache without stale-revision guards (local cache must not block authoritative server).
+ */
+export function saveAuthoritativeOnlineLocalCache(
+  state: GameState,
+  session: OnlineSession,
+): void {
+  clearOnlineLocalCache(session.accountId, session.worldId);
+  const blob = serializePrivateState(
+    state,
+    Date.now(),
+    state.onlineResetGeneration ?? 0,
+  );
+  writeProtectedLocalSaveBlob(onlineCacheKey(session), blob, {
+    rejectStale: false,
+  });
+}
+
 /** Fields excluded from persistence (session/ephemeral). */
 function stripEphemeral(state: GameState): Partial<GameState> {
   const {
@@ -50,6 +71,7 @@ function stripEphemeral(state: GameState): Partial<GameState> {
     logbookHighlightEntryId: _logHighlight,
     jobFocusPostingId: _jobFocus,
     companyPresence: _presence,
+    marketLeaderboard: _leaderboard,
     onlineConnectionStatus: _conn,
     onlineResetGeneration: _resetGen,
     onlineSession: _session,
@@ -82,8 +104,23 @@ export function serializePrivateState(
 ): Record<string, unknown> {
   const stripped = stripEphemeral(state) as GameState;
   const { jobPostings: _jobs, ...privateFields } = stripped;
+  const isOnline = stripped.onlineSession?.playMode === "online";
+  const settings = isOnline
+    ? stripSharedWorldMapSettings(stripped.settings)
+    : stripped.settings;
+  const persistable = isOnline
+    ? (() => {
+        const {
+          branchSites: _sites,
+          worldBranchNameSeq: _seq,
+          ...economyFields
+        } = privateFields as GameState;
+        return economyFields;
+      })()
+    : privateFields;
   return stripUndefinedDeep({
-    ...privateFields,
+    ...persistable,
+    settings,
     updatedAt,
     resetGeneration,
   }) as Record<string, unknown>;
@@ -98,6 +135,7 @@ export function deserializePrivateState(
     onlineSession: session,
     jobPostings: [],
     companyPresence: {},
+    marketLeaderboard: {},
     completedPostingPayouts: Array.isArray(raw.completedPostingPayouts)
       ? (raw.completedPostingPayouts as string[])
       : [],

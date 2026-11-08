@@ -14,6 +14,13 @@ export interface OnlineSession {
   worldId: WorldId;
 }
 
+export interface MarketLeaderboardEntry {
+  accountId: OnlineAccountId;
+  displayName: string;
+  netWorth: number;
+  lastSeenAt: number;
+}
+
 export interface CompanyPresence {
   accountId: OnlineAccountId;
   displayName: string;
@@ -22,6 +29,8 @@ export interface CompanyPresence {
     coord: AxialCoord;
     name: string;
   }>;
+  /** Public leaderboard stat — synced from private save on presence upsert. */
+  netWorth: number;
   lastSeenAt: number;
 }
 

@@ -40,3 +40,13 @@ export function companiesCol(worldId: WorldId = WORLD_ID) {
 export function mapLayoutRef(worldId: WorldId = WORLD_ID) {
   return doc(getDb(), "worlds", worldId, "shared", "mapLayout");
 }
+
+/** Shared branch pad occupancy (all companies). */
+export function sharedBranchesRef(worldId: WorldId = WORLD_ID) {
+  return doc(getDb(), "worlds", worldId, "shared", "branches");
+}
+
+/** Public net-worth rankings (Secretary → Market Research). */
+export function marketLeaderboardRef(worldId: WorldId = WORLD_ID) {
+  return doc(getDb(), "worlds", worldId, "shared", "marketLeaderboard");
+}

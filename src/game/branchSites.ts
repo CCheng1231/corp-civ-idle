@@ -5,6 +5,7 @@ import type {
   GameState,
   OfficeLocationId,
 } from "./types";
+import { activePlayerId } from "../multiplayer/playerHq";
 import { commercialLotById } from "./mapWorld";
 import { effectiveLandmarkCoord } from "./mapDevLayout";
 import { parseAxialKey } from "./openOffice";
@@ -129,9 +130,17 @@ export function branchSiteForOfficeId(
   return undefined;
 }
 
+export function isBranchOwnedByActivePlayer(
+  site: EstablishedBranchSite,
+  state: GameState,
+): boolean {
+  const owner = activePlayerId(state);
+  return (site.ownerPlayerId ?? owner) === owner;
+}
+
 export function branchOfficeIds(state: GameState): BranchOfficeId[] {
   return state.branchSites
-    .filter((s) => !s.closingStartedAt)
+    .filter((s) => !s.closingStartedAt && isBranchOwnedByActivePlayer(s, state))
     .map(branchOfficeIdForSite);
 }
 
@@ -140,7 +149,9 @@ export function ownedOfficeIds(state: GameState): OfficeLocationId[] {
 }
 
 export function hasBranchOffices(state: GameState): boolean {
-  return state.branchSites.some((s) => !s.closingStartedAt);
+  return state.branchSites.some(
+    (s) => !s.closingStartedAt && isBranchOwnedByActivePlayer(s, state),
+  );
 }
 
 export function branchSiteCoord(

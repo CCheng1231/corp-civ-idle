@@ -1,4 +1,4 @@
-import { type Dispatch } from "react";
+import { useState, type Dispatch } from "react";
 import { formatNumber, rosterAt } from "../game/constants";
 import { resolveOfficeLocation, isAllOfficesSelected } from "../game/officeSelection";
 import {
@@ -17,7 +17,9 @@ import {
 } from "../game/jobs";
 import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
 import { formatJobDurationSec } from "../game/jobBoard";
-import { jobWorkDurationSec } from "../game/secretaryEffects";
+import { jobWorkDurationSec, teamLeadJobIncomeMult } from "../game/secretaryEffects";
+import { secretaryById } from "../game/secretaryData";
+import { availableTeamLeadSecretaries } from "../game/secretaryTeamLead";
 import {
   REGION_LABELS,
   jobSiteCoordForPosting,
@@ -33,6 +35,7 @@ import type {
   GameState,
   JobPosting,
   JobSize,
+  SecretaryId,
   UnitAssignment,
 } from "../game/types";
 import { MissionCrewPicker } from "./MissionCrewPicker";
@@ -100,7 +103,10 @@ export function JobPostingCard({
   onEngageSuccess,
   showTower = false,
 }: JobPostingCardProps) {
+  const [teamLeadId, setTeamLeadId] = useState<SecretaryId | "">("");
   const officeId = resolveOfficeLocation(state);
+  const teamLeadOptions = availableTeamLeadSecretaries(state);
+  const previewLead = teamLeadId || null;
   const officeRoster = rosterAt(state, officeId);
   const engageLocked = isAllOfficesSelected(state.selectedOffice);
   const def = jobDefinitionForPosting(posting);
@@ -109,8 +115,11 @@ export function JobPostingCard({
   const siteRegion = jobSiteRegionForPosting(posting, def);
   const band = completionBand(posting.unitHoursCompleted, def.unitHoursTotal);
   const unitCount = totalAssigned(assignment);
-  const expectedPerHour = returnPerHour(def, unitCount);
-  const actualPerHour = actualShiftReturnPerHour(def, posting, unitCount);
+  const incomeMult = previewLead
+    ? teamLeadJobIncomeMult(state, previewLead)
+    : 1;
+  const expectedPerHour = returnPerHour(def, unitCount) * incomeMult;
+  const actualPerHour = actualShiftReturnPerHour(def, posting, unitCount) * incomeMult;
   const completionSupply = jobCompletionSupplyBonus(def);
   const travelHexes = jobTravelHexesToCoord(
     state,
@@ -121,11 +130,13 @@ export function JobPostingCard({
     state,
     posting.id,
     assignment,
+    previewLead,
   );
   const blockReason = validateEngagementAssignment(
     state,
     posting.id,
     assignment,
+    previewLead,
   );
   const disabled = engageLocked || Boolean(blockReason);
   const expiresIn = formatTimerRemaining(
@@ -169,7 +180,13 @@ export function JobPostingCard({
         </li>
         <li>
           <span className="job-posting-fact-label">Shift</span>
-          <span>{formatJobDurationSec(jobWorkDurationSec(state, def.durationSec))}</span>
+          <span>
+            {formatJobDurationSec(
+              jobWorkDurationSec(state, def.durationSec, {
+                teamLeadSecretaryId: previewLead,
+              }),
+            )}
+          </span>
         </li>
         <li>
           <span className="job-posting-fact-label">Payout</span>
@@ -224,6 +241,24 @@ export function JobPostingCard({
         dispatch={dispatch}
         onChange={onAssignmentChange}
       />
+      {teamLeadOptions.length > 0 ? (
+        <label className="job-posting-team-lead">
+          <span>Team lead (optional)</span>
+          <select
+            value={teamLeadId}
+            onChange={(event) =>
+              setTeamLeadId(event.target.value as SecretaryId | "")
+            }
+          >
+            <option value="">No secretary attached</option>
+            {teamLeadOptions.map((id) => (
+              <option key={id} value={id}>
+                {secretaryById(id).name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="job-posting-engage">
         <button
           type="button"
@@ -235,6 +270,7 @@ export function JobPostingCard({
               type: "ENGAGE_JOB",
               postingId: posting.id,
               crewAssigned: assignment,
+              teamLeadSecretaryId: teamLeadId || null,
             });
             onEngageSuccess?.();
           }}

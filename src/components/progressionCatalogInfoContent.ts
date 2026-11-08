@@ -4,11 +4,14 @@ import {
   STRUCTURE_CATEGORY_LABELS,
   STRUCTURE_CATEGORY_ORDER,
 } from "../game/constants";
+import { secretaryById } from "../game/secretaryData";
 import type {
   ContractorCategoryId,
   ResearchCategory,
   StructureCategory,
 } from "../game/types";
+
+const executiveAttachéName = secretaryById("secretary_02").name;
 
 export type ProgressionCatalogInfoKind =
   | "structures"
@@ -147,13 +150,11 @@ export const PROGRESSION_CATALOG_INFO: Record<
     sections: [
       {
         heading: "Growth track",
-        body:
-          "Optional tutorial chain with small RSS rewards. Accept on this tab or decline to play without guided steps (you still unlock Gessesa at ten hires).",
+        body: `Optional tutorial chain with small RSS rewards. Accept on this tab or decline to play without guided steps (you still unlock ${executiveAttachéName} at ten hires).`,
       },
       {
         heading: "Executive path",
-        body:
-          "If you accepted growth, hiring ten contractors pauses growth for a one-time charter here. Skip charter anytime to unlock Gessesa without the field lesson.",
+        body: `If you accepted growth, hiring ten contractors pauses growth for a one-time charter here. Skip charter anytime to unlock ${executiveAttachéName} without the field lesson.`,
       },
       {
         heading: "Job lock",

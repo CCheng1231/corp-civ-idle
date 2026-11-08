@@ -1,8 +1,10 @@
 import type {
   CompanyPresence,
+  MarketLeaderboardEntry,
   OnlineSession,
   PlayerId,
 } from "../multiplayer/types";
+import type { WorldMapDevLayoutStore } from "./worldMapDevLayoutStore";
 
 export type { PlayerId };
 
@@ -437,6 +439,8 @@ export interface JobEngagement {
   commercialLotId?: CommercialLotId | null;
   officeId: OfficeLocationId;
   crewAssigned: UnitAssignment;
+  /** Field team lead for this engagement (not the Chief of Staff). */
+  teamLeadSecretaryId?: SecretaryId | null;
   phase: JobEngagementPhase;
   /** Current travel leg (outbound / returning); null while working. */
   travelStartedAt: number | null;
@@ -524,6 +528,12 @@ export interface GameState {
   secretaryHubResume: SecretaryHubResume;
   /** Active Chief of Staff (Secretary roster). */
   chiefOfStaffId: SecretaryId;
+  /** Owned secretaries (roster + chief / team-lead eligibility). */
+  secretaryUnlocks: SecretaryUnlocks;
+  /** Per-secretary level, EXP, and skill ranks. */
+  secretaryProgress: Partial<Record<SecretaryId, SecretaryProgress>>;
+  /** Milestone recruitment offers (gacha pool). */
+  secretaryRecruitment: SecretaryRecruitmentState;
   /** Free-form notes saved with the game. */
   playerNotes: string;
   activityLog: LogEntry[];
@@ -557,6 +567,8 @@ export interface GameState {
   onlineSession?: OnlineSession | null;
   /** Other companies on the shared map (Online). */
   companyPresence?: Record<string, CompanyPresence>;
+  /** Shared world net-worth board (Secretary → Market Research). */
+  marketLeaderboard?: Record<string, MarketLeaderboardEntry>;
   /** Online: posting ids this client already paid out for. */
   completedPostingPayouts?: string[];
   /** Online Firestore listener status (UI only). */
@@ -705,7 +717,54 @@ export type ChiefOfStaffEffectKind =
   | "recruitTime"
   | "travelTime";
 
-export type SecretaryPanel = "landing" | "roster" | "job" | "log" | "govProgram";
+/** Team-lead identity perk on field engagements (maps to team skill trees). */
+export type TeamLeadEffectKind =
+  | "travelTime"
+  | "jobWorkTime"
+  | "jobIncome"
+  | "jobSupplyCost"
+  | "jobUnitHours";
+
+export type SecretaryUnlocks = Record<SecretaryId, boolean>;
+
+export interface SecretaryProgress {
+  level: number;
+  exp: number;
+  unspentSkillPoints: number;
+  chiefSkillRanks: Record<
+    import("./secretarySkillData").ChiefSkillNodeId,
+    number
+  >;
+  teamLeadSkillRanks: Record<
+    import("./secretarySkillData").TeamLeadSkillNodeId,
+    number
+  >;
+}
+
+export type SecretaryRecruitMilestoneId =
+  | "recruit_first_branch"
+  | "recruit_net_worth_250k"
+  | "recruit_secretary_mastery";
+
+export interface SecretaryRecruitmentOffer {
+  milestoneId: SecretaryRecruitMilestoneId;
+  phase: "offer" | "animating" | "revealed";
+  revealedId?: SecretaryId;
+}
+
+export interface SecretaryRecruitmentState {
+  completedMilestones: SecretaryRecruitMilestoneId[];
+  pendingOffer: SecretaryRecruitmentOffer | null;
+  offerQueue: SecretaryRecruitMilestoneId[];
+}
+
+export type SecretaryPanel =
+  | "landing"
+  | "roster"
+  | "job"
+  | "log"
+  | "govProgram"
+  | "marketResearch";
 
 export type HomePanel = "landing" | "overview";
 
@@ -716,9 +775,18 @@ export type HomeHubResume =
   | "recruitment"
   | "research";
 
-export type SecretaryHubResume = "landing" | "roster" | "job" | "log" | "govProgram";
+export type SecretaryHubResume =
+  | "landing"
+  | "roster"
+  | "job"
+  | "log"
+  | "govProgram"
+  | "marketResearch";
 
-export type GovProgramModalKind = "gessesa_intro" | "lafe_beat" | "decline_growth";
+export type GovProgramModalKind =
+  | "xaihi_intro"
+  | "surtr_beat"
+  | "decline_growth";
 
 export interface GovProgramCalendarState {
   activeDailyQuestId: string | null;
@@ -742,8 +810,8 @@ export interface GovProgramState {
   executiveStepId: string | null;
   executiveCompletedStepIds: string[];
   lifetimeRecruits: number;
-  gessesaUnlocked: boolean;
-  gessesaIntroSeen: boolean;
+  xaihiUnlocked: boolean;
+  xaihiIntroSeen: boolean;
   pendingModal: GovProgramModalKind | null;
   chiefLessonPending: boolean;
   mapSiteInspected: boolean;
@@ -767,7 +835,8 @@ export type LogCategory =
   | "job_engage"
   | "job_cancel"
   | "job_complete"
-  | "phase";
+  | "phase"
+  | "secretary";
 
 export interface LogEntry {
   id: string;
@@ -811,6 +880,7 @@ export type GameAction =
   | { type: "START_BRANCH_CLOSE"; officeId: OfficeLocationId }
   | { type: "SET_ACTIVE_OFFICE"; officeId: OfficeLocationId }
   | { type: "SYNC_WORLD_BRANCHES"; branchSites: EstablishedBranchSite[]; worldBranchNameSeq: number }
+  | { type: "SYNC_SHARED_WORLD_MAP_LAYOUT"; layout: WorldMapDevLayoutStore | null }
   | { type: "RENAME_BRANCH"; name: string; officeId?: OfficeLocationId }
   | { type: "RECRUIT_CONTRACTOR"; unitId: UnitId }
   | {
@@ -830,7 +900,17 @@ export type GameAction =
       type: "ENGAGE_JOB";
       postingId: string;
       crewAssigned: UnitAssignment;
+      teamLeadSecretaryId?: SecretaryId | null;
     }
+  | {
+      type: "SECRETARY_SPEND_SKILL_POINT";
+      secretaryId: SecretaryId;
+      tree: "chief" | "teamLead";
+      nodeId: string;
+    }
+  | { type: "SECRETARY_RECRUIT_DISMISS" }
+  | { type: "SECRETARY_RECRUIT_COMMIT" }
+  | { type: "SECRETARY_RECRUIT_ANIMATION_DONE" }
   | { type: "CANCEL_JOB_ENGAGEMENT"; engagementId: string }
   | {
       type: "START_PROJECT";
@@ -883,6 +963,10 @@ export type GameAction =
   | {
       type: "SYNC_COMPANY_PRESENCE";
       companyPresence: Record<string, CompanyPresence>;
+    }
+  | {
+      type: "SYNC_MARKET_LEADERBOARD";
+      marketLeaderboard: Record<string, MarketLeaderboardEntry>;
     }
   | { type: "SET_ONLINE_SESSION"; session: OnlineSession | null }
   | {

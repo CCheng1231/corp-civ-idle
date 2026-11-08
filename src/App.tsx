@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState }
 import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { GovProgramModal } from "./components/GovProgramModal";
+import { SecretaryRecruitmentModal } from "./components/SecretaryRecruitmentModal";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
 import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
@@ -74,10 +75,12 @@ function GameShell({
   }, [session, dispatch]);
 
   useLayoutEffect(() => {
-    saveGameState(state, session);
+    const result = saveGameState(state, session);
     const integrity = consumeLastSaveIntegrityEvent();
     if (integrity) {
       setSaveIntegrityMessage(integrity.message);
+    } else if (result?.ok) {
+      setSaveIntegrityMessage(null);
     }
   }, [state, session]);
 
@@ -119,6 +122,7 @@ function GameShell({
         />
       ) : null}
       <GovProgramModal state={state} dispatch={dispatch} />
+      <SecretaryRecruitmentModal state={state} dispatch={dispatch} />
       <CompletionAlertToasts
         alerts={state.pendingCompletionAlerts}
         settings={state.settings}

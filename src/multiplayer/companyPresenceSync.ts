@@ -1,14 +1,15 @@
 import { getDocs, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { branchSiteCoord } from "../game/mapWorld";
+import { isBranchOwnedByActivePlayer } from "../game/branchSites";
 import type { GameState, AxialCoord } from "../game/types";
 import {
   canonicalCompanyPresence,
-  canonicalCompanyPresenceMap,
   playerHqCoord,
   presenceHqNeedsRepair,
 } from "./playerHq";
 import type { CompanyPresence, OnlineSession, WorldId } from "./types";
 import { accountDisplayName, isValidOnlineAccountId } from "./types";
+import { upsertMarketLeaderboardEntry } from "./marketLeaderboardSync";
 import { companiesCol, companyRef, WORLD_ID } from "./worldDocs";
 
 export function presenceFromState(
@@ -18,13 +19,16 @@ export function presenceFromState(
   return {
     accountId: session.accountId,
     displayName: accountDisplayName(session.accountId, session.displayName),
-    hqCoord: playerHqCoord(session.accountId),
-    branchSites: state.branchSites.map((site) => ({
-      coord: branchSiteCoord(site),
-      name: site.name
-})),
-    lastSeenAt: Date.now()
-};
+    hqCoord: playerHqCoord(session.accountId, state.settings),
+    branchSites: state.branchSites
+      .filter((site) => isBranchOwnedByActivePlayer(site, state))
+      .map((site) => ({
+        coord: branchSiteCoord(site, state.settings),
+        name: site.name,
+      })),
+    netWorth: Math.max(0, Math.floor(state.netWorth ?? 0)),
+    lastSeenAt: Date.now(),
+  };
 }
 
 function parseAxialCoord(raw: unknown): AxialCoord | null {
@@ -72,8 +76,12 @@ export function parseCompanyPresence(
         : accountDisplayName(accountId),
     hqCoord,
     branchSites,
-    lastSeenAt: Number(raw.lastSeenAt ?? 0)
-};
+    netWorth:
+      typeof raw.netWorth === "number" && Number.isFinite(raw.netWorth)
+        ? Math.max(0, Math.floor(raw.netWorth))
+        : 0,
+    lastSeenAt: Number(raw.lastSeenAt ?? 0),
+  };
 }
 
 export async function repairCompanyPresenceDoc(
@@ -110,6 +118,7 @@ export async function upsertCompanyPresence(
     companyRef(session.accountId, session.worldId),
     presenceFromState(session, state),
   );
+  await upsertMarketLeaderboardEntry(session, state);
 }
 
 export function subscribeCompanies(
@@ -138,7 +147,7 @@ export function subscribeCompanies(
           );
         }
       }
-      onChange(canonicalCompanyPresenceMap(map));
+      onChange(map);
     },
     (err) => onError(err),
   );

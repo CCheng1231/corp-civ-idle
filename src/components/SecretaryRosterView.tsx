@@ -11,6 +11,7 @@ import {
   secretariesForOfficeFilter,
   sortSecretariesForRoster,
 } from "../game/secretaryRoles";
+import { effectiveChiefBonusLabel } from "../game/secretaryEffects";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import {
   UNIT_PORTRAIT_SKINS,
@@ -54,7 +55,7 @@ export function SecretaryRosterView({
   const chiefId = state.chiefOfStaffId;
   const chief = secretaryById(chiefId);
   const rosterEntries = sortSecretariesForRoster(
-    secretariesInPlayerRoster(state.govProgram?.gessesaUnlocked ?? false),
+    secretariesInPlayerRoster(state.secretaryUnlocks),
     chiefId,
   );
   const officeFilteredEntries = secretariesForOfficeFilter(
@@ -116,7 +117,9 @@ export function SecretaryRosterView({
       <h2 className="secretary-roster-title">
         Chief of Staff <span aria-hidden="true">—</span> {chief.name}
       </h2>
-      <p className="secretary-roster-stat-line">{chief.chiefOfStaffBonus}</p>
+      <p className="secretary-roster-stat-line">
+        {effectiveChiefBonusLabel(state, chiefId)}
+      </p>
     </section>
   );
 
@@ -341,8 +344,13 @@ export function SecretaryRosterView({
   );
 
   return (
-    <div className="main-view-panel location-view-panel secretary-view hub-synced-tab-view hub-synced-tab-view--progression-freeze secretary-roster-view">
-      <HubSyncedTabBackground chiefId={chiefId} portraitSource="secretary" />
+    <div
+      className={`main-view-panel location-view-panel secretary-view hub-synced-tab-view hub-synced-tab-view--progression-freeze secretary-roster-view${detailId ? " secretary-roster-view--skill-open" : ""}`}
+    >
+      <HubSyncedTabBackground
+        chiefId={detailId ?? chiefId}
+        portraitSource="secretary"
+      />
       <div className="progression-tab-frozen-header">
         <ProgressionTabStickyChrome
           secretaryHubTab="roster"
@@ -369,6 +377,8 @@ export function SecretaryRosterView({
 
       {detailSecretary ? (
         <SecretaryDetailDialog
+          state={state}
+          dispatch={dispatch}
           secretary={detailSecretary}
           chiefOfStaffId={chiefId}
           onAssignChief={selectChief}

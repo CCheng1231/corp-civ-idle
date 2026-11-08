@@ -7,6 +7,7 @@ import { PLAYER_IDS } from "./types";
 import { bumpPlayerResetAt, newSaveSessionId } from "./worldMeta";
 import { writeFreshPrivateState } from "./privateSaveSync";
 import { resetSharedWorld } from "./sharedJobSync";
+import { clearMarketLeaderboard } from "./marketLeaderboardSync";
 import { companyRef, metaRef, privateStateRef } from "./worldDocs";
 
 export async function resetOnlinePlayerAccount(
@@ -23,8 +24,9 @@ export async function resetOnlinePlayerAccount(
     displayName: accountDisplayName(accountId),
     hqCoord: playerHqCoord(accountId),
     branchSites: [],
-    lastSeenAt: Date.now()
-});
+    netWorth: 0,
+    lastSeenAt: Date.now(),
+  });
   clearOnlineLocalCache(accountId, session.worldId);
 }
 
@@ -82,10 +84,12 @@ export async function resetOnlineDatabase(
         displayName: PLAYER_LABELS[playerId],
         hqCoord: playerHqCoord(playerId),
         branchSites: [],
-        lastSeenAt: Date.now()
-});
+        netWorth: 0,
+        lastSeenAt: Date.now(),
+      });
     }),
   );
+  await clearMarketLeaderboard(session.worldId);
   await resetSharedWorld(session);
 }
 

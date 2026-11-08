@@ -12,7 +12,9 @@ import {
 import { applyOfficeCost, canAffordAtOffice } from "./constants";
 import { govEngageLockActive } from "./govProgram";
 import { resolveOfficeLocation } from "./officeSelection";
-import type { GameState, JobEngagement, UnitAssignment } from "./types";
+import { applyTeamLeadTravelSupplyCost } from "./secretaryEffects";
+import { canAssignTeamLead } from "./secretaryTeamLead";
+import type { GameState, JobEngagement, SecretaryId, UnitAssignment } from "./types";
 import { formatTimerRemaining, scheduleTimerAt } from "./timers";
 import {
   activeEngagementCount,
@@ -41,6 +43,7 @@ export function engageJobPosting(
   postingId: string,
   crewAssigned: UnitAssignment,
   now: number,
+  teamLeadSecretaryId?: SecretaryId | null,
 ): GameState {
   if (govEngageLockActive(state)) return state;
   if (!canEngageMoreJobs(state)) return state;
@@ -54,6 +57,12 @@ export function engageJobPosting(
   if (!canAssignFromRoster(roster, crewAssigned)) return state;
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) return state;
 
+  let teamLead: SecretaryId | null = null;
+  if (teamLeadSecretaryId) {
+    if (!canAssignTeamLead(state, teamLeadSecretaryId)) return state;
+    teamLead = teamLeadSecretaryId;
+  }
+
   const siteCoord = jobSiteCoordForPosting(posting, def, state.settings);
   const travelHexes = jobTravelHexesToCoord(
     state,
@@ -61,7 +70,11 @@ export function engageJobPosting(
     siteCoord,
   );
   const unitCount = totalAssigned(crewAssigned);
-  const tripSupply = roundTripTravelSupplyCost(travelHexes, unitCount);
+  const tripSupply = applyTeamLeadTravelSupplyCost(
+    state,
+    roundTripTravelSupplyCost(travelHexes, unitCount),
+    teamLead,
+  );
   if (!canAffordAtOffice(state, officeId, { supply: tripSupply })) {
     return state;
   }
@@ -74,7 +87,12 @@ export function engageJobPosting(
   if (tripSupply > 0) {
     next = applyOfficeCost(next, officeId, { supply: tripSupply });
   }
-  const travelMs = jobTravelDurationMsForDefinition(next, officeId, def);
+  const travelMs = jobTravelDurationMsForDefinition(
+    next,
+    officeId,
+    def,
+    teamLead,
+  );
   next.jobEngagements.push({
     id: `eng_${postingId}_${now}`,
     postingId,
@@ -84,6 +102,7 @@ export function engageJobPosting(
     commercialLotId: posting.commercialLotId ?? def.commercialLotId ?? null,
     officeId,
     crewAssigned,
+    teamLeadSecretaryId: teamLead,
     phase: "outbound",
     travelStartedAt: now,
     travelArrivesAt: scheduleTimerAt(next, now, travelMs),
@@ -123,12 +142,13 @@ export function validateEngagementAssignment(
   state: GameState,
   postingId: string,
   crewAssigned: UnitAssignment,
+  teamLeadSecretaryId?: SecretaryId | null,
 ): string | null {
   if (govEngageLockActive(state)) {
     return "Government charter in progress (Secretary → Gov't Prog)";
   }
   if (!canEngageMoreJobs(state)) {
-    return `Task force cap reached (${activeEngagementCount(state)}/${maxJobEngagements(state)})`;
+    return `Team cap reached (${activeEngagementCount(state)}/${maxJobEngagements(state)})`;
   }
   const posting = postingById(state, postingId);
   if (!posting || posting.status !== "open") return "Posting unavailable";
@@ -148,9 +168,10 @@ export function validateEngagementAssignment(
     state.selectedOffice,
     jobSiteCoordForPosting(posting, def, state.settings),
   );
-  const outboundSupply = roundTripTravelSupplyCost(
-    travelHexes,
-    totalAssigned(crewAssigned),
+  const outboundSupply = applyTeamLeadTravelSupplyCost(
+    state,
+    roundTripTravelSupplyCost(travelHexes, totalAssigned(crewAssigned)),
+    teamLeadSecretaryId,
   );
   if (
     outboundSupply > 0 &&
@@ -166,6 +187,7 @@ export function jobEngagementTravelSupplyCost(
   state: GameState,
   postingId: string,
   crewAssigned: UnitAssignment,
+  teamLeadSecretaryId?: SecretaryId | null,
 ): number {
   const posting = postingById(state, postingId);
   if (!posting) return 0;
@@ -176,5 +198,9 @@ export function jobEngagementTravelSupplyCost(
     officeId,
     jobSiteCoordForPosting(posting, def, state.settings),
   );
-  return roundTripTravelSupplyCost(hexes, totalAssigned(crewAssigned));
+  return applyTeamLeadTravelSupplyCost(
+    state,
+    roundTripTravelSupplyCost(hexes, totalAssigned(crewAssigned)),
+    teamLeadSecretaryId,
+  );
 }

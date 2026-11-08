@@ -27,6 +27,7 @@ import {
   withDerivedStats
 } from "./engineQueues";
 import { processBranchEstablishmentTransits } from "./branchEstablishmentProcess";
+import { mergeOnlineSettings } from "../multiplayer/sharedWorldMap";
 
 export function finalizeLoadedState(state: GameState, now: number): GameState {
   const previousTickAt = state.lastTickAt;
@@ -82,6 +83,8 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
 /** Online Firestore load — resolve queues and apply passive production since lastTickAt. */
 export function finalizeOnlineSyncState(state: GameState, now: number): GameState {
   const previousTickAt = state.lastTickAt;
+  const beforeCatchUp = state;
+  const priorSummary = state.pendingOfflineSummary;
   const normalized = reconcileStructureBuildTimers(
     {
       ...state,
@@ -117,10 +120,19 @@ export function finalizeOnlineSyncState(state: GameState, now: number): GameStat
   const awaySec = Math.max(0, (now - previousTickAt) / 1000);
   const afterProduction =
     awaySec > 0 ? tickProduction(afterQueues, awaySec) : afterQueues;
+  const pendingOfflineSummary =
+    awaySec > 0
+      ? buildOfflineWelcomeSummary(
+          beforeCatchUp,
+          afterQueues,
+          afterProduction,
+          awaySec,
+        )
+      : priorSummary ?? null;
   return {
     ...afterProduction,
     lastTickAt: now,
-    pendingOfflineSummary: null,
+    pendingOfflineSummary,
     onlineResetGeneration: afterProduction.onlineResetGeneration,
     onlineSaveSessionId: afterProduction.onlineSaveSessionId
 };
@@ -138,19 +150,18 @@ export function mergeOnlineRemoteState(
     homeHubResume: current.homeHubResume,
     secretaryPanel: current.secretaryPanel,
     secretaryHubResume: current.secretaryHubResume,
-    settings: {
-      ...incoming.settings,
-      viewportPreview:
-        current.settings.viewportPreview ??
-        incoming.settings.viewportPreview
-},
+    settings: mergeOnlineSettings(current.settings, incoming.settings),
     jobPostings: current.jobPostings,
+    branchSites: current.branchSites,
+    worldBranchNameSeq: current.worldBranchNameSeq,
     companyPresence: current.companyPresence,
+    marketLeaderboard: current.marketLeaderboard,
     recruitFocusUnitId: current.recruitFocusUnitId,
     logbookHighlightEntryId: current.logbookHighlightEntryId,
     jobFocusPostingId: current.jobFocusPostingId,
     pendingCompletionAlerts: current.pendingCompletionAlerts,
-    pendingOfflineSummary: current.pendingOfflineSummary,
+    pendingOfflineSummary:
+      incoming.pendingOfflineSummary ?? current.pendingOfflineSummary,
     onlineConnectionStatus: current.onlineConnectionStatus,
     onlineSession: current.onlineSession ?? incoming.onlineSession,
     onlineResetGeneration:

@@ -13,6 +13,7 @@ import {
   govGrowthTrackPaused,
 } from "../game/govProgram";
 import { resolveOfficeLocation } from "../game/officeSelection";
+import { secretaryById } from "../game/secretaryData";
 import type { GameAction, GameState } from "../game/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GovProgramStepGuidance } from "./GovProgramStepGuidance";
@@ -159,7 +160,8 @@ export function GovernmentProgramView({
         <section className="gov-program-card">
           <h3>Executive attaché</h3>
           <p className="muted">
-            Gessesa is available on Roster when the intro is complete.
+            {secretaryById("secretary_02").name} is available on Roster when the
+            intro is complete.
           </p>
         </section>
       ) : null}
@@ -213,7 +215,7 @@ export function GovernmentProgramView({
       {declineOpen ? (
         <ConfirmDialog
           title="Decline growth program?"
-          message="You will not receive growth stipends or guided steps. At ten hires you can still meet Gessesa — without the charter lesson or Lafe Chief tutorial."
+          message={`You will not receive growth stipends or guided steps. At ten hires you can still meet ${secretaryById("secretary_02").name} — without the charter lesson or ${secretaryById("secretary_01").name} Chief tutorial.`}
           confirmLabel="Decline program"
           cancelLabel="Stay enrolled"
           confirmTone="primary"

@@ -4124,6 +4124,38 @@
   margin-bottom: 0.5rem;
 }
 
+.contractor-roster-destination {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+}
+
+.contractor-roster-destination-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.contractor-roster-destination-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.contractor-roster-destination-select {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-size: 0.78rem;
+}
+
+.contractor-roster-engage {
+  margin-top: 0.45rem;
+}
+
+.contractor-roster-engage .job-posting-engage-btn {
+  width: 100%;
+}
+
 .contractor-roster-list {
   list-style: none;
   margin: 0;

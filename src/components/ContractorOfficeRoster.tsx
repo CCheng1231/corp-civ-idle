@@ -1,11 +1,14 @@
-import { type Dispatch } from "react";
+import { useState, type Dispatch } from "react";
 import {
   CONTRACTOR_TRANSFER_SEC_PER_HEX,
+  canAffordAtOffice,
   contractorTransferDurationMs,
   contractorTransferHexDistance,
   contractorTransferSupplyCost,
+  formatInteger,
   officeSiteLabel,
   otherOffice,
+  rosterAt,
   totalWorkforce,
   unitAvailableAt,
 } from "../game/constants";
@@ -15,30 +18,118 @@ import {
   ownedOfficeIds,
 } from "../game/branchSites";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
-import { unitDefinition } from "../game/unitEffects";
+import { totalAssigned, unitDefinition } from "../game/unitEffects";
 import { formatTimerRemaining } from "../game/timers";
 import type {
   GameAction,
   GameState,
   OfficeLocationId,
+  UnitAssignment,
   UnitId,
 } from "../game/types";
+import { UnitCountPicker } from "./UnitCountPicker";
 
 interface ContractorOfficeRosterProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
 }
 
-function transferLabelSec(
+function transferSupplyTotal(
   state: GameState,
   from: OfficeLocationId,
   to: OfficeLocationId,
-  unitId: UnitId,
+  draft: UnitAssignment,
+): number {
+  let supply = 0;
+  for (const [unitId, count] of Object.entries(draft)) {
+    const n = count ?? 0;
+    if (n <= 0) continue;
+    supply += contractorTransferSupplyCost(
+      state,
+      from,
+      to,
+      unitId as UnitId,
+      n,
+    );
+  }
+  return supply;
+}
+
+function transferBlockReason(
+  state: GameState,
+  from: OfficeLocationId,
+  to: OfficeLocationId | null,
+  draft: UnitAssignment,
+): string | null {
+  if (!to) return "Open a branch to relocate staff";
+  const total = totalAssigned(draft);
+  if (total <= 0) return "Choose units to send";
+  for (const [unitId, count] of Object.entries(draft)) {
+    const n = count ?? 0;
+    if (n <= 0) continue;
+    if (unitAvailableAt(state, from, unitId as UnitId) < n) {
+      const unit = unitDefinition(unitId as UnitId);
+      return `Not enough ${unit.name} on site`;
+    }
+  }
+  const supply = transferSupplyTotal(state, from, to, draft);
+  if (
+    supply > 0 &&
+    !canAffordAtOffice(state, from, { supply })
+  ) {
+    return `Need ${formatInteger(supply)} supply at ${officeSiteLabel(state, from)}`;
+  }
+  return null;
+}
+
+function transferDestinations(
+  offices: OfficeLocationId[],
+  from: OfficeLocationId,
+): OfficeLocationId[] {
+  return offices.filter((id) => id !== from);
+}
+
+function defaultTransferDestination(
+  state: GameState,
+  from: OfficeLocationId,
+  offices: OfficeLocationId[],
+): OfficeLocationId | null {
+  const options = transferDestinations(offices, from);
+  if (options.length === 0) return null;
+  const cyclic = otherOffice(state, from);
+  return options.includes(cyclic) ? cyclic : options[0];
+}
+
+function resolveTransferDestination(
+  state: GameState,
+  from: OfficeLocationId,
+  offices: OfficeLocationId[],
+  destinationByOffice: Partial<Record<OfficeLocationId, OfficeLocationId>>,
+): OfficeLocationId | null {
+  const options = transferDestinations(offices, from);
+  if (options.length === 0) return null;
+  const picked = destinationByOffice[from];
+  if (picked && picked !== from && options.includes(picked)) return picked;
+  return defaultTransferDestination(state, from, offices);
+}
+
+function transferSummaryLabel(
+  state: GameState,
+  from: OfficeLocationId,
+  to: OfficeLocationId,
+  draft: UnitAssignment,
 ): string {
+  const total = totalAssigned(draft);
+  const supply = transferSupplyTotal(state, from, to, draft);
   const hexes = contractorTransferHexDistance(state, from, to);
-  const sec = contractorTransferDurationMs(state, from, to, unitId, 1) / 1000;
-  const supply = contractorTransferSupplyCost(state, from, to, unitId, 1);
-  return `${hexes} hex · ${sec}s · ${supply} supply`;
+  const maxSec = RECRUITMENT_UNITS.reduce((peak, unit) => {
+    const count = draft[unit.id] ?? 0;
+    if (count <= 0) return peak;
+    const sec =
+      contractorTransferDurationMs(state, from, to, unit.id, count) / 1000;
+    return Math.max(peak, sec);
+  }, 0);
+  return `${total} unit${total === 1 ? "" : "s"} · ${hexes} hex · ~${Math.ceil(maxSec)}s · ${supply} supply`;
 }
 
 export function ContractorOfficeRoster({
@@ -52,19 +143,45 @@ export function ContractorOfficeRoster({
     firstBranchId != null
       ? contractorTransferHexDistance(state, "hq", firstBranchId)
       : 0;
+  const [draftByOffice, setDraftByOffice] = useState<
+    Partial<Record<OfficeLocationId, UnitAssignment>>
+  >({});
+  const [destinationByOffice, setDestinationByOffice] = useState<
+    Partial<Record<OfficeLocationId, OfficeLocationId>>
+  >({});
 
-  function sendOne(
-    from: OfficeLocationId,
-    to: OfficeLocationId,
-    unitId: UnitId,
-  ) {
+  function draftAt(officeId: OfficeLocationId): UnitAssignment {
+    return draftByOffice[officeId] ?? {};
+  }
+
+  function setDraftAt(officeId: OfficeLocationId, next: UnitAssignment) {
+    setDraftByOffice((prev) => ({ ...prev, [officeId]: next }));
+  }
+
+  function openRecruitment(unitId: UnitId) {
     dispatch({
-      type: "START_CONTRACTOR_TRANSFER",
-      from,
-      to,
-      unitId,
-      count: 1,
+      type: "SET_VIEW",
+      view: "recruitment",
+      recruitFocusUnitId: unitId,
     });
+  }
+
+  function confirmTransfer(from: OfficeLocationId, to: OfficeLocationId) {
+    const draft = draftAt(from);
+    const blockReason = transferBlockReason(state, from, to, draft);
+    if (blockReason) return;
+    for (const [unitId, count] of Object.entries(draft)) {
+      const n = count ?? 0;
+      if (n <= 0) continue;
+      dispatch({
+        type: "START_CONTRACTOR_TRANSFER",
+        from,
+        to,
+        unitId: unitId as UnitId,
+        count: n,
+      });
+    }
+    setDraftAt(from, {});
   }
 
   return (
@@ -85,12 +202,25 @@ export function ContractorOfficeRoster({
 
       <div className="contractor-roster-grid">
         {offices.map((officeId) => {
-          const roster = state.contractorsByLocation[officeId];
-          const destination =
-            offices.length > 1 ? otherOffice(state, officeId) : null;
-          const visibleUnits = RECRUITMENT_UNITS.filter(
-            (unit) => (roster[unit.id] ?? 0) > 0,
+          const roster = rosterAt(state, officeId);
+          const destOptions = transferDestinations(offices, officeId);
+          const destination = resolveTransferDestination(
+            state,
+            officeId,
+            offices,
+            destinationByOffice,
           );
+          const draft = draftAt(officeId);
+          const blockReason = transferBlockReason(
+            state,
+            officeId,
+            destination,
+            draft,
+          );
+          const disabled = Boolean(blockReason);
+          const relocateLabel = destination
+            ? `Relocate → ${officeSiteLabel(state, destination)}`
+            : "Relocate";
 
           return (
             <div key={officeId} className="contractor-roster-card">
@@ -98,48 +228,78 @@ export function ContractorOfficeRoster({
                 <strong>{officeSiteLabel(state, officeId)}</strong>
                 <span className="muted">{totalWorkforce(roster)} on site</span>
               </div>
-              {visibleUnits.length === 0 ? (
-                <p className="muted">No units stationed here.</p>
+              {destOptions.length > 1 && destination ? (
+                <label className="contractor-roster-destination-picker">
+                  <span className="contractor-roster-destination-label">
+                    Destination
+                  </span>
+                  <select
+                    className="location-office-select contractor-roster-destination-select"
+                    value={destination}
+                    aria-label={`Destination from ${officeSiteLabel(state, officeId)}`}
+                    onChange={(event) =>
+                      setDestinationByOffice((prev) => ({
+                        ...prev,
+                        [officeId]: event.target.value as OfficeLocationId,
+                      }))
+                    }
+                  >
+                    {destOptions.map((destId) => (
+                      <option key={destId} value={destId}>
+                        {officeSiteLabel(state, destId)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : destination ? (
+                <p className="muted contractor-roster-destination">
+                  Destination: {officeSiteLabel(state, destination)}
+                </p>
+              ) : null}
+              {RECRUITMENT_UNITS.some(
+                (unit) => unitAvailableAt(state, officeId, unit.id) > 0,
+              ) ? (
+                <UnitCountPicker
+                  units={RECRUITMENT_UNITS.filter(
+                    (unit) => unitAvailableAt(state, officeId, unit.id) > 0,
+                  )}
+                  maxForUnit={(unitId) =>
+                    unitAvailableAt(state, officeId, unitId)
+                  }
+                  assignment={draft}
+                  disabled={!destination}
+                  onChange={(next) => setDraftAt(officeId, next)}
+                  onRecruitClick={openRecruitment}
+                />
               ) : (
-                <ul className="contractor-roster-list">
-                  {visibleUnits.map((unit) => {
-                    const count = roster[unit.id] ?? 0;
-                    const canSend = unitAvailableAt(state, officeId, unit.id);
-                    return (
-                      <li key={unit.id} className="contractor-roster-row">
-                        <div className="contractor-roster-info">
-                          <span className="contractor-role">{unit.name}</span>
-                          <span className="contractor-count">×{count}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          disabled={canSend < 1 || !destination}
-                          title={
-                            destination
-                              ? transferLabelSec(
-                                  state,
-                                  officeId,
-                                  destination,
-                                  unit.id,
-                                )
-                              : "Open a branch to transfer staff"
-                          }
-                          onClick={() => {
-                            if (destination) {
-                              sendOne(officeId, destination, unit.id);
-                            }
-                          }}
-                        >
-                          {destination
-                            ? `Send 1 → ${officeSiteLabel(state, destination)}`
-                            : "No branch yet"}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <p className="muted">No units stationed here.</p>
               )}
+              <div className="job-posting-engage contractor-roster-engage">
+                <button
+                  type="button"
+                  className="btn primary job-posting-engage-btn"
+                  disabled={disabled}
+                  title={
+                    destination
+                      ? transferSummaryLabel(state, officeId, destination, draft)
+                      : undefined
+                  }
+                  onClick={() => {
+                    if (destination && !blockReason) {
+                      confirmTransfer(officeId, destination);
+                    }
+                  }}
+                >
+                  {blockReason ??
+                    (() => {
+                      const n = totalAssigned(draft);
+                      if (n > 0 && destination) {
+                        return `${relocateLabel} · ${n} unit${n === 1 ? "" : "s"}`;
+                      }
+                      return relocateLabel;
+                    })()}
+                </button>
+              </div>
             </div>
           );
         })}

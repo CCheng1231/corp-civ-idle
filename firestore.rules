@@ -122,5 +122,13 @@ service cloud.firestore {
       allow write: if isBoundToWorld(worldId)
         && isDevAccount(boundAccountId(worldId));
     }
+
+    match /worlds/{worldId}/shared/branches {
+      allow read, write: if isBoundToWorld(worldId);
+    }
+
+    match /worlds/{worldId}/shared/marketLeaderboard {
+      allow read, write: if isBoundToWorld(worldId);
+    }
   }
 }

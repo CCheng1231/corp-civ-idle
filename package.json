@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "balance:report": "node scripts/balance-report.mjs",
     "balance:import": "node scripts/import-balance-from-workbook.mjs",
-    "balance:tune": "node scripts/apply-balance-tuning.mjs"
+    "balance:tune": "node scripts/apply-balance-tuning.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -26,6 +27,7 @@
     "sharp": "^0.35.4",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
+    "vitest": "^3.2.4",
     "xlsx": "^0.18.5"
   }
 }

@@ -4,16 +4,15 @@ import type { GameAction } from "../game/types";
 import { isFirebaseConfigured } from "../multiplayer/firebase";
 import { ensureFirebaseUser } from "../multiplayer/onlineAccess";
 import {
-  applyWorldMapLayoutDocToLocalCache,
-  layoutSettingsPatchFromStore,
   loadWorldMapDevLayout,
   subscribeWorldMapDevLayout,
 } from "../multiplayer/worldMapLayoutSync";
+import { setLatestSharedWorldMapLayout } from "../multiplayer/sharedWorldMap";
 import type { WorldId } from "../multiplayer/types";
 
 /**
- * Keeps map dev layout in sync with Firestore `worlds/dev/shared/mapLayout`
- * for every player (online guests + offline with Firebase binding).
+ * Online: apply Firestore `worlds/dev/shared/mapLayout` (single source of truth).
+ * Does not write browser-local map caches.
  */
 export function useWorldMapDevLayoutSync(
   dispatch: Dispatch<GameAction>,
@@ -27,17 +26,16 @@ export function useWorldMapDevLayoutSync(
     let unsub: (() => void) | undefined;
     let cancelled = false;
 
-    function applyRemote(updatedAt: number, patch: ReturnType<typeof layoutSettingsPatchFromStore>) {
+    function applyRemote(
+      updatedAt: number,
+      layout: Parameters<typeof setLatestSharedWorldMapLayout>[0],
+    ) {
       if (updatedAt <= lastAppliedAtRef.current) return;
       lastAppliedAtRef.current = updatedAt;
+      setLatestSharedWorldMapLayout(layout, updatedAt);
       dispatch({
-        type: "UPDATE_SETTINGS",
-        settings: {
-          mapDevLandmarkCoords: patch.mapDevLandmarkCoords,
-          mapDevExtraHexes: patch.mapDevExtraHexes,
-          mapDevRegionOverrides: patch.mapDevRegionOverrides,
-          mapDevRegionBrush: patch.mapDevRegionBrush,
-        },
+        type: "SYNC_SHARED_WORLD_MAP_LAYOUT",
+        layout,
       });
     }
 
@@ -48,16 +46,14 @@ export function useWorldMapDevLayoutSync(
 
         const initial = await loadWorldMapDevLayout(worldId);
         if (initial && !cancelled) {
-          applyWorldMapLayoutDocToLocalCache(initial);
-          applyRemote(initial.updatedAt, layoutSettingsPatchFromStore(initial.layout));
+          applyRemote(initial.updatedAt, initial.layout);
         }
 
         unsub = subscribeWorldMapDevLayout(
           worldId,
           (doc) => {
             if (!doc) return;
-            applyWorldMapLayoutDocToLocalCache(doc);
-            applyRemote(doc.updatedAt, layoutSettingsPatchFromStore(doc.layout));
+            applyRemote(doc.updatedAt, doc.layout);
           },
           (err) => console.warn("World map layout sync error", err),
         );

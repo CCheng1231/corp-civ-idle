@@ -18,7 +18,12 @@ import type {
   ResourceCost,
 } from "./types";
 import { scheduleTimerAt, timerHasElapsed } from "./timers";
-import { jobWorkDurationMs } from "./secretaryEffects";
+import {
+  jobWorkDurationMsForEngagement,
+  teamLeadJobIncomeMult,
+  teamLeadUnitHoursMult,
+} from "./secretaryEffects";
+import { grantTeamLeadJobExp } from "./secretaryExp";
 import {
   createPostingFromDefinition,
   hiddenTotalCash,
@@ -99,8 +104,14 @@ function accrueEngagementThrough(
 
   const def = jobDefinitionById(engagement.definitionId);
   const deltaHours = deltaMs / 3_600_000;
-  const offeredUnitHours =
+  let offeredUnitHours =
     totalAssigned(engagement.crewAssigned) * deltaHours;
+  if (engagement.teamLeadSecretaryId) {
+    offeredUnitHours *= teamLeadUnitHoursMult(
+      next,
+      engagement.teamLeadSecretaryId,
+    );
+  }
   const playerId = activePlayerId(state);
 
   if (isOnlineMode(state)) {
@@ -110,7 +121,10 @@ function accrueEngagementThrough(
       def.unitHoursTotal - posting.unitHoursCompleted,
     );
     const effectiveHours = Math.min(offeredUnitHours, remaining);
-    const earnedCash = effectiveHours * def.cashPerUnitHour;
+    const incomeMult = engagement.teamLeadSecretaryId
+      ? teamLeadJobIncomeMult(next, engagement.teamLeadSecretaryId)
+      : 1;
+    const earnedCash = effectiveHours * def.cashPerUnitHour * incomeMult;
     next.jobEngagements[engIdx] = {
       ...engagement,
       lastAccruedAt: accrueUntil,
@@ -129,10 +143,13 @@ function accrueEngagementThrough(
     playerId,
   );
   next.jobPostings[postingIdx] = work.posting;
+  const incomeMult = engagement.teamLeadSecretaryId
+    ? teamLeadJobIncomeMult(next, engagement.teamLeadSecretaryId)
+    : 1;
   next.jobEngagements[engIdx] = {
     ...engagement,
     lastAccruedAt: accrueUntil,
-    earnedSoFar: engagement.earnedSoFar + work.earnedCash,
+    earnedSoFar: engagement.earnedSoFar + work.earnedCash * incomeMult,
     unitHoursApplied: engagement.unitHoursApplied + work.effectiveHours,
   };
   return next;
@@ -171,6 +188,7 @@ function beginReturnTravel(
     next,
     current.officeId,
     def,
+    current.teamLeadSecretaryId,
   );
   // Return supply paid upfront when the job was engaged.
   const returnStartedAt =
@@ -252,7 +270,7 @@ function startWorkingPhase(
     endsAt: scheduleTimerAt(
       next,
       workStartedAt,
-      jobWorkDurationMs(next, def.durationSec),
+      jobWorkDurationMsForEngagement(next, def.durationSec, current),
     ),
     lastAccruedAt: workStartedAt,
   };
@@ -596,6 +614,14 @@ function settleShiftEndedEngagement(
     },
     now,
   );
+  if (current.teamLeadSecretaryId) {
+    next = grantTeamLeadJobExp(
+      next,
+      current.teamLeadSecretaryId,
+      current.crewAssigned,
+      now,
+    );
+  }
   return beginReturnTravel(next, engagementId, now, gained);
 }
 

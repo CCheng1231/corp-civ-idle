@@ -237,3 +237,102 @@
   stroke-width: 2;
   pointer-events: none;
 }
+
+/* Secretary → Market Research (online net-worth leaderboard) */
+.market-research-panel {
+  padding: 0 0.35rem 1rem;
+}
+
+.market-research-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.market-research-header p {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.market-research-offline-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+
+.market-research-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgba(15, 20, 25, 0.55);
+}
+
+.market-research-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.market-research-table th,
+.market-research-table td {
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.market-research-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.market-research-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.market-research-row--self {
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.market-research-rank {
+  width: 2.25rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.market-research-col-worth {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-research-col-progress {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.market-research-col-status {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.market-research-firm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 5.5rem;
+}
+
+.market-research-you-pill {
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.38rem;
+  border-radius: 999px;
+  background: rgba(110, 231, 183, 0.2);
+  color: #6ee7b7;
+}

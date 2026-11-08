@@ -10,10 +10,10 @@ interface GovProgramModalProps {
 
 export function GovProgramModal({ state, dispatch }: GovProgramModalProps) {
   const modal = state.govProgram?.pendingModal;
-  if (modal !== "gessesa_intro" && modal !== "lafe_beat") return null;
+  if (modal !== "xaihi_intro" && modal !== "surtr_beat") return null;
 
-  if (modal === "gessesa_intro") {
-    const gessesa = secretaryById("secretary_02");
+  if (modal === "xaihi_intro") {
+    const xaihi = secretaryById("secretary_02");
     return (
       <div className="modal-backdrop gov-program-modal-backdrop" role="presentation">
         <div
@@ -22,7 +22,7 @@ export function GovProgramModal({ state, dispatch }: GovProgramModalProps) {
           aria-labelledby="gov-intro-title"
         >
           <header className="modal-header">
-            <h2 id="gov-intro-title">{gessesa.name}</h2>
+            <h2 id="gov-intro-title">{xaihi.name}</h2>
           </header>
           <div className="gov-program-intro-body">
             <img
@@ -32,7 +32,7 @@ export function GovProgramModal({ state, dispatch }: GovProgramModalProps) {
             />
             <p>
               Regional office assigns me to your firm now that you have ten
-              contractors on payroll. I coordinate task forces and keep field
+              contractors on payroll. I coordinate field teams and keep
               timelines honest.
             </p>
           </div>
@@ -50,16 +50,16 @@ export function GovProgramModal({ state, dispatch }: GovProgramModalProps) {
     );
   }
 
-  const lafe = secretaryById("secretary_01");
+  const surtr = secretaryById("secretary_01");
   return (
     <div className="modal-backdrop gov-program-modal-backdrop" role="presentation">
       <div
         className="modal gov-program-intro-modal"
         role="dialog"
-        aria-labelledby="gov-lafe-title"
+        aria-labelledby="gov-surtr-title"
       >
         <header className="modal-header">
-          <h2 id="gov-lafe-title">{lafe.name}</h2>
+          <h2 id="gov-surtr-title">{surtr.name}</h2>
         </header>
         <div className="gov-program-intro-body">
           <p>

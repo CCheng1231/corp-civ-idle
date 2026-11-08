@@ -1,18 +1,18 @@
 /**
- * Shared world-map dev layout (hex moves, region paint, extra hexes).
- * Browser-local so online bootstrap / per-account Firestore saves do not wipe the playtest map.
+ * Shared world-map layout payload (hex moves, regions, Z1 align, open pads).
+ * Online: authoritative copy lives in Firestore — localStorage is offline-dev only.
  */
-import type { GameSettings, GameState, MapRegion } from "./types";
+import type { GameSettings, GameState } from "./types";
+import {
+  SHARED_WORLD_MAP_SETTING_KEYS,
+  worldMapLayoutStoreFromSettings,
+} from "../multiplayer/sharedWorldMap";
 
 const STORAGE_KEY = "corp-civ-idle.worldMapDevLayout";
 
-export type WorldMapDevLayoutStore = {
-  mapDevLandmarkCoords?: Record<string, { q: number; r: number }>;
-  mapDevExtraHexes?: Array<{ q: number; r: number }>;
-  mapDevRegionOverrides?: Record<string, MapRegion>;
-  mapDevRegionBrush?: MapRegion;
-  mapDevOpenOffices?: Record<string, import("./types").DevOpenOfficeHex>;
-};
+export type WorldMapDevLayoutStore = Partial<
+  Pick<GameSettings, (typeof SHARED_WORLD_MAP_SETTING_KEYS)[number]>
+>;
 
 export function readWorldMapDevLayoutStore(): WorldMapDevLayoutStore | null {
   if (typeof localStorage === "undefined") return null;
@@ -48,27 +48,9 @@ export function clearWorldMapDevLayoutStore(): void {
 export function worldMapDevLayoutFromSettings(
   settings: GameSettings,
 ): WorldMapDevLayoutStore | null {
-  const hasLandmarks =
-    settings.mapDevLandmarkCoords &&
-    Object.keys(settings.mapDevLandmarkCoords).length > 0;
-  const hasExtra =
-    settings.mapDevExtraHexes && settings.mapDevExtraHexes.length > 0;
-  const hasRegions =
-    settings.mapDevRegionOverrides &&
-    Object.keys(settings.mapDevRegionOverrides).length > 0;
-  const hasOpenOffices =
-    settings.mapDevOpenOffices &&
-    Object.keys(settings.mapDevOpenOffices).length > 0;
-  if (!hasLandmarks && !hasExtra && !hasRegions && !hasOpenOffices) {
-    return null;
-  }
-  return {
-    mapDevLandmarkCoords: settings.mapDevLandmarkCoords,
-    mapDevExtraHexes: settings.mapDevExtraHexes,
-    mapDevRegionOverrides: settings.mapDevRegionOverrides,
-    mapDevRegionBrush: settings.mapDevRegionBrush,
-    mapDevOpenOffices: settings.mapDevOpenOffices,
-  };
+  const store = worldMapLayoutStoreFromSettings(settings);
+  if (Object.keys(store).length === 0) return null;
+  return store;
 }
 
 export function syncWorldMapDevLayoutFromSettings(settings: GameSettings): void {

@@ -14,6 +14,7 @@ import { parseJobPosting } from "./companySave";
 import { getDb } from "./firebase";
 import type { OnlineSession } from "./types";
 import { seedSharedJobPostingsIfNeeded } from "./worldMeta";
+import { resetSharedBranches } from "./sharedBranchSync";
 import { jobPostingsCol, metaRef } from "./worldDocs";
 
 export function subscribeJobPostings(
@@ -110,6 +111,7 @@ export async function resetSharedWorld(
   );
 
   await seedSharedJobPostingsIfNeeded(session);
+  await resetSharedBranches(session.worldId);
 }
 
 /** Remove a completed/expired posting doc and optionally spawn replacement. */

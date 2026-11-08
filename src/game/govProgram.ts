@@ -10,12 +10,29 @@ import {
   type GovProgramReward,
 } from "./govProgramData";
 import { appendActivityLogs } from "./logbook";
+import { unlockSecretary } from "./secretaryProgress";
 import { formatAssignmentSummary } from "./unitEffects";
 import type { GameState, GovProgramState, OfficeLocationId, UnitAssignment } from "./types";
 
 export const GOV_CHARTER_DEFINITION_ID = GOV_CHARTER_JOB.definitionId;
 
 const MS_DAY = 86_400_000;
+
+function migrateExecutiveStepId(id: string | null): string | null {
+  if (id === "exec_lafe_beat") return "exec_surtr_beat";
+  return id;
+}
+
+function migrateExecutiveCompletedStepIds(ids: string[]): string[] {
+  return ids.map((id) => (id === "exec_lafe_beat" ? "exec_surtr_beat" : id));
+}
+
+function migrateGovProgramModal(raw: unknown): GovProgramState["pendingModal"] {
+  if (raw === "gessesa_intro" || raw === "xaihi_intro") return "xaihi_intro";
+  if (raw === "lafe_beat" || raw === "surtr_beat") return "surtr_beat";
+  if (raw === "decline_growth") return "decline_growth";
+  return null;
+}
 
 export function createInitialGovProgram(): GovProgramState {
   return {
@@ -28,8 +45,8 @@ export function createInitialGovProgram(): GovProgramState {
     executiveStepId: null,
     executiveCompletedStepIds: [],
     lifetimeRecruits: 0,
-    gessesaUnlocked: false,
-    gessesaIntroSeen: false,
+    xaihiUnlocked: false,
+    xaihiIntroSeen: false,
     pendingModal: null,
     chiefLessonPending: false,
     mapSiteInspected: false,
@@ -73,28 +90,28 @@ export function normalizeGovProgram(
       : [],
     charterSkipped: parsed.charterSkipped === true,
     charterCompleted: parsed.charterCompleted === true,
-    executiveStepId:
+    executiveStepId: migrateExecutiveStepId(
       typeof parsed.executiveStepId === "string"
         ? parsed.executiveStepId
         : null,
-    executiveCompletedStepIds: Array.isArray(parsed.executiveCompletedStepIds)
-      ? parsed.executiveCompletedStepIds.filter(
-          (id): id is string => typeof id === "string",
-        )
-      : [],
+    ),
+    executiveCompletedStepIds: migrateExecutiveCompletedStepIds(
+      Array.isArray(parsed.executiveCompletedStepIds)
+        ? parsed.executiveCompletedStepIds.filter(
+            (id): id is string => typeof id === "string",
+          )
+        : [],
+    ),
     lifetimeRecruits:
       typeof parsed.lifetimeRecruits === "number" &&
       Number.isFinite(parsed.lifetimeRecruits)
         ? Math.max(0, Math.floor(parsed.lifetimeRecruits))
         : rosterFallbackRecruits,
-    gessesaUnlocked: parsed.gessesaUnlocked === true,
-    gessesaIntroSeen: parsed.gessesaIntroSeen === true,
-    pendingModal:
-      parsed.pendingModal === "gessesa_intro" ||
-      parsed.pendingModal === "lafe_beat" ||
-      parsed.pendingModal === "decline_growth"
-        ? parsed.pendingModal
-        : null,
+    xaihiUnlocked:
+      parsed.xaihiUnlocked === true || parsed.gessesaUnlocked === true,
+    xaihiIntroSeen:
+      parsed.xaihiIntroSeen === true || parsed.gessesaIntroSeen === true,
+    pendingModal: migrateGovProgramModal(parsed.pendingModal),
     chiefLessonPending: parsed.chiefLessonPending === true,
     mapSiteInspected: parsed.mapSiteInspected === true,
     calendar: {
@@ -145,7 +162,11 @@ function gp(state: GameState): GovProgramState {
 }
 
 function withGov(state: GameState, govProgram: GovProgramState): GameState {
-  return { ...state, govProgram };
+  let next = { ...state, govProgram };
+  if (govProgram.xaihiUnlocked) {
+    next = unlockSecretary(next, "secretary_02");
+  }
+  return next;
 }
 
 function applyRewardAtHq(
@@ -219,8 +240,8 @@ function completeExecutiveStep(
     next = applyRewardAtHq(next, reward);
   }
   if (stepId === "exec_intro") {
-    g.gessesaIntroSeen = true;
-    g.gessesaUnlocked = true;
+    g.xaihiIntroSeen = true;
+    g.xaihiUnlocked = true;
   }
   if (stepId === "exec_charter_return") {
     g.charterCompleted = true;
@@ -239,14 +260,14 @@ function completeExecutiveStep(
 function syncExecutiveSideEffects(state: GameState): GameState {
   let g = { ...gp(state) };
   const step = g.executiveStepId;
-  if (step === "exec_intro" && !g.gessesaIntroSeen) {
-    g.pendingModal = "gessesa_intro";
-  } else if (step === "exec_lafe_beat") {
-    g.pendingModal = "lafe_beat";
+  if (step === "exec_intro" && !g.xaihiIntroSeen) {
+    g.pendingModal = "xaihi_intro";
+  } else if (step === "exec_surtr_beat") {
+    g.pendingModal = "surtr_beat";
   } else if (step === "exec_chief_switch") {
     g.chiefLessonPending = true;
     g.pendingModal = null;
-  } else if (g.pendingModal === "gessesa_intro" && g.gessesaIntroSeen) {
+  } else if (g.pendingModal === "xaihi_intro" && g.xaihiIntroSeen) {
     g.pendingModal = null;
   }
   return withGov(state, g);
@@ -268,18 +289,18 @@ function completeGrowthStep(state: GameState, stepId: string): GameState {
 function maybeStartExecutiveAtTen(state: GameState): GameState {
   const g = { ...gp(state) };
   if (g.lifetimeRecruits < GOV_RECRUIT_UNLOCK_COUNT) return state;
-  if (g.gessesaUnlocked && g.growthDeclined) return state;
+  if (g.xaihiUnlocked && g.growthDeclined) return state;
   if (g.growthDeclined) {
-    if (!g.gessesaUnlocked) {
-      g.gessesaUnlocked = true;
-      g.pendingModal = g.gessesaIntroSeen ? null : "gessesa_intro";
+    if (!g.xaihiUnlocked) {
+      g.xaihiUnlocked = true;
+      g.pendingModal = g.xaihiIntroSeen ? null : "xaihi_intro";
     }
     return withGov(state, g);
   }
   if (!g.growthAccepted || g.charterSkipped) {
-    if (!g.gessesaUnlocked) {
-      g.gessesaUnlocked = true;
-      g.pendingModal = g.gessesaIntroSeen ? null : "gessesa_intro";
+    if (!g.xaihiUnlocked) {
+      g.xaihiUnlocked = true;
+      g.pendingModal = g.xaihiIntroSeen ? null : "xaihi_intro";
     }
     return withGov(state, g);
   }
@@ -331,8 +352,8 @@ export function govSkipCharter(state: GameState): GameState {
   g.executiveStepId = null;
   g.executiveCompletedStepIds = [];
   g.chiefLessonPending = false;
-  g.pendingModal = g.gessesaIntroSeen ? null : "gessesa_intro";
-  if (!g.gessesaUnlocked) g.gessesaUnlocked = true;
+  g.pendingModal = g.xaihiIntroSeen ? null : "xaihi_intro";
+  if (!g.xaihiUnlocked) g.xaihiUnlocked = true;
   let next = withGov(state, g);
   next = evaluateGrowthObjectives(next);
   return next;
@@ -340,9 +361,9 @@ export function govSkipCharter(state: GameState): GameState {
 
 export function govDismissIntroModal(state: GameState): GameState {
   const g = { ...gp(state) };
-  if (g.pendingModal === "gessesa_intro") {
-    g.gessesaIntroSeen = true;
-    g.gessesaUnlocked = true;
+  if (g.pendingModal === "xaihi_intro") {
+    g.xaihiIntroSeen = true;
+    g.xaihiUnlocked = true;
     g.pendingModal = null;
     let next = withGov(state, g);
     if (g.executiveStepId === "exec_intro") {
@@ -350,11 +371,11 @@ export function govDismissIntroModal(state: GameState): GameState {
     }
     return next;
   }
-  if (g.pendingModal === "lafe_beat") {
+  if (g.pendingModal === "surtr_beat") {
     g.pendingModal = null;
     let next = withGov(state, g);
-    if (g.executiveStepId === "exec_lafe_beat") {
-      next = completeExecutiveStep(next, "exec_lafe_beat");
+    if (g.executiveStepId === "exec_surtr_beat") {
+      next = completeExecutiveStep(next, "exec_surtr_beat");
     }
     return next;
   }

@@ -61,12 +61,12 @@ export function presenceHqNeedsRepair(presence: CompanyPresence): boolean {
   );
 }
 
-/** Firestore presence may carry stale HQ coords from older builds — code wins. */
+/** Firestore presence may carry stale HQ coords — use shared map layout when provided. */
 export function canonicalCompanyPresence(
   presence: CompanyPresence,
+  settings?: GameState["settings"],
 ): CompanyPresence {
-  const hqCoord = playerHqCoord(presence.accountId);
-  // presence repair ignores dev overrides — canonical dev hexes live in code/settings export
+  const hqCoord = playerHqCoord(presence.accountId, settings);
   if (presence.hqCoord.q === hqCoord.q && presence.hqCoord.r === hqCoord.r) {
     return presence;
   }
@@ -75,10 +75,11 @@ export function canonicalCompanyPresence(
 
 export function canonicalCompanyPresenceMap(
   map: Record<string, CompanyPresence>,
+  settings?: GameState["settings"],
 ): Record<string, CompanyPresence> {
   const next = { ...map };
   for (const accountId of Object.keys(next)) {
-    next[accountId] = canonicalCompanyPresence(next[accountId]);
+    next[accountId] = canonicalCompanyPresence(next[accountId], settings);
   }
   return next;
 }

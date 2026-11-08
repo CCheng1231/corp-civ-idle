@@ -4,6 +4,7 @@ import { OverviewView } from "./OverviewView";
 import { WorldView } from "./WorldView";
 import { OfficeView } from "./OfficeView";
 import { GovernmentProgramView } from "./GovernmentProgramView";
+import { MarketResearchView } from "./MarketResearchView";
 import { SecretaryLandingView } from "./SecretaryLandingView";
 import { SecretaryRosterView } from "./SecretaryRosterView";
 import { LogbookView } from "./LogbookView";
@@ -45,6 +46,9 @@ export function MainContent({ state, dispatch, session }: MainContentProps) {
       }
       if (state.secretaryPanel === "govProgram") {
         return <GovernmentProgramView state={state} dispatch={dispatch} />;
+      }
+      if (state.secretaryPanel === "marketResearch") {
+        return <MarketResearchView state={state} dispatch={dispatch} />;
       }
       return <SecretaryLandingView state={state} dispatch={dispatch} />;
     case "office":

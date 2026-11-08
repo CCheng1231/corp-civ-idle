@@ -16,6 +16,9 @@ import {
 } from "./mapWorld";
 import type { BranchEstablishmentTransit, EstablishedBranchSite, GameState } from "./types";
 import { appendActivityLogs } from "./logbook";
+import { onBranchEstablished } from "./secretaryExp";
+import { checkSecretaryRecruitmentMilestones } from "./secretaryRecruitment";
+import { timerHasElapsed } from "./timers";
 
 export function processBranchEstablishmentTransits(
   state: GameState,
@@ -24,7 +27,7 @@ export function processBranchEstablishmentTransits(
   if (!state.branchEstablishmentTransits.length) return state;
   let next = state;
   for (const transit of [...state.branchEstablishmentTransits]) {
-    if (transit.arrivesAt > now) continue;
+    if (!timerHasElapsed(now, transit.arrivesAt, next)) continue;
     if (transit.phase === "returning") {
       next = completeBranchEstablishmentReturn(next, transit, now);
     } else {
@@ -42,7 +45,14 @@ function resolveBranchEstablishmentArrival(
   if (transit.ownerPlayerId !== activePlayerId(state)) {
     return refundBranchEstablishment(state, transit, "wrong owner");
   }
-  if (!padIsAvailableForEstablish(state, transit.hexKey, transit.padIndex)) {
+  if (
+    !padIsAvailableForEstablish(
+      state,
+      transit.hexKey,
+      transit.padIndex,
+      transit.id,
+    )
+  ) {
     return refundBranchEstablishment(state, transit, "pad taken");
   }
   if (!canOpenAnotherBranch(state)) {
@@ -111,7 +121,7 @@ function resolveBranchEstablishmentArrival(
   next.worldPersistRevision = (next.worldPersistRevision ?? 0) + 1;
 
   next = withDerivedStats(next);
-  return appendActivityLogs(next, [
+  next = appendActivityLogs(next, [
     {
       category: "research",
       summary: `Opened ${site.name}`,
@@ -119,4 +129,10 @@ function resolveBranchEstablishmentArrival(
       impacts: openImpacts,
     },
   ]);
+  next = onBranchEstablished(next, now);
+  return checkSecretaryRecruitmentMilestones(next, {
+    ...state,
+    branchSites: state.branchSites,
+    netWorth: state.netWorth,
+  });
 }
