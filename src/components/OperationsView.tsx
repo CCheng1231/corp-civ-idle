@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from "react";
+import { useEffect, useState, type Dispatch } from "react";
 import { MAX_STRUCTURE_QUEUE } from "../game/constants";
 import { officeDisplayName, ownedOfficeIds } from "../game/mapWorld";
 import {
@@ -9,6 +9,9 @@ import { LocationSitePanel } from "./LocationSitePanel";
 import { OfficeBuildQueueSection } from "./OfficeStructurePanel";
 import { OfficeSiteSummary } from "./OfficeSiteSummary";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
+import { GovProgramStructureCoachCard } from "./GovProgramStructureCoachCard";
+import { GovProgramStructureQueueIntro } from "./GovProgramStructureQueueIntro";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { StructureBuildQueueList } from "./StructureBuildQueueList";
 import { TabPortraitLayout } from "./TabPortraitLayout";
@@ -27,6 +30,23 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
   const officeId: OfficeLocationId = resolveOfficeLocation(state);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [tabInfoOpen, setTabInfoOpen] = useState(false);
+  const structureQueueIntro =
+    state.govProgram?.pendingModal === "structure_queue_intro";
+  const structureQueueCoach =
+    state.govProgram?.pendingModal === "structure_queue_coach";
+  const structureQueueCoachJobId =
+    state.govProgram?.structureQueueCoachJobId ?? null;
+  const structureQueueCoachUi = structureQueueIntro || structureQueueCoach;
+
+  useEffect(() => {
+    if (!structureQueueCoachUi) return;
+    const scrollParent = document.querySelector(
+      ".operations-view.hub-synced-tab-view .hub-synced-tab-scroll-body",
+    );
+    scrollParent?.scrollTo({ top: 0, behavior: "smooth" });
+    const anchor = document.getElementById("gov-program-structure-queue-anchor");
+    anchor?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [structureQueueCoachUi, structureQueueCoachJobId]);
 
   const officeBesidePortrait = (
     <>
@@ -65,8 +85,16 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           dispatch={dispatch}
           officeId={officeId}
           compact
+          coachHighlight={structureQueueCoachUi}
+          coachHighlightJobId={structureQueueCoachJobId}
         />
       )}
+      {structureQueueIntro ? (
+        <GovProgramStructureQueueIntro dispatch={dispatch} />
+      ) : null}
+      {structureQueueCoach ? (
+        <GovProgramStructureCoachCard state={state} dispatch={dispatch} />
+      ) : null}
     </>
   );
 
@@ -79,7 +107,13 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           state={state}
           dispatch={dispatch}
           onInfo={() => setTabInfoOpen(true)}
-        />
+        >
+          <GovProgramLiveCue
+            state={state}
+            dispatch={dispatch}
+            screen="operations"
+          />
+        </ProgressionTabStickyChrome>
       </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout

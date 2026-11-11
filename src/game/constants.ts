@@ -95,6 +95,8 @@ export function clampUiScale(value: unknown): number {
   return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, stepped));
 }
 export const WIN_NET_WORTH = 100_000_000;
+/** Temporary: hide top win banner while playtesting (save still sets `won`). */
+export const VICTORY_BANNER_ENABLED = false;
 export const BASE_LOCATION_POWER = HQ_BASE_POWER;
 export const BASE_OFFICE_SPACE = HQ_BASE_OFFICE_SPACE;
 export const MAX_STRUCTURE_QUEUE = 2;

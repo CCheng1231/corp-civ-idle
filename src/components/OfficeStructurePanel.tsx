@@ -53,6 +53,10 @@ import {
 import { structureProgressionLockNav } from "../game/progressionLockNav";
 import { scrollProgressionCardIntoViewWhenReady } from "../utils/progressionFocusScroll";
 import {
+  govStructureCoachTargetCategory,
+  govStructureCoachTargetId,
+} from "../game/govProgram";
+import {
   formatPreviewDelta,
   formatPreviewText,
   formatCompactBonus,
@@ -212,6 +216,8 @@ interface OfficeBuildQueueSectionProps {
   dispatch: Dispatch<GameAction>;
   officeId: OfficeLocationId;
   compact?: boolean;
+  coachHighlight?: boolean;
+  coachHighlightJobId?: string | null;
 }
 
 export function OfficeBuildQueueSection({
@@ -219,13 +225,20 @@ export function OfficeBuildQueueSection({
   dispatch,
   officeId,
   compact = false,
+  coachHighlight = false,
+  coachHighlightJobId = null,
 }: OfficeBuildQueueSectionProps) {
   const buildQueue = state.structureQueues[officeId];
   const now = Date.now();
 
   if (compact) {
     return (
-      <section className="location-view-section tab-queue-section tab-compact-queue">
+      <section
+        id="gov-program-structure-queue-anchor"
+        className={`location-view-section tab-queue-section tab-compact-queue${
+          coachHighlight ? " gov-program-coach-queue-highlight" : ""
+        }`}
+      >
         <CompactQueueHeading
           title="Structure in progress"
           count={`${buildQueue.length}/${MAX_STRUCTURE_QUEUE}`}
@@ -239,6 +252,7 @@ export function OfficeBuildQueueSection({
           now={now}
           compact
           emptyLabel=""
+          highlightJobId={coachHighlightJobId}
         />
       </section>
     );
@@ -293,6 +307,8 @@ export function OfficeStructurePanel({
     return seeded;
   });
   const focusStructureId = state.structureFocusStructureId ?? null;
+  const coachTargetId = govStructureCoachTargetId(state, officeId);
+  const coachTargetCategory = govStructureCoachTargetCategory(state, officeId);
   const focusStructureCategory = (() => {
     if (!focusStructureId) return null;
     try {
@@ -332,6 +348,17 @@ export function OfficeStructurePanel({
   }, [focusStructureId, focusCategoryReady, dispatch]);
 
   useEffect(() => {
+    if (!coachTargetId || !coachTargetCategory) return;
+    const category = coachTargetCategory as StructureCategory;
+    setCategoryOpen((prev) => ({ ...prev, [category]: true }));
+    setOfficeCategoryOpen(officeId, category, true);
+    return scrollProgressionCardIntoViewWhenReady(
+      `structure-card-${coachTargetId}`,
+      { align: "comfortable" },
+    );
+  }, [coachTargetId, coachTargetCategory, officeId]);
+
+  useEffect(() => {
     const seeded: Partial<Record<StructureCategory, boolean>> = {};
     for (const category of STRUCTURE_CATEGORY_ORDER) {
       const remembered = getOfficeCategoryOpen(officeId, category);
@@ -346,6 +373,7 @@ export function OfficeStructurePanel({
 
   function renderStructureCard(structure: StructureDefinition) {
     const focused = focusStructureId === structure.id;
+    const coachPick = coachTargetId === structure.id;
     const lockLines = structureProgressionLockNav(state, structure.id);
     const portraitArt =
       structureEssentialsPortrait(structure.id) ??
@@ -436,10 +464,19 @@ export function OfficeStructurePanel({
 
       const actionsRow = (
         <div className="recruitment-hire-actions structure-build-actions">
-          <span className="recruitment-queue-btn-hint-wrap">
+          <span
+            className={`recruitment-queue-btn-hint-wrap${
+              coachPick ? " gov-program-coach-btn-wrap" : ""
+            }`}
+          >
+            {coachPick ? (
+              <span className="gov-program-coach-arrow" aria-hidden="true" />
+            ) : null}
             <button
               type="button"
-              className="btn primary recruitment-queue-btn"
+              className={`btn primary recruitment-queue-btn${
+                coachPick ? " gov-program-coach-btn" : ""
+              }`}
               disabled={!canUpgrade}
               onClick={() =>
                 dispatch({
@@ -717,10 +754,17 @@ export function OfficeStructurePanel({
             {structure.officeSlotsWhenBuilt}
           </p>
         ) : null}
-        <div className="structure-card-actions">
+        <div
+          className={`structure-card-actions${
+            coachPick ? " gov-program-coach-btn-wrap" : ""
+          }`}
+        >
+          {coachPick ? (
+            <span className="gov-program-coach-arrow" aria-hidden="true" />
+          ) : null}
           <button
             type="button"
-            className="btn"
+            className={`btn${coachPick ? " gov-program-coach-btn" : ""}`}
             disabled={!canUpgrade}
             onClick={() =>
               dispatch({
@@ -761,7 +805,9 @@ export function OfficeStructurePanel({
         id={`structure-card-${structure.id}`}
         className={`structure-card structure-card-upgrade${
           unlocked ? "" : " progression-locked"
-        }${portraitCardClasses}${focused ? " progression-focus-target" : ""}`}
+        }${portraitCardClasses}${focused ? " progression-focus-target" : ""}${
+          coachPick ? " gov-program-coach-target" : ""
+        }`}
       >
         {withPortrait ? (
           <div className="recruitment-card-split">

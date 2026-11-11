@@ -107,6 +107,7 @@ interface QueueRowProps {
   now: number;
   onCancel?: () => void;
   compact?: boolean;
+  coached?: boolean;
 }
 
 function QueueRow({
@@ -119,18 +120,20 @@ function QueueRow({
   now,
   onCancel,
   compact = false,
+  coached = false,
 }: QueueRowProps) {
   const fullName = siteLabel ? `${siteLabel} · ${name}` : name;
+  const coachedClass = coached ? " gov-program-coach-queue-job" : "";
   return (
     <li
       className={
-        onCancel
+        (onCancel
           ? compact
             ? "build-queue-row-with-cancel build-queue-row-compact"
             : "build-queue-row-with-cancel"
           : compact
             ? "build-queue-row-compact"
-            : undefined
+            : "") + coachedClass
       }
       data-tip={compact ? fullName : undefined}
       aria-label={compact ? fullName : undefined}
@@ -176,6 +179,7 @@ interface StructureBuildQueueListProps {
   emptyLabel?: string;
   maxSlots?: number;
   compact?: boolean;
+  highlightJobId?: string | null;
 }
 
 export function StructureBuildQueueList({
@@ -188,6 +192,7 @@ export function StructureBuildQueueList({
   emptyLabel = "No builds queued.",
   maxSlots = 2,
   compact = false,
+  highlightJobId = null,
 }: StructureBuildQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
   const rows =
@@ -261,6 +266,7 @@ export function StructureBuildQueueList({
                       : undefined
                   }
                   compact={compact}
+                  coached={highlightJobId != null && job.id === highlightJobId}
                 />
               );
             });
@@ -397,6 +403,7 @@ interface RecruitmentQueueListProps {
   emptyLabel?: string;
   maxSlots?: number;
   compact?: boolean;
+  highlightJobId?: string | null;
 }
 
 export function RecruitmentQueueList({
@@ -409,6 +416,7 @@ export function RecruitmentQueueList({
   emptyLabel = "No hires queued.",
   maxSlots = 2,
   compact = false,
+  highlightJobId = null,
 }: RecruitmentQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
 
@@ -482,6 +490,7 @@ export function RecruitmentQueueList({
                   now={now}
                   onCancel={() => requestCancel(job, rowOfficeId, unit.name)}
                   compact={compact}
+                  coached={highlightJobId != null && job.id === highlightJobId}
                 />
               );
             });

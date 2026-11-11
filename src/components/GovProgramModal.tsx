@@ -10,6 +10,10 @@ interface GovProgramModalProps {
 
 export function GovProgramModal({ state, dispatch }: GovProgramModalProps) {
   const modal = state.govProgram?.pendingModal;
+  if (modal === "structure_queue_coach") {
+    return null;
+  }
+
   if (modal !== "xaihi_intro" && modal !== "surtr_beat") return null;
 
   if (modal === "xaihi_intro") {

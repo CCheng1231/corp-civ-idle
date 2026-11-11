@@ -1,4 +1,4 @@
-import { type Dispatch } from "react";
+import { type Dispatch, type ReactNode } from "react";
 import {
   TabSiteHeader,
   type HomeHubTab,
@@ -11,6 +11,8 @@ type ProgressionTabStickyChromeProps = {
   dispatch: Dispatch<GameAction>;
   /** Info dialog — home hub tabs require it; secretary tabs optional (e.g. Gov't Prog). */
   onInfo?: () => void;
+  /** Sits under Section / Office, in that column only. */
+  children?: ReactNode;
 } & (
   | {
       homeHubTab: HomeHubTab;
@@ -57,6 +59,9 @@ export function ProgressionTabStickyChrome(props: ProgressionTabStickyChromeProp
           dispatch={dispatch}
         />
       </div>
+      {props.children ? (
+        <div className="progression-tab-sticky-cue">{props.children}</div>
+      ) : null}
     </div>
   );
 }

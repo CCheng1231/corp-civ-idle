@@ -95,6 +95,7 @@ import type {
   JobPosting,
   OfficeLocationId,
 } from "../game/types";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import { MapHexDrawer } from "./MapHexDrawer";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
@@ -778,6 +779,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       dispatch({ type: "SELECT_TOWER", towerId: null });
       dispatch({ type: "SELECT_COMMERCIAL_HEX", coord: null });
     }
+    dispatch({ type: "GOV_MAP_SITE_INSPECTED" });
   }
 
   function trackPointer(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1259,6 +1261,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
             ) : null}
           </div>
         </div>
+        <GovProgramLiveCue state={state} dispatch={dispatch} screen="world" />
       </div>
 
       <div className="world-map-stage" style={mapStagePanelStyle}>

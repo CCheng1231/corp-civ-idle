@@ -500,7 +500,7 @@
   flex: 0 0 auto;
   width: 100%;
   /* Secretary Roster / Job / Log — portrait breathing room before tables */
-  min-height: clamp(4rem, 18dvh, 12rem);
+  min-height: clamp(1.25rem, 8dvh, 4.5rem);
   pointer-events: none;
 }
 

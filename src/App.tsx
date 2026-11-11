@@ -11,7 +11,11 @@ import { MainContent } from "./components/MainContent";
 import { gameReducer } from "./game/engine";
 import { loadGameState, saveGameState } from "./game/save";
 import { consumeLastSaveIntegrityEvent } from "./game/saveIntegrity";
-import { WIN_NET_WORTH, formatNumber } from "./game/constants";
+import {
+  VICTORY_BANNER_ENABLED,
+  WIN_NET_WORTH,
+  formatNumber,
+} from "./game/constants";
 import { useBgm } from "./hooks/useBgm";
 import { useGameLoop } from "./hooks/useGameLoop";
 import { useMobileNavLayout } from "./hooks/useMobileNavLayout";
@@ -172,7 +176,7 @@ function GameShell({
             ) : null}
           </div>
         ) : null}
-        {state.won && (
+        {VICTORY_BANNER_ENABLED && state.won && (
           <div className="victory-banner" role="status">
             <strong>You win!</strong> Net worth reached{" "}
             {formatNumber(WIN_NET_WORTH)} — top of the corporate ladder (for now).

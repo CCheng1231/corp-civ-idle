@@ -45,13 +45,14 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() =>
+              onClick={() => {
+                dispatch({ type: "GOV_START_STRUCTURE_COACH" });
                 dispatch({
                   type: "SET_VIEW",
                   view: "operations",
-                  structureFocusStructureId: "office_desk",
-                })
-              }
+                  structureFocusStructureId: null,
+                });
+              }}
             >
               Go to Structure
             </button>
@@ -63,7 +64,14 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() => dispatch({ type: "SET_VIEW", view: "recruitment" })}
+              onClick={() => {
+                dispatch({ type: "GOV_START_RECRUIT_COACH" });
+                dispatch({
+                  type: "SET_VIEW",
+                  view: "recruitment",
+                  recruitFocusUnitId: null,
+                });
+              }}
             >
               Go to Recruit
             </button>

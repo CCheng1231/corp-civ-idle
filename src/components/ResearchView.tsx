@@ -26,6 +26,7 @@ import {
 } from "./upgradePreviewFormat";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureCostLine } from "./StructureCostLine";
@@ -665,7 +666,13 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           state={state}
           dispatch={dispatch}
           onInfo={() => setTabInfoOpen(true)}
-        />
+        >
+          <GovProgramLiveCue
+            state={state}
+            dispatch={dispatch}
+            screen="research"
+          />
+        </ProgressionTabStickyChrome>
       </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout

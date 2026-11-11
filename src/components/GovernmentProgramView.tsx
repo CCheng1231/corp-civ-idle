@@ -10,6 +10,7 @@ import {
   govEngageLockActive,
   govExecutiveTrackActive,
   govGrowthProgramOfferVisible,
+  govGrowthStepProgress,
   govGrowthTrackPaused,
 } from "../game/govProgram";
 import { resolveOfficeLocation } from "../game/officeSelection";
@@ -39,6 +40,7 @@ export function GovernmentProgramView({
   const [declineOpen, setDeclineOpen] = useState(false);
   const [tabInfoOpen, setTabInfoOpen] = useState(false);
   const growthStep = govCurrentGrowthStep(state);
+  const growthProgress = govGrowthStepProgress(state);
   const execStep = govCurrentExecutiveStep(state);
   const offer = govGrowthProgramOfferVisible(state);
   const officeId = resolveOfficeLocation(state);
@@ -82,7 +84,14 @@ export function GovernmentProgramView({
 
       {gp.growthAccepted && !gp.growthDeclined ? (
         <section className="gov-program-card">
-          <h3>Growth track</h3>
+          <div className="gov-program-card-heading-row">
+            <h3>Growth track</h3>
+            {growthProgress ? (
+              <p className="gov-program-step-progress" role="status">
+                Step {growthProgress.current}/{growthProgress.total}
+              </p>
+            ) : null}
+          </div>
           {govGrowthTrackPaused(state) ? (
             <p className="gov-program-banner" role="status">
               Paused at {GOV_RECRUIT_UNLOCK_COUNT} hires — finish the executive
@@ -99,10 +108,6 @@ export function GovernmentProgramView({
                 kind="growth"
                 step={growthStep}
               />
-              <p className="muted">
-                Lifetime recruits: {gp.lifetimeRecruits} /{" "}
-                {GOV_RECRUIT_UNLOCK_COUNT}
-              </p>
             </>
           ) : (
             <p className="muted">Growth track complete.</p>

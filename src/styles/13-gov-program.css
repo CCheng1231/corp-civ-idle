@@ -12,6 +12,31 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.gov-program-card-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.gov-program-card-heading-row h3 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gov-program-step-progress {
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(160, 210, 255, 0.95);
+}
+
 .gov-program-card h3 {
   margin: 0 0 0.35rem;
   font-size: 1rem;
@@ -54,6 +79,35 @@
   padding: 0.45rem 0.85rem;
 }
 
+.gov-program-live-cue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin: 0 0 0.65rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.35rem;
+  background: rgba(120, 180, 255, 0.12);
+  border: 1px solid rgba(120, 180, 255, 0.28);
+  font-size: 0.88rem;
+}
+
+.gov-program-live-cue p {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
+.world-header .gov-program-live-cue,
+.progression-tab-sticky-cue .gov-program-live-cue {
+  margin: 0.35rem 0 0;
+}
+
+.progression-tab-sticky-chrome > .progression-tab-sticky-cue {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+}
+
 .gov-program-lock-note {
   padding: 0 0.25rem;
   font-size: 0.85rem;
@@ -61,6 +115,147 @@
 
 .gov-program-modal-backdrop {
   z-index: 1200;
+}
+
+/* Structure queue coach — inline under “Structure in progress” (Operations tab). */
+.gov-program-structure-coach-card {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.12rem 0 0.2rem;
+  box-sizing: border-box;
+  min-height: 9rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(120, 200, 255, 0.35);
+  background: rgba(8, 14, 22, 0.88);
+  box-shadow: 0 0.25rem 0.85rem rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.gov-program-coach-card-portrait-col {
+  flex: 0 0 clamp(5rem, 34%, 6.75rem);
+  min-height: 9rem;
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.gov-program-coach-card-portrait {
+  display: block;
+  width: 115%;
+  height: 100%;
+  min-height: 9rem;
+  margin-left: -4%;
+  object-fit: cover;
+  object-position: 58% top;
+}
+
+.gov-program-coach-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  padding: 0.4rem 0.5rem 0.35rem;
+  font-size: 0.76rem;
+  line-height: 1.32;
+}
+
+.gov-program-coach-card-main h2 {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.gov-program-coach-card-actions {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gov-program-coach-card-ok {
+  min-height: 2rem;
+  min-width: 4rem;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.76rem;
+}
+
+.gov-program-coach-modal-lead {
+  margin: 0 0 0.28rem;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.gov-program-coach-status-done {
+  color: rgba(140, 230, 180, 0.95);
+}
+
+.gov-program-coach-modal-reward {
+  margin: 0 0 0.35rem;
+}
+
+.gov-program-coach-modal-reward-label {
+  display: block;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(160, 210, 255, 0.9);
+  margin-bottom: 0.12rem;
+}
+
+.gov-program-coach-modal-foot {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.operations-view .tab-hero-main .gov-program-structure-coach-card,
+.recruitment-view .tab-hero-main .gov-program-structure-coach-card {
+  margin-top: 0.12rem;
+}
+
+.gov-program-structure-queue-intro {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.2rem 0 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.gov-program-queue-intro-arrow {
+  width: 0;
+  height: 0;
+  margin-bottom: 0.15rem;
+  border-left: 0.55rem solid transparent;
+  border-right: 0.55rem solid transparent;
+  border-bottom: 0.75rem solid rgba(120, 200, 255, 0.92);
+  filter: drop-shadow(0 -1px 0 rgba(120, 200, 255, 0.35));
+  animation: gov-program-coach-bob 1.1s ease-in-out infinite;
+}
+
+.gov-program-queue-intro-bubble {
+  width: 100%;
+  padding: 0.55rem 0.65rem 0.5rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(120, 200, 255, 0.4);
+  background: rgba(8, 14, 22, 0.92);
+  box-shadow: 0 0.25rem 0.85rem rgba(0, 0, 0, 0.35);
+}
+
+.gov-program-queue-intro-text {
+  margin: 0 0 0.45rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.gov-program-queue-intro-btn {
+  min-height: 2rem;
+  padding: 0.28rem 0.85rem;
+  font-size: 0.74rem;
 }
 
 .gov-program-intro-modal {
@@ -79,4 +274,125 @@
   max-height: 14rem;
   object-fit: cover;
   border-radius: 0.35rem;
+}
+
+.gov-program-coach-target {
+  position: relative;
+  border-color: rgba(120, 200, 255, 0.55) !important;
+  box-shadow:
+    0 0 0 2px rgba(100, 180, 255, 0.35),
+    0 0 1.25rem rgba(80, 160, 255, 0.2);
+}
+
+.gov-program-coach-btn-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.gov-program-coach-qty-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  position: relative;
+}
+
+.gov-program-coach-qty-input-wrap .gov-program-coach-arrow {
+  margin: 0;
+}
+
+.gov-program-coach-overlay-bubble {
+  pointer-events: auto;
+  padding: 0.55rem 0.6rem 0.5rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(120, 200, 255, 0.45);
+  background: rgba(8, 14, 22, 0.94);
+  box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.45);
+}
+
+.gov-program-coach-overlay-text {
+  margin: 0 0 0.45rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.gov-program-coach-overlay-ok {
+  min-height: 2rem;
+  width: 100%;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.74rem;
+}
+
+.operations-view.hub-synced-tab-view .hub-synced-tab-scroll-body,
+.recruitment-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
+  overflow-x: clip;
+}
+
+.recruitment-card-with-portrait .gov-program-coach-qty-input-wrap {
+  align-items: flex-end;
+  width: 100%;
+}
+
+.recruitment-card-with-portrait .gov-program-coach-qty-input-wrap .recruit-count-input {
+  width: 100%;
+  max-width: 4.5rem;
+}
+
+.gov-program-coach-arrow {
+  display: block;
+  width: 0;
+  height: 0;
+  margin-right: 1.5rem;
+  border-left: 0.45rem solid transparent;
+  border-right: 0.45rem solid transparent;
+  border-top: 0.65rem solid rgba(120, 200, 255, 0.95);
+  filter: drop-shadow(0 0 0.35rem rgba(100, 180, 255, 0.8));
+  animation: gov-program-coach-bob 1.1s ease-in-out infinite;
+}
+
+.gov-program-coach-btn {
+  box-shadow: 0 0 0 2px rgba(120, 200, 255, 0.45);
+}
+
+@keyframes gov-program-coach-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.28rem);
+  }
+}
+
+.gov-program-coach-queue-highlight {
+  border-radius: 0.4rem;
+  box-shadow:
+    0 0 0 2px rgba(120, 200, 255, 0.5),
+    inset 0 0 0 1px rgba(120, 200, 255, 0.15);
+  background: rgba(80, 140, 220, 0.12);
+  animation: gov-program-queue-pulse 2s ease-in-out infinite;
+}
+
+.build-queue-row-compact.gov-program-coach-queue-job,
+.build-queue-row-with-cancel.gov-program-coach-queue-job {
+  border-radius: 0.35rem;
+  box-shadow: 0 0 0 2px rgba(140, 210, 255, 0.65);
+  background: rgba(90, 155, 230, 0.18);
+}
+
+@keyframes gov-program-queue-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(120, 200, 255, 0.45),
+      inset 0 0 0 1px rgba(120, 200, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(140, 210, 255, 0.65),
+      0 0 1rem rgba(100, 180, 255, 0.25);
+  }
 }

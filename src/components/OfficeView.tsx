@@ -21,6 +21,7 @@ import {
   type SecretaryWorkTab,
 } from "./SecretaryBriefing";
 import { TabPortraitLayout } from "./TabPortraitLayout";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
@@ -166,7 +167,20 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
           secretaryHubTab="job"
           state={state}
           dispatch={dispatch}
-        />
+        >
+          <GovProgramLiveCue
+            state={state}
+            dispatch={dispatch}
+            screen="job"
+            activeLocalId={
+              displayWorkTab === "reports" ? "job-reports" : "job-board"
+            }
+            onLocalAction={(id) => {
+              if (id === "job-board") setWorkTab("board");
+              if (id === "job-reports") setWorkTab("reports");
+            }}
+          />
+        </ProgressionTabStickyChrome>
       </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout

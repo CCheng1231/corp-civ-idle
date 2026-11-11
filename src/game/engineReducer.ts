@@ -115,7 +115,13 @@ import {
   govOnMapSiteInspected,
   govOnOpenGovProgram,
   govOnOpenRoster,
+  govResetGrowthTrack,
   govSkipCharter,
+  govStartStructureCoach,
+  govStartRecruitCoach,
+  govAdvanceRecruitCoach,
+  govAfterRecruitmentQueueChange,
+  govAfterSimulatedTime,
 } from "./govProgram";
 import {
   structureBuildTimeMs,
@@ -317,9 +323,6 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
             ? (action.researchFocusResearchId ?? null)
             : null,
       };
-      if (action.view === "world") {
-        next = govOnMapSiteInspected(next);
-      }
       return next;
     }
 
@@ -360,10 +363,10 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           dismissed.add(entry.id);
         }
       }
-      return {
+      return govAfterDismissJobReport({
         ...state,
-        dismissedJobReportIds: [...dismissed]
-};
+        dismissedJobReportIds: [...dismissed],
+      });
     }
 
     case "SECRETARY_SPEND_SKILL_POINT": {
@@ -458,6 +461,18 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "GOV_MAP_SITE_INSPECTED":
       return govOnMapSiteInspected(state);
+
+    case "GOV_RESET_GROWTH_TRACK":
+      return govResetGrowthTrack(state);
+
+    case "GOV_START_STRUCTURE_COACH":
+      return govStartStructureCoach(state);
+
+    case "GOV_START_RECRUIT_COACH":
+      return govStartRecruitCoach(state);
+
+    case "GOV_ADVANCE_RECRUIT_COACH":
+      return govAdvanceRecruitCoach(state);
 
     case "SET_HOME_PANEL":
       return {
@@ -728,16 +743,19 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       const deltaSec = (now - state.lastTickAt) / 1000;
       if (deltaSec <= 0) return state;
 
-      return advanceSimulatedTime(state, {
+      const advanced = advanceSimulatedTime(state, {
         productionDeltaSec: deltaSec,
         eventNow: now,
-        lastTickAt: now
-});
+        lastTickAt: now,
+      });
+      return govAfterSimulatedTime(state, advanced);
     }
 
-    case "DEV_SKIP_TIME":
+    case "DEV_SKIP_TIME": {
       if (isOnlineMode(state)) return state;
-      return devSkipTime(state, action.minutes);
+      const skipped = devSkipTime(state, action.minutes);
+      return govAfterSimulatedTime(state, skipped);
+    }
 
     case "DEV_REMOVE_BRANCH": {
       const removed = removeBranchOfficeForDev(state, action.officeId);
@@ -767,8 +785,9 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       const buildMs = structureBuildTimeMs(action.structureId, targetLevel);
       const queue = [...next.structureQueues[action.locationId]];
       const now = Date.now();
+      const queuedJobId = newQueueJobId();
       queue.push({
-        id: newQueueJobId(),
+        id: queuedJobId,
         structureId: action.structureId,
         targetLevel,
         spentCost: spentSnapshot,
@@ -801,6 +820,8 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
             ],
           },
         ]),
+        action.locationId,
+        { jobId: queuedJobId, structureId: action.structureId },
       );
     }
 
@@ -1003,20 +1024,24 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
       const unit = unitDefinition(unitId);
       const orderHours = recruitmentOrderBuildTimeHours(count);
-      return appendActivityLogs(merged, [
-        {
-          category: "recruit",
-          summary: `Queued order: ${count}× ${unit.name} at ${officeSiteLabel(merged, officeId)}`,
-          officeId,
-          spent: spentSnapshot,
-          impacts: [
-            `Queue ${officeJobs.length + 1}/${MAX_RECRUIT_QUEUE} orders`,
-            active
+      return govAfterRecruitmentQueueChange(
+        appendActivityLogs(merged, [
+          {
+            category: "recruit",
+            summary: `Queued order: ${count}× ${unit.name} at ${officeSiteLabel(merged, officeId)}`,
+            officeId,
+            spent: spentSnapshot,
+            impacts: [
+              `Queue ${officeJobs.length + 1}/${MAX_RECRUIT_QUEUE} orders`,
+              active
               ? `Arrives in ${formatQueueTimeHours(orderHours)}`
               : "Waiting behind earlier orders",
-          ]
-},
-      ]);
+            ],
+          },
+        ]),
+        officeId,
+        { jobId: job.id },
+      );
     }
 
     case "CANCEL_RECRUITMENT_JOB": {

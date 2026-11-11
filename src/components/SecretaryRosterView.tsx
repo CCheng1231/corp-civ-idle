@@ -25,6 +25,7 @@ import type { GameAction, GameState, SecretaryId, UnitId } from "../game/types";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import { ProgressionCategorySection } from "./progressionUi";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { TabPortraitLayout } from "./TabPortraitLayout";
 import { SecretaryDetailDialog } from "./SecretaryDetailDialog";
@@ -356,7 +357,21 @@ export function SecretaryRosterView({
           secretaryHubTab="roster"
           state={state}
           dispatch={dispatch}
-        />
+        >
+          <GovProgramLiveCue
+            state={state}
+            dispatch={dispatch}
+            screen="roster"
+            onLocalAction={(id) => {
+              if (id !== "open-chief-candidate") return;
+              const entries = secretariesInPlayerRoster(state.secretaryUnlocks);
+              const candidate =
+                entries.find((entry) => entry.id !== state.chiefOfStaffId) ??
+                entries[0];
+              if (candidate) setDetailId(candidate.id);
+            }}
+          />
+        </ProgressionTabStickyChrome>
       </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout

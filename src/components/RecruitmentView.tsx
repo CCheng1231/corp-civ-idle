@@ -24,6 +24,15 @@ import {
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
+import { GovProgramRecruitQueueIntro } from "./GovProgramRecruitQueueIntro";
+import { GovProgramRecruitSetQtyIntro } from "./GovProgramRecruitSetQtyIntro";
+import { GovProgramStructureCoachCard } from "./GovProgramStructureCoachCard";
+import {
+  govRecruitCoachActive,
+  govRecruitCoachQueueActive,
+  govRecruitCoachSetQtyActive,
+} from "../game/govProgram";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { RecruitmentQueueList } from "./StructureBuildQueueList";
 import { StructureCostLine } from "./StructureCostLine";
@@ -147,6 +156,77 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const unitCount = Math.round(staffTotal);
   const unitCountLabel = `${unitCount} ${unitCount === 1 ? "unit" : "units"}`;
   const focusUnitId = state.recruitFocusUnitId ?? null;
+  const recruitCoachActive = govRecruitCoachActive(state);
+  const recruitCoachSetQty = govRecruitCoachSetQtyActive(state);
+  const recruitCoachQueue = govRecruitCoachQueueActive(state);
+  const recruitSetQtyIntro =
+    state.govProgram?.pendingModal === "recruit_set_qty_intro";
+  const recruitQueueIntro =
+    state.govProgram?.pendingModal === "recruit_queue_intro";
+  const recruitFirstCoach =
+    state.govProgram?.pendingModal === "recruit_first_queue_coach";
+  const recruitStepCoach =
+    state.govProgram?.pendingModal === "recruit_step_coach";
+  const recruitQueueCoachUi =
+    recruitQueueIntro || recruitFirstCoach || recruitStepCoach;
+  const recruitQueueCoachJobId =
+    state.govProgram?.structureQueueCoachJobId ?? null;
+
+  useEffect(() => {
+    if (!recruitQueueCoachUi) return;
+    const scrollParent = document.querySelector(
+      ".recruitment-view.hub-synced-tab-view .hub-synced-tab-scroll-body",
+    );
+    scrollParent?.scrollTo({ top: 0, behavior: "smooth" });
+    document
+      .getElementById("gov-program-recruit-queue-anchor")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [recruitQueueCoachUi, recruitQueueCoachJobId]);
+
+  useEffect(() => {
+    if (recruitSetQtyIntro || recruitCoachSetQty) {
+      setCategoryOpen((prev) => ({ ...prev, farming: true }));
+      setRecruitCategoryOpen(officeId, "farming", true);
+    }
+  }, [recruitSetQtyIntro, recruitCoachSetQty, officeId]);
+
+  useEffect(() => {
+    if (!recruitSetQtyIntro && !recruitCoachSetQty) return;
+    const scrollParent = document.querySelector(
+      ".recruitment-view.hub-synced-tab-view .hub-synced-tab-scroll-body",
+    );
+    scrollParent?.scrollTo({ top: 0, behavior: "smooth" });
+    const id = window.setTimeout(() => {
+      document
+        .getElementById("recruit-unit-fresh_graduate")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, recruitSetQtyIntro ? 120 : 0);
+    return () => window.clearTimeout(id);
+  }, [recruitSetQtyIntro, recruitCoachSetQty]);
+
+  useEffect(() => {
+    if (!recruitCoachActive) return;
+    const farmingOpen = getRecruitCategoryOpen(officeId, "farming");
+    if (farmingOpen !== false) {
+      setCategoryOpen((prev) => ({ ...prev, farming: true }));
+      setRecruitCategoryOpen(officeId, "farming", true);
+    }
+    const cancelScroll = () => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById("recruit-unit-fresh_graduate")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
+    cancelScroll();
+  }, [recruitCoachActive, officeId]);
+
+  useEffect(() => {
+    if (!recruitCoachSetQty) return;
+    if ((counts.fresh_graduate ?? 1) === 10) {
+      dispatch({ type: "GOV_ADVANCE_RECRUIT_COACH" });
+    }
+  }, [recruitCoachSetQty, counts.fresh_graduate, dispatch]);
 
   useEffect(() => {
     if (!focusUnitId) return;
@@ -232,6 +312,10 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     const lockedTitle = recruitmentLockedButtonTitle(lockLines);
 
     const focused = focusUnitId === unit.id;
+    const coachFreshGrad = unit.id === "fresh_graduate" && recruitCoachActive;
+    const coachQty =
+      coachFreshGrad && recruitCoachSetQty && !recruitSetQtyIntro;
+    const coachQueue = coachFreshGrad && recruitCoachQueue;
     const portraitSrc = unitPortraitSrc(unit.id, state.settings);
 
     const headBlock = (
@@ -265,32 +349,55 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           ) : null}
         </div>
         <div className="recruitment-hire-actions">
-          <label className="recruit-count-field recruit-count-inline">
+          <span className="recruit-count-field recruit-count-inline">
             <span className="recruit-count-label">Qty</span>
-            <input
-              type="number"
-              min={1}
-              max={MAX_RECRUIT_BATCH}
-              inputMode="numeric"
-              className="recruit-count-input"
-              value={count}
-              disabled={actionsLocked || queueFull || researchLocked}
-              onChange={(e) => {
-                const n = Math.max(
-                  1,
-                  Math.min(MAX_RECRUIT_BATCH, Number(e.target.value) || 1),
-                );
-                setCounts((prev) => ({ ...prev, [unit.id]: n }));
-              }}
-            />
-          </label>
+            <div
+              className={
+                coachQty ? "gov-program-coach-qty-input-wrap" : undefined
+              }
+            >
+              {coachQty ? (
+                <span className="gov-program-coach-arrow" aria-hidden="true" />
+              ) : null}
+              <input
+                type="number"
+                id={
+                  unit.id === "fresh_graduate"
+                    ? "gov-recruit-fresh-grad-qty"
+                    : undefined
+                }
+                min={1}
+                max={MAX_RECRUIT_BATCH}
+                inputMode="numeric"
+                className={`recruit-count-input${
+                  coachQty ? " gov-program-coach-btn" : ""
+                }`}
+                value={count}
+                disabled={actionsLocked || queueFull || researchLocked}
+                onChange={(e) => {
+                  const n = Math.max(
+                    1,
+                    Math.min(MAX_RECRUIT_BATCH, Number(e.target.value) || 1),
+                  );
+                  setCounts((prev) => ({ ...prev, [unit.id]: n }));
+                }}
+              />
+            </div>
+          </span>
           <span
-            className="recruitment-queue-btn-hint-wrap"
+            className={`recruitment-queue-btn-hint-wrap${
+              coachQueue ? " gov-program-coach-btn-wrap" : ""
+            }`}
             title={lockedTitle}
           >
+            {coachQueue ? (
+              <span className="gov-program-coach-arrow" aria-hidden="true" />
+            ) : null}
             <button
               type="button"
-              className="btn primary recruitment-queue-btn"
+              className={`btn primary recruitment-queue-btn${
+                coachQueue ? " gov-program-coach-btn" : ""
+              }`}
               disabled={
                 !affordable || queueFull || researchLocked || unitQueued
               }
@@ -330,8 +437,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         className={`structure-card structure-card-upgrade recruitment-card-compact recruitment-card-unit-${unit.id}${
           portraitSrc ? " recruitment-card-with-portrait" : ""
         }${focused ? " recruit-unit-focused" : ""}${
-          researchLocked ? " progression-locked" : ""
-        }`}
+          coachFreshGrad ? " gov-program-coach-target" : ""
+        }${researchLocked ? " progression-locked" : ""}`}
       >
         {portraitSrc ? (
           <div className="recruitment-card-split">
@@ -412,7 +519,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           );
         })
       ) : (
-        <section className="location-view-section tab-queue-section tab-compact-queue">
+        <section
+          id="gov-program-recruit-queue-anchor"
+          className={`location-view-section tab-queue-section tab-compact-queue${
+            recruitQueueCoachUi ? " gov-program-coach-queue-highlight" : ""
+          }`}
+        >
           <CompactQueueHeading
             title="Hiring in progress"
             count={`${hireQueueCount}/${MAX_RECRUIT_QUEUE}`}
@@ -426,9 +538,24 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             now={now}
             compact
             emptyLabel=""
+            highlightJobId={recruitQueueCoachJobId}
           />
         </section>
       )}
+      {recruitQueueIntro ? (
+        <GovProgramRecruitQueueIntro dispatch={dispatch} />
+      ) : null}
+      {recruitFirstCoach ? (
+        <GovProgramStructureCoachCard
+          state={state}
+          dispatch={dispatch}
+          showReward={false}
+          footer="Click OK to continue hiring."
+        />
+      ) : null}
+      {recruitStepCoach ? (
+        <GovProgramStructureCoachCard state={state} dispatch={dispatch} />
+      ) : null}
     </>
   );
 
@@ -552,7 +679,13 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           state={state}
           dispatch={dispatch}
           onInfo={() => setTabInfoOpen(true)}
-        />
+        >
+          <GovProgramLiveCue
+            state={state}
+            dispatch={dispatch}
+            screen="recruitment"
+          />
+        </ProgressionTabStickyChrome>
       </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
@@ -568,6 +701,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         </TabPortraitLayout>
         <div className="tab-below-portrait">{recruitBelowPortrait}</div>
       </HubSyncedTabScrollBody>
+      {recruitSetQtyIntro ? (
+        <GovProgramRecruitSetQtyIntro
+          dispatch={dispatch}
+          anchorId="recruit-unit-fresh_graduate"
+        />
+      ) : null}
       {tabInfoOpen ? (
         <ProgressionCatalogInfoDialog
           kind="recruitment"

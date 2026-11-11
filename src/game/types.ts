@@ -786,7 +786,17 @@ export type SecretaryHubResume =
 export type GovProgramModalKind =
   | "xaihi_intro"
   | "surtr_beat"
-  | "decline_growth";
+  | "decline_growth"
+  | "structure_queue_intro"
+  | "structure_queue_coach"
+  | "recruit_set_qty_intro"
+  | "recruit_queue_intro"
+  | "recruit_first_queue_coach"
+  | "recruit_step_coach";
+
+export type GovGrowthRecruitCoachPhase = "set_qty" | "pick_queue";
+
+export type GovGrowthStructureCoachPhase = "pick_upgrade";
 
 export interface GovProgramCalendarState {
   activeDailyQuestId: string | null;
@@ -815,6 +825,24 @@ export interface GovProgramState {
   pendingModal: GovProgramModalKind | null;
   chiefLessonPending: boolean;
   mapSiteInspected: boolean;
+  /** When set, growth steps count only actions after this replay, not older progress. */
+  growthReplayAt: number | null;
+  /** lifetimeRecruits at replay start. Null when not replaying. */
+  growthReplayRecruitBaseline: number | null;
+  /** Start of the current growth step during a replay. */
+  growthStepStartedAt: number | null;
+  /** Dismissed-report count when the current growth step started. */
+  growthReportDismissedBaseline: number | null;
+  /** In-tab coach: arrow on first affordable upgrade before queue explainer modal. */
+  growthStructureCoach: GovGrowthStructureCoachPhase | null;
+  growthRecruitCoach: GovGrowthRecruitCoachPhase | null;
+  growthRecruitFirstQueueCoachDone: boolean;
+  /** Queue job row to pulse while structure_queue_coach modal is open. */
+  structureQueueCoachJobId: string | null;
+  /** Step 1 stipend copy for the queue coach modal (before step may complete). */
+  structureQueueCoachRewardCash: number | null;
+  structureQueueCoachRewardSupply: number | null;
+  structureQueueCoachRewardConnection: number | null;
   calendar: GovProgramCalendarState;
 }
 
@@ -944,6 +972,10 @@ export type GameAction =
   | { type: "GOV_ENGAGE_CHARTER"; officeId?: OfficeLocationId }
   | { type: "GOV_CLAIM_DAILY"; now: number }
   | { type: "GOV_MAP_SITE_INSPECTED" }
+  | { type: "GOV_RESET_GROWTH_TRACK" }
+  | { type: "GOV_START_STRUCTURE_COACH" }
+  | { type: "GOV_START_RECRUIT_COACH" }
+  | { type: "GOV_ADVANCE_RECRUIT_COACH" }
   | { type: "SET_HOME_PANEL"; panel: HomePanel }
   | { type: "RESTORE_HOME_HUB" }
   | { type: "GO_HOME_LANDING" }
