@@ -17,13 +17,22 @@ import type { OnlineSession } from "./types";
 import {
   ensureCanonSharedJobSlots,
   scheduleSharedSlotRespawn,
-  seedSharedJobPostingsIfNeeded,
+  reseedSharedJobPostings,
   spawnReadySharedJobSlots,
 } from "./sharedJobSlotSync";
 import { resetSharedBranches } from "./sharedBranchSync";
 import { jobPostingsCol, metaRef } from "./worldDocs";
 
-export { seedSharedJobPostingsIfNeeded };
+export { reseedSharedJobPostings, seedSharedJobPostingsIfNeeded } from "./sharedJobSlotSync";
+
+/** Reseed when the shared collection is empty (e.g. reset failed mid-flight). */
+export async function ensureSharedJobPostingsPresent(
+  session: OnlineSession,
+): Promise<void> {
+  const snap = await getDocs(jobPostingsCol(session.worldId));
+  if (!snap.empty) return;
+  await reseedSharedJobPostings(session);
+}
 
 export function subscribeJobPostings(
   session: OnlineSession,
@@ -108,7 +117,7 @@ export async function resetSharedWorld(
     { merge: true },
   );
 
-  await seedSharedJobPostingsIfNeeded(session);
+  await reseedSharedJobPostings(session);
   await resetSharedBranches(session.worldId);
 }
 

@@ -39,6 +39,7 @@ export {
   replaceClosedPosting,
   expireSharedPosting,
   maintainOnlineJobSlots,
+  ensureSharedJobPostingsPresent,
 } from "./sharedJobSync";
 export {
   resetOnlinePlayerAccount,

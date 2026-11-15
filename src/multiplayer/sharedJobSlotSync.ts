@@ -1,4 +1,4 @@
-import { doc, runTransaction } from "firebase/firestore";
+import { doc, runTransaction, type Transaction } from "firebase/firestore";
 import type { JobPosting, JobSiteSlotState } from "../game/types";
 import { seedProceduralJobWorld } from "../game/jobSlots";
 import { jobPostingsCol } from "./worldDocs";
@@ -91,40 +91,58 @@ export function emptySharedSlotRows(): JobSiteSlotState[] {
   return rows;
 }
 
+function writeFreshSharedJobBoard(
+  tx: Transaction,
+  session: OnlineSession,
+  meta: WorldMeta | undefined,
+  now: number,
+): void {
+  const metaDoc = metaRef(session.worldId);
+  const slotsRef = sharedJobSlotsRef(session.worldId);
+  const seeded = seedProceduralJobWorld({ worldSeed: session.worldId }, now);
+
+  for (const posting of seeded.jobPostings) {
+    tx.set(doc(jobPostingsCol(session.worldId), posting.id), posting);
+  }
+  tx.set(slotsRef, {
+    slots: seeded.jobSiteSlots,
+    schemaVersion: 1,
+  });
+  tx.set(
+    metaDoc,
+    {
+      mapRegionSeed: MAP_REGION_SEED,
+      jobPostingsInitialized: true,
+      createdAt: meta?.createdAt ?? now,
+    },
+    { merge: true },
+  );
+}
+
 export async function seedSharedJobPostingsIfNeeded(
   session: OnlineSession,
 ): Promise<void> {
   const metaDoc = metaRef(session.worldId);
-  const slotsRef = sharedJobSlotsRef(session.worldId);
 
   await runTransaction(getDb(), async (tx) => {
     const snap = await tx.get(metaDoc);
     const meta = snap.data() as WorldMeta | undefined;
     if (meta?.jobPostingsInitialized) return;
 
-    const now = Date.now();
-    const seeded = seedProceduralJobWorld(
-      { worldSeed: session.worldId },
-      now,
-    );
+    writeFreshSharedJobBoard(tx, session, meta, Date.now());
+  });
+}
 
-    for (const posting of seeded.jobPostings) {
-      tx.set(doc(jobPostingsCol(session.worldId), posting.id), posting);
-    }
-    tx.set(slotsRef, {
-      slots: seeded.jobSiteSlots,
-      schemaVersion: 1,
-    });
+/** World reset: always wipe slot pointers and reseed open postings. */
+export async function reseedSharedJobPostings(
+  session: OnlineSession,
+): Promise<void> {
+  const metaDoc = metaRef(session.worldId);
 
-    tx.set(
-      metaDoc,
-      {
-        mapRegionSeed: MAP_REGION_SEED,
-        jobPostingsInitialized: true,
-        createdAt: meta?.createdAt ?? now,
-      },
-      { merge: true },
-    );
+  await runTransaction(getDb(), async (tx) => {
+    const snap = await tx.get(metaDoc);
+    const meta = snap.data() as WorldMeta | undefined;
+    writeFreshSharedJobBoard(tx, session, meta, Date.now());
   });
 }
 

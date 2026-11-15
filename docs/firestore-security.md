@@ -62,6 +62,7 @@ Playtester flow:
 | `worlds/dev/bindings/{firebaseUid}` | Google uid → `accountId` (auto-resume) |
 | `worlds/dev/companies/{accountId}/private/state` | Private company save |
 | `worlds/dev/jobPostings/*` | Shared job board |
+| `worlds/dev/shared/jobSlots` | Procedural job spawn slots (paired with postings) |
 | `worlds/dev/shared/mapLayout` | Shared playtest hex map (dev publish → all players read) |
 | `worlds/dev/shared/marketLeaderboard` | Public net-worth rankings (Market Research) |
 
@@ -94,6 +95,7 @@ Keys are unguessable UUIDs. `lockedEmail` ties the key to one Google identity. S
 | Symptom | Fix |
 |---------|-----|
 | `Missing or insufficient permissions` | Publish rules; enable Google auth. Deploy `firestore.rules` (`firebase deploy --only firestore:rules`). |
+| No jobs at map sites after world reset | Deploy rules including `shared/jobSlots`; reload or run **Reset shared world** again (bootstrap also reseeds if `jobPostings` is empty). |
 | `Invalid access key` | Key typo, deleted doc, or wrong Firebase project |
 | Email lock mismatch | Sign in with the exact `lockedEmail` on the key doc |
 | Devs can't create keys in Settings | Redeem a Tim/Chris dev key first (bootstrap) |

@@ -20,6 +20,7 @@ import {
   remoteResetGeneration,
   replaceClosedPosting,
   expireSharedPosting,
+  ensureSharedJobPostingsPresent,
   maintainOnlineJobSlots,
   savePrivateState,
   seedSharedJobPostingsIfNeeded,
@@ -297,6 +298,7 @@ export function useOnlineWorld({
             lastExpectedSessionIdRef.current = expectedSessionId;
 
             await seedSharedJobPostingsIfNeeded(session);
+            await ensureSharedJobPostingsPresent(session);
 
             const layoutDoc = await loadWorldMapDevLayout(session.worldId);
             if (layoutDoc) {

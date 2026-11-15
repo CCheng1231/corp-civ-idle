@@ -144,6 +144,11 @@ service cloud.firestore {
       allow read, write: if isBoundToWorld(worldId);
     }
 
+    /** Per-slot spawn/respawn state for procedural job sites (paired with jobPostings). */
+    match /worlds/{worldId}/shared/jobSlots {
+      allow read, write: if isBoundToWorld(worldId);
+    }
+
     match /worlds/{worldId}/shared/marketLeaderboard {
       allow read, write: if isBoundToWorld(worldId);
     }
