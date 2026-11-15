@@ -76,4 +76,20 @@ Popup GIS and Firebase redirect often fail in Cursor's preview. **`npm run dev`*
 
 Production static hosting has no POST handler yet — use Chrome/Edge for deployed previews, or **Play solo** in Cursor.
 
+## Netlify (production deploy)
+
+Set these in **Site configuration → Environment variables** (scopes that include **Build**), then trigger a new deploy:
+
+| Variable | Notes |
+|----------|--------|
+| `VITE_FIREBASE_API_KEY` | Required for any Google sign-in |
+| `VITE_FIREBASE_PROJECT_ID` | |
+| `VITE_FIREBASE_AUTH_DOMAIN` | e.g. `corp-civ-idle-a8a18.firebaseapp.com` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | |
+| `VITE_FIREBASE_APP_ID` | |
+| `VITE_GOOGLE_OAUTH_CLIENT_ID` | Optional but recommended (GIS button); title sign-in still works via Firebase popup when only Firebase vars are set |
+
+Also add your Netlify URL (`https://your-site.netlify.app`) to Firebase **Authorized domains**, OAuth **JavaScript origins**, and the browser **API key** HTTP referrers (see sections above).
+
 Do **not** set `VITE_GOOGLE_SIGNIN_REDIRECT=true` for Cursor (that is Firebase redirect, not GIS redirect).

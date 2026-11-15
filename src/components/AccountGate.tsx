@@ -21,6 +21,7 @@ import {
   isGoogleSignedIn,
   isPendingGoogleOnlineRedirect,
   markPendingGoogleOnlineRedirect,
+  signInWithGoogle,
   signInWithGoogleRedirect,
   subscribeAuthState,
 } from "../multiplayer/firebaseAuth";
@@ -163,6 +164,55 @@ export function AccountGate({ onStart }: AccountGateProps) {
             ? err.message
             : "Could not start Google sign-in.",
       );
+    }
+  }
+
+  async function beginTitleGoogleSignIn() {
+    if (!firebaseReady) return;
+    if (useGoogleRedirect) {
+      await beginGoogleSignInRedirect();
+      return;
+    }
+    setOnlineError(null);
+    setTitleGoogleBusy(true);
+    let openedGisButton = false;
+    try {
+      if (
+        googleButtonConfigured &&
+        titleGoogleReady &&
+        clickMountedGoogleSignInButton(googleTitleSignInRef.current)
+      ) {
+        openedGisButton = true;
+        if (useGisRedirectInPreview) {
+          markPendingGoogleOnlineRedirect();
+        }
+        return;
+      }
+
+      setPlayMode("online");
+      setGateView("online");
+
+      if (embeddedPreview) {
+        markPendingGoogleOnlineRedirect();
+        await signInWithGoogle({ useRedirect: true });
+        return;
+      }
+
+      const user = await signInWithGoogle({ useRedirect: false });
+      await progressAfterGoogleUser(user, setOnlineError);
+    } catch (err) {
+      if (err instanceof OnlineAccessError && err.message.includes("Redirecting")) {
+        return;
+      }
+      setOnlineError(
+        err instanceof OnlineAccessError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not sign in with Google.",
+      );
+    } finally {
+      if (!openedGisButton) setTitleGoogleBusy(false);
     }
   }
 
@@ -463,37 +513,21 @@ export function AccountGate({ onStart }: AccountGateProps) {
             >
               Play solo
             </button>
-            {firebaseReady && (googleButtonConfigured || useGoogleRedirect) ? (
+            {firebaseReady ? (
               <>
                 <button
                   type="button"
                   className="btn account-gate-title-btn"
-                  disabled={
-                    useGoogleRedirect
-                      ? titleGoogleBusy || connecting
-                      : !titleGoogleReady || titleGoogleBusy || connecting
-                  }
+                  disabled={titleGoogleBusy || connecting}
                   onClick={() => {
-                    if (useGoogleRedirect) {
-                      void beginGoogleSignInRedirect();
-                      return;
-                    }
-                    setOnlineError(null);
-                    setTitleGoogleBusy(true);
-                    if (useGisRedirectInPreview) {
-                      markPendingGoogleOnlineRedirect();
-                    }
-                    const opened = clickMountedGoogleSignInButton(
-                      googleTitleSignInRef.current,
-                    );
-                    if (!opened) setTitleGoogleBusy(false);
+                    void beginTitleGoogleSignIn();
                   }}
                 >
                   {titleGoogleBusy || connecting
                     ? "Signing in…"
                     : "Sign in with Google"}
                 </button>
-                {!useGoogleRedirect ? (
+                {!useGoogleRedirect && googleButtonConfigured ? (
                   <div
                     ref={googleTitleSignInRef}
                     className="account-gate-google-gsi account-gate-google-gsi--proxy"
