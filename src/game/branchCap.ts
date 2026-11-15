@@ -1,6 +1,8 @@
 import type { GameState } from "./types";
-import { activePlayerId } from "../multiplayer/playerHq";
-import { branchManagementResearched } from "./mapWorld";
+
+function branchManagementResearched(state: GameState): boolean {
+  return state.researchLevels.branch_management >= 1;
+}
 
 /** Max branch offices (HQ is not included) once Branch Management is researched. */
 export function maxBranchOffices(state: GameState): number {
@@ -16,7 +18,9 @@ export function maxCompanyOfficeSites(state: GameState): number {
 
 export function ownedBranchSitesForPlayer(
   state: GameState,
-  ownerId: string = activePlayerId(state),
+  ownerId: string = state.onlineSession?.playMode === "online"
+    ? state.onlineSession.accountId
+    : "local",
 ): number {
   return state.branchSites.filter(
     (s) => (s.ownerPlayerId ?? ownerId) === ownerId && !s.closingStartedAt,

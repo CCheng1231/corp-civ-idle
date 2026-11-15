@@ -7,7 +7,7 @@ import {
   secretaryHomePortraitSrc,
   secretaryTabPortraitSrc,
 } from "../game/secretaryAssets";
-import type { SecretaryId } from "../game/types";
+import type { GameState, SecretaryId } from "../game/types";
 import { useCoverBackgroundPanOffset } from "../hooks/useCoverBackgroundPanOffset";
 
 export type HubSyncedPortraitSource = "home" | "secretary";
@@ -16,15 +16,17 @@ interface HubSyncedTabBackgroundProps {
   chiefId: SecretaryId;
   /** Home hub tabs use Home art; Secretary roster/job use Secretary art. */
   portraitSource?: HubSyncedPortraitSource;
+  skinContext?: Pick<GameState, "secretarySkins">;
 }
 
 export function HubSyncedTabBackground({
   chiefId,
   portraitSource = "home",
+  skinContext,
 }: HubSyncedTabBackgroundProps) {
   const portrait =
     portraitSource === "secretary"
-      ? secretaryTabPortraitSrc(chiefId)
+      ? secretaryTabPortraitSrc(chiefId, skinContext)
       : secretaryHomePortraitSrc(chiefId);
   const storageKey =
     portraitSource === "secretary"

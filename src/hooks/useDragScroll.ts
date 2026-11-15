@@ -37,6 +37,7 @@ function isScrollExcluded(target: EventTarget | null): boolean {
 export function useDragScroll() {
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
+  const suppressClickRef = useRef(false);
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (event.button !== 0 && event.button !== 1) return;
@@ -65,6 +66,7 @@ export function useDragScroll() {
     if (!drag.dragging) {
       if (dx * dx + dy * dy < DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) return;
       drag.dragging = true;
+      suppressClickRef.current = true;
       setDragging(true);
       el.setPointerCapture(event.pointerId);
     }
@@ -81,12 +83,22 @@ export function useDragScroll() {
     if (drag.dragging && el.hasPointerCapture(event.pointerId)) {
       el.releasePointerCapture(event.pointerId);
     }
+    if (drag.dragging) {
+      suppressClickRef.current = true;
+    }
     dragRef.current = null;
     setDragging(false);
   }
 
+  function shouldSuppressClick(): boolean {
+    if (!suppressClickRef.current) return false;
+    suppressClickRef.current = false;
+    return true;
+  }
+
   return {
     dragging,
+    shouldSuppressClick,
     onPointerDown,
     onPointerMove,
     onPointerUp: endDrag,

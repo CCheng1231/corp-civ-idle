@@ -20,9 +20,9 @@ import {
   remoteResetGeneration,
   replaceClosedPosting,
   expireSharedPosting,
+  maintainOnlineJobSlots,
   savePrivateState,
   seedSharedJobPostingsIfNeeded,
-  ensureSharedJobDefinitionsSynced,
   subscribeCompanies,
   subscribeJobPostings,
   subscribePrivateState,
@@ -106,6 +106,12 @@ async function maintainSharedJobPostings(
   refs: SharedJobMaintenanceRefs,
 ): Promise<void> {
   const now = Date.now();
+
+  try {
+    await maintainOnlineJobSlots(session, now);
+  } catch (err) {
+    console.error("Spawn ready job slots failed", err);
+  }
 
   for (const posting of postings) {
     if (
@@ -291,7 +297,6 @@ export function useOnlineWorld({
             lastExpectedSessionIdRef.current = expectedSessionId;
 
             await seedSharedJobPostingsIfNeeded(session);
-            await ensureSharedJobDefinitionsSynced(session);
 
             const layoutDoc = await loadWorldMapDevLayout(session.worldId);
             if (layoutDoc) {

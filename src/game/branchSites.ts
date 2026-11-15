@@ -5,8 +5,8 @@ import type {
   GameState,
   OfficeLocationId,
 } from "./types";
-import { activePlayerId } from "../multiplayer/playerHq";
-import { commercialLotById } from "./mapWorld";
+import { MAP_BRANCH, MAP_HQ, axialEquals, axialDistance } from "./hexLayout";
+import { commercialLotById } from "./commercialLots";
 import { effectiveLandmarkCoord } from "./mapDevLayout";
 import { parseAxialKey } from "./openOffice";
 import {
@@ -134,7 +134,10 @@ export function isBranchOwnedByActivePlayer(
   site: EstablishedBranchSite,
   state: GameState,
 ): boolean {
-  const owner = activePlayerId(state);
+  const owner =
+    state.onlineSession?.playMode === "online"
+      ? state.onlineSession.accountId
+      : "local";
   return (site.ownerPlayerId ?? owner) === owner;
 }
 
@@ -187,4 +190,40 @@ export function defaultBranchSiteName(
   branchIndex: number,
 ): string {
   return `Branch ${branchIndex} · ${padLabel} @ ${lotLabel}`;
+}
+
+export function officeCoordFor(
+  officeId: OfficeLocationId,
+  _branchCoord: AxialCoord | null,
+  hqCoord: AxialCoord = MAP_HQ,
+): AxialCoord {
+  if (officeId === "hq") return hqCoord;
+  return MAP_BRANCH;
+}
+
+export function officeAtCoord(
+  coord: AxialCoord,
+  branch: { branchSites: EstablishedBranchSite[] },
+  hqCoord: AxialCoord = MAP_HQ,
+): OfficeLocationId | null {
+  if (axialEquals(coord, hqCoord)) return "hq";
+  for (const site of branch.branchSites) {
+    if (axialEquals(coord, branchSiteCoord(site))) {
+      return branchOfficeIdForSite(site);
+    }
+  }
+  return null;
+}
+
+export function officeSeparationHexes(
+  from: OfficeLocationId,
+  to: OfficeLocationId,
+  branchCoord: AxialCoord | null,
+  hqCoord: AxialCoord = MAP_HQ,
+): number {
+  if (from === to) return 0;
+  return axialDistance(
+    officeCoordFor(from, branchCoord, hqCoord),
+    officeCoordFor(to, branchCoord, hqCoord),
+  );
 }

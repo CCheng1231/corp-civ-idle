@@ -1,8 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { googleAuthCallbackPlugin } from "./vite.plugins/googleAuthCallback";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), googleAuthCallbackPlugin()],
   server: {
     watch: {
       // Native FS watchers on Windows often throw EBUSY (OneDrive path, Defender,

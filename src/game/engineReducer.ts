@@ -50,15 +50,25 @@ import {
   checkSecretaryRecruitmentMilestones,
   commitSecretaryRecruitment,
   dismissSecretaryRecruitment,
+  resumeSecretaryRecruitment,
   finishRecruitmentAnimation,
 } from "./secretaryRecruitment";
 import { spendSecretarySkillPoint } from "./secretaryProgress";
+import {
+  checkSecretarySkinOffers,
+  commitSecretarySkinUnlock,
+  deferSecretarySkinOffer,
+  devMaxSecretaryProgress,
+  equipSecretarySkin,
+  resumeSecretarySkinOffer,
+} from "./secretarySkins";
+import { secretarySkinCatalogEntry } from "./secretarySkinData";
 import { formatQueueTimeHours } from "./timers";
 import {
   cancelJobEngagement,
   engageJobPosting,
   handleOnlinePostingCompleted,
-  jobDefinitionById
+  jobDefinitionForEngagement
 } from "./jobs";
 import {
   applyOnlineDevRestrictions,
@@ -153,7 +163,8 @@ import {
   devSkipTime,
   finalizeLoadedState,
   finalizeOnlineSyncState,
-  mergeOnlineRemoteState
+  mergeOnlineRemoteState,
+  onlineLoadAlreadyCaughtUp,
 } from "./engineTick";
 import { removeBranchOfficeForDev } from "./devRemoveBranch";
 
@@ -228,10 +239,11 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "LOAD":
       if (isOnlineMode(action.state) || isOnlineMode(state)) {
-        let merged = finalizeOnlineSyncState(
-          mergeOnlineRemoteState(state, action.state),
-          Date.now(),
-        );
+        const now = Date.now();
+        let merged = mergeOnlineRemoteState(state, action.state);
+        if (!onlineLoadAlreadyCaughtUp(action.state, now)) {
+          merged = finalizeOnlineSyncState(merged, now);
+        }
         merged = applyOnlineDevRestrictions(merged);
         const layout = latestSharedWorldMapLayout();
         if (layout) {
@@ -377,7 +389,29 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
         action.nodeId,
       );
       if (next === state) return state;
+      next = checkSecretarySkinOffers(next, state, action.secretaryId);
       return checkSecretaryRecruitmentMilestones(next, state);
+    }
+
+    case "SECRETARY_SKIN_UNLOCK": {
+      const entry = secretarySkinCatalogEntry(action.skinId);
+      if (!entry.unlockable) return state;
+      return commitSecretarySkinUnlock(state, action.skinId);
+    }
+
+    case "SECRETARY_SKIN_DEFER":
+      return deferSecretarySkinOffer(state);
+
+    case "SECRETARY_SKIN_RESUME":
+      return resumeSecretarySkinOffer(state);
+
+    case "SECRETARY_SKIN_EQUIP":
+      return equipSecretarySkin(state, action.secretaryId, action.skinId);
+
+    case "DEV_MAX_SECRETARY_PROGRESS": {
+      if (isOnlineMode(state)) return state;
+      const target = action.secretaryId ?? state.chiefOfStaffId;
+      return devMaxSecretaryProgress(state, target);
     }
 
     case "SECRETARY_RECRUIT_COMMIT": {
@@ -390,6 +424,10 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "SECRETARY_RECRUIT_DISMISS": {
       return dismissSecretaryRecruitment(state);
+    }
+
+    case "SECRETARY_RECRUIT_RESUME": {
+      return resumeSecretaryRecruitment(state);
     }
 
     case "SELECT_CHIEF_OF_STAFF": {
@@ -1146,7 +1184,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (next.jobEngagements.length <= before) return state;
       next = govAfterEngageJob(next);
       const engagement = next.jobEngagements[next.jobEngagements.length - 1];
-      const def = jobDefinitionById(engagement.definitionId);
+      const def = jobDefinitionForEngagement(state, engagement);
       const travelHexes = jobTravelHexesToCoord(
         state,
         engagement.officeId,

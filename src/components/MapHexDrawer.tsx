@@ -49,7 +49,7 @@ import {
   jobPayoutPerHour,
 } from "../game/jobBoard";
 import {
-  BUSINESS_TYPE_LABELS,
+  LOCATION_TYPE_LABELS,
   COMPLETION_BANDS,
   completionBand,
   completionBandLabel,
@@ -60,6 +60,8 @@ import {
   postingsForMajorHub,
   postingsForTower,
 } from "../game/jobs";
+import { postingsForLocationId } from "../game/jobCatalog";
+import { jobSiteAtCoord } from "../game/jobSites";
 import { jobWorkDurationSec } from "../game/secretaryEffects";
 import type {
   AxialCoord,
@@ -98,7 +100,8 @@ interface MapHexDrawerProps {
 type MapContractSite =
   | { mode: "tower"; towerId: TowerId }
   | { mode: "major-hub"; majorHubId: MajorHubId }
-  | { mode: "commercial"; commercialLotId: CommercialLotId };
+  | { mode: "commercial"; commercialLotId: CommercialLotId }
+  | { mode: "location"; locationId: string };
 
 function MapLandmarkSiteDrawerSection({
   instance,
@@ -133,6 +136,11 @@ function contractSiteForDrawer(
   info: MapHexInfo,
   highlightPostingId: string | null,
 ): MapContractSite | null {
+  const proceduralSite = jobSiteAtCoord(coord, state.settings);
+  if (proceduralSite) {
+    return { mode: "location", locationId: proceduralSite.id };
+  }
+
   if (info.kind === "tower") {
     return { mode: "tower", towerId: info.towerId };
   }
@@ -457,7 +465,9 @@ function HexContractsSection({
                           <div className="map-hex-job-detail-text">
                             <span className="map-hex-job-tier">
                               T{def.tier} · {JOB_SIZE_LABELS[def.size]} ·{" "}
-                              {BUSINESS_TYPE_LABELS[def.businessType]}
+                              {def.locationType
+                                ? LOCATION_TYPE_LABELS[def.locationType]
+                                : "Job"}
                             </span>
                             <span className="map-hex-job-meta">
                               Dur:{" "}
@@ -514,6 +524,51 @@ function MajorHubContractsSection({
   const activePostingIds = new Set(
     state.jobEngagements
       .filter((engagement) => engagement.majorHubId === majorHubId)
+      .map((engagement) => engagement.postingId),
+  );
+
+  function sendToSecretary(postingId: string) {
+    dispatch({
+      type: "SET_VIEW",
+      view: "office",
+      jobFocusPostingId: postingId,
+    });
+  }
+
+  return (
+    <HexContractsSection
+      gameState={state}
+      coord={coord}
+      postings={postings}
+      isEngaged={(postingId) => activePostingIds.has(postingId)}
+      onSend={sendToSecretary}
+      highlightPostingId={highlightPostingId}
+    />
+  );
+}
+
+function JobSiteContractsSection({
+  state,
+  dispatch,
+  locationId,
+  coord,
+  highlightPostingId,
+}: {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+  locationId: string;
+  coord: AxialCoord;
+  highlightPostingId?: string | null;
+}) {
+  const postings = postingsForLocationId(state, locationId);
+  const activePostingIds = new Set(
+    state.jobEngagements
+      .filter((engagement) => {
+        const posting = state.jobPostings.find(
+          (p) => p.id === engagement.postingId,
+        );
+        return posting?.locationId === locationId;
+      })
       .map((engagement) => engagement.postingId),
   );
 
@@ -1120,6 +1175,16 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             state={state}
             dispatch={dispatch}
             towerId={contractSite.towerId}
+            coord={coord}
+            highlightPostingId={highlightPostingId}
+          />
+        ) : null}
+
+        {contractSite?.mode === "location" ? (
+          <JobSiteContractsSection
+            state={state}
+            dispatch={dispatch}
+            locationId={contractSite.locationId}
             coord={coord}
             highlightPostingId={highlightPostingId}
           />

@@ -1,4 +1,4 @@
-import { getAuth, signInAnonymously, type User } from "firebase/auth";
+import type { User } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -6,7 +6,17 @@ import {
   setDoc,
   type FirestoreError,
 } from "firebase/firestore";
-import { getDb, getFirebaseApp } from "./firebase";
+import {
+  accessKeyEmailLockMessage,
+  accessKeyEmailLockSatisfied,
+} from "./accessKeyEmailLock";
+import {
+  isGoogleSignedIn,
+  requireOnlineUser,
+  requireUserEmail,
+} from "./firebaseAuth";
+import { getDb } from "./firebase";
+import { OnlineAccessError } from "./onlineAccessError";
 import type { OnlineAccountId, OnlineSession, WorldId } from "./types";
 import {
   accountDisplayName,
@@ -14,12 +24,7 @@ import {
   isValidOnlineAccountId,
 } from "./types";
 
-export class OnlineAccessError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "OnlineAccessError";
-  }
-}
+export { OnlineAccessError };
 
 export interface BrowserBinding {
   uid: string;
@@ -27,6 +32,7 @@ export interface BrowserBinding {
   displayName: string;
   boundAt: number;
   keyId: string;
+  googleEmail?: string;
 }
 
 export interface AccessKeyRecord {
@@ -35,6 +41,8 @@ export interface AccessKeyRecord {
   createdAt: number;
   createdBy?: string;
   revoked?: boolean;
+  /** When set, only this Google email may redeem the key (Option 1B). */
+  lockedEmail?: string;
 }
 
 function bindingRef(worldId: WorldId, uid: string) {
@@ -59,23 +67,16 @@ function newAccessKeyId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Invisible Firebase sign-in — required for Firestore rules, no user-facing login. */
+/** @deprecated Use requireOnlineUser from firebaseAuth */
 export async function ensureFirebaseUser(): Promise<User> {
-  const auth = getAuth(getFirebaseApp());
-  if (!auth.currentUser) {
-    await signInAnonymously(auth);
-  }
-  const user = auth.currentUser;
-  if (!user) {
-    throw new OnlineAccessError("Firebase sign-in failed.");
-  }
-  return user;
+  return requireOnlineUser();
 }
 
 export async function loadBrowserBinding(
   worldId: WorldId = "dev",
+  signedInUser?: User,
 ): Promise<BrowserBinding | null> {
-  const user = await ensureFirebaseUser();
+  const user = signedInUser ?? (await requireOnlineUser());
   const snap = await getDoc(bindingRef(worldId, user.uid));
   if (!snap.exists()) return null;
 
@@ -89,13 +90,24 @@ export async function loadBrowserBinding(
     displayName: accountDisplayName(accountId, String(data.displayName ?? "")),
     boundAt: Number(data.boundAt ?? 0),
     keyId: String(data.keyId ?? ""),
+    googleEmail: data.googleEmail ? String(data.googleEmail) : undefined,
   };
 }
 
+function assertKeyEmailLock(key: AccessKeyRecord, user: User): void {
+  if (accessKeyEmailLockSatisfied(key, user)) return;
+  const lock = key.lockedEmail?.trim();
+  throw new OnlineAccessError(
+    lock
+      ? accessKeyEmailLockMessage(lock)
+      : "This access key does not match your Google account.",
+  );
+}
+
 /**
- * Redeem a dev-provided access key on this browser.
- * Keys are reusable — the same key works on any browser (one binding per browser).
- * Same browser profile auto-resumes via Firebase anonymous uid + binding doc.
+ * Redeem a dev-provided access key on this Google account.
+ * Keys are reusable — the same key works on any device after Google sign-in.
+ * Same Google account auto-resumes via bindings/{firebaseUid}.
  */
 export async function redeemAccessKey(
   keyId: string,
@@ -106,13 +118,18 @@ export async function redeemAccessKey(
     throw new OnlineAccessError("Enter an access key.");
   }
 
-  const user = await ensureFirebaseUser();
+  const user = await requireOnlineUser();
+  if (!isGoogleSignedIn(user) && import.meta.env.VITE_ONLINE_ALLOW_ANONYMOUS !== "true") {
+    throw new OnlineAccessError("Sign in with Google before connecting.");
+  }
+
   const existing = await loadBrowserBinding(worldId);
   if (existing) {
     return existing;
   }
 
   const keyRef = accessKeyRef(worldId, trimmed);
+  const googleEmail = user.email ? requireUserEmail(user) : undefined;
 
   try {
     return await runTransaction(getDb(), async (tx) => {
@@ -131,6 +148,8 @@ export async function redeemAccessKey(
         throw new OnlineAccessError("Access key is misconfigured.");
       }
 
+      assertKeyEmailLock(key, user);
+
       const bindingSnap = await tx.get(bindingRef(worldId, user.uid));
       if (bindingSnap.exists()) {
         const row = bindingSnap.data();
@@ -143,6 +162,7 @@ export async function redeemAccessKey(
           ),
           boundAt: Number(row.boundAt ?? 0),
           keyId: String(row.keyId ?? trimmed),
+          googleEmail: row.googleEmail ? String(row.googleEmail) : undefined,
         };
       }
 
@@ -158,6 +178,7 @@ export async function redeemAccessKey(
         displayName,
         boundAt: now,
         keyId: trimmed,
+        ...(googleEmail ? { googleEmail } : {}),
       });
 
       return {
@@ -166,14 +187,22 @@ export async function redeemAccessKey(
         displayName,
         boundAt: now,
         keyId: trimmed,
+        googleEmail,
       };
     });
   } catch (err) {
     if (err instanceof OnlineAccessError) throw err;
     const code = (err as FirestoreError).code;
     if (code === "permission-denied") {
+      const keySnap = await getDoc(keyRef);
+      if (keySnap.exists()) {
+        const key = keySnap.data() as AccessKeyRecord;
+        if (key.lockedEmail?.trim()) {
+          assertKeyEmailLock(key, user);
+        }
+      }
       throw new OnlineAccessError(
-        "Access denied. Check Firestore rules and Anonymous Auth.",
+        "Access denied. Check Firestore rules, Google sign-in, and that this key matches your Google email.",
       );
     }
     throw err;
@@ -184,11 +213,11 @@ export async function redeemAccessKey(
 export async function ensureOnlineAccess(
   session: OnlineSession,
 ): Promise<User> {
-  const user = await ensureFirebaseUser();
+  const user = await requireOnlineUser();
   const binding = await loadBrowserBinding(session.worldId);
   if (!binding) {
     throw new OnlineAccessError(
-      "No access key on this browser. Enter your key at the account gate.",
+      "No online access on this Google account. Sign in and enter your invite key at the account gate.",
     );
   }
   if (binding.accountId !== session.accountId) {
@@ -203,7 +232,13 @@ export async function ensureOnlineAccess(
 export async function createPlaytestAccessKey(
   session: OnlineSession,
   displayName: string,
-): Promise<{ keyId: string; accountId: OnlineAccountId; displayName: string }> {
+  lockedEmail?: string,
+): Promise<{
+  keyId: string;
+  accountId: OnlineAccountId;
+  displayName: string;
+  lockedEmail?: string;
+}> {
   if (!isDevAccount(session.accountId)) {
     throw new OnlineAccessError("Only dev accounts can create access keys.");
   }
@@ -211,6 +246,11 @@ export async function createPlaytestAccessKey(
   const label = displayName.trim();
   if (!label) {
     throw new OnlineAccessError("Enter a name for the playtester.");
+  }
+
+  const email = lockedEmail?.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new OnlineAccessError("Enter a valid Google email for the invite lock.");
   }
 
   await ensureOnlineAccess(session);
@@ -223,11 +263,17 @@ export async function createPlaytestAccessKey(
     createdAt: Date.now(),
     createdBy: session.accountId,
     revoked: false,
+    ...(email ? { lockedEmail: email.toLowerCase() } : {}),
   };
 
   await setDoc(accessKeyRef(session.worldId, keyId), record);
 
-  return { keyId, accountId, displayName: label };
+  return {
+    keyId,
+    accountId,
+    displayName: label,
+    lockedEmail: record.lockedEmail,
+  };
 }
 
 /** Optional dev shortcuts from .env.local (not committed). */

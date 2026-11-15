@@ -2,6 +2,7 @@ import type {
   AxialCoord,
   BranchEstablishmentPhase,
   BranchEstablishmentTransit,
+  CommercialLotId,
   GameState,
   OfficeLocationId,
   ResourceCost,
@@ -10,18 +11,38 @@ import { activePlayerId } from "../multiplayer/playerHq";
 import { axialKey, parseAxialKey } from "./openOffice";
 import { branchOfficeIdForOpenPad } from "./branchOfficeIds";
 import { establishedBranchAtPad } from "./branchSites";
-import { canOpenAnotherBranch } from "./branchCap";
-import { canEngageMoreJobs } from "./jobCatalog";
-import { formatJobDurationSec } from "./jobBoard";
 import {
-  branchManagementResearched,
-  commercialSiteAt,
-} from "./mapWorld";
+  canOpenAnotherBranch,
+  companyOfficeSiteFraction,
+} from "./branchCap";
+import { commercialLotById } from "./commercialLots";
+import { branchOpeningCostForPadOnLot } from "./branchCommercial";
+import { formatNumber } from "./formatUtil";
+import { formatJobDurationSec } from "./jobBoard";
+import { commercialSiteAt } from "./commercialSiteLookup";
 import {
   jobTravelDurationMsToCoord,
   jobTravelHexesToCoord,
 } from "./mapTravel";
-import { applyOfficeCost, applyOfficeRefund, canAffordAtOffice, unitAvailableAt } from "./constants";
+import {
+  applyOfficeCost,
+  applyOfficeRefund,
+  canAffordAtOffice,
+  powerAvailable,
+  RESOURCE_LABELS,
+  splitResourceCost,
+  unitAvailableAt,
+} from "./constants";
+
+function branchOpeningCostForPad(
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+): ResourceCost {
+  return branchOpeningCostForPadOnLot(
+    commercialLotById(commercialLotId),
+    slotIndex,
+  );
+}
 import {
   formatTimerRemaining,
   scheduleTimerAt,
@@ -86,6 +107,23 @@ export function padIsAvailableForEstablish(
   return !closing;
 }
 
+function branchManagementResearched(state: GameState): boolean {
+  return state.researchLevels.branch_management >= 1;
+}
+
+function canEngageMoreJobsForBranches(state: GameState): boolean {
+  const cap = 3 + (state.researchLevels.portfolio_management ?? 0);
+  const owner =
+    state.onlineSession?.playMode === "online"
+      ? state.onlineSession.accountId
+      : "local";
+  const active =
+    state.jobEngagements.length +
+    state.branchEstablishmentTransits.filter((t) => t.ownerPlayerId === owner)
+      .length;
+  return active < cap;
+}
+
 export function canSendBranchEstablishment(
   state: GameState,
   fromOfficeId: OfficeLocationId,
@@ -94,13 +132,82 @@ export function canSendBranchEstablishment(
   openingCost: ResourceCost,
 ): boolean {
   if (!branchManagementResearched(state)) return false;
-  if (!canEngageMoreJobs(state)) return false;
+  if (!canEngageMoreJobsForBranches(state)) return false;
   if (!canOpenAnotherBranch(state)) return false;
   const hexKey = axialKey(coord);
   if (!padIsAvailableForEstablish(state, hexKey, padIndex)) return false;
   if (unitAvailableAt(state, fromOfficeId, "branch_manager") < 1) return false;
   if (!canAffordAtOffice(state, fromOfficeId, openingCost)) return false;
   return true;
+}
+
+export function branchEstablishBlockersForPad(
+  state: GameState,
+  commercialLotId: CommercialLotId,
+  slotIndex: number,
+  coord: AxialCoord,
+): string[] {
+  if (establishedBranchAtPad(state, commercialLotId, slotIndex)) {
+    return ["Pad already open"];
+  }
+  const hexKey = axialKey(coord);
+  if (
+    state.branchEstablishmentTransits.some(
+      (t) => t.hexKey === hexKey && t.padIndex === slotIndex,
+    )
+  ) {
+    return ["Branch Manager already traveling to this pad"];
+  }
+  const blockers: string[] = [];
+  if (!branchManagementResearched(state)) {
+    blockers.push("Research Branch Management (Research tab)");
+  }
+  if (!canOpenAnotherBranch(state)) {
+    const { open, max } = companyOfficeSiteFraction(state);
+    blockers.push(`Branch office cap reached (${open}/${max})`);
+  }
+  const jobEngagementCap =
+    3 + (state.researchLevels.portfolio_management ?? 0);
+  const owner =
+    state.onlineSession?.playMode === "online"
+      ? state.onlineSession.accountId
+      : "local";
+  const activeJobs =
+    state.jobEngagements.length +
+    state.branchEstablishmentTransits.filter((t) => t.ownerPlayerId === owner)
+      .length;
+  if (activeJobs >= jobEngagementCap) {
+    blockers.push(
+      `Team cap reached (${jobEngagementCap} slots — finish or cancel a job first)`,
+    );
+  }
+  if ((state.contractorsByLocation.hq?.branch_manager ?? 0) < 1) {
+    blockers.push("Hire a Branch Manager at HQ (sent on establish)");
+  }
+  const openingCost = branchOpeningCostForPad(commercialLotId, slotIndex);
+  if (canSendBranchEstablishment(state, "hq", coord, slotIndex, openingCost)) {
+    return blockers;
+  }
+  const { global, power } = splitResourceCost(openingCost);
+  for (const [key, amount] of Object.entries(global)) {
+    const k = key as keyof GameState["resources"];
+    const need = amount ?? 0;
+    if (state.resources[k] < need) {
+      blockers.push(
+        `Need ${formatNumber(need)} ${RESOURCE_LABELS[k]} (have ${formatNumber(state.resources[k])})`,
+      );
+    }
+  }
+  const freePower = powerAvailable(state.locationStats.hq);
+  if (power > freePower) {
+    blockers.push(
+      `Need ${power} Power at HQ (${formatNumber(freePower)} free — build Power Grid or sell bids' power use)`,
+    );
+  }
+  if (blockers.length === 0) {
+    blockers.push("Pay branch opening costs at HQ");
+  }
+  return blockers;
 }
 
 export function branchEstablishmentTravelSummary(

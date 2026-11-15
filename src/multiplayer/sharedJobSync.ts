@@ -1,5 +1,6 @@
 import {
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   runTransaction,
@@ -7,15 +8,22 @@ import {
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
-import { createPostingFromDefinition, jobDefinitionById } from "../game/jobs";
+import { jobDefinitionForPosting } from "../game/jobs";
 import { MAP_REGION_SEED } from "../game/mapWorld";
 import type { JobPosting } from "../game/types";
 import { parseJobPosting } from "./companySave";
 import { getDb } from "./firebase";
 import type { OnlineSession } from "./types";
-import { seedSharedJobPostingsIfNeeded } from "./worldMeta";
+import {
+  ensureCanonSharedJobSlots,
+  scheduleSharedSlotRespawn,
+  seedSharedJobPostingsIfNeeded,
+  spawnReadySharedJobSlots,
+} from "./sharedJobSlotSync";
 import { resetSharedBranches } from "./sharedBranchSync";
 import { jobPostingsCol, metaRef } from "./worldDocs";
+
+export { seedSharedJobPostingsIfNeeded };
 
 export function subscribeJobPostings(
   session: OnlineSession,
@@ -49,7 +57,7 @@ export async function flushPostingWorkDelta(
     const posting = parseJobPosting(snap.data() as Record<string, unknown>);
     if (posting.status !== "open") return posting;
 
-    const def = jobDefinitionById(posting.definitionId);
+    const def = jobDefinitionForPosting(posting);
     const remaining = Math.max(0, def.unitHoursTotal - posting.unitHoursCompleted);
     const effective = Math.min(deltaHours, remaining);
     if (effective <= 0) return posting;
@@ -65,24 +73,14 @@ export async function flushPostingWorkDelta(
     const next: JobPosting = {
       ...posting,
       unitHoursCompleted: posting.unitHoursCompleted + effective,
-      contributors
-};
+      contributors,
+    };
     if (next.unitHoursCompleted >= def.unitHoursTotal) {
       next.status = "completed";
     }
     tx.set(postingRef, next);
     return next;
   });
-}
-
-export async function respawnSharedPosting(
-  session: OnlineSession,
-  definitionId: string,
-  now: number,
-): Promise<void> {
-  const def = jobDefinitionById(definitionId);
-  const posting = createPostingFromDefinition(def, now);
-  await setDoc(doc(jobPostingsCol(session.worldId), posting.id), posting);
 }
 
 export async function resetSharedWorld(
@@ -105,8 +103,8 @@ export async function resetSharedWorld(
     {
       mapRegionSeed: MAP_REGION_SEED,
       jobPostingsInitialized: false,
-      createdAt: Date.now()
-},
+      createdAt: Date.now(),
+    },
     { merge: true },
   );
 
@@ -114,18 +112,27 @@ export async function resetSharedWorld(
   await resetSharedBranches(session.worldId);
 }
 
-/** Remove a completed/expired posting doc and optionally spawn replacement. */
+/** Remove closed posting and start hidden slot cooldown — no instant replacement. */
 export async function replaceClosedPosting(
   session: OnlineSession,
   closedPostingId: string,
-  definitionId: string,
+  _definitionId: string,
   now: number,
 ): Promise<void> {
-  const batch = writeBatch(getDb());
-  batch.delete(doc(jobPostingsCol(session.worldId), closedPostingId));
-  const next = createPostingFromDefinition(jobDefinitionById(definitionId), now);
-  batch.set(doc(jobPostingsCol(session.worldId), next.id), next);
-  await batch.commit();
+  const postingRef = doc(jobPostingsCol(session.worldId), closedPostingId);
+  const snap = await getDoc(postingRef);
+  if (!snap.exists()) return;
+  const posting = parseJobPosting(snap.data() as Record<string, unknown>);
+  await scheduleSharedSlotRespawn(session, posting, now);
+  await spawnReadySharedJobSlots(session, now);
+}
+
+export async function maintainOnlineJobSlots(
+  session: OnlineSession,
+  now: number,
+): Promise<void> {
+  await ensureCanonSharedJobSlots(session, now);
+  await spawnReadySharedJobSlots(session, now);
 }
 
 export async function expireSharedPosting(

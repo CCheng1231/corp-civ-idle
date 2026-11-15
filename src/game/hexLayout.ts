@@ -1,10 +1,6 @@
 /** Pointy-top hex layout (Civilization-style tessellation). */
 
-import type { AxialCoord, EstablishedBranchSite, OfficeLocationId } from "./types";
-import {
-  branchOfficeIdForSite,
-  branchSiteCoord,
-} from "./branchSites";
+import type { AxialCoord } from "./types";
 
 /** Hex circumradius in px — roomier than the original 26 for player city map. */
 export const HEX_RADIUS = 42;
@@ -103,29 +99,6 @@ export function axialEquals(a: AxialCoord, b: AxialCoord): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
-export function officeAtCoord(
-  coord: AxialCoord,
-  branch: { branchSites: EstablishedBranchSite[] },
-  hqCoord: AxialCoord = MAP_HQ,
-): OfficeLocationId | null {
-  if (axialEquals(coord, hqCoord)) return "hq";
-  for (const site of branch.branchSites) {
-    if (axialEquals(coord, branchSiteCoord(site))) {
-      return branchOfficeIdForSite(site);
-    }
-  }
-  return null;
-}
-
-export function officeCoordFor(
-  officeId: OfficeLocationId,
-  _branchCoord: AxialCoord | null,
-  hqCoord: AxialCoord = MAP_HQ,
-): AxialCoord {
-  if (officeId === "hq") return hqCoord;
-  return MAP_BRANCH;
-}
-
 /** @deprecated use branchSiteCoordForOffice — HQ-only fallback map */
 export const OFFICE_COORDS = {
   hq: MAP_HQ,
@@ -136,17 +109,4 @@ export function axialDistance(a: AxialCoord, b: AxialCoord): number {
   const dq = a.q - b.q;
   const dr = a.r - b.r;
   return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
-}
-
-export function officeSeparationHexes(
-  from: OfficeLocationId,
-  to: OfficeLocationId,
-  branchCoord: AxialCoord | null,
-  hqCoord: AxialCoord = MAP_HQ,
-): number {
-  if (from === to) return 0;
-  return axialDistance(
-    officeCoordFor(from, branchCoord, hqCoord),
-    officeCoordFor(to, branchCoord, hqCoord),
-  );
 }

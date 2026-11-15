@@ -1,6 +1,6 @@
 import type { SecretaryDefinition } from "./secretaryData";
 import { secretaryById } from "./secretaryData";
-import { jobDefinitionById } from "./jobs";
+import { jobDefinitionForEngagement } from "./jobs";
 import { officeSiteLabel } from "./officeSelection";
 import { teamLeadsOnActiveJobs } from "./secretaryTeamLead";
 import type { GameState, OfficeSelectionId, SecretaryId } from "./types";
@@ -29,7 +29,7 @@ export function secretaryRoleLinesFor(
   for (const engagement of state.jobEngagements) {
     if (engagement.teamLeadSecretaryId !== secretaryId) continue;
     if (engagement.phase === "returning") continue;
-    const def = jobDefinitionById(engagement.definitionId);
+    const def = jobDefinitionForEngagement(state, engagement);
     lines.push({
       id: `team-lead-${engagement.id}`,
       text: `Team lead · ${def.title}`,

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Core region — metropolis vA tile set</title>
+    <style>
+      :root {
+        --map-bg: #465042;
+        --hex-core: #445ca8;
+        --ink: #e8eef5;
+        --muted: #9aa8b5;
+        --card: #242b33;
+        --border: #3a4550;
+        --tile-px: 128px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, Segoe UI, sans-serif;
+        background: #1a1f24;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      header,
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem 2rem;
+      }
+      header h1 {
+        font-size: 1.12rem;
+        margin: 0 0 0.5rem;
+      }
+      header p,
+      .note {
+        font-size: 0.86rem;
+        color: var(--muted);
+      }
+      .notice {
+        margin: 0.75rem 0 1.25rem;
+        padding: 0.75rem 1rem;
+        background: #2a3844;
+        border: 1px solid #4a6878;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #c5dce8;
+      }
+      h2.section-title {
+        font-size: 0.98rem;
+        margin: 1.5rem 0 0.75rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 0.85rem 1rem 0.35rem;
+      }
+      .card-head h2 {
+        margin: 0;
+        font-size: 0.94rem;
+      }
+      .card-head p {
+        margin: 0.3rem 0 0;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+      .repeat-stage {
+        height: 280px;
+        background-color: var(--map-bg);
+        background-repeat: repeat;
+        background-size: 256px 256px;
+        border-top: 1px solid var(--border);
+      }
+      .card-foot {
+        padding: 0.5rem 1rem 0.85rem;
+        font-size: 0.72rem;
+        color: #7ec8c0;
+      }
+      code {
+        font-size: 0.68rem;
+        color: #b8c8d4;
+      }
+      .mixed-stage {
+        display: grid;
+        grid-template-columns: repeat(6, var(--tile-px));
+        grid-template-rows: repeat(4, var(--tile-px));
+        width: fit-content;
+        margin: 0 auto;
+        background: var(--map-bg);
+        border: 1px solid var(--border);
+      }
+      .mixed-cell {
+        width: var(--tile-px);
+        height: var(--tile-px);
+        background-size: 256px 256px;
+        background-repeat: no-repeat;
+      }
+      .mixed-wrap {
+        padding: 0.75rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 1rem;
+      }
+      .mixed-wrap p {
+        margin: 0 0 0.65rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Metropolis core — vA tile set (anti-homogeneity)</h1>
+      <p>
+        Master <strong>vA</strong> plus three layout alts — assign per hex (e.g.
+        hash of <code>q,r</code>) so repeats break up. Palette:
+        <span style="color: #8ea4ff">#445ca8</span>.
+      </p>
+      <div class="notice">
+        Square repeats are reference only. The player map uses a gov-centered
+        world field — see <code>core-region-hex-tile-demos.html</code>.
+      </div>
+    </header>
+    <main>
+      <div class="mixed-wrap">
+        <p>
+          6×4 checkerboard — vA / alt1 / alt2 / alt3 (simulates mixed placement)
+        </p>
+        <div class="mixed-stage" id="mixed-mosaic" aria-hidden="true"></div>
+      </div>
+
+      <h2 class="section-title">vA family — single-tile repeat</h2>
+      <section class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h2>vA — master</h2>
+            <p>Original block mosaic (pick).</p>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vA.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vA.jpg</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>vA-alt1</h2>
+            <p>Courtyard upper-left; parks on right / bottom.</p>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vA-alt1.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vA-alt1.jpg</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>vA-alt2</h2>
+            <p>Diagonal micro-block band; parks top-right &amp; lower-left.</p>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vA-alt2.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vA-alt2.jpg</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>vA-alt3</h2>
+            <p>Cluster lower-right; open indigo north; sparse parks.</p>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vA-alt3.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vA-alt3.jpg</code>
+          </div>
+        </article>
+      </section>
+
+      <h2 class="section-title">Earlier explorations (B / C)</h2>
+      <section class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h2>Variant B — watercolor basin</h2>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vB.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vB.jpg</code>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>Variant C — geometric clusters</h2>
+          </div>
+          <div
+            class="repeat-stage"
+            style="
+              background-image: url(./map/core-region-tile-metropolis-vC.jpg);
+            "
+          ></div>
+          <div class="card-foot">
+            <code>core-region-tile-metropolis-vC.jpg</code>
+          </div>
+        </article>
+      </section>
+
+      <p class="note" style="margin-top: 1.5rem">
+        <code>/src/assets/reference/core-region-tile-demos.html</code>
+      </p>
+    </main>
+    <script>
+      const tiles = [
+        "./map/core-region-tile-metropolis-vA.jpg",
+        "./map/core-region-tile-metropolis-vA-alt1.jpg",
+        "./map/core-region-tile-metropolis-vA-alt2.jpg",
+        "./map/core-region-tile-metropolis-vA-alt3.jpg",
+      ];
+      const host = document.getElementById("mixed-mosaic");
+      for (let row = 0; row < 4; row += 1) {
+        for (let col = 0; col < 6; col += 1) {
+          const cell = document.createElement("div");
+          cell.className = "mixed-cell";
+          const idx = (row * 3 + col + row) % tiles.length;
+          cell.style.backgroundImage = `url(${tiles[idx]})`;
+          host.appendChild(cell);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -82,17 +82,35 @@ loadDotEnvLocal();
 
 const args = process.argv.slice(2);
 const accountFlag = args.indexOf("--account");
+const emailFlag = args.indexOf("--email");
+
+function stripFlags(argv, flags) {
+  const skip = new Set();
+  for (const flag of flags) {
+    const i = argv.indexOf(flag);
+    if (i >= 0) {
+      skip.add(i);
+      skip.add(i + 1);
+    }
+  }
+  return argv.filter((_, i) => !skip.has(i)).join(" ").trim();
+}
+
 const accountId =
   accountFlag >= 0 ? args[accountFlag + 1] : `guest-${randomUUID().replace(/-/g, "").slice(0, 12)}`;
-const displayName =
-  accountFlag >= 0
-    ? args.filter((_, i) => i !== accountFlag && i !== accountFlag + 1).join(" ").trim()
-    : args.join(" ").trim();
+const lockedEmail =
+  emailFlag >= 0 ? args[emailFlag + 1]?.trim().toLowerCase() : undefined;
+const displayName = stripFlags(args, ["--account", "--email"]);
 
 if (!displayName) {
   console.error(
-    'Usage: node scripts/create-access-key.mjs "Playtester name" [--account tim|chris|guest-xxx]',
+    'Usage: node scripts/create-access-key.mjs "Playtester name" [--account tim|chris] [--email user@gmail.com]',
   );
+  process.exit(1);
+}
+
+if (lockedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lockedEmail)) {
+  console.error("Invalid --email address.");
   process.exit(1);
 }
 
@@ -129,11 +147,15 @@ await db.doc(`worlds/${worldId}/accessKeys/${keyId}`).set({
   createdAt: Date.now(),
   createdBy: "script",
   revoked: false,
+  ...(lockedEmail ? { lockedEmail } : {}),
 });
 
 console.log(`Created access key for ${displayName}`);
 console.log(`  projectId: ${projectId}`);
 console.log(`  accountId: ${accountId}`);
+if (lockedEmail) console.log(`  lockedEmail: ${lockedEmail}`);
 console.log(`  key:       ${keyId}`);
 console.log("");
-console.log("Send the key to the playtester. They enter it once at the account gate.");
+console.log(
+  "Send the key and locked email (if any) to the playtester. They sign in with Google, then enter the key once.",
+);

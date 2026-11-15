@@ -102,10 +102,6 @@ import { MapJobFilterPanel } from "./MapJobFilterPanel";
 import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
   DEFAULT_JOB_BOARD_FILTERS,
-  countActiveJobBoardFilters,
-  filterAndSortJobPostings,
-  sortJobPostingsByDistanceFromMainOffice,
-  openJobPostings,
   type JobBoardFilters,
 } from "../game/jobBoard";
 import { MapPlayerHq3DMarker } from "./MapPlayerHq3DMarker";
@@ -120,6 +116,30 @@ import { MapBakedLandmarkOverlayLayer } from "./MapBakedLandmarkOverlayLayer";
 import { resolvePlayerBuildingLandmarkInstances } from "../game/mapPlayerBuildingLandmarks";
 import { playerWorldLandmarkArtVisible } from "../game/mapLandmarkPolicy";
 import { WorldMapZ1ProceduralOverlay } from "./WorldMapZ1ProceduralOverlay";
+import {
+  METROPOLIS_CORE_GROUND_TEXTURE_SIZE,
+  METROPOLIS_CORE_GROUND_TEXTURE_URL,
+  metropolisCoreGroundPatternOrigin,
+  metropolisCoreGroundPatternTransform,
+} from "../game/mapMetropolisCoreGround";
+import {
+  METRO_FRINGE_GROUND_TEXTURE_SIZE,
+  METRO_FRINGE_GROUND_TEXTURE_URL,
+  metroFringeGroundPatternOrigin,
+  metroFringeGroundPatternTransform,
+} from "../game/mapMetroFringeGround";
+import {
+  COUNTY_GROUND_TEXTURE_SIZE,
+  COUNTY_GROUND_TEXTURE_URL,
+  countyGroundPatternOrigin,
+  countyGroundPatternTransform,
+} from "../game/mapCountyGround";
+import {
+  GREENBELT_GROUND_TEXTURE_SIZE,
+  GREENBELT_GROUND_TEXTURE_URL,
+  greenbeltGroundPatternOrigin,
+  greenbeltGroundPatternTransform,
+} from "../game/mapGreenbeltGround";
 import { WorldMapDevToolbar } from "./WorldMapDevToolbar";
 import {
   defaultMapDevMovableLandmarkKey,
@@ -318,6 +338,38 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   const mapZoom = fitZoom * mapZoomRel;
   const panOverscroll = mapPanOverscrollRatio(false);
   const mapViewBounds = hexBounds;
+  const metropolisGroundPatternOrigin = useMemo(
+    () => metropolisCoreGroundPatternOrigin(state.settings),
+    [state.settings],
+  );
+  const metropolisGroundPatternTransform = useMemo(
+    () => metropolisCoreGroundPatternTransform(state.settings),
+    [state.settings],
+  );
+  const fringeGroundPatternOrigin = useMemo(
+    () => metroFringeGroundPatternOrigin(state.settings),
+    [state.settings],
+  );
+  const fringeGroundPatternTransform = useMemo(
+    () => metroFringeGroundPatternTransform(state.settings),
+    [state.settings],
+  );
+  const countyPatternOrigin = useMemo(
+    () => countyGroundPatternOrigin(state.settings),
+    [state.settings],
+  );
+  const countyPatternTransform = useMemo(
+    () => countyGroundPatternTransform(state.settings),
+    [state.settings],
+  );
+  const greenbeltPatternOrigin = useMemo(
+    () => greenbeltGroundPatternOrigin(state.settings),
+    [state.settings],
+  );
+  const greenbeltPatternTransform = useMemo(
+    () => greenbeltGroundPatternTransform(state.settings),
+    [state.settings],
+  );
   const mapDevHexEditActive = isDev && state.settings.mapDevHexEdit === true;
   const isDevRef = useRef(isDev);
   const dispatchRef = useRef(dispatch);
@@ -1099,32 +1151,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     return coords;
   }, [activeEngagements, state.jobPostings]);
 
-  const mapVisibleJobPostings = useMemo(() => {
-    const filtered = filterAndSortJobPostings(
-      openJobPostings(state),
-      mapJobFilters,
-      "expires_soon",
-      now,
-    );
-    return sortJobPostingsByDistanceFromMainOffice(state, filtered);
-  }, [state, mapJobFilters, now]);
-
-  const jobSiteCoordKeys = useMemo(() => {
-    const keys = new Set<string>();
-    for (const posting of mapVisibleJobPostings) {
-      try {
-        const def = jobDefinitionForPosting(posting);
-        keys.add(axialKey(jobSiteCoordForPosting(posting, def, state.settings)));
-      } catch {
-        /* skip bad posting */
-      }
-    }
-    return keys;
-  }, [mapVisibleJobPostings, state.settings]);
-
-  const mapJobFilterActive = countActiveJobBoardFilters(mapJobFilters) > 0;
-  const mapJobHighlight =
-    !isDev && mapVisibleJobPostings.length > 0 && mapJobFilterActive;
   const playerLandmarkIconsVisible =
     !isDev && playerWorldLandmarkArtVisible(state.settings);
 
@@ -1139,6 +1165,32 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       return null;
     }
   }, [selectedMapPostingId, state.jobPostings, state.settings]);
+
+  const playerMapHighlightedHexes = useMemo(() => {
+    if (isDev) return [];
+    const keys = new Set<string>();
+    if (inspectedCoord) keys.add(axialKey(inspectedCoord));
+    if (selectedJobSiteCoordKey) keys.add(selectedJobSiteCoordKey);
+    if (keys.size === 0) return [];
+    const highlighted: {
+      coord: AxialCoord;
+      x: number;
+      y: number;
+      r: number;
+    }[] = [];
+    for (const coord of cells) {
+      const key = axialKey(coord);
+      if (!keys.has(key)) continue;
+      const { x, y } = worldMapPresentationPixel(coord, state.settings);
+      highlighted.push({
+        coord,
+        x,
+        y,
+        r: worldMapHexTileRadius(coord),
+      });
+    }
+    return highlighted;
+  }, [cells, inspectedCoord, isDev, selectedJobSiteCoordKey, state.settings]);
 
   useLayoutEffect(() => {
     const el = mapHexDrawerRef.current;
@@ -1217,8 +1269,8 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   return (
     <div
       className={`world-view map-presentation-${isDev ? "dev" : "player"}${
-        mapJobHighlight ? " map-job-filter-active" : ""
-      }${mapDevHexEditActive ? " world-view-dev-hex-edit" : ""}`}
+        mapDevHexEditActive ? " world-view-dev-hex-edit" : ""
+      }`}
     >
       <div className="world-header">
         <div className="world-header-top">
@@ -1382,6 +1434,12 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
               >
             <svg
               ref={mapSvgRef}
+              className={[
+                "map-hex-map-base",
+                !isDev ? "map-metropolis-ground-ready" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               viewBox={`${mapViewBounds.minX} ${mapViewBounds.minY} ${mapViewBounds.width} ${mapViewBounds.height}`}
               width="100%"
               height="100%"
@@ -1401,6 +1459,79 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                 className="map-hex-undercoat"
                 pointerEvents="none"
               />
+
+              {!isDev ? (
+                <defs>
+                  <pattern
+                    id="map-metropolis-core-ground"
+                    patternUnits="userSpaceOnUse"
+                    patternContentUnits="userSpaceOnUse"
+                    patternTransform={metropolisGroundPatternTransform}
+                    x={metropolisGroundPatternOrigin.x}
+                    y={metropolisGroundPatternOrigin.y}
+                    width={METROPOLIS_CORE_GROUND_TEXTURE_SIZE}
+                    height={METROPOLIS_CORE_GROUND_TEXTURE_SIZE}
+                  >
+                    <image
+                      href={METROPOLIS_CORE_GROUND_TEXTURE_URL}
+                      width={METROPOLIS_CORE_GROUND_TEXTURE_SIZE}
+                      height={METROPOLIS_CORE_GROUND_TEXTURE_SIZE}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  </pattern>
+                  <pattern
+                    id="map-metro-fringe-ground"
+                    patternUnits="userSpaceOnUse"
+                    patternContentUnits="userSpaceOnUse"
+                    patternTransform={fringeGroundPatternTransform}
+                    x={fringeGroundPatternOrigin.x}
+                    y={fringeGroundPatternOrigin.y}
+                    width={METRO_FRINGE_GROUND_TEXTURE_SIZE}
+                    height={METRO_FRINGE_GROUND_TEXTURE_SIZE}
+                  >
+                    <image
+                      href={METRO_FRINGE_GROUND_TEXTURE_URL}
+                      width={METRO_FRINGE_GROUND_TEXTURE_SIZE}
+                      height={METRO_FRINGE_GROUND_TEXTURE_SIZE}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  </pattern>
+                  <pattern
+                    id="map-county-ground"
+                    patternUnits="userSpaceOnUse"
+                    patternContentUnits="userSpaceOnUse"
+                    patternTransform={countyPatternTransform}
+                    x={countyPatternOrigin.x}
+                    y={countyPatternOrigin.y}
+                    width={COUNTY_GROUND_TEXTURE_SIZE}
+                    height={COUNTY_GROUND_TEXTURE_SIZE}
+                  >
+                    <image
+                      href={COUNTY_GROUND_TEXTURE_URL}
+                      width={COUNTY_GROUND_TEXTURE_SIZE}
+                      height={COUNTY_GROUND_TEXTURE_SIZE}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  </pattern>
+                  <pattern
+                    id="map-greenbelt-ground"
+                    patternUnits="userSpaceOnUse"
+                    patternContentUnits="userSpaceOnUse"
+                    patternTransform={greenbeltPatternTransform}
+                    x={greenbeltPatternOrigin.x}
+                    y={greenbeltPatternOrigin.y}
+                    width={GREENBELT_GROUND_TEXTURE_SIZE}
+                    height={GREENBELT_GROUND_TEXTURE_SIZE}
+                  >
+                    <image
+                      href={GREENBELT_GROUND_TEXTURE_URL}
+                      width={GREENBELT_GROUND_TEXTURE_SIZE}
+                      height={GREENBELT_GROUND_TEXTURE_SIZE}
+                      preserveAspectRatio="xMidYMid slice"
+                    />
+                  </pattern>
+                </defs>
+              ) : null}
 
               {!isDev ? (
                 <WorldMapZ1ProceduralOverlay
@@ -1466,20 +1597,11 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                   axialEquals(coord, mapFocusCoordValue);
                 const hqFlashing = isPlayerMainOffice && hqFlashActive;
                 const hexTileR = worldMapHexTileRadius(coord);
-                const onJobHex = jobSiteCoordKeys.has(axialKey(coord));
-                const jobHot = mapJobHighlight && onJobHex;
-                const jobDim = mapJobHighlight && !onJobHex;
 
                 return (
                   <g
                     key={axialKey(coord)}
-                    className={[
-                      "hex-cell",
-                      jobHot ? "is-job-hex-hot" : "",
-                      jobDim ? "is-job-hex-dim" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
+                    className="hex-cell"
                   >
                     <polygon
                       points={hexPolygonPoints(x, y, hexTileR)}
@@ -1496,8 +1618,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                         isHexMoveSource ? "hex-tile-dev-move-source" : "",
                         isHexMoveTarget ? "hex-tile-dev-move-target" : "",
                         hqFlashing ? "hex-tile-hq-flash" : "",
-                        jobHot ? "hex-tile-job-hot" : "",
-                        jobDim ? "is-job-hex-dim" : "",
                         !isDev && landmarkHexSite?.siteKind === "major-hub"
                           ? "hex-tile-major-hub-site"
                           : "",
@@ -1523,15 +1643,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                         cy={y}
                         r={hexTileR * 0.92}
                         className="map-hq-focus-ring"
-                        pointerEvents="none"
-                      />
-                    ) : null}
-                    {isMapHexHighlighted ? (
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={hexTileR * 1.02}
-                        className="map-hex-selection-ring"
                         pointerEvents="none"
                       />
                     ) : null}
@@ -1692,6 +1803,33 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
                   mapContentScale={mapZoom}
                   instances={mapOverlayLandmarkInstances}
                 />
+                {playerMapHighlightedHexes.length > 0 ? (
+                  <svg
+                    className="map-hex-selection-overlay"
+                    viewBox={`${mapViewBounds.minX} ${mapViewBounds.minY} ${mapViewBounds.width} ${mapViewBounds.height}`}
+                    width="100%"
+                    height="100%"
+                    preserveAspectRatio={mapSvgPreserveAspectRatio(
+                      mapZoomRel,
+                      playerMinZoomRel,
+                    )}
+                    aria-hidden
+                  >
+                    {playerMapHighlightedHexes.map(({ coord, x, y, r }) => (
+                      <polygon
+                        key={`sel-${axialKey(coord)}`}
+                        points={hexPolygonPoints(x, y, r)}
+                        className="map-hex-selection-ring"
+                        fill="none"
+                        stroke="#f7f3ec"
+                        strokeWidth={0.5}
+                        strokeDasharray="2 2"
+                        vectorEffect="nonScalingStroke"
+                        pointerEvents="none"
+                      />
+                    ))}
+                  </svg>
+                ) : null}
               </div>
             ) : null}
               </div>

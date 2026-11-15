@@ -13,6 +13,13 @@ import {
   TEAM_LEAD_SKILL_DEFS,
   TEAM_LEAD_SKILL_NODES,
 } from "../game/secretarySkillData";
+import { secretaryRosterPortraitSrc } from "../game/secretaryAssets";
+import {
+  SECRETARY_SKIN_CATALOG,
+  secretarySkinPortraitSrc,
+  type SecretaryUnlockableSkinId,
+} from "../game/secretarySkinData";
+import { equippedSecretarySkinId } from "../game/secretarySkins";
 import type { GameAction, GameState, SecretaryId } from "../game/types";
 
 interface SecretaryDetailDialogProps {
@@ -52,6 +59,8 @@ export function SecretaryDetailDialog({
     nextLevelExp > 0
       ? Math.min(100, Math.round((progress.exp / nextLevelExp) * 100))
       : 100;
+  const unlockedSkins = state.secretarySkins?.unlocked[secretary.id] ?? [];
+  const equippedSkin = equippedSecretarySkinId(state, secretary.id);
 
   useLayoutEffect(() => {
     syncAppTopChromeHeight();
@@ -121,6 +130,54 @@ export function SecretaryDetailDialog({
               </div>
             </dl>
           </div>
+          {unlockedSkins.length > 0 ? (
+            <section className="secretary-detail-skin-panel" aria-label="Wardrobe">
+              <h3>Wardrobe</h3>
+              <div className="secretary-detail-skin-options">
+                <button
+                  type="button"
+                  className={`secretary-detail-skin-option${equippedSkin == null ? " is-active" : ""}`}
+                  onClick={() =>
+                    dispatch({
+                      type: "SECRETARY_SKIN_EQUIP",
+                      secretaryId: secretary.id,
+                      skinId: null,
+                    })
+                  }
+                >
+                  <img
+                    src={secretaryRosterPortraitSrc(secretary.id)}
+                    alt=""
+                    draggable={false}
+                  />
+                  <span>Default</span>
+                </button>
+                {unlockedSkins.map((skinId) => {
+                  const meta = SECRETARY_SKIN_CATALOG.find((e) => e.id === skinId);
+                  const src =
+                    secretarySkinPortraitSrc(skinId, secretary.id) ??
+                    secretaryRosterPortraitSrc(secretary.id, state);
+                  return (
+                    <button
+                      key={skinId}
+                      type="button"
+                      className={`secretary-detail-skin-option${equippedSkin === skinId ? " is-active" : ""}`}
+                      onClick={() =>
+                        dispatch({
+                          type: "SECRETARY_SKIN_EQUIP",
+                          secretaryId: secretary.id,
+                          skinId: skinId as SecretaryUnlockableSkinId,
+                        })
+                      }
+                    >
+                      <img src={src} alt="" draggable={false} />
+                      <span>{meta?.label ?? skinId}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
           <div className="secretary-detail-skill-panel">
             <section className="secretary-skill-tree">
               <h3>Chief of Staff tree</h3>

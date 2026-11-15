@@ -38,13 +38,23 @@ export function recruitmentLoreIntro(
   }
 }
 
+function playerOwnedBranchCount(state: GameState): number {
+  const online = state.onlineSession?.playMode === "online";
+  const ownerId = online ? state.onlineSession!.accountId : "local";
+  return state.branchSites.filter((site) => {
+    if (site.closingStartedAt) return false;
+    if (online) return site.ownerPlayerId === ownerId;
+    return (site.ownerPlayerId ?? ownerId) === ownerId;
+  }).length;
+}
+
 function milestoneTriggered(
   state: GameState,
   id: SecretaryRecruitMilestoneId,
 ): boolean {
   switch (id) {
     case "recruit_first_branch":
-      return state.branchSites.length >= 1;
+      return playerOwnedBranchCount(state) >= 1;
     case "recruit_net_worth_250k":
       return state.netWorth >= RECRUITMENT_NET_WORTH_MILESTONE;
     case "recruit_secretary_mastery":
@@ -70,11 +80,45 @@ function enqueueMilestones(
   return { ...recruitment, offerQueue: queue };
 }
 
+function stripStaleSecretaryRecruitment(
+  state: GameState,
+): GameState {
+  const recruitment = state.secretaryRecruitment ?? createInitialSecretaryRecruitment();
+  let pendingOffer = recruitment.pendingOffer;
+  if (pendingOffer) {
+    const completed = new Set(recruitment.completedMilestones);
+    if (
+      completed.has(pendingOffer.milestoneId) ||
+      !milestoneTriggered(state, pendingOffer.milestoneId)
+    ) {
+      pendingOffer = null;
+    }
+  }
+  const offerQueue = recruitment.offerQueue.filter(
+    (id) =>
+      !recruitment.completedMilestones.includes(id) &&
+      milestoneTriggered(state, id),
+  );
+  if (
+    pendingOffer === recruitment.pendingOffer &&
+    offerQueue.length === recruitment.offerQueue.length &&
+    offerQueue.every((id, i) => id === recruitment.offerQueue[i])
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    secretaryRecruitment: { ...recruitment, pendingOffer, offerQueue },
+  };
+}
+
 export function checkSecretaryRecruitmentMilestones(
   state: GameState,
   prev?: GameState,
 ): GameState {
   if (lockedGachaPool(state).length === 0) return state;
+
+  state = stripStaleSecretaryRecruitment(state);
 
   let recruitment = state.secretaryRecruitment ?? createInitialSecretaryRecruitment();
   const completed = new Set(recruitment.completedMilestones);
@@ -160,7 +204,58 @@ export function finishRecruitmentAnimation(state: GameState): GameState {
   };
 }
 
+export function canResumeSecretaryRecruitment(state: GameState): boolean {
+  const recruitment = state.secretaryRecruitment;
+  if (recruitment.pendingOffer || lockedGachaPool(state).length === 0) {
+    return false;
+  }
+  return recruitment.offerQueue.some((id) => milestoneTriggered(state, id));
+}
+
+/** Re-open a deferred milestone offer (after “Later” on the modal). */
+export function resumeSecretaryRecruitment(state: GameState): GameState {
+  if (!canResumeSecretaryRecruitment(state)) return state;
+  const recruitment = state.secretaryRecruitment;
+  const idx = recruitment.offerQueue.findIndex((id) =>
+    milestoneTriggered(state, id),
+  );
+  if (idx < 0) return state;
+  const milestoneId = recruitment.offerQueue[idx];
+  const offerQueue = recruitment.offerQueue.filter((_, i) => i !== idx);
+  return {
+    ...state,
+    secretaryRecruitment: {
+      ...recruitment,
+      offerQueue,
+      pendingOffer: { milestoneId, phase: "offer" },
+    },
+  };
+}
+
 export function dismissSecretaryRecruitment(state: GameState): GameState {
+  const offer = state.secretaryRecruitment.pendingOffer;
+  if (!offer) return state;
+
+  if (offer.phase === "offer") {
+    let recruitment: SecretaryRecruitmentState = {
+      ...state.secretaryRecruitment,
+      pendingOffer: null,
+    };
+    if (
+      milestoneTriggered(state, offer.milestoneId) &&
+      !recruitment.completedMilestones.includes(offer.milestoneId)
+    ) {
+      const queue = recruitment.offerQueue.filter(
+        (id) => id !== offer.milestoneId,
+      );
+      recruitment = {
+        ...recruitment,
+        offerQueue: [offer.milestoneId, ...queue],
+      };
+    }
+    return { ...state, secretaryRecruitment: recruitment };
+  }
+
   const recruitment: SecretaryRecruitmentState = {
     ...state.secretaryRecruitment,
     pendingOffer: null,

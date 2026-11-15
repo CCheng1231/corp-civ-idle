@@ -24,11 +24,8 @@ import {
   teamLeadUnitHoursMult,
 } from "./secretaryEffects";
 import { grantTeamLeadJobExp } from "./secretaryExp";
-import {
-  createPostingFromDefinition,
-  hiddenTotalCash,
-  jobDefinitionById,
-} from "./jobCatalog";
+import { hiddenTotalCash, jobDefinitionForEngagement, resolveJobDefinition } from "./jobCatalog";
+import { closeSlotAfterPostingEnd } from "./jobSlots";
 
 function contributorShare(
   contributors: JobPosting["contributors"],
@@ -102,7 +99,7 @@ function accrueEngagementThrough(
   const deltaMs = Math.max(0, accrueUntil - engagement.lastAccruedAt);
   if (deltaMs <= 0) return next;
 
-  const def = jobDefinitionById(engagement.definitionId);
+  const def = jobDefinitionForEngagement(next, engagement);
   const deltaHours = deltaMs / 3_600_000;
   let offeredUnitHours =
     totalAssigned(engagement.crewAssigned) * deltaHours;
@@ -183,7 +180,7 @@ function beginReturnTravel(
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(next, current);
   const travelMs = jobTravelDurationMsForDefinition(
     next,
     current.officeId,
@@ -214,7 +211,7 @@ function completeReturnTravel(
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(next, current);
   next.contractorsByLocation[current.officeId] = addAssignmentToRoster(
     next.contractorsByLocation[current.officeId],
     current.crewAssigned,
@@ -259,7 +256,7 @@ function startWorkingPhase(
   const idx = next.jobEngagements.findIndex((e) => e.id === engagementId);
   if (idx < 0) return next;
   const current = next.jobEngagements[idx];
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(next, current);
   const workStartedAt = current.travelArrivesAt ?? now;
   next.jobEngagements[idx] = {
     ...current,
@@ -286,7 +283,7 @@ function cancelOutboundEngagement(
   if (idx < 0) return state;
   const current = state.jobEngagements[idx];
   if (current.phase !== "outbound") return state;
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(state, current);
   const withLog = logUnitsReturned(
     state,
     {
@@ -341,16 +338,6 @@ function logUnitsReturned(
   );
 }
 
-function respawnPosting(
-  state: GameState,
-  def: JobDefinition,
-  now: number,
-): GameState {
-  const next = structuredClone(state);
-  next.jobPostings.push(createPostingFromDefinition(def, now));
-  return next;
-}
-
 function finalizeCompletedPosting(
   state: GameState,
   postingId: string,
@@ -359,7 +346,7 @@ function finalizeCompletedPosting(
   let next = structuredClone(state);
   const posting = next.jobPostings.find((p) => p.id === postingId);
   if (!posting) return next;
-  const def = jobDefinitionById(posting.definitionId);
+  const def = resolveJobDefinition(next, { postingId: posting.id });
   const totalCash = hiddenTotalCash(def);
   const bonusCash = totalCash * def.bonusPercent;
   const share = contributorShare(posting.contributors, activePlayerId(state));
@@ -410,8 +397,17 @@ function finalizeCompletedPosting(
   }
 
   next.completedProjects += 1;
-  if (!isOnlineMode(next)) {
-    next = respawnPosting(next, def, now);
+  if (
+    !isOnlineMode(next) &&
+    posting.locationId != null &&
+    posting.slotIndex != null
+  ) {
+    next = closeSlotAfterPostingEnd(
+      next,
+      posting.locationId,
+      posting.slotIndex,
+      now,
+    );
   }
   return next;
 }
@@ -557,8 +553,17 @@ function processJobEngagementsPass(
       // returning: already paid — keep walking home
     }
     const posting = next.jobPostings.find((p) => p.id === postingId);
-    if (posting) {
-      next = respawnPosting(next, jobDefinitionById(posting.definitionId), now);
+    if (
+      posting &&
+      posting.locationId != null &&
+      posting.slotIndex != null
+    ) {
+      next = closeSlotAfterPostingEnd(
+        next,
+        posting.locationId,
+        posting.slotIndex,
+        now,
+      );
     }
   }
 
@@ -597,7 +602,7 @@ function settleShiftEndedEngagement(
   if (idx < 0) return next;
 
   const current = next.jobEngagements[idx];
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(next, current);
   const payout = current.earnedSoFar;
   const gained = jobPayoutGained(payout);
   next.resources.cash += payout;
@@ -645,7 +650,7 @@ export function settleCancelledEngagement(
   if (idx < 0) return next;
 
   const current = next.jobEngagements[idx];
-  const def = jobDefinitionById(current.definitionId);
+  const def = jobDefinitionForEngagement(next, current);
   const payout = current.earnedSoFar * 0.5;
   const gained = jobPayoutGained(payout);
   next.resources.cash += payout;

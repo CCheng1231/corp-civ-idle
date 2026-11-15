@@ -20,7 +20,7 @@ import {
   activeEngagementCount,
   assignmentMeetsJobRequirements,
   canEngageMoreJobs,
-  jobDefinitionById,
+  jobDefinitionForPosting,
   maxJobEngagements,
   postingById,
 } from "./jobCatalog";
@@ -51,7 +51,7 @@ export function engageJobPosting(
   if (!posting || posting.status !== "open") return state;
   if (posting.expiresAt <= now) return state;
 
-  const def = jobDefinitionById(posting.definitionId);
+  const def = jobDefinitionForPosting(posting);
   const officeId = resolveOfficeLocation(state);
   const roster = state.contractorsByLocation[officeId];
   if (!canAssignFromRoster(roster, crewAssigned)) return state;
@@ -152,7 +152,7 @@ export function validateEngagementAssignment(
   }
   const posting = postingById(state, postingId);
   if (!posting || posting.status !== "open") return "Posting unavailable";
-  const def = jobDefinitionById(posting.definitionId);
+  const def = jobDefinitionForPosting(posting);
   if (!assignmentMeetsJobRequirements(crewAssigned, def)) {
     return "Not enough units";
   }
@@ -191,7 +191,7 @@ export function jobEngagementTravelSupplyCost(
 ): number {
   const posting = postingById(state, postingId);
   if (!posting) return 0;
-  const def = jobDefinitionById(posting.definitionId);
+  const def = jobDefinitionForPosting(posting);
   const officeId = resolveOfficeLocation(state);
   const hexes = jobTravelHexesToCoord(
     state,

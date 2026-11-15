@@ -132,7 +132,16 @@ export function buildOfflineWelcomeSummary(
     hires.length > 0 ||
     jobsFinished > 0;
 
-  if (!hasGains && !hasCompletions) return null;
+  if (!hasGains && !hasCompletions) {
+    return {
+      awaySec,
+      gained: {},
+      structures: [],
+      research: [],
+      hires: [],
+      jobsFinished: 0,
+    };
+  }
 
   return {
     awaySec,

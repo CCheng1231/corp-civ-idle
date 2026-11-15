@@ -1,4 +1,14 @@
+import {
+  equippedSecretarySkinId,
+  type SecretarySkinsState,
+} from "./secretarySkins";
+import { secretarySkinPortraitSrc } from "./secretarySkinData";
 import type { SecretaryId } from "./types";
+
+type SecretaryPortraitContext = Pick<
+  { secretarySkins?: SecretarySkinsState },
+  "secretarySkins"
+>;
 import secretary01Roster from "../assets/Secretary_info/Secretary_01_Roster.jpg";
 import secretary02Roster from "../assets/Secretary_info/Secretary_02_Roster.jpg";
 import secretary03Roster from "../assets/Secretary_info/Secretary_03_Roster.jpg";
@@ -51,18 +61,40 @@ export const SECRETARY_TAB_PORTRAIT_SRC: Record<SecretaryId, string> = {
   secretary_05: secretary05Secretary,
 };
 
-export function secretaryPortraitSrc(id: SecretaryId): string {
-  return SECRETARY_MAIN_PORTRAIT_SRC[id];
+function withEquippedSkin(
+  id: SecretaryId,
+  base: string,
+  ctx?: SecretaryPortraitContext,
+): string {
+  const skinId = ctx?.secretarySkins
+    ? equippedSecretarySkinId(ctx, id)
+    : null;
+  if (!skinId) return base;
+  const skinSrc = secretarySkinPortraitSrc(skinId, id);
+  return skinSrc ?? base;
 }
 
-export function secretaryRosterPortraitSrc(id: SecretaryId): string {
-  return SECRETARY_ROSTER_PORTRAIT_SRC[id];
+export function secretaryPortraitSrc(
+  id: SecretaryId,
+  ctx?: SecretaryPortraitContext,
+): string {
+  return withEquippedSkin(id, SECRETARY_MAIN_PORTRAIT_SRC[id], ctx);
+}
+
+export function secretaryRosterPortraitSrc(
+  id: SecretaryId,
+  ctx?: SecretaryPortraitContext,
+): string {
+  return withEquippedSkin(id, SECRETARY_ROSTER_PORTRAIT_SRC[id], ctx);
 }
 
 export function secretaryHomePortraitSrc(id: SecretaryId): string {
   return SECRETARY_HOME_PORTRAIT_SRC[id];
 }
 
-export function secretaryTabPortraitSrc(id: SecretaryId): string {
-  return SECRETARY_TAB_PORTRAIT_SRC[id];
+export function secretaryTabPortraitSrc(
+  id: SecretaryId,
+  ctx?: SecretaryPortraitContext,
+): string {
+  return withEquippedSkin(id, SECRETARY_TAB_PORTRAIT_SRC[id], ctx);
 }

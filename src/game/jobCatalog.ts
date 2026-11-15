@@ -1,7 +1,15 @@
-import { JOB_DEFINITIONS } from "./jobHubData";
 import { totalAssigned, unitDefinition } from "./unitEffects";
 import { requiredMinUnitTierForJob } from "./jobUnitTier";
 import { activePlayerId } from "../multiplayer/playerHq";
+import {
+  JOB_ENGAGE_CAPPED_SHIFT_HINT,
+  jobDefinitionFromPosting,
+  jobDefinitionForEngagement,
+  jobDefinitionById as definitionByIdFromPostings,
+} from "./jobDefinitions";
+export { jobDefinitionForEngagement };
+import { seedProceduralJobWorld } from "./jobSlots";
+import type { JobLocationType } from "./jobSites";
 import type {
   CommercialLotId,
   CompletionBand,
@@ -14,19 +22,33 @@ import type {
   UnitId,
 } from "./types";
 
+export { JOB_ENGAGE_CAPPED_SHIFT_HINT };
+
 export const BASE_JOB_ENGAGEMENT_CAP = 3;
 export const LOCAL_PLAYER_ID = "local";
 
-const definitionById = new Map(JOB_DEFINITIONS.map((d) => [d.id, d]));
+export function resolveJobDefinition(
+  state: GameState,
+  ref: { postingId?: string; definitionId?: string },
+): JobDefinition {
+  if (ref.postingId) {
+    const posting = state.jobPostings.find((p) => p.id === ref.postingId);
+    if (posting) return jobDefinitionForPosting(posting);
+  }
+  const posting = state.jobPostings.find(
+    (p) => p.definitionId === ref.definitionId,
+  );
+  if (posting) return jobDefinitionForPosting(posting);
+  return definitionByIdFromPostings(ref.definitionId ?? "", state.jobPostings);
+}
 
-export function jobDefinitionById(id: string): JobDefinition {
-  const def = definitionById.get(id);
-  if (!def) throw new Error(`Unknown job definition ${id}`);
-  return def;
+/** @deprecated Prefer resolveJobDefinition(state, { definitionId }) or jobDefinitionForPosting. */
+export function jobDefinitionById(state: GameState, id: string): JobDefinition {
+  return resolveJobDefinition(state, { definitionId: id });
 }
 
 export function jobDefinitionForPosting(posting: JobPosting): JobDefinition {
-  return jobDefinitionById(posting.definitionId);
+  return jobDefinitionFromPosting(posting);
 }
 
 export function postingsForMajorHub(
@@ -75,6 +97,15 @@ export function postingsForCommercialLot(
       return false;
     }
   });
+}
+
+export function postingsForLocationId(
+  state: GameState,
+  locationId: string,
+): JobPosting[] {
+  return state.jobPostings.filter(
+    (p) => p.status === "open" && p.locationId === locationId,
+  );
 }
 
 export function postingById(
@@ -151,7 +182,6 @@ export function completionBandLabel(band: CompletionBand): string {
   }
 }
 
-/** Ordered bands for UI tooltips / legends. */
 export const COMPLETION_BANDS: CompletionBand[] = [
   "none",
   "minimal",
@@ -161,25 +191,22 @@ export const COMPLETION_BANDS: CompletionBand[] = [
   "finishing",
 ];
 
-export function jobCompletionSupplyBonus(
-  def: JobDefinition,
-): number {
+export function jobCompletionSupplyBonus(def: JobDefinition): number {
   return Math.max(0, Math.floor(def.completionPayout?.supply ?? 0));
+}
+
+export function jobCompletionConnectionBonus(def: JobDefinition): number {
+  return Math.max(0, Math.floor(def.completionPayout?.connection ?? 0));
 }
 
 export function hiddenTotalCash(def: JobDefinition): number {
   return def.cashPerUnitHour * def.unitHoursTotal;
 }
 
-/** Full crew rate if the posting always has work left (expected). */
 export function returnPerHour(def: JobDefinition, unitCount: number): number {
   return def.cashPerUnitHour * Math.max(0, unitCount);
 }
 
-/**
- * Average $/hr over one full shift for this crew on this posting.
- * Caps at remaining job work — idle time after the posting fills pays nothing.
- */
 export function actualShiftReturnPerHour(
   def: JobDefinition,
   posting: Pick<JobPosting, "unitHoursCompleted">,
@@ -205,62 +232,39 @@ export function assignmentMeetsJobRequirements(
     if (count <= 0) continue;
     const unitId = key as UnitId;
     const unit = unitDefinition(unitId);
-    if (unit.category !== def.requiredCategory) return false;
     if (unit.tier < minUnitTier) return false;
   }
   return true;
 }
 
-function newPostingId(definitionId: string, now: number): string {
-  return `${definitionId}_${now}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
 export function mergeMissingJobPostings(
   existing: JobPosting[],
-  now: number,
+  _now: number,
 ): JobPosting[] {
-  const seenDefs = new Set(existing.map((p) => p.definitionId));
-  const added = JOB_DEFINITIONS.filter((d) => !seenDefs.has(d.id)).map((d) =>
-    createPostingFromDefinition(d, now),
-  );
-  return added.length > 0 ? [...existing, ...added] : existing;
+  return existing;
 }
 
-export function createPostingFromDefinition(
-  def: JobDefinition,
+export function initializeJobPostings(
   now: number,
-): JobPosting {
-  return {
-    id: newPostingId(def.id, now),
-    definitionId: def.id,
-    towerId: def.towerId ?? null,
-    majorHubId: def.majorHubId ?? null,
-    commercialLotId: def.commercialLotId ?? null,
-    spawnedAt: now,
-    expiresAt: now + def.expirationSec * 1000,
-    unitHoursCompleted: 0,
-    status: "open",
-    contributors: [],
-  };
+  settings?: GameState["settings"],
+  worldSeed?: string,
+): JobPosting[] {
+  return seedProceduralJobWorld({ settings, worldSeed }, now).jobPostings;
 }
 
-export function initializeJobPostings(now: number): JobPosting[] {
-  return JOB_DEFINITIONS.map((def) => createPostingFromDefinition(def, now));
-}
-
-export const BUSINESS_TYPE_LABELS: Record<JobDefinition["businessType"], string> = {
-  theme_park: "Theme park",
+export const LOCATION_TYPE_LABELS: Record<JobLocationType, string> = {
+  police_station: "Police station",
   hospital: "Hospital",
-  science_lab: "Science lab",
-  restaurant: "Restaurant",
-  retail_shop: "Retail shop",
-  research_lab: "Research lab",
-  big_corp: "Big Corp",
-  start_up: "Start up",
-  gov: "Gov",
-  family_business: "Family business",
-  mall_management: "Mall management",
+  tower: "Tower",
+  major_hub: "Major hub",
+  city_hall: "City Hall",
 };
+
+/** @deprecated Use LOCATION_TYPE_LABELS */
+export const BUSINESS_TYPE_LABELS = LOCATION_TYPE_LABELS as unknown as Record<
+  string,
+  string
+>;
 
 export const JOB_SIZE_LABELS: Record<JobDefinition["size"], string> = {
   small: "Small",
@@ -268,5 +272,4 @@ export const JOB_SIZE_LABELS: Record<JobDefinition["size"], string> = {
   huge: "Huge",
 };
 
-/** Ordered sizes for UI tooltips / legends. */
 export const JOB_SIZES: JobDefinition["size"][] = ["small", "mid", "huge"];

@@ -11,6 +11,7 @@ import {
   TEAM_LEAD_SKILL_DEFS,
   type TeamLeadSkillNodeId,
 } from "./secretarySkillData";
+import { secretarySkinOnSiteWorkPctForEngagement } from "./secretarySkins";
 import type {
   ChiefOfStaffEffectKind,
   GameState,
@@ -245,15 +246,27 @@ export function jobTravelDurationMsForPreview(
   return Math.max(minMs, baseMs);
 }
 
+type JobWorkDurationState = Pick<
+  GameState,
+  "chiefOfStaffId" | "secretaryProgress"
+> & {
+  secretarySkins?: GameState["secretarySkins"];
+};
+
 export function jobWorkDurationMsForEngagement(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  state: JobWorkDurationState,
   durationSec: number,
-  engagement?: Pick<JobEngagement, "teamLeadSecretaryId">,
+  engagement?: Pick<JobEngagement, "teamLeadSecretaryId" | "definitionId">,
 ): number {
   const baseMs = Math.max(0, durationSec) * 1000;
   const teamLeadId = engagement?.teamLeadSecretaryId;
   if (teamLeadId) {
-    const pct = totalTeamLeadPct(state, teamLeadId, "lead_work_time");
+    let pct = totalTeamLeadPct(state, teamLeadId, "lead_work_time");
+    pct += secretarySkinOnSiteWorkPctForEngagement(
+      state,
+      teamLeadId,
+      engagement?.definitionId,
+    );
     if (pct !== 0) {
       return Math.max(1000, Math.round(baseMs * (1 + pct)));
     }
@@ -269,16 +282,16 @@ export function jobWorkDurationMsForEngagement(
 }
 
 export function jobWorkDurationMs(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  state: JobWorkDurationState,
   durationSec: number,
 ): number {
   return jobWorkDurationMsForEngagement(state, durationSec);
 }
 
 export function jobWorkDurationSec(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  state: JobWorkDurationState,
   durationSec: number,
-  engagement?: Pick<JobEngagement, "teamLeadSecretaryId">,
+  engagement?: Pick<JobEngagement, "teamLeadSecretaryId" | "definitionId">,
 ): number {
   return jobWorkDurationMsForEngagement(state, durationSec, engagement) / 1000;
 }

@@ -62,6 +62,16 @@ export const MAP_LANDMARK_BAKE_CATALOG = {
     masterName: "branch-pad-campus-isometric-bake-master",
     outBase: "branch-pad-campus-isometric-bake",
   },
+  police_station_world: {
+    label: "Police station (world)",
+    masterName: "police-station-isometric-bake-master",
+    outBase: "police-station-isometric-bake",
+  },
+  hospital_world: {
+    label: "Hospital (world)",
+    masterName: "hospital-isometric-bake-master",
+    outBase: "hospital-isometric-bake",
+  },
 };
 
 function argValue(flag) {

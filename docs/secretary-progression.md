@@ -37,6 +37,8 @@
 
 Offers use a random pick from `secretary_03`–`secretary_05` still locked. See also [gov-program-spec.md](./gov-program-spec.md) for Xaihi.
 
+**Later on the modal** defers the offer (milestone stays eligible). Re-open: **Secretary → Roster** → **Open executive recruitment**.
+
 ## Code map
 
 - State: `types.ts` (`secretaryUnlocks`, `secretaryProgress`, `secretaryRecruitment`)

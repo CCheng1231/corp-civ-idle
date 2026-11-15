@@ -5,6 +5,10 @@
  * Multi-hex: use `landmarkArtInstanceMultiHex` (footprint length ≥ 2).
  * Unique building: register art in mapLandmarkArtRegistry.ts, then reference by artId.
  */
+import {
+  HOSPITAL_WORLD_COORD,
+  POLICE_WORLD_COORD,
+} from "./jobSites";
 import { MAP_GOV, axialEquals, axialKey, type AxialCoord } from "./hexLayout";
 import type { GameSettings } from "./types";
 import {
@@ -108,6 +112,27 @@ const govCapitolProvider: MapLandmarkSiteProvider = () => [
   }),
 ];
 
+const policeStationProvider: MapLandmarkSiteProvider = (settings) => [
+  landmarkArtInstanceSingleHex({
+    instanceKey: "police-station-world",
+    siteId: "police:world",
+    artId: "police-station-world",
+    coord: effectiveLandmarkCoord("police:world", settings) ?? POLICE_WORLD_COORD,
+    siteKind: "police-station",
+  }),
+];
+
+const hospitalWorldProvider: MapLandmarkSiteProvider = (settings) => [
+  landmarkArtInstanceSingleHex({
+    instanceKey: "hospital-world",
+    siteId: "hospital:world",
+    artId: "hospital-world",
+    coord:
+      effectiveLandmarkCoord("hospital:world", settings) ?? HOSPITAL_WORLD_COORD,
+    siteKind: "hospital",
+  }),
+];
+
 const z1MajorHubProvider: MapLandmarkSiteProvider = (settings) =>
   resolveZ1MajorHubs(settings).map((hub) =>
     landmarkArtInstanceSingleHex({
@@ -182,6 +207,8 @@ export function resolveOfficeTowerLandmarkInstances(
 
 const PLAYER_MAP_LANDMARK_PROVIDERS: MapLandmarkSiteProvider[] = [
   govCapitolProvider,
+  policeStationProvider,
+  hospitalWorldProvider,
   z1MajorHubProvider,
   commercialLotLandmarkProvider,
   ...canonMultiHexLandmarkProviders,

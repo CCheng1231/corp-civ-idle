@@ -1,5 +1,6 @@
 import { effectiveLandmarkCoord } from "../game/mapDevLayout";
-import { MAP_HQ, axialEquals, officeAtCoord } from "../game/hexLayout";
+import { MAP_HQ, axialEquals } from "../game/hexLayout";
+import { officeAtCoord } from "../game/branchSites";
 import type { AxialCoord, GameState, OfficeLocationId } from "../game/types";
 import {
   isDevAccount,
@@ -18,11 +19,14 @@ export function resolveOnlineSession(
   return null;
 }
 
-/** Chris HQ — fixed countryside-adjacent hex, distinct from Tim (must fit MAP_RADIUS). */
+/** Chris HQ — distinct from Tim (must fit MAP_RADIUS). */
 export const CHRIS_HQ: AxialCoord = { q: 4, r: -1 };
 
+/** Canon Tim HQ — same hex as `MAP_HQ` in hexLayout (inlined to avoid import cycles). */
+const TIM_HQ: AxialCoord = { q: -6, r: 5 };
+
 const HQ_BY_DEV: Record<PlayerId, AxialCoord> = {
-  tim: MAP_HQ,
+  tim: TIM_HQ,
   chris: CHRIS_HQ,
 };
 

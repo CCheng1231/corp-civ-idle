@@ -1,10 +1,9 @@
-import { doc, getDoc, getDocs, runTransaction, setDoc, writeBatch } from "firebase/firestore";
+import { getDoc, setDoc } from "firebase/firestore";
 import { MAP_REGION_SEED } from "../game/mapWorld";
-import { createPostingFromDefinition, initializeJobPostings } from "../game/jobs";
-import { JOB_DEFINITIONS } from "../game/jobHubData";
-import { getDb } from "./firebase";
 import type { OnlineSession, WorldId, WorldMeta } from "./types";
-import { jobPostingsCol, metaRef, worldRoot } from "./worldDocs";
+import { metaRef, worldRoot } from "./worldDocs";
+
+export { seedSharedJobPostingsIfNeeded } from "./sharedJobSlotSync";
 
 export function playerResetTimestamp(
   meta: WorldMeta | undefined,
@@ -51,8 +50,8 @@ export async function bumpPlayerResetAt(
     metaRef(worldId),
     {
       playerResetAt: { [accountId]: resetAt },
-      playerSaveSessionId: { [accountId]: saveSessionId }
-},
+      playerSaveSessionId: { [accountId]: saveSessionId },
+    },
     { merge: true },
   );
   return { resetAt, saveSessionId };
@@ -66,8 +65,8 @@ export async function loadWorldMeta(
     return {
       mapRegionSeed: MAP_REGION_SEED,
       jobPostingsInitialized: false,
-      createdAt: Date.now()
-};
+      createdAt: Date.now(),
+    };
   }
   return snap.data() as WorldMeta;
 }
@@ -84,58 +83,9 @@ export async function ensureWorldBootstrapped(
   const meta: WorldMeta = {
     mapRegionSeed: MAP_REGION_SEED,
     jobPostingsInitialized: false,
-    createdAt: Date.now()
-};
+    createdAt: Date.now(),
+  };
   await setDoc(metaDoc, meta);
   await setDoc(worldRoot(session.worldId), { id: session.worldId });
   return meta;
-}
-
-export async function seedSharedJobPostingsIfNeeded(
-  session: OnlineSession,
-): Promise<void> {
-  const metaDoc = metaRef(session.worldId);
-  await runTransaction(getDb(), async (tx) => {
-    const snap = await tx.get(metaDoc);
-    const meta = snap.data() as WorldMeta | undefined;
-    if (meta?.jobPostingsInitialized) return;
-
-    const now = Date.now();
-    const postings = initializeJobPostings(now);
-    for (const posting of postings) {
-      const ref = doc(jobPostingsCol(session.worldId), posting.id);
-      tx.set(ref, posting);
-    }
-    tx.set(
-      metaDoc,
-      {
-        mapRegionSeed: MAP_REGION_SEED,
-        jobPostingsInitialized: true,
-        createdAt: meta?.createdAt ?? now
-},
-      { merge: true },
-    );
-  });
-}
-
-/** Add shared postings for new job definitions (existing online worlds). */
-export async function ensureSharedJobDefinitionsSynced(
-  session: OnlineSession,
-): Promise<void> {
-  const snap = await getDocs(jobPostingsCol(session.worldId));
-  const defsSeen = new Set(
-    snap.docs.map((d) =>
-      String((d.data() as Record<string, unknown>).definitionId ?? ""),
-    ),
-  );
-  const missing = JOB_DEFINITIONS.filter((d) => !defsSeen.has(d.id));
-  if (missing.length === 0) return;
-
-  const now = Date.now();
-  const batch = writeBatch(getDb());
-  for (const def of missing) {
-    const posting = createPostingFromDefinition(def, now);
-    batch.set(doc(jobPostingsCol(session.worldId), posting.id), posting);
-  }
-  await batch.commit();
 }

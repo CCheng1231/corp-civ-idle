@@ -6,8 +6,11 @@ import {
   unlockSecretary,
 } from "./secretaryProgress";
 import {
+  canResumeSecretaryRecruitment,
   checkSecretaryRecruitmentMilestones,
+  dismissSecretaryRecruitment,
   pickRandomRecruit,
+  resumeSecretaryRecruitment,
 } from "./secretaryRecruitment";
 import { chiefOfficeProductionMult } from "./secretaryEffects";
 
@@ -19,6 +22,52 @@ describe("secretary recruitment", () => {
       "secretary_05",
     ]);
     expect(["secretary_03", "secretary_04", "secretary_05"]).toContain(picked);
+  });
+
+  it("does not queue first branch for another players shared branch online", () => {
+    let state = createInitialState();
+    state = {
+      ...state,
+      onlineSession: {
+        accountId: "guest-testplayer",
+        playMode: "online",
+        worldId: "dev",
+      },
+      branchSites: [
+        {
+          name: "Chris Branch",
+          hexKey: "2,0",
+          officeSpaceBase: 12,
+          ownerPlayerId: "chris",
+        },
+      ],
+    };
+    const next = checkSecretaryRecruitmentMilestones(state);
+    expect(next.secretaryRecruitment.pendingOffer).toBeNull();
+  });
+
+  it("defers milestone offer on Later and resumes from queue", () => {
+    let state = createInitialState();
+    state = {
+      ...state,
+      branchSites: [
+        {
+          name: "Branch 1",
+          hexKey: "1,0",
+          officeSpaceBase: 12,
+          ownerPlayerId: "local",
+        },
+      ],
+    };
+    state = checkSecretaryRecruitmentMilestones(state);
+    expect(state.secretaryRecruitment.pendingOffer?.milestoneId).toBe(
+      "recruit_first_branch",
+    );
+    state = dismissSecretaryRecruitment(state);
+    expect(state.secretaryRecruitment.pendingOffer).toBeNull();
+    expect(canResumeSecretaryRecruitment(state)).toBe(true);
+    state = resumeSecretaryRecruitment(state);
+    expect(state.secretaryRecruitment.pendingOffer?.phase).toBe("offer");
   });
 
   it("queues net worth milestone once", () => {

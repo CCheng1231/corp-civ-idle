@@ -23,9 +23,8 @@ import {
   type JobBoardSort,
 } from "../game/jobBoard";
 import {
-  BUSINESS_TYPE_LABELS,
+  LOCATION_TYPE_LABELS,
   JOB_SIZE_LABELS,
-  jobDefinitionById,
   jobDefinitionForPosting,
 } from "../game/jobs";
 import { pruneAssignmentForJob } from "../game/jobUnitTier";
@@ -289,19 +288,23 @@ export function JobBoard({
     dispatch({ type: "SELECT_TOWER", towerId: null });
   }
 
-  function assignmentFor(postingId: string, definitionId: string) {
+  function assignmentFor(postingId: string) {
     const assignment = emptyAssignmentForJob(
-      definitionId,
+      state,
+      postingId,
       officeRoster,
       crewByPosting,
-      postingId,
     );
+    const posting = state.jobPostings.find((p) => p.id === postingId);
     try {
-      const def = jobDefinitionById(definitionId);
-      return pruneAssignmentForJob(assignment, def);
+      const def = posting
+        ? jobDefinitionForPosting(posting)
+        : null;
+      if (def) return pruneAssignmentForJob(assignment, def);
     } catch {
-      return assignment;
+      /* keep assignment */
     }
+    return assignment;
   }
 
   function clearFilter(key: keyof JobBoardFilters) {
@@ -504,18 +507,18 @@ export function JobBoard({
         </label>
 
         <label className="job-board-filter">
-          <span>Business type</span>
+          <span>Location type</span>
           <select
-            value={filters.businessType}
+            value={filters.locationType}
             onChange={(e) =>
               updateFilter(
-                "businessType",
-                e.target.value as JobBoardFilters["businessType"],
+                "locationType",
+                e.target.value as JobBoardFilters["locationType"],
               )
             }
           >
             <option value="all">All types</option>
-            {options.businessTypes.map(([id, label]) => (
+            {options.locationTypes.map(([id, label]) => (
               <option key={id} value={id}>
                 {label}
               </option>
@@ -557,26 +560,6 @@ export function JobBoard({
             {options.sizes.map((size) => (
               <option key={size} value={size}>
                 {JOB_SIZE_LABELS[size]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="job-board-filter">
-          <span>Unit category</span>
-          <select
-            value={filters.category}
-            onChange={(e) =>
-              updateFilter(
-                "category",
-                e.target.value as JobBoardFilters["category"],
-              )
-            }
-          >
-            <option value="all">All categories</option>
-            {options.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
               </option>
             ))}
           </select>
@@ -669,7 +652,10 @@ export function JobBoard({
                         <strong>{def.title}</strong>
                         <span className="muted job-board-row-meta">
                           <span className="job-board-row-meta-primary">
-                            {BUSINESS_TYPE_LABELS[def.businessType]} ·{" "}
+                            {def.locationType
+                              ? LOCATION_TYPE_LABELS[def.locationType]
+                              : "Job"}{" "}
+                            ·{" "}
                             {JOB_SIZE_LABELS[def.size]} ·{" "}
                             {formatJobDurationSec(
                               jobWorkDurationSec(state, def.durationSec),
@@ -742,10 +728,7 @@ export function JobBoard({
                 dispatch={dispatch}
                 posting={selectedPosting}
                 showTower
-                assignment={assignmentFor(
-                  selectedPosting.id,
-                  selectedPosting.definitionId,
-                )}
+                assignment={assignmentFor(selectedPosting.id)}
                 onAssignmentChange={(next) =>
                   setCrewByPosting((prev) => ({
                     ...prev,

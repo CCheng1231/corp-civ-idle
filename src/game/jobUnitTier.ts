@@ -15,7 +15,7 @@ export function requiredMinUnitTierForJob(
 
 export function pruneAssignmentForJob(
   assignment: UnitAssignment,
-  def: Pick<JobDefinition, "requiredCategory" | "minUnitTier" | "tier">,
+  def: Pick<JobDefinition, "minUnitTier" | "tier">,
 ): UnitAssignment {
   const minUnitTier = requiredMinUnitTierForJob(def);
   const next: UnitAssignment = {};
@@ -25,7 +25,6 @@ export function pruneAssignmentForJob(
     const unitId = key as UnitId;
     try {
       const unit = unitDefinition(unitId);
-      if (unit.category !== def.requiredCategory) continue;
       if (unit.tier < minUnitTier) continue;
       next[unitId] = count;
     } catch {

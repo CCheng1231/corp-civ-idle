@@ -32,9 +32,11 @@ import {
   createOfflineSession,
   createOnlineSession,
 } from "../multiplayer/session";
+import { linkGoogleAccount, signOutFirebase } from "../multiplayer/firebaseAuth";
 import {
   createPlaytestAccessKey,
   loadBrowserBinding,
+  OnlineAccessError,
   readDevAccessKeyHint,
   redeemAccessKey,
 } from "../multiplayer/onlineAccess";
@@ -52,6 +54,11 @@ import {
   saveAuthoritativeOnlineLocalCache,
 } from "../multiplayer/companySave";
 import { flushPendingOnlineWork } from "../hooks/useOnlineWorld";
+import {
+  AccessKeyInviteCopyRow,
+  AccessKeyInviteDialog,
+  type AccessKeyInviteDetails,
+} from "./AccessKeyInviteDialog";
 
 const ONLINE_RESET_TIMEOUT_MS = 30_000;
 
@@ -85,8 +92,13 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
   );
   const [pullingServerSave, setPullingServerSave] = useState(false);
   const [playtesterName, setPlaytesterName] = useState("");
+  const [playtesterEmail, setPlaytesterEmail] = useState("");
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [creatingAccessKey, setCreatingAccessKey] = useState(false);
-  const [lastCreatedKey, setLastCreatedKey] = useState<string | null>(null);
+  const [keyInviteModal, setKeyInviteModal] =
+    useState<AccessKeyInviteDetails | null>(null);
+  const [lastCreatedInvite, setLastCreatedInvite] =
+    useState<AccessKeyInviteDetails | null>(null);
 
   async function pullServerSave() {
     if (!session || !isOnlineSession(session)) return;
@@ -125,8 +137,32 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         console.error("Failed to flush online save before account switch", err);
       }
     }
+    try {
+      await signOutFirebase();
+    } catch (err) {
+      console.error("Firebase sign-out before account switch failed", err);
+    }
     clearSession();
     window.location.reload();
+  }
+
+  async function linkGoogleForOnlineMigration() {
+    setLinkingGoogle(true);
+    try {
+      await linkGoogleAccount();
+      window.alert(
+        "Google account linked on this browser. Online progress is unchanged — use Google sign-in at the gate from now on.",
+      );
+    } catch (err) {
+      console.error("Link Google failed", err);
+      window.alert(
+        err instanceof OnlineAccessError
+          ? err.message
+          : "Could not link Google account.",
+      );
+    } finally {
+      setLinkingGoogle(false);
+    }
   }
 
   async function switchPlayMode(mode: "offline" | "online") {
@@ -167,7 +203,7 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
       } catch (err) {
         console.error("Online access check before mode switch failed", err);
         window.alert(
-          "Could not verify online access. Check Firebase config, Anonymous Auth, and Firestore rules.",
+          "Could not verify online access. Check Firebase config, Google sign-in, and Firestore rules.",
         );
         return;
       }
@@ -270,6 +306,19 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               ? ` Firestore: ${state.onlineConnectionStatus}.`
               : null}
           </p>
+          {online && import.meta.env.DEV ? (
+            <p className="muted setting-hint">
+              Migrating from anonymous auth?{" "}
+              <button
+                type="button"
+                className="btn"
+                disabled={linkingGoogle}
+                onClick={() => void linkGoogleForOnlineMigration()}
+              >
+                {linkingGoogle ? "Linking…" : "Link Google account"}
+              </button>
+            </p>
+          ) : null}
           <div className="settings-account-actions">
             <button type="button" className="btn" onClick={switchAccount}>
               Switch account
@@ -481,6 +530,22 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             normally.
           </p>
           <DevTimeSkip dispatch={dispatch} />
+          <button
+            type="button"
+            className="btn dev-skip-btn"
+            onClick={() =>
+              dispatch({
+                type: "DEV_MAX_SECRETARY_PROGRESS",
+                secretaryId: state.chiefOfStaffId,
+              })
+            }
+          >
+            Max Chief of Staff (level &amp; skills)
+          </button>
+          <p className="muted setting-hint">
+            Sets the current Chief of Staff to max level and maxes both skill
+            trees for wardrobe / skin unlock testing.
+          </p>
         </section>
       ) : null}
 
@@ -488,8 +553,9 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
         <section className="settings-block">
           <h3>Playtest access keys</h3>
           <p className="muted setting-hint">
-            Create a one-time invite for friends or family. They enter the key
-            once; their browser remembers the account afterward.
+            Create an invite for friends or family. Set their Google email so
+            only they can redeem the key. They sign in with Google once, then
+            paste the key.
           </p>
           <label className="setting-row">
             Playtester name
@@ -500,25 +566,41 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               placeholder="e.g. Alice"
             />
           </label>
+          <label className="setting-row">
+            Google email (required for new invites)
+            <input
+              type="email"
+              value={playtesterEmail}
+              onChange={(e) => setPlaytesterEmail(e.target.value)}
+              placeholder="alice@gmail.com"
+              autoComplete="off"
+            />
+          </label>
           <div className="settings-account-actions">
             <button
               type="button"
               className="btn primary"
-              disabled={creatingAccessKey || !playtesterName.trim()}
+              disabled={
+                creatingAccessKey ||
+                !playtesterName.trim() ||
+                !playtesterEmail.trim()
+              }
               onClick={() => {
                 void (async () => {
                   setCreatingAccessKey(true);
-                  setLastCreatedKey(null);
                   try {
                     const created = await createPlaytestAccessKey(
                       session,
                       playtesterName,
+                      playtesterEmail,
                     );
-                    setLastCreatedKey(created.keyId);
                     setPlaytesterName("");
-                    window.alert(
-                      `Access key for ${created.displayName}:\n\n${created.keyId}\n\nCopy this now — it won't be shown again.`,
-                    );
+                    setPlaytesterEmail("");
+                    setKeyInviteModal({
+                      keyId: created.keyId,
+                      displayName: created.displayName,
+                      lockedEmail: created.lockedEmail,
+                    });
                   } catch (err) {
                     console.error("Create access key failed", err);
                     window.alert(
@@ -535,12 +617,20 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               {creatingAccessKey ? "Creating…" : "Create access key"}
             </button>
           </div>
-          {lastCreatedKey ? (
-            <p className="muted setting-hint">
-              Last key: <code>{lastCreatedKey}</code>
-            </p>
+          {lastCreatedInvite ? (
+            <AccessKeyInviteCopyRow details={lastCreatedInvite} />
           ) : null}
         </section>
+      ) : null}
+
+      {keyInviteModal ? (
+        <AccessKeyInviteDialog
+          details={keyInviteModal}
+          onClose={() => {
+            setLastCreatedInvite(keyInviteModal);
+            setKeyInviteModal(null);
+          }}
+        />
       ) : null}
 
       {online && session ? (

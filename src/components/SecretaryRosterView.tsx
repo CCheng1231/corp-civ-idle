@@ -12,6 +12,8 @@ import {
   sortSecretariesForRoster,
 } from "../game/secretaryRoles";
 import { effectiveChiefBonusLabel } from "../game/secretaryEffects";
+import { canResumeSecretaryRecruitment } from "../game/secretaryRecruitment";
+import { canResumeSecretarySkinOffer } from "../game/secretarySkins";
 import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import {
   UNIT_PORTRAIT_SKINS,
@@ -113,6 +115,9 @@ export function SecretaryRosterView({
     setRosterViewMode((mode) => (mode === "detail" ? "grid" : "detail"));
   }
 
+  const showRecruitResume = canResumeSecretaryRecruitment(state);
+  const showSkinResume = canResumeSecretarySkinOffer(state);
+
   const rosterChiefBanner = (
     <section className="secretary-roster-chief-banner" aria-label="Chief of Staff">
       <h2 className="secretary-roster-title">
@@ -181,7 +186,7 @@ export function SecretaryRosterView({
                   >
                     <div className="secretary-roster-grid-thumb">
                       <img
-                        src={secretaryRosterPortraitSrc(entry.id)}
+                        src={secretaryRosterPortraitSrc(entry.id, state)}
                         alt=""
                         aria-hidden
                         draggable={false}
@@ -213,7 +218,7 @@ export function SecretaryRosterView({
                         <div className="secretary-roster-row-portrait">
                           <div className="secretary-roster-row-thumb">
                             <img
-                              src={secretaryRosterPortraitSrc(entry.id)}
+                              src={secretaryRosterPortraitSrc(entry.id, state)}
                               alt=""
                               aria-hidden
                               draggable={false}
@@ -351,6 +356,7 @@ export function SecretaryRosterView({
       <HubSyncedTabBackground
         chiefId={detailId ?? chiefId}
         portraitSource="secretary"
+        skinContext={state}
       />
       <div className="progression-tab-frozen-header">
         <ProgressionTabStickyChrome
@@ -387,6 +393,42 @@ export function SecretaryRosterView({
         </TabPortraitLayout>
         <div className="hub-synced-tab-portrait-reveal" aria-hidden />
         {rosterChiefBanner}
+        {showRecruitResume ? (
+          <section
+            className="secretary-recruit-resume-banner"
+            aria-label="Deferred executive recruitment"
+          >
+            <p className="muted">
+              You deferred an executive recruitment offer. You can roll for a new
+              chief-of-staff candidate while the milestone still applies.
+            </p>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => dispatch({ type: "SECRETARY_RECRUIT_RESUME" })}
+            >
+              Open executive recruitment
+            </button>
+          </section>
+        ) : null}
+        {showSkinResume ? (
+          <section
+            className="secretary-recruit-resume-banner secretary-skin-resume-banner"
+            aria-label="Deferred wardrobe unlock"
+          >
+            <p className="muted">
+              You deferred a wardrobe unlock. Open the catalogue to choose a skin
+              for the secretary who mastered a skill tree.
+            </p>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => dispatch({ type: "SECRETARY_SKIN_RESUME" })}
+            >
+              Open wardrobe catalogue
+            </button>
+          </section>
+        ) : null}
         <div className="tab-below-portrait">{rosterBelowPortrait}</div>
       </HubSyncedTabScrollBody>
 

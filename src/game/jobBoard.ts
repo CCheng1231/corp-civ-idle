@@ -1,5 +1,5 @@
 import {
-  BUSINESS_TYPE_LABELS,
+  LOCATION_TYPE_LABELS,
   JOB_SIZE_LABELS,
   jobDefinitionForPosting,
   returnPerHour,
@@ -13,10 +13,9 @@ import {
   towerById,
 } from "./mapWorld";
 import type {
-  BusinessType,
-  ContractorCategoryId,
   GameState,
   JobDefinition,
+  JobLocationType,
   JobPosting,
   JobSize,
   JobTier,
@@ -24,30 +23,35 @@ import type {
   TowerId,
 } from "./types";
 
-/** Map / site bucket for job filters (not the same as business type). */
-export type JobSiteKindFilter =
-  | "tower"
-  | "major_hub"
-  | "commercial_lot"
-  | "gov";
+export type JobSiteKindFilter = JobLocationType;
 
 export const JOB_SITE_KIND_FILTER_LABELS: Record<JobSiteKindFilter, string> = {
+  police_station: "Police station",
+  hospital: "Hospital",
   tower: "Tower",
   major_hub: "Major hub",
-  commercial_lot: "Commercial lot",
-  gov: "Gov't",
+  city_hall: "City Hall",
 };
+
+/** @deprecated Alias for location-type filters. */
+export const JOB_LOCATION_TYPE_FILTER_LABELS = JOB_SITE_KIND_FILTER_LABELS;
 
 export function jobSiteKindForPosting(
   posting: JobPosting,
   def: JobDefinition,
 ): JobSiteKindFilter {
-  if (def.businessType === "gov") return "gov";
-  const commercialLotId = posting.commercialLotId ?? def.commercialLotId;
-  if (commercialLotId) return "commercial_lot";
-  const majorHubId = posting.majorHubId ?? def.majorHubId;
-  if (majorHubId) return "major_hub";
-  return "tower";
+  const t =
+    posting.locationType ?? def.locationType ?? inferLocationType(posting, def);
+  return t ?? "tower";
+}
+
+function inferLocationType(
+  posting: JobPosting,
+  def: JobDefinition,
+): JobLocationType | undefined {
+  if (def.majorHubId || posting.majorHubId) return "major_hub";
+  if (def.towerId || posting.towerId) return "tower";
+  return def.locationType;
 }
 
 export type JobBoardSort =
@@ -63,22 +67,19 @@ export type JobBoardSort =
 export interface JobBoardFilters {
   region: MapRegion | "all";
   towerId: TowerId | "all";
-  /** World map job filter — physical site bucket. */
   siteType: JobSiteKindFilter | "all";
-  businessType: BusinessType | "all";
+  locationType: JobLocationType | "all";
   tier: JobTier | "all";
   size: JobSize | "all";
-  category: ContractorCategoryId | "all";
 }
 
 export const DEFAULT_JOB_BOARD_FILTERS: JobBoardFilters = {
   region: "all",
   towerId: "all",
   siteType: "all",
-  businessType: "all",
+  locationType: "all",
   tier: "all",
   size: "all",
-  category: "all",
 };
 
 export function countActiveJobBoardFilters(filters: JobBoardFilters): number {
@@ -86,10 +87,9 @@ export function countActiveJobBoardFilters(filters: JobBoardFilters): number {
   if (filters.region !== "all") count++;
   if (filters.towerId !== "all") count++;
   if (filters.siteType !== "all") count++;
-  if (filters.businessType !== "all") count++;
+  if (filters.locationType !== "all") count++;
   if (filters.tier !== "all") count++;
   if (filters.size !== "all") count++;
-  if (filters.category !== "all") count++;
   return count;
 }
 
@@ -98,12 +98,10 @@ export interface JobBoardFilterSummary {
   label: string;
 }
 
-/** Human-readable labels for each non-default filter (toolbar chips). */
 export function activeJobBoardFilterSummaries(
   filters: JobBoardFilters,
 ): JobBoardFilterSummary[] {
   const summaries: JobBoardFilterSummary[] = [];
-  const categories = jobBoardFilterOptions().categories;
 
   if (filters.region !== "all") {
     summaries.push({
@@ -123,10 +121,10 @@ export function activeJobBoardFilterSummaries(
       label: JOB_SITE_KIND_FILTER_LABELS[filters.siteType],
     });
   }
-  if (filters.businessType !== "all") {
+  if (filters.locationType !== "all") {
     summaries.push({
-      key: "businessType",
-      label: BUSINESS_TYPE_LABELS[filters.businessType],
+      key: "locationType",
+      label: LOCATION_TYPE_LABELS[filters.locationType],
     });
   }
   if (filters.tier !== "all") {
@@ -139,13 +137,6 @@ export function activeJobBoardFilterSummaries(
     summaries.push({
       key: "size",
       label: JOB_SIZE_LABELS[filters.size],
-    });
-  }
-  if (filters.category !== "all") {
-    const category = categories.find((entry) => entry.id === filters.category);
-    summaries.push({
-      key: "category",
-      label: category?.label ?? filters.category,
     });
   }
 
@@ -194,16 +185,15 @@ export function filterAndSortJobPostings(
       if (posting.commercialLotId) return false;
       if (posting.towerId !== filters.towerId) return false;
     }
-    if (filters.businessType !== "all" && def.businessType !== filters.businessType) {
-      return false;
+  if (filters.locationType !== "all") {
+      const locType =
+        posting.locationType ?? def.locationType ?? jobSiteKindForPosting(posting, def);
+      if (locType !== filters.locationType) return false;
     }
     if (filters.tier !== "all" && def.tier !== filters.tier) {
       return false;
     }
     if (filters.size !== "all" && def.size !== filters.size) {
-      return false;
-    }
-    if (filters.category !== "all" && def.requiredCategory !== filters.category) {
       return false;
     }
     if (posting.expiresAt <= now) return false;
@@ -245,7 +235,6 @@ export function filterAndSortJobPostings(
   return filtered;
 }
 
-/** Nearest main-office hex first; ties by soonest expiry. */
 export function sortJobPostingsByDistanceFromMainOffice(
   state: GameState,
   postings: JobPosting[],
@@ -280,18 +269,16 @@ export function jobBoardFilterOptions() {
       label: tower.name,
       region: tower.region,
     })),
-    businessTypes: Object.entries(BUSINESS_TYPE_LABELS) as [
-      BusinessType,
+    locationTypes: Object.entries(LOCATION_TYPE_LABELS) as [
+      JobLocationType,
+      string,
+    ][],
+    siteTypes: Object.entries(JOB_SITE_KIND_FILTER_LABELS) as [
+      JobSiteKindFilter,
       string,
     ][],
     tiers: [1, 2] as JobTier[],
     sizes: ["small", "mid", "huge"] as JobSize[],
-    categories: [
-      { id: "farming" as const, label: "Farming" },
-      { id: "defense" as const, label: "Defense" },
-      { id: "intel" as const, label: "Intel" },
-      { id: "support" as const, label: "Support" },
-    ],
   };
 }
 
@@ -301,7 +288,6 @@ export function formatJobDurationSec(sec: number): string {
   return `${sec}s`;
 }
 
-/** Whole hours until posting expires; "<1hr" when under one hour. */
 export function formatJobPostingExpiresHours(
   expiresAt: number,
   now = Date.now(),
@@ -312,22 +298,25 @@ export function formatJobPostingExpiresHours(
   return `${Math.floor(hours)}hr`;
 }
 
-/** Expires label for tight map rows — "remain" or "rm" when title is long. */
+/** @deprecated Use formatJobPostingExpiresHours */
 export function formatJobPostingExpiresLabel(
   expiresAt: number,
   now = Date.now(),
-  context?: { titleLength?: number },
+  _options?: { titleLength?: number },
 ): string {
-  const hoursPart = formatJobPostingExpiresHours(expiresAt, now);
-  const titleLength = context?.titleLength ?? 0;
-  const withRemain = `${hoursPart} remain`;
-  const withRm = `${hoursPart} rm`;
-  const compact =
-    titleLength > 26 || titleLength + withRemain.length > 46;
-  return compact ? withRm : withRemain;
+  return formatJobPostingExpiresHours(expiresAt, now);
 }
 
-/** Preview payout per hour for one unit on this job. */
+/** Visible nominal engage rate ($/hr) for preview buttons. */
+export function nominalEngageRatePerHour(
+  def: JobDefinition,
+  unitCount: number,
+  incomeMult = 1,
+): number {
+  return returnPerHour(def, unitCount) * incomeMult;
+}
+
+/** Visible per-unit-hour rate on list rows (contract totals stay hidden). */
 export function jobPayoutPerHour(posting: JobPosting): number {
-  return returnPerHour(jobDefinitionForPosting(posting), 1);
+  return jobDefinitionForPosting(posting).cashPerUnitHour;
 }

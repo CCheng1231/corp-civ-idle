@@ -6,6 +6,18 @@ export function loadGovCapitolBake2x(): Promise<string> {
   );
 }
 
+export function loadHospitalWorldBake2x(): Promise<string> {
+  return import("../assets/map/hospital-isometric-bake@2x.png").then(
+    (m) => m.default,
+  );
+}
+
+export function loadPoliceStationWorldBake2x(): Promise<string> {
+  return import("../assets/map/police-station-isometric-bake@2x.png").then(
+    (m) => m.default,
+  );
+}
+
 export function loadCommercialSuburbanStripBake2x(): Promise<string> {
   return import(
     "../assets/map/commercial-suburban-strip-isometric-bake@2x.png"

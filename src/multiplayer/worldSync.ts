@@ -4,7 +4,6 @@ export {
   loadWorldMeta,
   ensureWorldBootstrapped,
   seedSharedJobPostingsIfNeeded,
-  ensureSharedJobDefinitionsSynced,
 } from "./worldMeta";
 export { SaveRegressionError } from "../game/saveIntegrity";
 export {
@@ -36,10 +35,10 @@ export {
 export {
   subscribeJobPostings,
   flushPostingWorkDelta,
-  respawnSharedPosting,
   resetSharedWorld,
   replaceClosedPosting,
   expireSharedPosting,
+  maintainOnlineJobSlots,
 } from "./sharedJobSync";
 export {
   resetOnlinePlayerAccount,

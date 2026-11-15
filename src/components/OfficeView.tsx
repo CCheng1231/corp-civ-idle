@@ -7,7 +7,7 @@ import {
 import { activePlayerId } from "../multiplayer/playerHq";
 import {
   engagementStatusLabel,
-  jobDefinitionById,
+  jobDefinitionForEngagement,
 } from "../game/jobs";
 import {
   secretaryJobSummary,
@@ -107,7 +107,7 @@ export function OfficeView({ state, dispatch }: OfficeViewProps) {
                 );
               })}
               {state.jobEngagements.map((engagement) => {
-                const def = jobDefinitionById(engagement.definitionId);
+                const def = jobDefinitionForEngagement(state, engagement);
                 const units = totalAssigned(engagement.crewAssigned);
                 const earned =
                   engagement.phase === "working"

@@ -3,6 +3,7 @@ import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { GovProgramModal } from "./components/GovProgramModal";
 import { SecretaryRecruitmentModal } from "./components/SecretaryRecruitmentModal";
+import { SecretarySkinUnlockModal } from "./components/SecretarySkinUnlockModal";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
 import { OfflineWelcomeDialog } from "./components/OfflineWelcomeDialog";
 import { ResourceBar } from "./components/ResourceBar";
@@ -127,6 +128,7 @@ function GameShell({
       ) : null}
       <GovProgramModal state={state} dispatch={dispatch} />
       <SecretaryRecruitmentModal state={state} dispatch={dispatch} />
+      <SecretarySkinUnlockModal state={state} dispatch={dispatch} />
       <CompletionAlertToasts
         alerts={state.pendingCompletionAlerts}
         settings={state.settings}
@@ -165,7 +167,7 @@ function GameShell({
                 {accountDisplayName(session.accountId, session.displayName)} · Online{" "}
                 {state.onlineConnectionStatus}
                 {state.onlineConnectionStatus === "error"
-                  ? " — use Settings → Switch account and reconnect with your access key"
+                  ? " — use Settings → Switch account, sign in with Google, and your access key if needed"
                   : null}
               </div>
             ) : (

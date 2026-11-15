@@ -233,6 +233,28 @@ export const MAP_BAKED_LANDMARK_MAJOR_HUB_SUPERTALL: MapBakedLandmarkPreset =
     0.34,
   );
 
+/** hospital-isometric-bake — keyed from hospital-isometric-bake-master.jpg (concept C). */
+export const MAP_BAKED_LANDMARK_HOSPITAL_WORLD: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "hospital-world",
+    0.88,
+    531 / 970,
+    0.458,
+    96,
+    0.34,
+  );
+
+/** police-station-isometric-bake — keyed from concept G3D-C master. */
+export const MAP_BAKED_LANDMARK_POLICE_STATION_WORLD: MapBakedLandmarkPreset =
+  mapBakedLandmarkIsometricBuildingPreset(
+    "police-station-world",
+    0.88,
+    860 / 902,
+    0.419,
+    96,
+    0.34,
+  );
+
 export const MAP_BAKED_LANDMARK_OFFICE_TOWER_METRO: MapBakedLandmarkPreset =
   mapBakedLandmarkIsometricBuildingPreset(
     "office-tower-metro-central",

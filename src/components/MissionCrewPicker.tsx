@@ -1,10 +1,11 @@
 import { type Dispatch } from "react";
 import { rosterAt } from "../game/constants";
-import { jobDefinitionById } from "../game/jobs";
+import { jobDefinitionForPosting, postingById } from "../game/jobs";
 import { requiredMinUnitTierForJob } from "../game/jobUnitTier";
-import { unitsInCategory } from "../game/unitEffects";
+import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type {
   GameAction,
+  GameState,
   JobDefinition,
   OfficeLocationId,
   UnitAssignment,
@@ -32,8 +33,8 @@ export function MissionCrewPicker({
   onChange,
 }: MissionCrewPickerProps) {
   const minUnitTier = requiredMinUnitTierForJob(job);
-  const units = unitsInCategory(job.requiredCategory).filter(
-    (unit) => unit.tier >= minUnitTier,
+  const units = RECRUITMENT_UNITS.filter(
+    (unit) => unit.tier >= minUnitTier && (roster[unit.id] ?? 0) > 0,
   );
 
   function openRecruitment(unitId: UnitId) {
@@ -42,6 +43,15 @@ export function MissionCrewPicker({
       view: "recruitment",
       recruitFocusUnitId: unitId,
     });
+  }
+
+  if (units.length === 0) {
+    return (
+      <p className="muted mission-crew-empty">
+        No units available at this office — recruit staff or wait for crews to
+        return.
+      </p>
+    );
   }
 
   return (
@@ -57,20 +67,23 @@ export function MissionCrewPicker({
 }
 
 export function emptyAssignmentForJob(
-  definitionId: string,
+  state: GameState,
+  postingId: string,
   roster: ReturnType<typeof rosterAt>,
   existing: Record<string, UnitAssignment> | undefined,
-  postingId: string,
 ): UnitAssignment {
   if (existing?.[postingId]) return { ...existing[postingId] };
+  const posting = postingById(state, postingId);
   let job: JobDefinition;
   try {
-    job = jobDefinitionById(definitionId);
+    job = posting
+      ? jobDefinitionForPosting(posting)
+      : ({ minUnitTier: 1, tier: 1 } as JobDefinition);
   } catch {
-    job = { requiredCategory: "farming", minUnitTier: 1, tier: 1 } as JobDefinition;
+    job = { minUnitTier: 1, tier: 1 } as JobDefinition;
   }
   const minUnitTier = requiredMinUnitTierForJob(job);
-  const eligible = unitsInCategory(job.requiredCategory).filter(
+  const eligible = RECRUITMENT_UNITS.filter(
     (def) => def.tier >= minUnitTier && (roster[def.id] ?? 0) > 0,
   );
   if (eligible[0]) return { [eligible[0].id]: 1 };

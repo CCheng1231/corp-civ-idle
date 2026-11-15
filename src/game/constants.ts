@@ -25,6 +25,7 @@ import type {
   UnitRoster,
 } from "./types";
 import { DEFAULT_CHIEF_OF_STAFF_ID } from "./secretaryData";
+import { createInitialSecretarySkinsState } from "./secretarySkins";
 import {
   createInitialSecretaryRecruitment,
   createInitialSecretaryUnlocks,
@@ -63,7 +64,6 @@ import {
   recomputeProductionRates,
   structureMaxLevel,
 } from "./structureBalance";
-import { initializeJobPostings } from "./jobs";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import {
   DEFAULT_TIER1_UNIT,
@@ -746,7 +746,8 @@ export function createInitialState(now = Date.now()): GameState {
     selectedTowerId: null,
     selectedCommercialHex: null,
     won: false,
-    jobPostings: initializeJobPostings(now),
+    jobPostings: [],
+    jobSiteSlots: [],
     jobEngagements: [],
     completedProjects: 0,
     phase: 1,
@@ -761,6 +762,7 @@ export function createInitialState(now = Date.now()): GameState {
       createInitialSecretaryUnlocks(),
     ),
     secretaryRecruitment: createInitialSecretaryRecruitment(),
+    secretarySkins: createInitialSecretarySkinsState(),
     playerNotes: "",
     activityLog: [],
     dismissedJobReportIds: [],
@@ -854,7 +856,7 @@ export function recomputeDerivedStats(state: {
   researchLevels: GameState["researchLevels"];
   chiefOfStaffId?: GameState["chiefOfStaffId"];
   secretaryProgress?: GameState["secretaryProgress"];
-  /** Region site bonus on structure passives; defaults to countryside HQ (0%). */
+  /** Region site bonus on structure passives at each office. */
   siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): { rates: ProductionRates } {
   const structureRates = recomputeProductionRates({

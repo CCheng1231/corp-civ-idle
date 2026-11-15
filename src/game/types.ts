@@ -361,6 +361,7 @@ export interface ActiveProject {
 /** @deprecated Legacy tower contracts — migrated to job engagements. */
 export type { ActiveProject as LegacyActiveProject };
 
+/** @deprecated Legacy business-type filter — procedural jobs use JobLocationType. */
 export type BusinessType =
   | "theme_park"
   | "hospital"
@@ -373,6 +374,13 @@ export type BusinessType =
   | "gov"
   | "family_business"
   | "mall_management";
+
+export type JobLocationType =
+  | "police_station"
+  | "hospital"
+  | "tower"
+  | "major_hub"
+  | "city_hall";
 
 export type JobTier = 1 | 2;
 export type JobSize = "small" | "mid" | "huge";
@@ -387,10 +395,11 @@ export type CompletionBand =
 
 export interface JobDefinition {
   id: string;
+  locationId?: string;
+  locationType?: JobLocationType;
   towerId?: TowerId;
   majorHubId?: MajorHubId;
   commercialLotId?: CommercialLotId;
-  businessType: BusinessType;
   tier: JobTier;
   size: JobSize;
   title: string;
@@ -403,10 +412,16 @@ export interface JobDefinition {
   /** Hidden total work capacity (unit-hours). */
   unitHoursTotal: number;
   bonusPercent: number;
-  requiredCategory: ContractorCategoryId;
   minUnitTier: number;
-  optionalIntelBoost: boolean;
   completionPayout: Partial<Resources>;
+}
+
+export interface JobSiteSlotState {
+  locationId: string;
+  slotIndex: number;
+  postingId: string | null;
+  respawnAt: number | null;
+  generation: number;
 }
 
 /** Shared tower posting — multiplayer-ready contributor ledger. */
@@ -418,6 +433,21 @@ export interface JobContributor {
 export interface JobPosting {
   id: string;
   definitionId: string;
+  locationId?: string;
+  slotIndex?: number;
+  generation?: number;
+  locationType?: JobLocationType;
+  title?: string;
+  description?: string;
+  tier?: JobTier;
+  size?: JobSize;
+  durationSec?: number;
+  expirationSec?: number;
+  cashPerUnitHour?: number;
+  unitHoursTotal?: number;
+  bonusPercent?: number;
+  minUnitTier?: number;
+  completionPayout?: Partial<Resources>;
   towerId?: TowerId | null;
   majorHubId?: MajorHubId | null;
   commercialLotId?: CommercialLotId | null;
@@ -514,6 +544,7 @@ export interface GameState {
   /** @deprecated Migrated to jobEngagements on load. */
   activeProject?: ActiveProject | null;
   jobPostings: JobPosting[];
+  jobSiteSlots?: JobSiteSlotState[];
   jobEngagements: JobEngagement[];
   completedProjects: number;
   phase: 1 | 2 | 3;
@@ -534,6 +565,8 @@ export interface GameState {
   secretaryProgress: Partial<Record<SecretaryId, SecretaryProgress>>;
   /** Milestone recruitment offers (gacha pool). */
   secretaryRecruitment: SecretaryRecruitmentState;
+  /** Unlocked wardrobes, equipped looks, and deferred skin picker offers. */
+  secretarySkins: import("./secretarySkins").SecretarySkinsState;
   /** Free-form notes saved with the game. */
   playerNotes: string;
   activityLog: LogEntry[];
@@ -936,9 +969,22 @@ export type GameAction =
       tree: "chief" | "teamLead";
       nodeId: string;
     }
+  | {
+      type: "SECRETARY_SKIN_UNLOCK";
+      skinId: import("./secretarySkinData").SecretaryUnlockableSkinId;
+    }
+  | { type: "SECRETARY_SKIN_DEFER" }
+  | { type: "SECRETARY_SKIN_RESUME" }
+  | {
+      type: "SECRETARY_SKIN_EQUIP";
+      secretaryId: SecretaryId;
+      skinId: import("./secretarySkinData").SecretaryUnlockableSkinId | null;
+    }
+  | { type: "DEV_MAX_SECRETARY_PROGRESS"; secretaryId?: SecretaryId }
   | { type: "SECRETARY_RECRUIT_DISMISS" }
   | { type: "SECRETARY_RECRUIT_COMMIT" }
   | { type: "SECRETARY_RECRUIT_ANIMATION_DONE" }
+  | { type: "SECRETARY_RECRUIT_RESUME" }
   | { type: "CANCEL_JOB_ENGAGEMENT"; engagementId: string }
   | {
       type: "START_PROJECT";

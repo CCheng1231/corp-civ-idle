@@ -9,6 +9,8 @@ import {
   loadCommercialRuralHighwayBake2x,
   loadCommercialSuburbanStripBake2x,
   loadGovCapitolBake2x,
+  loadHospitalWorldBake2x,
+  loadPoliceStationWorldBake2x,
   loadMajorHubSupertallBake2x,
   loadOfficeTowerCountryEstateBake2x,
   loadOfficeTowerMetroCentralBake2x,
@@ -25,6 +27,8 @@ import {
   MAP_BAKED_LANDMARK_COMMERCIAL_RURAL_HIGHWAY,
   MAP_BAKED_LANDMARK_COMMERCIAL_SUBURBAN_STRIP,
   MAP_BAKED_LANDMARK_GOV_CAPITOL,
+  MAP_BAKED_LANDMARK_HOSPITAL_WORLD,
+  MAP_BAKED_LANDMARK_POLICE_STATION_WORLD,
   MAP_BAKED_LANDMARK_MAJOR_HUB_SUPERTALL,
   MAP_BAKED_LANDMARK_OFFICE_TOWER_COUNTRYSIDE,
   MAP_BAKED_LANDMARK_OFFICE_TOWER_METRO,
@@ -37,6 +41,8 @@ import {
 
 export type KnownMapLandmarkArtId =
   | "gov-capitol"
+  | "hospital-world"
+  | "police-station-world"
   | "major-hub-supertall"
   | "commercial-suburban-strip"
   | "commercial-rural-highway"
@@ -76,6 +82,18 @@ export const MAP_LANDMARK_ART: Record<string, MapLandmarkArtDefinition> = {
     MAP_BAKED_LANDMARK_GOV_CAPITOL,
     loadGovCapitolBake2x,
     "map-gov-capitol-bake",
+  ),
+  "hospital-world": bakedEntry(
+    "hospital-world",
+    MAP_BAKED_LANDMARK_HOSPITAL_WORLD,
+    loadHospitalWorldBake2x,
+    "map-hospital-bake",
+  ),
+  "police-station-world": bakedEntry(
+    "police-station-world",
+    MAP_BAKED_LANDMARK_POLICE_STATION_WORLD,
+    loadPoliceStationWorldBake2x,
+    "map-police-station-bake",
   ),
   "major-hub-supertall": bakedEntry(
     "major-hub-supertall",
@@ -164,6 +182,8 @@ export function getMapLandmarkArt(
 }
 
 export type MapLandmarkSiteKind =
+  | "police-station"
+  | "hospital"
   | "gov"
   | "major-hub"
   | "commercial-lot"
@@ -184,6 +204,8 @@ export function defaultSiteKindForArtId(artId: string): MapLandmarkSiteKind {
 
 export function mapLandmarkArtDisplayName(artId: string): string {
   if (artId === "gov-capitol") return "Regional capitol";
+  if (artId === "hospital-world") return "Regional hospital";
+  if (artId === "police-station-world") return "Police station";
   if (artId === "major-hub-supertall") return "Major hub tower";
   if (artId === "commercial-suburban-strip") return "Suburban strip parcel";
   if (artId === "commercial-rural-highway") return "Rural highway frontage";

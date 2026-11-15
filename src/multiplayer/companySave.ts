@@ -142,10 +142,47 @@ export function deserializePrivateState(
   } as Partial<GameState>;
 }
 
+function optionalCompletionPayout(
+  raw: unknown,
+): JobPosting["completionPayout"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const row = raw as Record<string, unknown>;
+  const payout: NonNullable<JobPosting["completionPayout"]> = {};
+  if (row.supply != null) payout.supply = Number(row.supply);
+  if (row.connection != null) payout.connection = Number(row.connection);
+  return Object.keys(payout).length > 0 ? payout : undefined;
+}
+
 export function parseJobPosting(data: Record<string, unknown>): JobPosting {
   return {
     id: String(data.id ?? ""),
     definitionId: String(data.definitionId ?? ""),
+    locationId:
+      data.locationId != null ? String(data.locationId) : undefined,
+    slotIndex:
+      data.slotIndex != null ? Number(data.slotIndex) : undefined,
+    generation:
+      data.generation != null ? Number(data.generation) : undefined,
+    locationType:
+      data.locationType as JobPosting["locationType"] | undefined,
+    title: data.title != null ? String(data.title) : undefined,
+    description:
+      data.description != null ? String(data.description) : undefined,
+    tier: data.tier != null ? (Number(data.tier) as 1 | 2) : undefined,
+    size: data.size as JobPosting["size"] | undefined,
+    durationSec:
+      data.durationSec != null ? Number(data.durationSec) : undefined,
+    expirationSec:
+      data.expirationSec != null ? Number(data.expirationSec) : undefined,
+    cashPerUnitHour:
+      data.cashPerUnitHour != null ? Number(data.cashPerUnitHour) : undefined,
+    unitHoursTotal:
+      data.unitHoursTotal != null ? Number(data.unitHoursTotal) : undefined,
+    bonusPercent:
+      data.bonusPercent != null ? Number(data.bonusPercent) : undefined,
+    minUnitTier:
+      data.minUnitTier != null ? Number(data.minUnitTier) : undefined,
+    completionPayout: optionalCompletionPayout(data.completionPayout),
     towerId: (data.towerId as JobPosting["towerId"]) ?? null,
     majorHubId: (data.majorHubId as JobPosting["majorHubId"]) ?? null,
     commercialLotId:

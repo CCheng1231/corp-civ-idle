@@ -1,16 +1,15 @@
 import {
   BRANCH_PAD_CATALOG,
   branchOpeningCostForPadOnLot,
-  branchPadFromCatalog,
   branchSlotAtLot,
-  normalizeCommercialLotBranchSlots,
 } from "./branchCommercial";
-import {
-  branchEstablishmentInTransitToPad,
-  canSendBranchEstablishment,
-} from "./branchEstablishment";
-import { canEngageMoreJobs, maxJobEngagements } from "./jobCatalog";
-import { axialKey } from "./openOffice";
+import { commercialLotById } from "./commercialLots";
+
+export {
+  COMMERCIAL_BRANCH_SLOT_TEMPLATES,
+  COMMERCIAL_REAL_ESTATE,
+  commercialLotById,
+} from "./commercialLots";
 import {
   branchOfficeIdForSite,
   branchOfficeIds,
@@ -21,11 +20,7 @@ import {
   hasBranchOffices,
   isBranchOfficeId,
 } from "./branchSites";
-import {
-  canOpenAnotherBranch,
-  companyOfficeSiteFraction,
-  maxBranchOffices,
-} from "./branchCap";
+import { maxBranchOffices } from "./branchCap";
 import {
   axialDistance,
   axialEquals,
@@ -34,13 +29,11 @@ import {
   HEX_RADIUS,
   isCoordOnMapGrid,
   MAP_GOV,
-  MAP_HQ,
   MAP_RADIUS,
 } from "./hexLayout";
 import type {
   AxialCoord,
   CommercialLotBranchSlot,
-  CommercialLotDefinition,
   CommercialLotId,
   GameSettings,
   GameState,
@@ -54,24 +47,16 @@ import type {
   ResourceCost,
   TowerId,
 } from "./types";
-import { devRegionAtCoord, effectiveLandmarkCoord } from "./mapDevLayout";
+import { devRegionAtCoord } from "./mapDevLayout";
+import { majorHubById } from "./worldMapMajorHubs";
+import { commercialSiteAt as lookupCommercialSiteAt } from "./commercialSiteLookup";
 import {
-  majorHubById,
-  majorHubCoord,
-} from "./worldMapMajorHubs";
-import {
-  formatNumber,
-  OFFICE_LABELS,
-  powerAvailable,
-  RESOURCE_LABELS,
-  splitResourceCost,
-  unitAvailableAt,
-} from "./constants";
-import {
-  CHRIS_HQ,
-  hqCoordForState,
-  officeAtForState,
-} from "../multiplayer/playerHq";
+  branchEstablishBlockersForPad,
+  canSendBranchEstablishment,
+} from "./branchEstablishment";
+
+export { branchEstablishBlockersForPad };
+import { hqCoordForState, officeAtForState } from "../multiplayer/playerHq";
 import type { OnlineSession } from "../multiplayer/types";
 
 export const REGION_LABELS: Record<MapRegion, string> = {
@@ -84,7 +69,6 @@ export const REGION_LABELS: Record<MapRegion, string> = {
 /**
  * Regional site bonus on structure passive rates at that office.
  * Rank (worst→best): countryside → rural → suburban → metropolis.
- * HQ starts countryside at 0% so branches inland are worth opening.
  */
 export const REGION_SITE_RATE_BONUS: Record<MapRegion, number> = {
   countryside: 0,
@@ -93,16 +77,13 @@ export const REGION_SITE_RATE_BONUS: Record<MapRegion, number> = {
   metropolis: 0.12,
 };
 
-/** HQ / future company-start region (pinned; not jittered off countryside). */
-export const HQ_REGION: MapRegion = "countryside";
-
 /**
  * Fixed world seed for region jitter (testing baseline).
  * Multiplayer world setup will supply a shared seed later so all clients match.
  */
 export const MAP_REGION_SEED = 104729;
 
-export const MAP_HQ_COORD = MAP_HQ;
+export const MAP_HQ_COORD: AxialCoord = { q: -6, r: 5 };
 
 /** Stable 0–1 hash for axial coords + seed. */
 function regionHash01(q: number, r: number, seed: number): number {
@@ -126,36 +107,16 @@ function regionDistanceJitter(coord: AxialCoord, distance: number): number {
   return 0;
 }
 
-export const OFFICE_TOWERS: OfficeTowerDefinition[] = [
-  {
-    id: "metro_central",
-    name: "Central Exchange Tower",
-    coord: { q: 0, r: -4 },
-    region: "metropolis",
-    companyCrewCapacity: 8,
-  },
-  {
-    id: "suburban_park",
-    name: "Parkview Office Tower",
-    coord: { q: 2, r: 5 },
-    region: "suburban",
-    companyCrewCapacity: 5,
-  },
-  {
-    id: "rural_crossing",
-    name: "Crossroads Business Tower",
-    coord: { q: -7, r: 2 },
-    region: "rural",
-    companyCrewCapacity: 3,
-  },
-  {
-    id: "country_estate",
-    name: "Hillside Corporate Tower",
-    coord: { q: 7, r: -6 },
-    region: "countryside",
-    companyCrewCapacity: 4,
-  },
-];
+import { OFFICE_TOWERS, officeTowerCoord, towerById } from "./officeTowers";
+
+export { OFFICE_TOWERS, officeTowerCoord, towerById } from "./officeTowers";
+
+export {
+  jobSiteCoordForDefinition,
+  jobSiteCoordForPosting,
+  jobSiteRegionForDefinition,
+  jobSiteRegionForPosting,
+} from "./jobMapCoords";
 
 /** Compact labels for map hexes (full names in project panel). */
 export const TOWER_HEX_LABELS: Record<TowerId, string> = {
@@ -183,36 +144,6 @@ export const OFFICE_TOWER_VISUAL_STYLE: Record<TowerId, OfficeTowerVisualStyle> 
 export function officeTowerVisualStyle(towerId: TowerId): OfficeTowerVisualStyle {
   return OFFICE_TOWER_VISUAL_STYLE[towerId];
 }
-
-export const COMMERCIAL_BRANCH_SLOT_TEMPLATES: CommercialLotBranchSlot[] = [
-  branchPadFromCatalog("compact"),
-  branchPadFromCatalog("standard"),
-  branchPadFromCatalog("campus"),
-];
-
-export const COMMERCIAL_REAL_ESTATE: CommercialLotDefinition[] = [
-  {
-    id: "suburban_strip",
-    coord: { q: 5, r: 2 },
-    region: "suburban",
-    label: "Suburban strip parcel",
-    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
-  },
-  {
-    id: "rural_highway",
-    coord: { q: -1, r: -6 },
-    region: "rural",
-    label: "Rural highway frontage",
-    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
-  },
-  {
-    id: "countryside_lot",
-    coord: { q: -5, r: 7 },
-    region: "countryside",
-    label: "Countryside lot",
-    branchSlots: normalizeCommercialLotBranchSlots(COMMERCIAL_BRANCH_SLOT_TEMPLATES),
-  },
-];
 
 /** @deprecated use branchOpeningCostForPad */
 export const BRANCH_OPENING_COST: ResourceCost = {
@@ -343,12 +274,6 @@ export const TOWER_PROJECTS: ProjectDefinition[] = [
   },
 ];
 
-export function towerById(id: TowerId): OfficeTowerDefinition {
-  const t = OFFICE_TOWERS.find((x) => x.id === id);
-  if (!t) throw new Error(`Unknown tower ${id}`);
-  return t;
-}
-
 export function projectById(id: string): ProjectDefinition {
   const p = TOWER_PROJECTS.find((x) => x.id === id);
   if (!p) throw new Error(`Unknown project ${id}`);
@@ -359,29 +284,12 @@ export function projectsForTower(towerId: TowerId): ProjectDefinition[] {
   return TOWER_PROJECTS.filter((p) => p.towerId === towerId);
 }
 
-function towerCoord(
-  tower: OfficeTowerDefinition,
-  settings?: GameSettings,
-): AxialCoord {
-  return (
-    effectiveLandmarkCoord(`tower:${tower.id}`, settings) ?? tower.coord
-  );
-}
-
-/** Effective map hex for an office tower (respects dev landmark nudges). */
-export function officeTowerCoord(
-  towerId: TowerId,
-  settings?: GameSettings,
-): AxialCoord {
-  return towerCoord(towerById(towerId), settings);
-}
-
 export function officeTowerMapSites(
   settings?: GameSettings,
 ): Array<{ id: TowerId; coord: AxialCoord }> {
   return OFFICE_TOWERS.map((tower) => ({
     id: tower.id,
-    coord: towerCoord(tower, settings),
+    coord: officeTowerCoord(tower.id, settings),
   }));
 }
 
@@ -390,16 +298,10 @@ export function towerAtCoord(
   settings?: GameSettings,
 ): TowerId | null {
   for (const tower of OFFICE_TOWERS) {
-    const c = towerCoord(tower, settings);
+    const c = officeTowerCoord(tower.id, settings);
     if (c.q === coord.q && c.r === coord.r) return tower.id;
   }
   return null;
-}
-
-export function commercialLotById(id: CommercialLotId): CommercialLotDefinition {
-  const lot = COMMERCIAL_REAL_ESTATE.find((entry) => entry.id === id);
-  if (!lot) throw new Error(`Unknown commercial lot ${id}`);
-  return lot;
 }
 
 export function commercialLotAtCoord(coord: AxialCoord): CommercialLotId | null {
@@ -407,28 +309,25 @@ export function commercialLotAtCoord(coord: AxialCoord): CommercialLotId | null 
   return site?.id ?? null;
 }
 
-export function jobSiteCoordForDefinition(
-  def: JobDefinition,
-  settings?: GameSettings,
-): AxialCoord {
-  if (def.commercialLotId) {
-    const lot = commercialLotById(def.commercialLotId);
-    return (
-      effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? {
-        ...lot.coord,
-      }
-    );
-  }
-  if (def.majorHubId) {
-    return majorHubCoord(def.majorHubId, settings);
-  }
-  if (def.towerId) {
-    return officeTowerCoord(def.towerId, settings);
-  }
-  throw new Error(`Job ${def.id} has no map site`);
-}
+const PROCEDURAL_JOB_SITE_LABELS: Record<string, string> = {
+  "city_hall:gov": "City Hall",
+  "police:world": "Police Station",
+  "hospital:world": "Hospital",
+};
 
 export function jobSiteLabelForDefinition(def: JobDefinition): string {
+  if (def.locationId) {
+    if (PROCEDURAL_JOB_SITE_LABELS[def.locationId]) {
+      return PROCEDURAL_JOB_SITE_LABELS[def.locationId]!;
+    }
+    if (def.locationId.startsWith("tower:")) {
+      return towerById(def.locationId.slice("tower:".length) as TowerId).name;
+    }
+    if (def.locationId.startsWith("hub:")) {
+      const hubId = def.locationId.slice("hub:".length) as MajorHubId;
+      return majorHubById(hubId)?.label ?? hubId;
+    }
+  }
   if (def.commercialLotId) {
     return commercialLotById(def.commercialLotId).label;
   }
@@ -439,68 +338,6 @@ export function jobSiteLabelForDefinition(def: JobDefinition): string {
     return towerById(def.towerId).name;
   }
   return "Unknown site";
-}
-
-export function jobSiteCoordForPosting(
-  posting: Pick<
-    JobPosting,
-    "towerId" | "majorHubId" | "commercialLotId"
-  >,
-  def: JobDefinition,
-  settings?: GameSettings,
-): AxialCoord {
-  if (posting.commercialLotId) {
-    const lot = commercialLotById(posting.commercialLotId);
-    return (
-      effectiveLandmarkCoord(`commercial:${lot.id}`, settings) ?? {
-        ...lot.coord,
-      }
-    );
-  }
-  const hubId = (posting.majorHubId ?? def.majorHubId) as MajorHubId | null;
-  if (hubId) {
-    return majorHubCoord(hubId, settings);
-  }
-  if (posting.towerId) {
-    return officeTowerCoord(posting.towerId, settings);
-  }
-  return jobSiteCoordForDefinition(def, settings);
-}
-
-export function jobSiteRegionForDefinition(def: JobDefinition): MapRegion {
-  if (def.commercialLotId) {
-    return commercialLotById(def.commercialLotId).region;
-  }
-  if (def.majorHubId) {
-    const hub = majorHubById(def.majorHubId);
-    return hub ? regionAtCoord(hub.coord) : "metropolis";
-  }
-  if (def.towerId) {
-    return towerById(def.towerId).region;
-  }
-  return "countryside";
-}
-
-export function jobSiteRegionForPosting(
-  posting: Pick<
-    JobPosting,
-    "towerId" | "majorHubId" | "commercialLotId"
-  >,
-  def: JobDefinition,
-  settings?: GameSettings,
-): MapRegion {
-  if (posting.commercialLotId) {
-    return commercialLotById(posting.commercialLotId).region;
-  }
-  const hubId = (posting.majorHubId ?? def.majorHubId) as MajorHubId | null;
-  if (hubId) {
-    const hub = majorHubById(hubId, settings);
-    return hub ? regionAtCoord(hub.coord, settings) : jobSiteRegionForDefinition(def);
-  }
-  if (posting.towerId) {
-    return towerById(posting.towerId).region;
-  }
-  return jobSiteRegionForDefinition(def);
 }
 
 export function jobSiteLabelForPosting(
@@ -525,11 +362,7 @@ export function jobSiteLabelForPosting(
 }
 
 export function commercialSiteAt(coord: AxialCoord, settings?: GameSettings) {
-  return COMMERCIAL_REAL_ESTATE.find((s) => {
-    const c =
-      effectiveLandmarkCoord(`commercial:${s.id}`, settings) ?? s.coord;
-    return c.q === coord.q && c.r === coord.r;
-  });
+  return lookupCommercialSiteAt(coord, settings);
 }
 
 /** Commercial lot not yet leased as an office site. */
@@ -546,9 +379,6 @@ export function regionAtCoord(
 ): MapRegion {
   const painted = devRegionAtCoord(coord, settings);
   if (painted) return painted;
-
-  // Company HQs are authored as countryside for starts / future creation.
-  if (axialEquals(coord, MAP_HQ) || axialEquals(coord, CHRIS_HQ)) return HQ_REGION;
 
   const d = axialDistance(coord, MAP_GOV);
   const effective = Math.max(
@@ -664,8 +494,9 @@ export function siteRateBonusForCoord(coord: AxialCoord): number {
 export function siteRateBonusesForState(
   state: GameState,
 ): Partial<Record<OfficeLocationId, number>> {
+  const hqRegion = regionAtCoord(hqCoordForState(state), state.settings);
   const bonuses: Partial<Record<OfficeLocationId, number>> = {
-    hq: siteRateBonusForRegion(HQ_REGION),
+    hq: siteRateBonusForRegion(hqRegion),
   };
   for (const site of state.branchSites) {
     const officeId = branchOfficeIdForSite(site);
@@ -723,7 +554,7 @@ export function officeDisplayName(
   state: GameState,
   officeId: OfficeLocationId,
 ): string {
-  if (officeId === "hq") return OFFICE_LABELS.hq;
+  if (officeId === "hq") return "HQ";
   const site = branchSiteForOfficeId(state, officeId);
   return site?.name ?? "Branch Office";
 }
@@ -756,7 +587,7 @@ export function maxBranchSlots(state: GameState): number {
 }
 
 export function branchManagerAvailable(state: GameState): number {
-  return unitAvailableAt(state, "hq", "branch_manager");
+  return state.contractorsByLocation.hq?.branch_manager ?? 0;
 }
 
 export function canEstablishBranchPad(
@@ -784,65 +615,6 @@ export function canEstablishBranch(
   const site = coord ? commercialSiteAt(coord, state.settings) : undefined;
   if (!site || !coord) return false;
   return canEstablishBranchPad(state, site.id, slotIndex, coord);
-}
-
-/** Human-readable reasons the player cannot open a branch pad yet. */
-export function branchEstablishBlockersForPad(
-  state: GameState,
-  commercialLotId: CommercialLotId,
-  slotIndex: number,
-  coord: AxialCoord,
-): string[] {
-  if (establishedBranchAtPad(state, commercialLotId, slotIndex)) {
-    return ["Pad already open"];
-  }
-  const hexKey = axialKey(coord);
-  if (branchEstablishmentInTransitToPad(state, hexKey, slotIndex)) {
-    return ["Branch Manager already traveling to this pad"];
-  }
-  const blockers: string[] = [];
-  if (!branchManagementResearched(state)) {
-    blockers.push("Research Branch Management (Research tab)");
-  }
-  if (!canOpenAnotherBranch(state)) {
-    const { open, max } = companyOfficeSiteFraction(state);
-    blockers.push(`Branch office cap reached (${open}/${max})`);
-  }
-  if (!canEngageMoreJobs(state)) {
-    blockers.push(
-      `Team cap reached (${maxJobEngagements(state)} slots — finish or cancel a job first)`,
-    );
-  }
-  if (branchManagerAvailable(state) < 1) {
-    blockers.push("Hire a Branch Manager at HQ (sent on establish)");
-  }
-  const openingCost = branchOpeningCostForPad(commercialLotId, slotIndex);
-  if (
-    canSendBranchEstablishment(state, "hq", coord, slotIndex, openingCost)
-  ) {
-    return blockers;
-  }
-
-  const { global, power } = splitResourceCost(openingCost);
-  for (const [key, amount] of Object.entries(global)) {
-    const k = key as keyof GameState["resources"];
-    const need = amount ?? 0;
-    if (state.resources[k] < need) {
-      blockers.push(
-        `Need ${formatNumber(need)} ${RESOURCE_LABELS[k]} (have ${formatNumber(state.resources[k])})`,
-      );
-    }
-  }
-  const freePower = powerAvailable(state.locationStats.hq);
-  if (power > freePower) {
-    blockers.push(
-      `Need ${power} Power at HQ (${formatNumber(freePower)} free — build Power Grid or sell bids' power use)`,
-    );
-  }
-  if (blockers.length === 0) {
-    blockers.push("Pay branch opening costs at HQ");
-  }
-  return blockers;
 }
 
 /** @deprecated use branchEstablishBlockersForPad */

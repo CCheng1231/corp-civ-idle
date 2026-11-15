@@ -26,6 +26,7 @@ import {
   normalizeSecretaryUnlocks,
   syncLegacyGovUnlocks,
 } from "./secretaryProgress";
+import { normalizeSecretarySkins } from "./secretarySkins";
 import { checkSecretaryRecruitmentMilestones } from "./secretaryRecruitment";
 import {
   lifetimeRecruitsFromRoster,
@@ -34,8 +35,9 @@ import {
 import { trimSecretaryJobReports } from "./logbook";
 import { applyOnlineDevRestrictions } from "../multiplayer/playerHq";
 import { structureUpgradeCostForTargetLevel } from "./structureBalance";
-import { initializeJobPostings, jobDefinitionById, mergeMissingJobPostings } from "./jobs";
-import { JOB_DEFINITIONS } from "./jobHubData";
+import { mergeMissingJobPostings } from "./jobs";
+import { isLegacyStaticDefinitionId } from "./jobSites";
+import { seedProceduralJobWorld } from "./jobSlots";
 import {
   migrateStructureId,
   migrateStructureLevelsMap,
@@ -631,8 +633,7 @@ function migrateEngagementRow(engagement: JobEngagement): JobEngagement {
   let endsAt = engagement.endsAt;
   if (!endsAt) {
     try {
-      const def = jobDefinitionById(engagement.definitionId);
-      endsAt = engagement.startedAt + def.durationSec * 1000;
+      endsAt = engagement.startedAt + 3600 * 1000;
     } catch {
       endsAt = engagement.startedAt + 3600 * 1000;
     }
@@ -648,48 +649,62 @@ function migrateEngagementRow(engagement: JobEngagement): JobEngagement {
   };
 }
 
-const KNOWN_JOB_DEFINITION_IDS = new Set(JOB_DEFINITIONS.map((d) => d.id));
-
-function sanitizeLegacyJobRows(parsed: LegacySave): {
-  jobPostings: GameState["jobPostings"];
-  jobEngagements: GameState["jobEngagements"];
-} {
-  return {
-    jobPostings: (parsed.jobPostings ?? []).filter((p) =>
-      KNOWN_JOB_DEFINITION_IDS.has(p.definitionId),
-    ),
-    jobEngagements: (parsed.jobEngagements ?? []).filter((e) =>
-      KNOWN_JOB_DEFINITION_IDS.has(e.definitionId),
-    ),
-  };
+function hasLegacyStaticJobs(parsed: LegacySave): boolean {
+  return (parsed.jobPostings ?? []).some((p) =>
+    isLegacyStaticDefinitionId(p.definitionId),
+  );
 }
 
 function migrateJobFields(
   parsed: LegacySave,
   now: number,
-): Pick<GameState, "jobPostings" | "jobEngagements"> {
-  const sanitized = sanitizeLegacyJobRows(parsed);
-  const engagements = sanitized.jobEngagements.map(migrateEngagementRow);
+): Pick<GameState, "jobPostings" | "jobEngagements" | "jobSiteSlots"> {
+  const engagements = (parsed.jobEngagements ?? []).map(migrateEngagementRow);
+  const postings = parsed.jobPostings ?? [];
+  const procedural =
+    postings.length > 0 &&
+    postings.every((p) => !isLegacyStaticDefinitionId(p.definitionId));
+
+  if (hasLegacyStaticJobs(parsed) || (!procedural && postings.length === 0)) {
+    const seeded = seedProceduralJobWorld(
+      { settings: parsed.settings as GameState["settings"] },
+      now,
+    );
+    return {
+      jobPostings: seeded.jobPostings,
+      jobSiteSlots: seeded.jobSiteSlots,
+      jobEngagements: engagements.filter((e) =>
+        seeded.jobPostings.some((p) => p.id === e.postingId),
+      ),
+    };
+  }
 
   // Online private saves omit shared jobPostings — still restore field teams.
   if (engagements.length > 0) {
     return {
-      jobPostings: sanitized.jobPostings.length
-        ? mergeMissingJobPostings(sanitized.jobPostings, now)
+      jobPostings: postings.length
+        ? mergeMissingJobPostings(postings, now)
         : [],
       jobEngagements: engagements,
+      jobSiteSlots: parsed.jobSiteSlots,
     };
   }
 
-  if (sanitized.jobPostings.length) {
+  if (postings.length) {
     return {
-      jobPostings: mergeMissingJobPostings(sanitized.jobPostings, now),
+      jobPostings: mergeMissingJobPostings(postings, now),
       jobEngagements: engagements,
+      jobSiteSlots: parsed.jobSiteSlots,
     };
   }
 
+  const seeded = seedProceduralJobWorld(
+    { settings: parsed.settings as GameState["settings"] },
+    now,
+  );
   return {
-    jobPostings: initializeJobPostings(now),
+    jobPostings: seeded.jobPostings,
+    jobSiteSlots: seeded.jobSiteSlots,
     jobEngagements: [],
   };
 }
@@ -1200,6 +1215,7 @@ function normalizeSave(
   merged.secretaryRecruitment = normalizeSecretaryRecruitment(
     parsed.secretaryRecruitment,
   );
+  merged.secretarySkins = normalizeSecretarySkins(parsed.secretarySkins);
   merged.chiefOfStaffId = normalizeChiefOfStaffId(
     parsed.chiefOfStaffId,
     merged.secretaryUnlocks,
@@ -1256,9 +1272,14 @@ export function loadOnlineStateFromRemote(
   const sanitized = sanitizeOnlineMapAnchors(merged);
   sanitized.settings = sanitizeOnlinePrivateMapClientSettings(sanitized.settings);
   const layout = sharedLayout ?? latestSharedWorldMapLayout();
+  const savedAt = Number(remote.updatedAt ?? 0);
+  const awayAnchorAt =
+    savedAt > 0
+      ? Math.min(sanitized.lastTickAt, savedAt)
+      : sanitized.lastTickAt;
   return applySharedWorldLayoutToGameState(
     applyOnlineDevRestrictions(
-      finalizeOnlineSyncState(sanitized, Date.now()),
+      finalizeOnlineSyncState(sanitized, Date.now(), { awayAnchorAt }),
     ),
     layout,
   );

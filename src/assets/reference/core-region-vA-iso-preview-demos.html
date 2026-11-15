@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Core vA — isometric angle previews</title>
+    <style>
+      :root {
+        --map-bg: #465042;
+        --ink: #e8eef5;
+        --muted: #9aa8b5;
+        --card: #242b33;
+        --border: #3a4550;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, Segoe UI, sans-serif;
+        background: #1a1f24;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      header,
+      main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem 2rem;
+      }
+      header h1 {
+        font-size: 1.12rem;
+        margin: 0;
+      }
+      header p {
+        font-size: 0.86rem;
+        color: var(--muted);
+        margin: 0.5rem 0 0;
+      }
+      .notice {
+        margin: 1rem 0;
+        padding: 0.75rem 1rem;
+        background: #2a3844;
+        border: 1px solid #4a6878;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #c5dce8;
+      }
+      h2.section {
+        font-size: 0.92rem;
+        margin: 1.25rem 0 0.65rem;
+        color: #c5dce8;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 0.75rem 1rem 0.35rem;
+      }
+      .card-head h3 {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+      .card-head p {
+        margin: 0.3rem 0 0;
+        font-size: 0.74rem;
+        color: var(--muted);
+      }
+      .stage {
+        background: var(--map-bg);
+        padding: 0.35rem;
+        min-height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage svg {
+        display: block;
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+      }
+      .thumb {
+        border-top: 1px solid var(--border);
+        padding: 0.35rem 0.5rem;
+        text-align: center;
+      }
+      .thumb img {
+        max-width: 100%;
+        max-height: 120px;
+        object-fit: contain;
+        border-radius: 4px;
+      }
+      code {
+        font-size: 0.68rem;
+        color: #7ec8c0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>vA core ground — isometric angle options</h1>
+      <p>
+        Each card: metropolis ring in-game layout (gov-centered field). Compare
+        <strong>top-down vA</strong> with SVG rotation/skew vs
+        <strong>re-authored isometric</strong> JPGs (moderate / soft 3:4 /
+        strong).
+      </p>
+      <div class="notice">
+        Open with <code>npm run dev</code> →
+        <code>/src/assets/reference/core-region-vA-iso-preview-demos.html</code>.
+        Pick one for <code>mapMetropolisCoreGround</code> — iso art uses
+        <code>patternTransform="rotate(0)"</code>; top-down may still need ~30°.
+      </div>
+    </header>
+    <main>
+      <h2 class="section">A — Top-down vA (transform only)</h2>
+      <div class="grid" id="group-transform"></div>
+      <h2 class="section">B — Re-baked isometric vA family</h2>
+      <div class="grid" id="group-iso"></div>
+    </main>
+    <script>
+      (function () {
+        const NS = "http://www.w3.org/2000/svg";
+        const XLINK = "http://www.w3.org/1999/xlink";
+        const HEX_R = 42;
+        const TEX = 1024;
+        const GOV = { q: 0, r: 0 };
+        const MAP_BG = "#465042";
+        const CORE = "#445ca8";
+        const TOPDOWN = "map/core-region-tile-metropolis-vA.jpg";
+
+        const TRANSFORM_OPTIONS = [
+          {
+            title: "Top-down vA (0°)",
+            desc: "Original orthographic art, no patternTransform.",
+            href: TOPDOWN,
+            patternTransform: null,
+          },
+          {
+            title: "Top-down + rotate 30°",
+            desc: "Live player map default — cheap alignment trick.",
+            href: TOPDOWN,
+            patternTransform: (gx, gy) => `rotate(30 ${gx} ${gy})`,
+          },
+          {
+            title: "Top-down + skewY(−26.5°) rotate 30°",
+            desc: "Dimetric stretch on orthographic art (can look soft).",
+            href: TOPDOWN,
+            patternTransform: (gx, gy) =>
+              `rotate(30 ${gx} ${gy}) skewY(-26.5)`,
+          },
+        ];
+
+        const ISO_OPTIONS = [
+          {
+            title: "Iso moderate",
+            desc: "AI re-render ~30° dimetric, block sides visible.",
+            href: "map/core-region-vA-iso-moderate.jpg",
+            patternTransform: null,
+          },
+          {
+            title: "Iso soft 3/4",
+            desc: "Closer to landmark bake obliquity (~34°).",
+            href: "map/core-region-vA-iso-soft34.jpg",
+            patternTransform: null,
+          },
+          {
+            title: "Iso strong",
+            desc: "Heavier facade read — check vs building foot scale.",
+            href: "map/core-region-vA-iso-strong.jpg",
+            patternTransform: null,
+          },
+        ];
+
+        function axialToPixel(q, r, size) {
+          return {
+            x: size * Math.sqrt(3) * (q + r / 2),
+            y: size * 1.5 * r,
+          };
+        }
+
+        function hexPoints(cx, cy, size) {
+          const pts = [];
+          for (let i = 0; i < 6; i += 1) {
+            const a = (Math.PI / 180) * (60 * i - 30);
+            pts.push(
+              `${cx + size * Math.cos(a)},${cy + size * Math.sin(a)}`,
+            );
+          }
+          return pts.join(" ");
+        }
+
+        function axialDist(a, b) {
+          const dq = a.q - b.q;
+          const dr = a.r - b.r;
+          return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+        }
+
+        function cells(radius) {
+          const out = [];
+          for (let q = -radius; q <= radius; q += 1) {
+            for (let r = -radius; r <= radius; r += 1) {
+              if (Math.abs(q + r) <= radius) out.push({ q, r });
+            }
+          }
+          return out;
+        }
+
+        const all = cells(5);
+        const govPx = axialToPixel(0, 0, HEX_R);
+        const patX = govPx.x - TEX / 2;
+        const patY = govPx.y - TEX / 2;
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const c of all) {
+          const { x, y } = axialToPixel(c.q, c.r, HEX_R);
+          minX = Math.min(minX, x - HEX_R * 1.15);
+          maxX = Math.max(maxX, x + HEX_R * 1.15);
+          minY = Math.min(minY, y - HEX_R * 1.15);
+          maxY = Math.max(maxY, y + HEX_R * 1.15);
+        }
+        const pad = 10;
+        const vb = {
+          minX: minX - pad,
+          minY: minY - pad,
+          w: maxX - minX + pad * 2,
+          h: maxY - minY + pad * 2,
+        };
+
+        function buildCard(opt) {
+          const card = document.createElement("article");
+          card.className = "card";
+          const head = document.createElement("div");
+          head.className = "card-head";
+          head.innerHTML = `<h3>${opt.title}</h3><p>${opt.desc}</p><code>${opt.href}</code>`;
+          const stage = document.createElement("div");
+          stage.className = "stage";
+
+          const svg = document.createElementNS(NS, "svg");
+          svg.setAttribute(
+            "viewBox",
+            `${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`,
+          );
+          const bg = document.createElementNS(NS, "rect");
+          bg.setAttribute("x", String(vb.minX));
+          bg.setAttribute("y", String(vb.minY));
+          bg.setAttribute("width", String(vb.w));
+          bg.setAttribute("height", String(vb.h));
+          bg.setAttribute("fill", MAP_BG);
+          svg.appendChild(bg);
+
+          const defs = document.createElementNS(NS, "defs");
+          const pattern = document.createElementNS(NS, "pattern");
+          const pid = `p-${Math.random().toString(36).slice(2)}`;
+          pattern.setAttribute("id", pid);
+          pattern.setAttribute("patternUnits", "userSpaceOnUse");
+          pattern.setAttribute("patternContentUnits", "userSpaceOnUse");
+          pattern.setAttribute("x", String(patX));
+          pattern.setAttribute("y", String(patY));
+          pattern.setAttribute("width", String(TEX));
+          pattern.setAttribute("height", String(TEX));
+          if (opt.patternTransform) {
+            pattern.setAttribute(
+              "patternTransform",
+              opt.patternTransform(govPx.x, govPx.y),
+            );
+          }
+          const image = document.createElementNS(NS, "image");
+          image.setAttribute("href", opt.href);
+          image.setAttributeNS(XLINK, "href", opt.href);
+          image.setAttribute("width", String(TEX));
+          image.setAttribute("height", String(TEX));
+          image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+          pattern.appendChild(image);
+          defs.appendChild(pattern);
+          svg.appendChild(defs);
+
+          for (const c of all) {
+            const { x, y } = axialToPixel(c.q, c.r, HEX_R);
+            const core = axialDist(c, GOV) <= 4;
+            const poly = document.createElementNS(NS, "polygon");
+            poly.setAttribute("points", hexPoints(x, y, HEX_R));
+            if (core) poly.setAttribute("fill", `url(#${pid})`);
+            else {
+              poly.setAttribute("fill", "#b0766c");
+              poly.setAttribute("fill-opacity", "0.45");
+            }
+            svg.appendChild(poly);
+          }
+
+          stage.appendChild(svg);
+          const thumb = document.createElement("div");
+          thumb.className = "thumb";
+          thumb.innerHTML = `<img src="${opt.href}" alt="" loading="lazy" />`;
+          card.appendChild(head);
+          card.appendChild(stage);
+          card.appendChild(thumb);
+          return card;
+        }
+
+        for (const opt of TRANSFORM_OPTIONS) {
+          document.getElementById("group-transform").appendChild(buildCard(opt));
+        }
+        for (const opt of ISO_OPTIONS) {
+          document.getElementById("group-iso").appendChild(buildCard(opt));
+        }
+      })();
+    </script>
+  </body>
+</html>

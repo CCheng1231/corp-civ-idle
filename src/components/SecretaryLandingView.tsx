@@ -27,7 +27,7 @@ export function SecretaryLandingView({
 }: SecretaryLandingViewProps) {
   const chiefId = state.chiefOfStaffId;
   const chief = secretaryById(chiefId);
-  const portrait = secretaryTabPortraitSrc(chiefId);
+  const portrait = secretaryTabPortraitSrc(chiefId, state);
   const panStorageKey = secretaryLandingPanStorageKey(chiefId);
   const tips = secretaryTips(state);
   const [focusRailOpen, setFocusRailOpen] = useState(() => {

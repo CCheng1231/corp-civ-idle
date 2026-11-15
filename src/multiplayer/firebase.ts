@@ -1,5 +1,16 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  browserSessionPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+
+let auth: Auth | null = null;
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -29,6 +40,29 @@ export function readFirebaseConfig(): FirebaseConfig | null {
 
 export function isFirebaseConfigured(): boolean {
   return readFirebaseConfig() !== null;
+}
+
+export function getFirebaseAuth(): Auth {
+  if (auth) return auth;
+  const app = getFirebaseApp();
+  try {
+    auth = initializeAuth(app, {
+      persistence: [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        browserSessionPersistence,
+      ],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "auth/already-initialized") {
+      auth = getAuth(app);
+    } else {
+      throw e;
+    }
+  }
+  return auth;
 }
 
 export function getFirebaseApp(): FirebaseApp {

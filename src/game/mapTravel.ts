@@ -8,9 +8,9 @@ import { branchSiteCoordForOffice } from "./branchSites";
 import {
   jobSiteCoordForDefinition,
   jobSiteCoordForPosting,
-  towerById,
-} from "./mapWorld";
-import { jobDefinitionById } from "./jobs";
+} from "./jobMapCoords";
+import { towerById } from "./officeTowers";
+import { jobDefinitionForEngagement, jobDefinitionForPosting } from "./jobs";
 import { parseAxialKey } from "./openOffice";
 import { jobTravelDurationMsForPreview } from "./secretaryEffects";
 import type {
@@ -176,7 +176,7 @@ export function jobSiteCoordsForEngagement(
   engagement: JobEngagement,
 ): { from: AxialCoord; to: AxialCoord } {
   const posting = state.jobPostings.find((p) => p.id === engagement.postingId);
-  const def = jobDefinitionById(engagement.definitionId);
+  const def = jobDefinitionForEngagement(state, engagement);
   const target = posting
     ? jobSiteCoordForPosting(posting, def, state.settings)
     : jobSiteCoordForDefinition(def, state.settings);
@@ -188,7 +188,7 @@ export function jobSiteCoordsForPosting(
   officeId: OfficeLocationId,
   posting: JobPosting,
 ): { from: AxialCoord; to: AxialCoord } {
-  const def = jobDefinitionById(posting.definitionId);
+  const def = jobDefinitionForPosting(posting);
   return jobSiteCoords(
     state,
     officeId,

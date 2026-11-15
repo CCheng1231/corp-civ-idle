@@ -1,9 +1,14 @@
 /* —— Player: dark Google-Maps-like ground (game palette) —— */
-.map-presentation-player .hex-map svg {
+.map-presentation-player .hex-map svg.map-hex-map-base {
   background: #465042;
   border-radius: 0;
   overflow: visible;
   box-shadow: none;
+}
+
+.map-presentation-player .hex-map svg.map-hex-selection-overlay {
+  background: transparent;
+  overflow: visible;
 }
 
 /* Player map: flat regions without grid lines (dev keeps hex strokes). */
@@ -21,28 +26,17 @@
 }
 
 .map-presentation-player .hex-tile.hex-tile-map-selected {
-  stroke: #f7f3ec;
-  stroke-width: 3.5px;
-  paint-order: stroke fill;
+  stroke: none;
+  stroke-width: 0;
   filter: brightness(1.22) saturate(1.14);
 }
 
-.map-presentation-player .hex-tile.hex-tile-major-hub-site {
-  stroke: #f7f3ec;
-  stroke-width: 5px;
-  paint-order: stroke fill;
-}
-
-.map-presentation-player .hex-tile.hex-tile-gov-site {
-  stroke: #f7f3ec;
-  stroke-width: 5px;
-  paint-order: stroke fill;
-}
-
+/* Baked landmark rasters cover the hex; cream rings read as a white edge on pad corners. */
+.map-presentation-player .hex-tile.hex-tile-major-hub-site,
+.map-presentation-player .hex-tile.hex-tile-gov-site,
 .map-presentation-player .hex-tile.hex-tile-landmark-site {
-  stroke: #f7f3ec;
-  stroke-width: 5px;
-  paint-order: stroke fill;
+  stroke: none;
+  stroke-width: 0;
 }
 
 .map-presentation-player .map-baked-landmark-svg-image {
@@ -78,6 +72,16 @@
   filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.4));
 }
 
+.map-presentation-player .map-hospital-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-hospital-bake {
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.4));
+}
+
+.map-presentation-player .map-police-station-bake.map-baked-landmark-overlay-img,
+.map-presentation-player .map-baked-landmark-overlay-img.map-police-station-bake {
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.4));
+}
+
 .map-presentation-player .map-commercial-lot-bake.map-baked-landmark-overlay-img,
 .map-presentation-player .map-baked-landmark-overlay-img.map-commercial-lot-bake {
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.38));
@@ -106,21 +110,21 @@
 .map-presentation-player .map-hex-selection-ring {
   fill: none;
   stroke: #f7f3ec;
-  stroke-width: 3px;
-  stroke-dasharray: 6 4;
-  opacity: 0.95;
+  stroke-width: 0.5;
+  stroke-dasharray: 2 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.9;
   animation: map-hex-selection-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes map-hex-selection-pulse {
   0%,
   100% {
-    stroke-opacity: 0.55;
-    stroke-width: 2.5px;
+    stroke-opacity: 0.72;
   }
   50% {
     stroke-opacity: 1;
-    stroke-width: 3.5px;
   }
 }
 
@@ -2437,21 +2441,6 @@
   padding: 0.25rem 0.1rem;
 }
 
-.map-job-filter-active .hex-tile.is-job-hex-dim {
-  opacity: 0.42;
-  filter: saturate(0.65);
-}
-
-.map-presentation-player .hex-tile.hex-tile-job-hot {
-  filter: brightness(1.12) saturate(1.08);
-  stroke: rgba(45, 106, 74, 0.85);
-  stroke-width: 2.5px;
-}
-
-.map-presentation-player .hex-tile-inspected.hex-tile-job-hot {
-  stroke: rgba(26, 26, 26, 0.75);
-}
-
 .map-hex-drawer-head {
   display: flex;
   align-items: flex-start;
@@ -3376,6 +3365,30 @@
 
 .hex-region-metropolis.hex-tile-default {
   fill: #445ca8;
+}
+
+.map-presentation-player
+  .map-hex-map-base.map-metropolis-ground-ready
+  .hex-region-metropolis.hex-tile-default {
+  fill: url(#map-metropolis-core-ground);
+}
+
+.map-presentation-player
+  .map-hex-map-base.map-metropolis-ground-ready
+  .hex-region-suburban.hex-tile-default {
+  fill: url(#map-metro-fringe-ground);
+}
+
+.map-presentation-player
+  .map-hex-map-base.map-metropolis-ground-ready
+  .hex-region-rural.hex-tile-default {
+  fill: url(#map-county-ground);
+}
+
+.map-presentation-player
+  .map-hex-map-base.map-metropolis-ground-ready
+  .hex-region-countryside.hex-tile-default {
+  fill: url(#map-greenbelt-ground);
 }
 
 .hex-region-suburban.hex-tile-default {

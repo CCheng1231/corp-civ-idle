@@ -3,7 +3,7 @@ import { formatNumber, rosterAt } from "../game/constants";
 import { resolveOfficeLocation, isAllOfficesSelected } from "../game/officeSelection";
 import {
   actualShiftReturnPerHour,
-  BUSINESS_TYPE_LABELS,
+  JOB_ENGAGE_CAPPED_SHIFT_HINT,
   COMPLETION_BANDS,
   completionBand,
   completionBandLabel,
@@ -11,6 +11,8 @@ import {
   JOB_SIZE_LABELS,
   JOB_SIZES,
   jobCompletionSupplyBonus,
+  jobCompletionConnectionBonus,
+  LOCATION_TYPE_LABELS,
   jobEngagementTravelSupplyCost,
   returnPerHour,
   validateEngagementAssignment,
@@ -121,6 +123,8 @@ export function JobPostingCard({
   const expectedPerHour = returnPerHour(def, unitCount) * incomeMult;
   const actualPerHour = actualShiftReturnPerHour(def, posting, unitCount) * incomeMult;
   const completionSupply = jobCompletionSupplyBonus(def);
+  const completionConnection = jobCompletionConnectionBonus(def);
+  const bonusPctLabel = Math.round(def.bonusPercent * 100);
   const travelHexes = jobTravelHexesToCoord(
     state,
     officeId,
@@ -147,15 +151,15 @@ export function JobPostingCard({
 
   const showPayNote =
     unitCount > 0 && actualPerHour + 0.05 < expectedPerHour;
-  const engageNote = showPayNote
-    ? `Below full $${formatNumber(expectedPerHour)}/hr — not enough work left for this whole crew/shift.`
-    : null;
+  const engageNote = showPayNote ? JOB_ENGAGE_CAPPED_SHIFT_HINT : null;
 
   return (
     <article className="project-card job-posting-card">
       <header>
         <strong>{def.title}</strong>
-        <span>{BUSINESS_TYPE_LABELS[def.businessType]}</span>
+        <span>
+          {def.locationType ? LOCATION_TYPE_LABELS[def.locationType] : "Job"}
+        </span>
         {showTower && (
           <span className="job-posting-tower muted">
             {siteLabel} · {REGION_LABELS[siteRegion]}
@@ -184,6 +188,7 @@ export function JobPostingCard({
             {formatJobDurationSec(
               jobWorkDurationSec(state, def.durationSec, {
                 teamLeadSecretaryId: previewLead,
+                definitionId: def.id,
               }),
             )}
           </span>
@@ -195,11 +200,19 @@ export function JobPostingCard({
         {completionSupply > 0 ? (
           <li>
             <span className="job-posting-fact-label">Bonus</span>
-            <span>
-              {formatNumber(completionSupply)} SUP by completion
-            </span>
+            <span>{formatNumber(completionSupply)} SUP on completion</span>
           </li>
         ) : null}
+        {completionConnection > 0 ? (
+          <li>
+            <span className="job-posting-fact-label">Bonus</span>
+            <span>{formatNumber(completionConnection)} CON on completion</span>
+          </li>
+        ) : null}
+        <li>
+          <span className="job-posting-fact-label">Completion cash</span>
+          <span>{bonusPctLabel}% of contract on finish</span>
+        </li>
         <li>
           <span className="job-posting-fact-label">Completion</span>
           <MetaTip<CompletionBand>
@@ -227,9 +240,7 @@ export function JobPostingCard({
         {minUnitTier > 1 ? (
           <li>
             <span className="job-posting-fact-label">Needs</span>
-            <span>
-              {def.requiredCategory} tier {minUnitTier}+
-            </span>
+            <span>Units tier {minUnitTier}+</span>
           </li>
         ) : null}
       </ul>
@@ -277,7 +288,7 @@ export function JobPostingCard({
         >
           {blockReason ??
             (unitCount > 0
-              ? `Engage · $${formatNumber(actualPerHour)}/hr`
+              ? `Engage · $${formatNumber(expectedPerHour)}/hr`
               : "Engage")}
         </button>
         {engageNote ? (

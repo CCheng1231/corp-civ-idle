@@ -6,6 +6,8 @@ import { buildOfflineWelcomeSummary } from "./offlineWelcome";
 import {
   processJobEngagements
 } from "./jobs";
+import { processJobSiteSlots } from "./jobSlots";
+import { isOnlineMode } from "../multiplayer/playerHq";
 import {
   ownedOfficeIds
 } from "./branchSites";
@@ -80,9 +82,21 @@ export function finalizeLoadedState(state: GameState, now: number): GameState {
   return next;
 }
 
+/** True when a remote online load already ran catch-up (skip duplicate finalize on LOAD). */
+export function onlineLoadAlreadyCaughtUp(
+  state: GameState,
+  now = Date.now(),
+): boolean {
+  return Math.abs(now - state.lastTickAt) < 5000;
+}
+
 /** Online Firestore load — resolve queues and apply passive production since lastTickAt. */
-export function finalizeOnlineSyncState(state: GameState, now: number): GameState {
-  const previousTickAt = state.lastTickAt;
+export function finalizeOnlineSyncState(
+  state: GameState,
+  now: number,
+  options?: { awayAnchorAt?: number },
+): GameState {
+  const previousTickAt = options?.awayAnchorAt ?? state.lastTickAt;
   const beforeCatchUp = state;
   const priorSummary = state.pendingOfflineSummary;
   const normalized = reconcileStructureBuildTimers(
@@ -206,7 +220,11 @@ function runJobSimulation(
   now: number,
   notify = true,
 ): GameState {
-  const processed = processJobEngagements(state, now, notify);
+  let next = state;
+  if (!isOnlineMode(state)) {
+    next = processJobSiteSlots(next, now);
+  }
+  const processed = processJobEngagements(next, now, notify);
   return applyVictoryCheck(applyJobPhaseMilestone(withDerivedStats(processed)));
 }
 
@@ -288,6 +306,14 @@ function shiftSimulatedClock(state: GameState, shiftMs: number): GameState {
     spawnedAt: shift(posting.spawnedAt),
     expiresAt: shift(posting.expiresAt)
 }));
+
+  if (next.jobSiteSlots) {
+    next.jobSiteSlots = next.jobSiteSlots.map((slot) => ({
+      ...slot,
+      respawnAt:
+        slot.respawnAt != null ? slot.respawnAt - shiftMs : null,
+    }));
+  }
 
   next.activityLog = next.activityLog.map((entry) => ({
     ...entry,

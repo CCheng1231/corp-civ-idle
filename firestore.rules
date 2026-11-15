@@ -1,12 +1,12 @@
 rules_version = '2';
 
-// Corp Civ Idle — access-key gated online world (worlds/dev).
+// Corp Civ Idle — Google sign-in + access-key gated online world (worlds/dev).
 //
-// Setup: Firebase Console → Authentication → Anonymous → Enable
+// Setup: Firebase Console → Authentication → Google (+ Anonymous optional dev)
 // Deploy: firebase deploy --only firestore:rules
 //
-// Flow: dev creates worlds/dev/accessKeys/{uuid} → playtester redeems on each
-// browser (keys are reusable) → bindings/{firebaseUid} stores accountId.
+// Flow: dev creates accessKeys (optional lockedEmail) → playtester signs in
+// with Google → redeems key → bindings/{firebaseUid} stores accountId.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -47,6 +47,17 @@ service cloud.firestore {
       return /databases/$(database)/documents/worlds/$(worldId)/accessKeys/$(keyId);
     }
 
+    function isGoogleSignIn() {
+      return request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function accessKeyEmailLockOk(worldId, keyId) {
+      let key = get(accessKeyPath(worldId, keyId)).data;
+      return !('lockedEmail' in key)
+        || key.lockedEmail == ''
+        || (request.auth.token.email is string && key.lockedEmail == request.auth.token.email);
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
@@ -63,7 +74,11 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
         && request.resource.data.createdAt is int
-        && request.resource.data.revoked == false;
+        && request.resource.data.revoked == false
+        && (!('lockedEmail' in request.resource.data)
+          || (request.resource.data.lockedEmail is string
+              && request.resource.data.lockedEmail.size() > 3
+              && request.resource.data.lockedEmail.size() <= 320));
       allow update: if isSignedIn()
         && isDevWorld(worldId)
         && isDevAccount(boundAccountId(worldId))
@@ -76,6 +91,7 @@ service cloud.firestore {
     match /worlds/{worldId}/bindings/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid && isDevWorld(worldId);
       allow create: if isSignedIn()
+        && isGoogleSignIn()
         && request.auth.uid == uid
         && isDevWorld(worldId)
         && request.resource.data.uid == uid
@@ -86,7 +102,8 @@ service cloud.firestore {
         && exists(accessKeyPath(worldId, request.resource.data.keyId))
         && get(accessKeyPath(worldId, request.resource.data.keyId)).data.revoked != true
         && get(accessKeyPath(worldId, request.resource.data.keyId)).data.accountId
-          == request.resource.data.accountId;
+          == request.resource.data.accountId
+        && accessKeyEmailLockOk(worldId, request.resource.data.keyId);
       allow update, delete: if false;
     }
 

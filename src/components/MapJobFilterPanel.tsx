@@ -6,7 +6,6 @@ import {
   filterAndSortJobPostings,
   JOB_SITE_KIND_FILTER_LABELS,
   jobBoardFilterOptions,
-  type JobSiteKindFilter,
   openJobPostings,
   sortJobPostingsByDistanceFromMainOffice,
   type JobBoardFilters,
@@ -53,12 +52,7 @@ export function MapJobFilterPanel({
   const activeCount = countActiveJobBoardFilters(filters);
   const activeSummaries = activeJobBoardFilterSummaries(filters);
 
-  const siteTypeOptions: JobSiteKindFilter[] = [
-    "tower",
-    "major_hub",
-    "commercial_lot",
-    "gov",
-  ];
+  const siteTypeOptions = options.siteTypes.map(([id]) => id);
 
   function updateFilter<K extends keyof JobBoardFilters>(
     key: K,
@@ -164,20 +158,20 @@ export function MapJobFilterPanel({
               </select>
             </label>
             <label className="map-job-filter-field map-job-filter-field--select-long">
-              <span>Role</span>
+              <span>Location</span>
               <select
-                value={filters.category}
+                value={filters.locationType}
                 onChange={(e) =>
                   updateFilter(
-                    "category",
-                    e.target.value as JobBoardFilters["category"],
+                    "locationType",
+                    e.target.value as JobBoardFilters["locationType"],
                   )
                 }
               >
                 <option value="all">All</option>
-                {options.categories.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.label}
+                {options.locationTypes.map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
                   </option>
                 ))}
               </select>
@@ -241,9 +235,9 @@ export function MapJobFilterPanel({
                 const selected = posting.id === selectedPostingId;
                 const payout = def.cashPerUnitHour;
                 const roleLabel =
-                  options.categories.find(
-                    (entry) => entry.id === def.requiredCategory,
-                  )?.label ?? def.requiredCategory;
+                  def.locationType != null
+                    ? JOB_SITE_KIND_FILTER_LABELS[def.locationType]
+                    : "Job site";
                 const towerLabel = jobSiteLabelForPosting(posting, def);
                 const distanceHx = hexDistanceFromMainOfficeForState(
                   state,

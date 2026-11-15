@@ -527,6 +527,22 @@
   color: var(--muted);
 }
 
+.secretary-recruit-resume-banner {
+  margin: 0.5rem 0.65rem 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.secretary-recruit-resume-banner .btn {
+  align-self: flex-start;
+}
+
 .secretary-view.hub-synced-tab-view .hub-synced-tab-scroll-body {
   display: flex;
   flex-direction: column;
