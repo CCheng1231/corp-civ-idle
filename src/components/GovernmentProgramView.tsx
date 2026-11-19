@@ -84,14 +84,14 @@ export function GovernmentProgramView({
 
       {gp.growthAccepted && !gp.growthDeclined ? (
         <section className="gov-program-card">
-          <div className="gov-program-card-heading-row">
-            <h3>Growth track</h3>
+          <h3 className="gov-program-card-title">
+            Growth track
             {growthProgress ? (
-              <p className="gov-program-step-progress" role="status">
+              <span className="gov-program-step-progress" role="status">
                 Step {growthProgress.current}/{growthProgress.total}
-              </p>
+              </span>
             ) : null}
-          </div>
+          </h3>
           {govGrowthTrackPaused(state) ? (
             <p className="gov-program-banner" role="status">
               Paused at {GOV_RECRUIT_UNLOCK_COUNT} hires — finish the executive
@@ -99,16 +99,20 @@ export function GovernmentProgramView({
             </p>
           ) : null}
           {growthStep ? (
-            <>
-              <h4>{growthStep.title}</h4>
-              <p>{growthStep.body}</p>
+            <div className="gov-program-step-block">
+              <p className="gov-program-step-lead">
+                <strong className="gov-program-step-title">{growthStep.title}</strong>
+                <span className="gov-program-step-objective">
+                  {growthStep.body}
+                </span>
+              </p>
               <GovProgramStepGuidance
                 state={state}
                 dispatch={dispatch}
                 kind="growth"
                 step={growthStep}
               />
-            </>
+            </div>
           ) : (
             <p className="muted">Growth track complete.</p>
           )}
@@ -118,14 +122,18 @@ export function GovernmentProgramView({
       {govExecutiveTrackActive(state) && execStep ? (
         <section className="gov-program-card">
           <h3>Executive attaché</h3>
-          <h4>{execStep.title}</h4>
-          <p>{execStep.body}</p>
-          <GovProgramStepGuidance
-            state={state}
-            dispatch={dispatch}
-            kind="executive"
-            step={execStep}
-          />
+          <div className="gov-program-step-block">
+            <p className="gov-program-step-lead">
+              <strong className="gov-program-step-title">{execStep.title}</strong>
+              <span className="gov-program-step-objective">{execStep.body}</span>
+            </p>
+            <GovProgramStepGuidance
+              state={state}
+              dispatch={dispatch}
+              kind="executive"
+              step={execStep}
+            />
+          </div>
           {execStep.stepId === "exec_charter_engage" ? (
             <>
               <p className="muted">
@@ -180,22 +188,26 @@ export function GovernmentProgramView({
       <section className="gov-program-card">
         <h3>Daily contract</h3>
         {dailyQuest ? (
-          <>
-            <p>{dailyQuest.title}</p>
-            <p className="muted">
-              Progress: {gp.calendar.dailyProgress} / {dailyQuest.param}
+          <div className="gov-program-step-block">
+            <p className="gov-program-step-lead">
+              <strong className="gov-program-step-title">{dailyQuest.title}</strong>
+              <span className="gov-program-step-objective">
+                Progress: {gp.calendar.dailyProgress} / {dailyQuest.param}
+              </span>
             </p>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!dailyReady}
-              onClick={() =>
-                dispatch({ type: "GOV_CLAIM_DAILY", now: Date.now() })
-              }
-            >
-              Claim stipend
-            </button>
-          </>
+            <div className="gov-program-step-actions">
+              <button
+                type="button"
+                className="btn primary gov-program-card-btn"
+                disabled={!dailyReady}
+                onClick={() =>
+                  dispatch({ type: "GOV_CLAIM_DAILY", now: Date.now() })
+                }
+              >
+                Claim stipend
+              </button>
+            </div>
+          </div>
         ) : (
           <p className="muted">No daily quest configured.</p>
         )}

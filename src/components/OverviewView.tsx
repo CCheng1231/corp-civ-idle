@@ -2,9 +2,7 @@ import { type Dispatch } from "react";
 import {
   RESEARCH,
   STRUCTURES,
-  WIN_NET_WORTH,
   formatInteger,
-  formatResourceShort,
   isResearchQueued,
   projectedResearchLevels,
   rosterAt,
@@ -19,12 +17,13 @@ import { RECRUITMENT_UNITS } from "../game/recruitmentData";
 import type { GameAction, GameState, OfficeLocationId, StructureId } from "../game/types";
 import { SceneBanner } from "./SceneBanner";
 import { TabPortraitLayout } from "./TabPortraitLayout";
-import { TabSiteHeader } from "./TabSiteHeader";
+import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { HubSyncedTabBackground } from "./HubSyncedTabBackground";
 import { HubSyncedTabScrollBody } from "./HubSyncedTabScrollBody";
 import homeStaffArt from "../assets/Home_Staff.png";
 import homeStructureArt from "../assets/Home_Structure.jpg";
 import { ContractorOfficeRoster } from "./ContractorOfficeRoster";
+import { OverviewNetWorthSummary } from "./OverviewNetWorthSummary";
 import { OverviewQueuePanel } from "./OverviewQueuePanel";
 
 interface OverviewViewProps {
@@ -49,33 +48,6 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
         0,
       )
     : totalWorkforce(rosterAt(state, officeId));
-
-  const overviewNetWorth = (
-    <div className="overview-summary-block">
-      <h2 className="overview-panel-title">Overview</h2>
-      <p
-        className="overview-net-worth-banner"
-        aria-label={`Net worth ${formatResourceShort(state.netWorth)} of ${formatResourceShort(WIN_NET_WORTH)} goal`}
-      >
-        <span className="tab-net-worth-label">Net worth</span>
-        <span className="overview-net-worth-amounts">
-          <strong className="tab-net-worth-value">
-            {formatResourceShort(state.netWorth)}
-          </strong>
-          <span className="tab-net-worth-goal">
-            / {formatResourceShort(WIN_NET_WORTH)}
-          </span>
-        </span>
-      </p>
-    </div>
-  );
-
-  const overviewBesidePortrait = (
-    <>
-      <TabSiteHeader homeHubTab="overview" state={state} dispatch={dispatch} />
-      <OverviewQueuePanel state={state} dispatch={dispatch} />
-    </>
-  );
 
   function openStructureFromOverview(
     siteId: OfficeLocationId,
@@ -151,7 +123,12 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
 
   const overviewBelowPortrait = (
     <>
-      {overviewNetWorth}
+      <OverviewNetWorthSummary state={state} />
+      <OverviewQueuePanel
+        state={state}
+        dispatch={dispatch}
+        className="overview-below-queues"
+      />
       <section className="overview-section location-view-section">
         <h3>Structure levels{showAll ? "" : ` — ${officeLabel}`}</h3>
         <SceneBanner
@@ -210,8 +187,11 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
   );
 
   return (
-    <div className="main-view-panel location-view-panel overview-view hub-synced-tab-view">
+    <div className="main-view-panel location-view-panel overview-view hub-synced-tab-view hub-synced-tab-view--progression-freeze">
       <HubSyncedTabBackground chiefId={state.chiefOfStaffId} />
+      <div className="progression-tab-frozen-header">
+        <ProgressionTabStickyChrome homeHubTab="overview" state={state} dispatch={dispatch} />
+      </div>
       <HubSyncedTabScrollBody>
         <TabPortraitLayout
           storageKey="corp-civ-idle-overview-portrait-size"
@@ -222,7 +202,7 @@ export function OverviewView({ state, dispatch }: OverviewViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {overviewBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{overviewBelowPortrait}</div>
       </HubSyncedTabScrollBody>

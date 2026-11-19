@@ -546,6 +546,67 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
             Sets the current Chief of Staff to max level and maxes both skill
             trees for wardrobe / skin unlock testing.
           </p>
+          {state.govProgram ? (
+            <>
+              <button
+                type="button"
+                className="btn dev-skip-btn"
+                onClick={() => {
+                  dispatch({ type: "GOV_RESET_GROWTH_TRACK" });
+                  dispatch({ type: "SET_SECRETARY_PANEL", panel: "govProgram" });
+                }}
+              >
+                Reset Govt Prog — Growth step 1
+              </button>
+              <button
+                type="button"
+                className="btn dev-skip-btn"
+                onClick={() => {
+                  dispatch({
+                    type: "GOV_RESET_GROWTH_TRACK",
+                    stepId: "growth_recruit_push",
+                  });
+                  dispatch({ type: "SET_VIEW", view: "recruitment" });
+                }}
+              >
+                Reset Govt Prog — Growth step 2
+              </button>
+              {(
+                [
+                  ["growth_map", "3 Site survey", "world" as const],
+                  ["growth_job", "4 First contract", "office" as const],
+                  ["growth_report", "5 After-action", "secretary" as const],
+                  ["growth_research", "6 R&D voucher", "research" as const],
+                  ["growth_bm_hint", "7 Branch hint", "research" as const],
+                  ["growth_bm_hired", "8 Branch lead", "recruitment" as const],
+                ] as const
+              ).map(([stepId, label, view]) => (
+                <button
+                  key={stepId}
+                  type="button"
+                  className="btn dev-skip-btn"
+                  onClick={() => {
+                    dispatch({
+                      type: "GOV_RESET_GROWTH_TRACK",
+                      stepId,
+                    });
+                    if (view === "secretary") {
+                      dispatch({ type: "SET_SECRETARY_PANEL", panel: "job" });
+                    } else {
+                      dispatch({ type: "SET_VIEW", view });
+                    }
+                  }}
+                >
+                  Reset Govt Prog — Growth step {label}
+                </button>
+              ))}
+              <p className="muted setting-hint">
+                Replays a growth step (earlier steps marked complete). Economy
+                and roster unchanged. Step 1 starts Structure coach; step 2
+                starts Recruit qty intro.
+              </p>
+            </>
+          ) : null}
         </section>
       ) : null}
 

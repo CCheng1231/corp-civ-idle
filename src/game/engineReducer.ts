@@ -125,8 +125,20 @@ import {
   govOnMapSiteInspected,
   govOnOpenGovProgram,
   govOnOpenRoster,
+  govAdvanceMapCoachTier,
+  govAdvanceMapDrawerCoach,
+  govOnEnterWorldView,
+  govOnMapJobFocused,
+  govOnJobSendFromMap,
+  govCancelMapJobEngage,
+  govAfterJobCoachViewChange,
   govResetGrowthTrack,
+  govResetGrowthTrackAtStep,
+  govStartMapCoach,
+  govStartJobCoach,
   govSkipCharter,
+  govAfterStructureCoachViewChange,
+  govReleaseStructureCoach,
   govStartStructureCoach,
   govStartRecruitCoach,
   govAdvanceRecruitCoach,
@@ -335,7 +347,12 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
             ? (action.researchFocusResearchId ?? null)
             : null,
       };
-      return next;
+      next =
+        action.view === "world"
+          ? govOnEnterWorldView(next)
+          : next;
+      next = govAfterStructureCoachViewChange(state, next);
+      return govAfterJobCoachViewChange(state, next);
     }
 
     case "CLEAR_JOB_FOCUS":
@@ -500,11 +517,37 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "GOV_MAP_SITE_INSPECTED":
       return govOnMapSiteInspected(state);
 
+    case "GOV_START_MAP_COACH":
+      return govStartMapCoach(state);
+
+    case "GOV_ADVANCE_MAP_COACH_TIER":
+      return govAdvanceMapCoachTier(state, action.postingId);
+
+    case "GOV_MAP_JOB_FOCUSED":
+      return govOnMapJobFocused(state, action.postingId);
+
+    case "GOV_ADVANCE_MAP_DRAWER_COACH":
+      return govAdvanceMapDrawerCoach(state);
+
+    case "GOV_START_JOB_COACH":
+      return govStartJobCoach(state);
+
+    case "GOV_ON_JOB_SEND_FROM_MAP":
+      return govOnJobSendFromMap(state, action.postingId);
+
+    case "GOV_CANCEL_MAP_JOB_ENGAGE":
+      return govCancelMapJobEngage(state);
+
     case "GOV_RESET_GROWTH_TRACK":
-      return govResetGrowthTrack(state);
+      return action.stepId
+        ? govResetGrowthTrackAtStep(state, action.stepId)
+        : govResetGrowthTrack(state);
 
     case "GOV_START_STRUCTURE_COACH":
       return govStartStructureCoach(state);
+
+    case "GOV_RELEASE_STRUCTURE_COACH":
+      return govReleaseStructureCoach(state);
 
     case "GOV_START_RECRUIT_COACH":
       return govStartRecruitCoach(state);
@@ -512,42 +555,50 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "GOV_ADVANCE_RECRUIT_COACH":
       return govAdvanceRecruitCoach(state);
 
-    case "SET_HOME_PANEL":
-      return {
+    case "SET_HOME_PANEL": {
+      const homeHubResume =
+        action.panel === "overview" ? ("overview" as const) : ("landing" as const);
+      const next: GameState = {
         ...state,
         view: "overview",
         homePanel: action.panel,
-        homeHubResume: action.panel === "overview" ? "overview" : "landing",
+        homeHubResume,
       };
+      return govAfterStructureCoachViewChange(state, next);
+    }
 
-    case "GO_HOME_LANDING":
-      return {
+    case "GO_HOME_LANDING": {
+      const next = {
         ...state,
-        view: "overview",
-        homePanel: "landing",
-        homeHubResume: "landing",
+        view: "overview" as const,
+        homePanel: "landing" as const,
+        homeHubResume: "landing" as const,
       };
+      return govAfterStructureCoachViewChange(state, next);
+    }
 
     case "RESTORE_HOME_HUB": {
       const target = state.homeHubResume;
+      let next: GameState;
       if (target === "landing") {
-        return {
+        next = {
           ...state,
           view: "overview",
           homePanel: "landing",
         };
-      }
-      if (target === "overview") {
-        return {
+      } else if (target === "overview") {
+        next = {
           ...state,
           view: "overview",
           homePanel: "overview",
         };
+      } else {
+        next = {
+          ...state,
+          view: target,
+        };
       }
-      return {
-        ...state,
-        view: target,
-      };
+      return govAfterStructureCoachViewChange(state, next);
     }
 
     case "GO_SECRETARY_LANDING":
@@ -971,6 +1022,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 });
       next.researchQueues = { ...next.researchQueues, [officeId]: queue };
       const buildHours = buildMs / (3600 * 1000);
+      const queuedJob = queue[queue.length - 1];
       return govAfterResearchQueue(
         appendActivityLogs(next, [
           {
@@ -986,6 +1038,8 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
             ],
           },
         ]),
+        officeId,
+        queuedJob ? { jobId: queuedJob.id } : undefined,
       );
     }
 

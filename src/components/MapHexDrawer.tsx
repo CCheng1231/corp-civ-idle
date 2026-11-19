@@ -85,6 +85,24 @@ import {
 } from "./mapHexInfo";
 import type { MapLandmarkArtInstance } from "../game/mapLandmarkInstances";
 import { mapLandmarkArtDisplayName } from "../game/mapLandmarkArtRegistry";
+import { govShouldMapSendOpenEngageModal } from "../game/govProgram";
+
+function dispatchMapJobSend(
+  state: GameState,
+  dispatch: Dispatch<GameAction>,
+  postingId: string,
+) {
+  if (govShouldMapSendOpenEngageModal(state, postingId)) {
+    dispatch({ type: "GOV_ON_JOB_SEND_FROM_MAP", postingId });
+    return;
+  }
+  dispatch({
+    type: "SET_VIEW",
+    view: "office",
+    jobFocusPostingId: postingId,
+  });
+}
+
 interface MapHexDrawerProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
@@ -380,6 +398,7 @@ function HexContractsSection({
   isEngaged,
   onSend,
   highlightPostingId,
+  coachSendPostingId = null,
 }: {
   gameState: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">;
   coord: AxialCoord;
@@ -387,6 +406,7 @@ function HexContractsSection({
   isEngaged: (postingId: string) => boolean;
   onSend: (postingId: string) => void;
   highlightPostingId?: string | null;
+  coachSendPostingId?: string | null;
 }) {
   const [contractsOpen, setContractsOpen] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
@@ -412,7 +432,11 @@ function HexContractsSection({
   }
 
   return (
-    <section className="map-hex-contracts-section" aria-label="Contracts">
+    <section
+      id="gov-coach-anchor-map-hex-contracts"
+      className="map-hex-contracts-section gov-program-coach-target"
+      aria-label="Contracts"
+    >
       <button
         type="button"
         className={`map-hex-contracts-toggle${contractsOpen ? " is-open" : ""}`}
@@ -488,13 +512,26 @@ function HexContractsSection({
                               </span>
                             ) : null}
                           </div>
-                          <button
-                            type="button"
-                            className="map-hex-job-send"
-                            onClick={() => onSend(posting.id)}
+                          <span
+                            id={
+                              coachSendPostingId === posting.id
+                                ? `gov-coach-anchor-map-job-send-${posting.id}`
+                                : undefined
+                            }
+                            className={
+                              coachSendPostingId === posting.id
+                                ? "map-hex-job-send-coach-anchor gov-program-coach-target"
+                                : "map-hex-job-send-wrap"
+                            }
                           >
-                            Send
-                          </button>
+                            <button
+                              type="button"
+                              className="map-hex-job-send"
+                              onClick={() => onSend(posting.id)}
+                            >
+                              Send
+                            </button>
+                          </span>
                         </div>
                       </div>
                     </li>
@@ -513,12 +550,14 @@ function MajorHubContractsSection({
   majorHubId,
   coord,
   highlightPostingId,
+  coachSendPostingId = null,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   majorHubId: MajorHubId;
   coord: AxialCoord;
   highlightPostingId?: string | null;
+  coachSendPostingId?: string | null;
 }) {
   const postings = postingsForMajorHub(state, majorHubId);
   const activePostingIds = new Set(
@@ -528,11 +567,7 @@ function MajorHubContractsSection({
   );
 
   function sendToSecretary(postingId: string) {
-    dispatch({
-      type: "SET_VIEW",
-      view: "office",
-      jobFocusPostingId: postingId,
-    });
+    dispatchMapJobSend(state, dispatch, postingId);
   }
 
   return (
@@ -543,6 +578,7 @@ function MajorHubContractsSection({
       isEngaged={(postingId) => activePostingIds.has(postingId)}
       onSend={sendToSecretary}
       highlightPostingId={highlightPostingId}
+      coachSendPostingId={coachSendPostingId}
     />
   );
 }
@@ -553,12 +589,14 @@ function JobSiteContractsSection({
   locationId,
   coord,
   highlightPostingId,
+  coachSendPostingId = null,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   locationId: string;
   coord: AxialCoord;
   highlightPostingId?: string | null;
+  coachSendPostingId?: string | null;
 }) {
   const postings = postingsForLocationId(state, locationId);
   const activePostingIds = new Set(
@@ -573,11 +611,7 @@ function JobSiteContractsSection({
   );
 
   function sendToSecretary(postingId: string) {
-    dispatch({
-      type: "SET_VIEW",
-      view: "office",
-      jobFocusPostingId: postingId,
-    });
+    dispatchMapJobSend(state, dispatch, postingId);
   }
 
   return (
@@ -588,6 +622,7 @@ function JobSiteContractsSection({
       isEngaged={(postingId) => activePostingIds.has(postingId)}
       onSend={sendToSecretary}
       highlightPostingId={highlightPostingId}
+      coachSendPostingId={coachSendPostingId}
     />
   );
 }
@@ -598,12 +633,14 @@ function TowerContractsSection({
   towerId,
   coord,
   highlightPostingId,
+  coachSendPostingId = null,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   towerId: TowerId;
   coord: AxialCoord;
   highlightPostingId?: string | null;
+  coachSendPostingId?: string | null;
 }) {
   const postings = postingsForTower(state, towerId);
   const activePostingIds = new Set(
@@ -614,11 +651,7 @@ function TowerContractsSection({
 
   function sendToSecretary(postingId: string) {
     dispatch({ type: "SELECT_TOWER", towerId });
-    dispatch({
-      type: "SET_VIEW",
-      view: "office",
-      jobFocusPostingId: postingId,
-    });
+    dispatchMapJobSend(state, dispatch, postingId);
   }
 
   return (
@@ -629,6 +662,7 @@ function TowerContractsSection({
       isEngaged={(postingId) => activePostingIds.has(postingId)}
       onSend={sendToSecretary}
       highlightPostingId={highlightPostingId}
+      coachSendPostingId={coachSendPostingId}
     />
   );
 }
@@ -711,12 +745,14 @@ function CommercialLotSection({
   coord,
   info,
   highlightPostingId,
+  coachSendPostingId = null,
 }: {
   state: GameState;
   dispatch: Dispatch<GameAction>;
   coord: AxialCoord;
   info: Extract<ReturnType<typeof mapHexInfo>, { kind: "commercial" }>;
   highlightPostingId?: string | null;
+  coachSendPostingId?: string | null;
 }) {
   const site = commercialSiteAt(coord);
   const [branchOpen, setBranchOpen] = useState(false);
@@ -769,11 +805,7 @@ function CommercialLotSection({
 
   function sendToSecretary(postingId: string) {
     dispatch({ type: "SELECT_TOWER", towerId: null });
-    dispatch({
-      type: "SET_VIEW",
-      view: "office",
-      jobFocusPostingId: postingId,
-    });
+    dispatchMapJobSend(state, dispatch, postingId);
   }
 
   return (
@@ -1039,6 +1071,7 @@ function CommercialLotSection({
         isEngaged={(postingId) => activePostingIds.has(postingId)}
         onSend={sendToSecretary}
         highlightPostingId={highlightPostingId}
+        coachSendPostingId={coachSendPostingId}
       />
     </>
   );
@@ -1068,23 +1101,13 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
   const defaultKind = mapHexKindLabel(info);
   const distanceLabel = mapHexDistanceLabel(state, coord);
 
-  let displayTitle = defaultTitle;
-  let displayKind = defaultKind;
-  let kindIsJobTitle = false;
-
-  if (highlightPostingId) {
-    const posting = state.jobPostings.find((p) => p.id === highlightPostingId);
-    if (posting) {
-      try {
-        const def = jobDefinitionForPosting(posting);
-        displayTitle = jobSiteLabelForPosting(posting, def);
-        displayKind = def.title;
-        kindIsJobTitle = true;
-      } catch {
-        /* keep hex defaults */
-      }
-    }
-  }
+  const displayTitle = defaultTitle;
+  const displayKind = defaultKind;
+  const kindIsJobTitle = false;
+  const coachSendPostingId =
+    state.govProgram?.growthJobCoach === "map_send"
+      ? (state.govProgram.growthJobCoachPostingId ?? null)
+      : null;
 
   let commercialInfo: Extract<MapHexInfo, { kind: "commercial" }> | null =
     info.kind === "commercial" ? info : null;
@@ -1115,10 +1138,16 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
   return (
     <aside
       ref={ref}
-      className={`map-hex-drawer is-open map-hex-drawer-side-${side}`}
+      id="gov-coach-anchor-map-hex-drawer"
+      className={`map-hex-drawer is-open map-hex-drawer-side-${side}${
+        highlightPostingId ? " map-hex-drawer--job-focus" : ""
+      }`}
       aria-label="Map location details"
     >
-      <header className="map-hex-drawer-head">
+      <header
+        id="gov-coach-anchor-map-hex-drawer-head"
+        className="map-hex-drawer-head"
+      >
         <div className="map-hex-drawer-head-text">
           <span
             className={`map-hex-drawer-kind${
@@ -1127,7 +1156,12 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
           >
             {displayKind}
           </span>
-          <h3 className="map-hex-drawer-title">{displayTitle}</h3>
+          <h3
+            id="gov-coach-anchor-map-hex-drawer-title"
+            className="map-hex-drawer-title gov-program-coach-target"
+          >
+            {displayTitle}
+          </h3>
         </div>
         <button
           type="button"
@@ -1142,12 +1176,17 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
       <div className="map-hex-drawer-body">
         <div className="map-hex-facts map-hex-facts-compact">
           <span
-            className={`map-hex-region-pill map-hex-region-pill-${info.region}`}
+            id="gov-coach-anchor-map-hex-region"
+            className={`map-hex-region-pill map-hex-region-pill-${info.region} gov-program-coach-target`}
             title={REGION_LABELS[info.region]}
           >
             {REGION_LABELS[info.region]}
           </span>
-          <span className="map-hex-distance-pill" title="Distance from main office">
+          <span
+            id="gov-coach-anchor-map-hex-distance"
+            className="map-hex-distance-pill gov-program-coach-target"
+            title="Distance from main office"
+          >
             {distanceLabel}
           </span>
         </div>
@@ -1177,6 +1216,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             towerId={contractSite.towerId}
             coord={coord}
             highlightPostingId={highlightPostingId}
+            coachSendPostingId={coachSendPostingId}
           />
         ) : null}
 
@@ -1187,6 +1227,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             locationId={contractSite.locationId}
             coord={coord}
             highlightPostingId={highlightPostingId}
+            coachSendPostingId={coachSendPostingId}
           />
         ) : null}
 
@@ -1197,6 +1238,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             majorHubId={contractSite.majorHubId}
             coord={coord}
             highlightPostingId={highlightPostingId}
+            coachSendPostingId={coachSendPostingId}
           />
         ) : null}
 
@@ -1211,6 +1253,7 @@ export const MapHexDrawer = forwardRef<HTMLElement, MapHexDrawerProps>(
             coord={coord}
             info={commercialInfo}
             highlightPostingId={highlightPostingId}
+            coachSendPostingId={coachSendPostingId}
           />
         ) : null}
 

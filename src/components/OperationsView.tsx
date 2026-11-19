@@ -48,8 +48,8 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
     anchor?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [structureQueueCoachUi, structureQueueCoachJobId]);
 
-  const officeBesidePortrait = (
-    <>
+  const structureQueuesBelowBanner = (
+    <div className="tab-hero-queues">
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = state.structureQueues[siteId] ?? [];
@@ -90,12 +90,16 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
         />
       )}
       {structureQueueIntro ? (
-        <GovProgramStructureQueueIntro dispatch={dispatch} />
+        <GovProgramStructureQueueIntro dispatch={dispatch} key="structure-queue-intro" />
       ) : null}
       {structureQueueCoach ? (
-        <GovProgramStructureCoachCard state={state} dispatch={dispatch} />
+        <GovProgramStructureCoachCard
+          state={state}
+          dispatch={dispatch}
+          presentation="overlay"
+        />
       ) : null}
-    </>
+    </div>
   );
 
   return (
@@ -125,7 +129,7 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {officeBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="tab-below-portrait">
           {!showAll ? (
@@ -135,6 +139,7 @@ export function OperationsView({ state, dispatch }: OperationsViewProps) {
               variant="banner"
             />
           ) : null}
+          {structureQueuesBelowBanner}
           <LocationSitePanel
             state={state}
             dispatch={dispatch}

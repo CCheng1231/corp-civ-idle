@@ -2,6 +2,10 @@ import { useEffect, useState, type Dispatch } from "react";
 import { secretaryById } from "../game/secretaryData";
 import { secretaryTabPortraitSrc } from "../game/secretaryAssets";
 import { secretaryLandingPanStorageKey } from "../game/hubLandingPan";
+import {
+  govProgramGovTabQuestPending,
+  govSecretaryLandingProgramReminder,
+} from "../game/govProgram";
 import { secretaryTips } from "../game/secretaryBriefing";
 import type { GameAction, GameState } from "../game/types";
 import { useCoverBackgroundPan } from "../hooks/useCoverBackgroundPan";
@@ -30,6 +34,8 @@ export function SecretaryLandingView({
   const portrait = secretaryTabPortraitSrc(chiefId, state);
   const panStorageKey = secretaryLandingPanStorageKey(chiefId);
   const tips = secretaryTips(state);
+  const programReminder = govSecretaryLandingProgramReminder(state);
+  const govQuestPending = govProgramGovTabQuestPending(state);
   const [focusRailOpen, setFocusRailOpen] = useState(() => {
     try {
       return localStorage.getItem(SECRETARY_FOCUS_RAIL_KEY) === "true";
@@ -131,6 +137,11 @@ export function SecretaryLandingView({
             <p className="hub-landing-chat">
               {chief.reportLine} — {chief.name}
             </p>
+            {programReminder ? (
+              <p className="hub-landing-program-reminder" role="status">
+                {programReminder}
+              </p>
+            ) : null}
           </div>
           <div className="hub-landing-buttons">
             {SECRETARY_DESTINATIONS.map((destination) => (
@@ -138,9 +149,22 @@ export function SecretaryLandingView({
                 key={destination.id}
                 type="button"
                 className="btn hub-landing-nav-btn"
+                aria-label={
+                  destination.id === "govProgram" && govQuestPending
+                    ? "Gov't Prog — guided step ready"
+                    : destination.label
+                }
                 onClick={() => openDestination(destination.id)}
               >
                 {destination.label}
+                {destination.id === "govProgram" && govQuestPending ? (
+                  <span
+                    className="hub-landing-nav-btn-badge"
+                    aria-hidden="true"
+                  >
+                    !
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>

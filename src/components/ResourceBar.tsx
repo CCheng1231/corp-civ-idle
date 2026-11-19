@@ -210,7 +210,7 @@ export function ResourceBar({ state }: ResourceBarProps) {
   } | null>(null);
 
   return (
-    <header className="resource-bar">
+    <header id="gov-coach-anchor-resource-bar" className="resource-bar">
       <div className="resource-bar-row">
         <div className="brand" title="Corp Civ Idle">
           <span className="brand-mark" aria-hidden="true">

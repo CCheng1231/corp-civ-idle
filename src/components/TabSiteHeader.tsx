@@ -144,6 +144,7 @@ export function TabSiteHeader({
           Section
         </span>
         <select
+          id="gov-coach-anchor-home-section"
           className="location-office-select tab-office-select tab-hub-picker-select"
           value={homeHubTab}
           aria-label="Section"

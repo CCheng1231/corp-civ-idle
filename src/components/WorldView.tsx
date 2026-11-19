@@ -1,15 +1,16 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useLayoutEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type Dispatch,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import {
   majorHubAtCoord,
 } from "../game/worldMapMajorHubs";
@@ -95,13 +96,24 @@ import type {
   JobPosting,
   OfficeLocationId,
 } from "../game/types";
-import { GovProgramLiveCue } from "./GovProgramLiveCue";
+import {
+  govMapDrawerCoachActive,
+  govMapJobEngageModalActive,
+  govWorldMapHeaderTitle,
+} from "../game/govProgram";
+import { GovProgramMapFilterIntro } from "./GovProgramMapFilterIntro";
+import { GovProgramMapNavCoach } from "./GovProgramMapNavCoach";
 import { MapHexDrawer } from "./MapHexDrawer";
+import { MapWorldJobEngageDialog } from "./MapWorldJobEngageDialog";
+import { GovProgramMapJobTravelCoach } from "./GovProgramMapJobTravelCoach";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
 import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
 import {
   DEFAULT_JOB_BOARD_FILTERS,
+  filterAndSortJobPostings,
+  openJobPostings,
+  sortJobPostingsByDistanceFromMainOffice,
   type JobBoardFilters,
 } from "../game/jobBoard";
 import { MapPlayerHq3DMarker } from "./MapPlayerHq3DMarker";
@@ -803,6 +815,66 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     requestAnimationFrame(() => requestAnimationFrame(centerOnHqHex));
   }
 
+  const MAP_JOB_DISPATCH_ZOOM_REL = 1.2;
+
+  function focusJobEngagementTravel(engagement: JobEngagement) {
+    const viewport = mapViewportRef.current;
+    if (!viewport || mapViewBoundsRef.current.width <= 0) return;
+    const { from, to } = jobSiteCoordsForEngagement(state, engagement);
+    const bounds = mapViewBoundsRef.current;
+    const content = mapContentSizeRef.current;
+    const fromPx = worldMapCoordToContentPixel(
+      from,
+      bounds,
+      content,
+      state.settings,
+    );
+    const toPx = worldMapCoordToContentPixel(to, bounds, content, state.settings);
+    const mid = {
+      x: (fromPx.x + toPx.x) / 2,
+      y: (fromPx.y + toPx.y) / 2,
+    };
+    const spanPx = Math.hypot(toPx.x - fromPx.x, toPx.y - fromPx.y);
+    const vpW = Math.max(1, viewport.clientWidth);
+    const vpH = Math.max(1, viewport.clientHeight);
+    const fit = fitZoomRef.current;
+    let zoomRel = MAP_JOB_DISPATCH_ZOOM_REL;
+    if (spanPx > 0 && fit > 0) {
+      const targetSpan = Math.min(vpW, vpH) * 0.62;
+      zoomRel = Math.min(
+        MAP_ZOOM_REL_MAX,
+        Math.max(MAP_HQ_FOCUS_ZOOM_REL, targetSpan / (spanPx * fit)),
+      );
+    }
+    mapZoomRelRef.current = zoomRel;
+    setMapZoomRel(zoomRel);
+    const zoom = fit * zoomRel;
+    const pan = panToCenterContentPoint(mid, content, zoom);
+    setPanClamped(pan, zoom);
+  }
+
+  const jobEngagementsLenRef = useRef(state.jobEngagements.length);
+
+  useEffect(() => {
+    if (state.view !== "world") {
+      jobEngagementsLenRef.current = state.jobEngagements.length;
+      return;
+    }
+    const prev = jobEngagementsLenRef.current;
+    const count = state.jobEngagements.length;
+    if (count > prev) {
+      const engagement = state.jobEngagements[count - 1];
+      setJobFilterOpen(false);
+      setJobFilterExpanded(false);
+      setSelectedMapPostingId(null);
+      setInspectedCoord(null);
+      if (engagement.phase === "outbound") {
+        requestAnimationFrame(() => focusJobEngagementTravel(engagement));
+      }
+    }
+    jobEngagementsLenRef.current = count;
+  }, [state.jobEngagements, state.view]);
+
   function closeDrawer() {
     setSelectedMapPostingId(null);
     setInspectedCoord(null);
@@ -1222,11 +1294,130 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
     } as CSSProperties;
   }, [inspectedCoord, mapDrawerReservePx]);
 
+  const mapCoachPostingId = state.govProgram?.growthMapCoachPostingId ?? null;
+  const jobCoachPostingId = state.govProgram?.growthJobCoachPostingId ?? null;
+  const mapFilterCoachPhase = state.govProgram?.growthMapCoach;
+  const jobFilterCoachPhase =
+    state.govProgram?.growthJobCoach === "pick_job"
+      ? ("pick_job" as const)
+      : null;
+  const mapFilterCoachNeedsOpen =
+    mapFilterCoachPhase === "filter_intro" ||
+    mapFilterCoachPhase === "filter_tier" ||
+    mapFilterCoachPhase === "pick_job" ||
+    jobFilterCoachPhase === "pick_job" ||
+    state.govProgram?.pendingModal === "map_filter_intro";
+
+  useEffect(() => {
+    const onFilterCoachStart =
+      state.govProgram?.growthStepId === "growth_map" &&
+      (state.govProgram.growthMapCoach === "filter_intro" ||
+        state.govProgram.pendingModal === "map_filter_intro");
+    if (onFilterCoachStart) {
+      setMapJobFilters({ ...DEFAULT_JOB_BOARD_FILTERS });
+      setJobFilterExpanded(false);
+      mapFilterTierPrevRef.current = "all";
+    }
+  }, [
+    state.govProgram?.growthStepId,
+    state.govProgram?.growthMapCoach,
+    state.govProgram?.pendingModal,
+  ]);
+
+  useEffect(() => {
+    if (
+      state.govProgram?.growthStepId !== "growth_job" ||
+      state.govProgram.growthJobCoach !== "pick_job"
+    ) {
+      return;
+    }
+    setMapJobFilters((prev) => ({ ...prev, tier: 1 }));
+    setJobFilterExpanded(false);
+  }, [
+    state.govProgram?.growthStepId,
+    state.govProgram?.growthJobCoach,
+  ]);
+
+  useEffect(() => {
+    if (state.govProgram?.growthMapCoach !== "filter_tier") return;
+    mapFilterTierPrevRef.current = mapJobFilters.tier;
+  }, [state.govProgram?.growthMapCoach]);
+
+  useEffect(() => {
+    if (!mapFilterCoachNeedsOpen) return;
+    if (!jobFilterOpen) setJobFilterOpen(true);
+  }, [
+    mapFilterCoachNeedsOpen,
+    mapFilterCoachPhase,
+    jobFilterOpen,
+    state.govProgram?.pendingModal,
+  ]);
+
+  useEffect(() => {
+    const phase = state.govProgram?.growthMapCoach;
+  const filterIntro =
+      phase === "filter_intro" ||
+      phase === "filter_tier" ||
+      state.govProgram?.pendingModal === "map_filter_intro";
+    if (!filterIntro || phase === "pick_job") return;
+    if (inspectedCoord !== null) {
+      closeDrawer();
+    }
+    if (selectedMapPostingId !== null) {
+      setSelectedMapPostingId(null);
+    }
+  }, [
+    state.govProgram?.growthMapCoach,
+    state.govProgram?.pendingModal,
+    inspectedCoord,
+    selectedMapPostingId,
+  ]);
+
+  const mapFilterTierPrevRef = useRef<JobBoardFilters["tier"]>(
+    mapJobFilters.tier,
+  );
+
+  useEffect(() => {
+    const phase = state.govProgram?.growthMapCoach;
+    if (phase !== "filter_tier") {
+      mapFilterTierPrevRef.current = mapJobFilters.tier;
+      return;
+    }
+    const prevTier = mapFilterTierPrevRef.current;
+    mapFilterTierPrevRef.current = mapJobFilters.tier;
+    if (mapJobFilters.tier !== 1 || prevTier === 1) return;
+    const tier1Visible = sortJobPostingsByDistanceFromMainOffice(
+      state,
+      filterAndSortJobPostings(
+        openJobPostings(state),
+        { ...mapJobFilters, tier: 1 },
+        "expires_soon",
+      ),
+    );
+    const firstT1 = tier1Visible.find((posting) => {
+      try {
+        return jobDefinitionForPosting(posting).tier === 1;
+      } catch {
+        return false;
+      }
+    });
+    dispatch({
+      type: "GOV_ADVANCE_MAP_COACH_TIER",
+      postingId: firstT1?.id ?? null,
+    });
+  }, [mapJobFilters, state.govProgram?.growthMapCoach, state.jobPostings, dispatch]);
+
   function focusJobPosting(posting: JobPosting) {
     const def = jobDefinitionForPosting(posting);
     const coord = jobSiteCoordForPosting(posting, def, state.settings);
     setSelectedMapPostingId(posting.id);
     setInspectedCoord({ ...coord });
+    if (state.govProgram?.growthMapCoach === "pick_job") {
+      dispatch({ type: "GOV_MAP_JOB_FOCUSED", postingId: posting.id });
+    }
+    if (state.govProgram?.growthJobCoach === "pick_job") {
+      dispatch({ type: "GOV_MAP_JOB_FOCUSED", postingId: posting.id });
+    }
     const contentPx = viewBoxPointToContentPixelWithAspect(
       worldMapPresentationPixel(coord, state.settings),
       mapViewBounds,
@@ -1266,15 +1457,43 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       });
   }, [state.companyPresence, state.onlineSession]);
 
+  const mapJobEngagePosting = useMemo(() => {
+    if (!govMapJobEngageModalActive(state)) return null;
+    const id = state.govProgram?.growthJobCoachPostingId;
+    if (!id) return null;
+    return state.jobPostings.find((p) => p.id === id) ?? null;
+  }, [
+    state,
+    state.govProgram?.growthJobCoach,
+    state.govProgram?.growthJobCoachPostingId,
+    state.jobPostings,
+  ]);
+
   return (
     <div
       className={`world-view map-presentation-${isDev ? "dev" : "player"}${
         mapDevHexEditActive ? " world-view-dev-hex-edit" : ""
+      }${
+        mapFilterCoachPhase === "filter_intro" ||
+        mapFilterCoachPhase === "filter_tier" ||
+        mapFilterCoachPhase === "pick_job" ||
+        jobFilterCoachPhase === "pick_job"
+          ? " world-view--map-filter-coach"
+          : ""
+      }${
+        govMapDrawerCoachActive(state)
+          ? " world-view--map-drawer-coach"
+          : ""
+      }${
+        state.govProgram?.growthJobCoach === "map_send"
+          ? " world-view--map-job-send-coach"
+          : ""
       }`}
     >
       <div className="world-header">
+        <GovProgramLiveCue state={state} dispatch={dispatch} screen="world" />
         <div className="world-header-top">
-          <h2>World map</h2>
+          <h2>{govWorldMapHeaderTitle(state)}</h2>
           <div
             className="world-map-controls world-map-controls-compact"
             role="group"
@@ -1313,7 +1532,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
             ) : null}
           </div>
         </div>
-        <GovProgramLiveCue state={state} dispatch={dispatch} screen="world" />
       </div>
 
       <div className="world-map-stage" style={mapStagePanelStyle}>
@@ -1328,7 +1546,21 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
             onFiltersChange={setMapJobFilters}
             onFocusPosting={focusJobPosting}
             selectedPostingId={selectedMapPostingId}
+            coachPostingId={
+              state.govProgram?.growthMapCoach === "pick_job"
+                ? mapCoachPostingId
+                : state.govProgram?.growthJobCoach === "pick_job"
+                  ? jobCoachPostingId
+                  : null
+            }
           />
+        ) : null}
+
+        {state.govProgram?.pendingModal === "map_filter_intro" ? (
+          <GovProgramMapFilterIntro dispatch={dispatch} />
+        ) : null}
+        {!isDev ? (
+          <GovProgramMapNavCoach state={state} dispatch={dispatch} />
         ) : null}
 
         <div className="map-top-left-controls">
@@ -1855,6 +2087,17 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
         <ProgressionCatalogInfoDialog
           kind="worldMap"
           onClose={() => setMapInfoOpen(false)}
+        />
+      ) : null}
+      {state.govProgram?.pendingModal === "growth_job_travel_coach" ? (
+        <GovProgramMapJobTravelCoach dispatch={dispatch} />
+      ) : null}
+      {mapJobEngagePosting ? (
+        <MapWorldJobEngageDialog
+          state={state}
+          dispatch={dispatch}
+          posting={mapJobEngagePosting}
+          onClose={() => dispatch({ type: "GOV_CANCEL_MAP_JOB_ENGAGE" })}
         />
       ) : null}
     </div>

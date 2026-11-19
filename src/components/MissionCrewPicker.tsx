@@ -34,7 +34,10 @@ export function MissionCrewPicker({
 }: MissionCrewPickerProps) {
   const minUnitTier = requiredMinUnitTierForJob(job);
   const units = RECRUITMENT_UNITS.filter(
-    (unit) => unit.tier >= minUnitTier && (roster[unit.id] ?? 0) > 0,
+    (unit) =>
+      unit.id !== "branch_manager" &&
+      unit.tier >= minUnitTier &&
+      (roster[unit.id] ?? 0) > 0,
   );
 
   function openRecruitment(unitId: UnitId) {

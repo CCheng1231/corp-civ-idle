@@ -140,6 +140,7 @@ html.viewport-preview-galaxy-s24 #root {
 }
 
 .device-preview-webview {
+  position: relative;
   overflow: hidden;
   background: var(--bg);
   container-type: size;

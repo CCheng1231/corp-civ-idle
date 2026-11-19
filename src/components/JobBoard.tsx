@@ -736,6 +736,11 @@ export function JobBoard({
                   }))
                 }
                 onEngageSuccess={() => handleEngageSuccess(selectedPosting.id)}
+                coachEngageHighlight={
+                  state.govProgram?.growthStepId === "growth_job" &&
+                  state.govProgram.growthJobCoach === "map_engage" &&
+                  selectedPosting.id === state.govProgram.growthJobCoachPostingId
+                }
               />
             </div>
           </aside>

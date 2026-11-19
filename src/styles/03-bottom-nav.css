@@ -487,6 +487,7 @@
 }
 
 .hub-landing-nav-btn {
+  position: relative;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -501,6 +502,41 @@
   line-height: 1;
   border-radius: 0.35rem;
   flex-shrink: 0;
+  overflow: visible;
+}
+
+.hub-landing-nav-btn-badge {
+  position: absolute;
+  top: -0.14rem;
+  right: -0.12rem;
+  z-index: 1;
+  display: block;
+  width: 0.48rem;
+  height: 0.48rem;
+  font-size: 0.46rem;
+  font-weight: 800;
+  line-height: 0.48rem;
+  text-align: center;
+  color: rgba(28, 22, 8, 0.96);
+  background: #f5e06a;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 0 0.35rem rgba(245, 224, 106, 0.55);
+}
+
+.hub-landing-program-reminder {
+  margin: 0.08rem 0 0;
+  max-width: calc(100% - 0.25rem);
+  font-size: 0.54rem;
+  font-weight: 550;
+  line-height: 1.38;
+  text-align: left;
+  color: rgba(245, 224, 106, 0.96);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(0, 0, 0, 0.65);
 }
 
 .hub-landing-copy-block {

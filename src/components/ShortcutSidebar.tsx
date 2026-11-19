@@ -250,6 +250,7 @@ export function ShortcutSidebar({
     return (
       <button
         key="overview"
+        id="gov-coach-anchor-home"
         type="button"
         className={
           homeActive

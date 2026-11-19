@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState } from "./constants";
-import { govAcceptGrowthProgram, govOnMapSiteInspected } from "./govProgram";
+import {
+  govAcceptGrowthProgram,
+  govOnMapSiteInspected,
+  govWorldMapHeaderTitle,
+} from "./govProgram";
 import { govProgramLiveCue } from "./govProgramLiveCue";
 
 describe("gov program live cue", () => {
@@ -9,11 +13,9 @@ describe("gov program live cue", () => {
     expect(govProgramLiveCue(state, "operations")).toBeNull();
   });
 
-  it("points at Office Desk only on the structure tab", () => {
+  it("keeps step 1 structure off the live cue strip", () => {
     const state = govAcceptGrowthProgram(createInitialState());
-    const cue = govProgramLiveCue(state, "operations");
-    expect(cue?.title).toBe("Learning Basic");
-    expect(cue?.action?.kind).toBe("game");
+    expect(govProgramLiveCue(state, "operations")).toBeNull();
     expect(govProgramLiveCue(state, "recruitment")).toBeNull();
   });
 
@@ -34,10 +36,27 @@ describe("gov program live cue", () => {
         growthCompletedStepIds: ["growth_structure", "growth_recruit_push"],
       },
     };
-    expect(govProgramLiveCue(state, "world")?.instruction).toMatch(/Tap a hex/);
+    expect(govProgramLiveCue(state, "world")).toBeNull();
+    expect(govWorldMapHeaderTitle(state)).toBe("World Map - Program available");
     const next = govOnMapSiteInspected(state);
     expect(next.govProgram.mapSiteInspected).toBe(true);
     expect(next.govProgram.growthStepId).toBe("growth_job");
+  });
+
+  it("hides orientation charter on world during growth track replay", () => {
+    let state = govAcceptGrowthProgram(createInitialState());
+    state = {
+      ...state,
+      govProgram: {
+        ...state.govProgram,
+        lifetimeRecruits: 10,
+        executiveStepId: "exec_charter_engage",
+        growthStepId: "growth_structure",
+        growthReplayAt: Date.now(),
+      },
+    };
+    expect(govProgramLiveCue(state, "world")).toBeNull();
+    expect(govProgramLiveCue(state, "job")).toBeNull();
   });
 
   it("locks the job and map screens onto the charter", () => {
@@ -52,7 +71,7 @@ describe("gov program live cue", () => {
       },
     };
     expect(govProgramLiveCue(state, "job")?.title).toBe("Orientation charter");
-    expect(govProgramLiveCue(state, "world")?.action?.kind).toBe("game");
+    expect(govProgramLiveCue(state, "world")).toBeNull();
     expect(govProgramLiveCue(state, "operations")).toBeNull();
   });
 });

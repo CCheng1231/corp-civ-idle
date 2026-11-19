@@ -26,8 +26,10 @@ import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
 import { GovProgramLiveCue } from "./GovProgramLiveCue";
 import { GovProgramRecruitQueueIntro } from "./GovProgramRecruitQueueIntro";
+import { GovProgramCoachSpotlight } from "./GovProgramCoachSpotlight";
 import { GovProgramRecruitSetQtyIntro } from "./GovProgramRecruitSetQtyIntro";
 import { GovProgramStructureCoachCard } from "./GovProgramStructureCoachCard";
+import { secretaryById } from "../game/secretaryData";
 import {
   govRecruitCoachActive,
   govRecruitCoachQueueActive,
@@ -221,12 +223,69 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     cancelScroll();
   }, [recruitCoachActive, officeId]);
 
+  const freshGradQty = counts.fresh_graduate ?? 1;
+  const freshGradTenCost = recruitBatchCostForState(
+    state,
+    "fresh_graduate",
+    10,
+  );
+  const canAffordFreshGradTen =
+    state.settings.ignoreCosts ||
+    canAffordAtOffice(state, officeId, freshGradTenCost);
+
   useEffect(() => {
     if (!recruitCoachSetQty) return;
-    if ((counts.fresh_graduate ?? 1) === 10) {
+    if (freshGradQty === 10 && canAffordFreshGradTen) {
       dispatch({ type: "GOV_ADVANCE_RECRUIT_COACH" });
     }
-  }, [recruitCoachSetQty, counts.fresh_graduate, dispatch]);
+  }, [
+    recruitCoachSetQty,
+    freshGradQty,
+    canAffordFreshGradTen,
+    dispatch,
+  ]);
+
+  const recruitQtySpotlight =
+    recruitCoachActive &&
+    !recruitSetQtyIntro &&
+    !recruitQueueCoachUi &&
+    recruitCoachSetQty ? (
+      !canAffordFreshGradTen ? (
+        <GovProgramCoachSpotlight
+          anchorId="gov-recruit-fresh-grad-qty"
+          message="Not enough cash or supply for ten Fresh Graduates. Earn income, then come back."
+          dimBackground={false}
+          active
+        />
+      ) : freshGradQty < 10 ? (
+        <GovProgramCoachSpotlight
+          anchorId="gov-recruit-fresh-grad-qty"
+          message="Set Qty to 10 for the workforce grant."
+          active
+        />
+      ) : null
+    ) : null;
+
+  const recruitQueueSpotlight =
+    recruitCoachActive &&
+    !recruitSetQtyIntro &&
+    !recruitQueueCoachUi &&
+    recruitCoachQueue ? (
+      !canAffordFreshGradTen ? (
+        <GovProgramCoachSpotlight
+          anchorId="gov-recruit-fresh-grad-qty"
+          message="Not enough cash or supply for ten Fresh Graduates. Come back when you can afford the batch."
+          dimBackground={false}
+          active
+        />
+      ) : (
+        <GovProgramCoachSpotlight
+          anchorId="gov-recruit-fresh-grad-queue"
+          message="Tap Queue order."
+          active
+        />
+      )
+    ) : null;
 
   useEffect(() => {
     if (!focusUnitId) return;
@@ -395,6 +454,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
             ) : null}
             <button
               type="button"
+              id={
+                unit.id === "fresh_graduate"
+                  ? "gov-recruit-fresh-grad-queue"
+                  : undefined
+              }
               className={`btn primary recruitment-queue-btn${
                 coachQueue ? " gov-program-coach-btn" : ""
               }`}
@@ -487,8 +551,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     );
   }
 
-  const recruitBesidePortrait = (
-    <>
+  const recruitQueuesBelowBanner = (
+    <div className="tab-hero-queues">
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = recruitmentJobsAtOffice(state, siteId);
@@ -543,20 +607,18 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         </section>
       )}
       {recruitQueueIntro ? (
-        <GovProgramRecruitQueueIntro dispatch={dispatch} />
+        <GovProgramRecruitQueueIntro dispatch={dispatch} key="recruit-queue-intro" />
       ) : null}
       {recruitFirstCoach ? (
         <GovProgramStructureCoachCard
           state={state}
           dispatch={dispatch}
           showReward={false}
-          footer="Click OK to continue hiring."
+          presentation="overlay"
+          footer={`${secretaryById("secretary_01").name}: Keep hiring until ten are on roster.`}
         />
       ) : null}
-      {recruitStepCoach ? (
-        <GovProgramStructureCoachCard state={state} dispatch={dispatch} />
-      ) : null}
-    </>
+    </div>
   );
 
   const recruitBelowPortrait = (
@@ -619,6 +681,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           </div>
         ) : null}
       </div>
+      {recruitQueuesBelowBanner}
       <ProgressionCatalogToolbar
         onCollapseAll={collapseAllRecruitCategories}
         filterToggle={{
@@ -697,7 +760,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {recruitBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{recruitBelowPortrait}</div>
       </HubSyncedTabScrollBody>
@@ -707,6 +770,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
           anchorId="recruit-unit-fresh_graduate"
         />
       ) : null}
+      {recruitQtySpotlight}
+      {recruitQueueSpotlight}
       {tabInfoOpen ? (
         <ProgressionCatalogInfoDialog
           kind="recruitment"

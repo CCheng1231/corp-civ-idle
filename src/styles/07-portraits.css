@@ -69,8 +69,29 @@
   gap: 0.85rem;
 }
 
+.overview-view .tab-below-portrait,
 .operations-view .tab-below-portrait {
   gap: 0.1rem;
+}
+
+/* Queues live below net worth on Overview; reserve Build-tab queue column height. */
+.overview-view.hub-synced-tab-view--progression-freeze
+  .tab-portrait-fit.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .tab-hero-main:empty,
+.operations-view.hub-synced-tab-view--progression-freeze
+  .tab-portrait-fit.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .tab-hero-main:empty,
+.recruitment-view.hub-synced-tab-view--progression-freeze
+  .tab-portrait-fit.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .tab-hero-main:empty,
+.research-view.hub-synced-tab-view--progression-freeze
+  .tab-portrait-fit.tab-portrait-stretch
+  .tab-sticky-hero-row
+  .tab-hero-main:empty {
+  min-height: 4.35rem;
 }
 
 .recruitment-view .tab-below-portrait,
@@ -438,6 +459,30 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
   padding: 0.08rem 0.32rem;
 }
 
+/* Compact queue: 2+ jobs share one bordered shell */
+.tab-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)),
+.overview-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) {
+  gap: 0;
+  padding: 0;
+  border-radius: 0.38rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.tab-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) > li,
+.overview-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) > li {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tab-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) > li + li,
+.overview-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) > li + li {
+  border-top: 1px solid var(--border);
+}
+
 .tab-net-worth-label,
 .overview-net-worth-label {
   font-size: 0.62rem;
@@ -516,30 +561,57 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
   font-size: 0.58rem;
 }
 
+.overview-view
+  .tab-below-portrait
+  > .office-site-summary-banner--capacity-only
+  + .tab-hero-queues,
+.operations-view
+  .tab-below-portrait
+  > .office-site-summary-banner--capacity-only
+  + .tab-hero-queues,
+.recruitment-view .tab-below-portrait > .recruitment-units-banner + .tab-hero-queues,
+.research-view .tab-below-portrait > .research-progress-banner + .tab-hero-queues {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+
+.overview-view .tab-below-portrait > .office-site-summary-banner:first-child,
+.operations-view .tab-below-portrait > .office-site-summary-banner:first-child,
+.recruitment-view .tab-below-portrait > .recruitment-units-banner:first-child,
+.research-view .tab-below-portrait > .research-progress-banner:first-child {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.overview-view .tab-below-portrait > .tab-hero-queues + .location-view-section,
+.operations-view .tab-below-portrait > .tab-hero-queues + .office-sites-panel,
+.recruitment-view
+  .tab-below-portrait
+  > .tab-hero-queues
+  + .office-structures-catalog-toolbar,
+.research-view
+  .tab-below-portrait
+  > .tab-hero-queues
+  + .office-structures-catalog-toolbar {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+
+.operations-view .tab-below-portrait > .tab-hero-queues:first-child,
+.recruitment-view .tab-below-portrait > .tab-hero-queues:first-child,
+.research-view .tab-below-portrait > .tab-hero-queues:first-child {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
 .overview-view .tab-below-portrait > .overview-summary-block + .location-view-section {
   padding-top: 0.35rem;
   border-top: 1px solid var(--border);
 }
 
-.operations-view .tab-below-portrait > .office-site-summary-banner--capacity-only + .office-sites-panel {
-  padding-top: 0.15rem;
-  border-top: 1px solid var(--border);
-}
 
-.operations-view .tab-below-portrait > .office-site-summary-banner + .office-sites-panel {
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--border);
-}
-
-.recruitment-view .tab-below-portrait > .recruitment-units-banner + .progression-category-section {
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--border);
-}
-
-.research-view .tab-below-portrait > .research-progress-banner + .progression-category-section {
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--border);
-}
 
 .secretary-view .tab-hero-main .tab-title-row h2 {
   font-size: 0.95rem;
@@ -750,24 +822,63 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
   font-size: 0.95rem;
 }
 
-.overview-view .tab-hero-main .tab-queue-heading h3 {
+.overview-view .tab-hero-main .tab-queue-heading h3,
+.overview-view .tab-below-portrait .tab-hero-queues .tab-queue-heading h3,
+.operations-view .tab-below-portrait .tab-hero-queues .tab-queue-heading h3,
+.recruitment-view .tab-below-portrait .tab-hero-queues .tab-queue-heading h3,
+.research-view .tab-below-portrait .tab-hero-queues .tab-queue-heading h3 {
   font-size: 0.68rem;
 }
 
-.overview-view .tab-hero-main .tab-queue-count {
+.overview-view .tab-hero-main .tab-queue-count,
+.overview-view .tab-below-portrait .tab-hero-queues .tab-queue-count,
+.operations-view .tab-below-portrait .tab-hero-queues .tab-queue-count,
+.recruitment-view .tab-below-portrait .tab-hero-queues .tab-queue-count,
+.research-view .tab-below-portrait .tab-hero-queues .tab-queue-count {
   font-size: 0.62rem;
 }
 
-.overview-view .tab-hero-main .tab-compact-queue .build-queue li {
+.overview-view .tab-hero-main .tab-compact-queue .build-queue li,
+.overview-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue li,
+.operations-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue li,
+.recruitment-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue li,
+.research-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue li {
   font-size: 0.64rem;
 }
 
-.overview-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn {
+.overview-view .tab-hero-main .tab-compact-queue .build-queue .queue-cancel-btn,
+.overview-view
+  .tab-below-portrait
+  .tab-hero-queues
+  .tab-compact-queue
+  .build-queue
+  .queue-cancel-btn,
+.operations-view
+  .tab-below-portrait
+  .tab-hero-queues
+  .tab-compact-queue
+  .build-queue
+  .queue-cancel-btn,
+.recruitment-view
+  .tab-below-portrait
+  .tab-hero-queues
+  .tab-compact-queue
+  .build-queue
+  .queue-cancel-btn,
+.research-view
+  .tab-below-portrait
+  .tab-hero-queues
+  .tab-compact-queue
+  .build-queue
+  .queue-cancel-btn {
   font-size: 0.58rem;
 }
 
 /* Office right column: keep Space/Power visible when the build queue is full */
 .operations-view .tab-hero-main .tab-queue-heading,
+.operations-view .tab-below-portrait .tab-hero-queues .tab-queue-heading,
+.recruitment-view .tab-below-portrait .tab-hero-queues .tab-queue-heading,
+.research-view .tab-below-portrait .tab-hero-queues .tab-queue-heading,
 .recruitment-view .tab-hero-main .tab-queue-heading,
 .research-view .tab-hero-main .tab-queue-heading,
 .secretary-view .tab-hero-main .tab-queue-heading {
@@ -798,6 +909,9 @@ html.viewport-preview-galaxy-s24 .secretary-view--work-reports .secretary-job-re
 }
 
 .operations-view .tab-hero-main .tab-compact-queue .build-queue-slot,
+.operations-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue-slot,
+.recruitment-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue-slot,
+.research-view .tab-below-portrait .tab-hero-queues .tab-compact-queue .build-queue-slot,
 .recruitment-view .tab-hero-main .tab-compact-queue .build-queue-slot,
 .research-view .tab-hero-main .tab-compact-queue .build-queue-slot,
 .secretary-view .tab-hero-main .tab-compact-queue .build-queue-slot {

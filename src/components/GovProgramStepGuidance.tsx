@@ -45,14 +45,7 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() => {
-                dispatch({ type: "GOV_START_STRUCTURE_COACH" });
-                dispatch({
-                  type: "SET_VIEW",
-                  view: "operations",
-                  structureFocusStructureId: null,
-                });
-              }}
+              onClick={() => dispatch({ type: "GOV_START_STRUCTURE_COACH" })}
             >
               Go to Structure
             </button>
@@ -83,7 +76,10 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() => dispatch({ type: "SET_VIEW", view: "world" })}
+              onClick={() => {
+                dispatch({ type: "GOV_START_MAP_COACH" });
+                dispatch({ type: "SET_VIEW", view: "world" });
+              }}
             >
               Open World map
             </button>
@@ -95,9 +91,12 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() => dispatch({ type: "SET_VIEW", view: "office" })}
+              onClick={() => {
+                dispatch({ type: "GOV_START_JOB_COACH" });
+                dispatch({ type: "SET_VIEW", view: "world" });
+              }}
             >
-              Go to Job board
+              Open World map
             </button>
           </GovProgramGuidanceActions>
         );

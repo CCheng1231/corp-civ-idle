@@ -1,50 +1,85 @@
 .gov-program-view {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.5rem 0 1.25rem;
+  gap: 0.45rem;
+  padding: 0.35rem 0 0.85rem;
 }
 
 .gov-program-card {
-  padding: 0.85rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem 0.55rem;
+  border-radius: 0.45rem;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.gov-program-card-heading-row {
+.gov-program-card-title {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-  margin-bottom: 0.35rem;
-}
-
-.gov-program-card-heading-row h3 {
-  margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
+  gap: 0.35rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.82rem;
+  font-weight: inherit;
 }
 
 .gov-program-step-progress {
   margin: 0;
-  flex: 0 0 auto;
-  font-size: 0.82rem;
+  font-size: 0.62rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: rgba(160, 210, 255, 0.95);
+  white-space: nowrap;
+}
+
+.gov-program-step-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.35rem 0.5rem;
+}
+
+.gov-program-step-block .gov-program-step-lead {
+  flex: 1 1 11rem;
+  min-width: 0;
+  margin: 0;
 }
 
 .gov-program-card h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.82rem;
 }
 
 .gov-program-card h4 {
-  margin: 0.5rem 0 0.25rem;
-  font-size: 0.92rem;
+  margin: 0.25rem 0 0.12rem;
+  font-size: 0.76rem;
+}
+
+.gov-program-step-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.06rem;
+  margin: 0 0 0.28rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.28;
+  text-wrap: pretty;
+}
+
+.gov-program-step-title {
+  font-weight: 650;
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.gov-program-step-objective {
+  display: block;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.3;
 }
 
 .gov-program-actions {
@@ -70,13 +105,26 @@
 .gov-program-step-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.55rem 0 0.15rem;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
-.gov-program-step-go {
-  min-height: 3rem;
-  padding: 0.45rem 0.85rem;
+.gov-program-step-block .gov-program-step-actions {
+  align-self: flex-end;
+}
+
+.gov-program-view .gov-program-step-go,
+.gov-program-view .gov-program-card-btn {
+  width: auto;
+  max-width: 100%;
+  min-height: 2rem;
+  padding: 0.26rem 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  align-self: flex-end;
 }
 
 .gov-program-live-cue {
@@ -117,6 +165,36 @@
   z-index: 1200;
 }
 
+/* Step 2 qty intro — block UI until “Got it”. */
+.gov-program-coach-intro-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1290;
+  background: rgba(5, 8, 12, 0.72);
+  pointer-events: auto;
+}
+
+.gov-program-coach-card-floating-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 1310;
+  display: grid;
+  place-items: center;
+  padding: max(0.65rem, env(safe-area-inset-top, 0px))
+    max(0.65rem, env(safe-area-inset-right, 0px))
+    max(0.65rem, env(safe-area-inset-bottom, 0px))
+    max(0.65rem, env(safe-area-inset-left, 0px));
+  pointer-events: none;
+}
+
+.gov-program-coach-card-floating-wrap .gov-program-structure-coach-card {
+  pointer-events: auto;
+  width: min(24rem, 100%);
+  max-width: 100%;
+  margin: 0;
+  min-height: 0;
+}
+
 /* Structure queue coach — inline under “Structure in progress” (Operations tab). */
 .gov-program-structure-coach-card {
   display: flex;
@@ -125,7 +203,7 @@
   max-width: 100%;
   margin: 0.12rem 0 0.2rem;
   box-sizing: border-box;
-  min-height: 9rem;
+  min-height: 7.25rem;
   border-radius: 0.45rem;
   border: 1px solid rgba(120, 200, 255, 0.35);
   background: rgba(8, 14, 22, 0.88);
@@ -134,8 +212,8 @@
 }
 
 .gov-program-coach-card-portrait-col {
-  flex: 0 0 clamp(5rem, 34%, 6.75rem);
-  min-height: 9rem;
+  flex: 0 0 clamp(4.5rem, 32%, 6rem);
+  min-height: 7.25rem;
   background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
@@ -144,7 +222,7 @@
   display: block;
   width: 115%;
   height: 100%;
-  min-height: 9rem;
+  min-height: 7.25rem;
   margin-left: -4%;
   object-fit: cover;
   object-position: 58% top;
@@ -163,22 +241,70 @@
 
 .gov-program-coach-card-main h2 {
   margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.2;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: rgba(140, 230, 180, 0.95);
 }
 
 .gov-program-coach-card-actions {
   margin-top: auto;
-  padding-top: 0.35rem;
+  padding-top: 0.28rem;
   display: flex;
   justify-content: flex-end;
 }
 
-.gov-program-coach-card-ok {
+.gov-program-coach-card-actions .gov-program-tutorial-btn {
+  width: auto;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  min-height: 2rem;
+  padding: 0.28rem 0.75rem;
+}
+
+/* Shared compact coach copy + actions (queue intro, reward card, anchored overlay). */
+.gov-program-tutorial-copy {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: 0;
+  text-wrap: pretty;
+}
+
+.gov-program-tutorial-copy strong {
+  font-weight: 650;
+}
+
+.gov-program-tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.28rem;
+}
+
+.gov-program-tutorial-actions .gov-program-tutorial-btn:not(.gov-program-tutorial-btn--block) {
+  width: auto;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-self: flex-end;
+}
+
+.gov-program-tutorial-actions--stack {
+  justify-content: stretch;
+  width: 100%;
+}
+
+.gov-program-tutorial-btn {
   min-height: 2rem;
   min-width: 4rem;
   padding: 0.28rem 0.75rem;
   font-size: 0.76rem;
+}
+
+.gov-program-tutorial-btn--block {
+  width: 100%;
+  min-width: 0;
 }
 
 .gov-program-coach-modal-lead {
@@ -205,25 +331,35 @@
 }
 
 .gov-program-coach-modal-foot {
-  margin: 0;
-  font-size: 0.72rem;
+  margin: 0.12rem 0 0;
 }
 
 .operations-view .tab-hero-main .gov-program-structure-coach-card,
-.recruitment-view .tab-hero-main .gov-program-structure-coach-card {
+.operations-view .tab-below-portrait .tab-hero-queues .gov-program-structure-coach-card,
+.recruitment-view .tab-hero-main .gov-program-structure-coach-card,
+.recruitment-view .tab-below-portrait .tab-hero-queues .gov-program-structure-coach-card {
   margin-top: 0.12rem;
 }
 
+.gov-program-queue-intro,
 .gov-program-structure-queue-intro {
   position: relative;
   width: 100%;
   max-width: 100%;
-  margin: 0.2rem 0 0;
+  margin: 0.12rem 0 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 2;
+}
+
+.gov-program-queue-intro--floating {
+  margin: 0;
+  width: auto;
+  max-width: none;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .gov-program-queue-intro-arrow {
@@ -238,24 +374,15 @@
 }
 
 .gov-program-queue-intro-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
   width: 100%;
-  padding: 0.55rem 0.65rem 0.5rem;
+  padding: 0.4rem 0.5rem 0.35rem;
   border-radius: 0.45rem;
   border: 1px solid rgba(120, 200, 255, 0.4);
   background: rgba(8, 14, 22, 0.92);
   box-shadow: 0 0.25rem 0.85rem rgba(0, 0, 0, 0.35);
-}
-
-.gov-program-queue-intro-text {
-  margin: 0 0 0.45rem;
-  font-size: 0.74rem;
-  line-height: 1.35;
-}
-
-.gov-program-queue-intro-btn {
-  min-height: 2rem;
-  padding: 0.28rem 0.85rem;
-  font-size: 0.74rem;
 }
 
 .gov-program-intro-modal {
@@ -304,26 +431,185 @@
   margin: 0;
 }
 
-.gov-program-coach-overlay-bubble {
+html.gov-program-coach-active .gov-program-coach-spotlight-target {
+  position: relative;
+  z-index: 1192 !important;
+}
+
+html.gov-program-coach-active
+  .world-view--map-filter-coach
+  .gov-program-coach-spotlight-target,
+html.gov-program-coach-active
+  .world-view--map-drawer-coach
+  .gov-program-coach-spotlight-target {
+  z-index: 1325 !important;
+  position: relative;
+  isolation: isolate;
+}
+
+.map-presentation-player
+  .map-job-filter-row.gov-program-coach-spotlight-target,
+.map-presentation-player
+  .map-job-filter-field select.gov-program-coach-spotlight-target,
+.map-presentation-player .map-hex-drawer-title.gov-program-coach-spotlight-target,
+.map-presentation-player .map-hex-region-pill.gov-program-coach-spotlight-target,
+.map-presentation-player .map-hex-distance-pill.gov-program-coach-spotlight-target,
+.map-presentation-player
+  .map-hex-contracts-section.gov-program-coach-spotlight-target {
+  box-shadow: 0 0 0 1px rgba(26, 26, 26, 0.12);
+}
+
+@keyframes gov-program-coach-ring-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(120, 200, 255, 0.55),
+      0 0 0.65rem rgba(100, 180, 255, 0.28);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(165, 225, 255, 0.95),
+      0 0 1.15rem rgba(100, 180, 255, 0.52);
+  }
+}
+
+.gov-program-coach-spotlight-ring {
+  border-radius: 0.4rem;
+  animation: gov-program-coach-ring-pulse 1.35s ease-in-out infinite;
+}
+
+.gov-program-coach-spotlight-ring--soft {
+  animation: none;
+  box-shadow:
+    0 0 0 2px rgba(120, 200, 255, 0.45),
+    0 0 0.5rem rgba(100, 180, 255, 0.22);
+}
+
+.gov-program-coach-guide-bubble--dismiss {
   pointer-events: auto;
-  padding: 0.55rem 0.6rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  max-width: min(18rem, calc(100vw - 1rem));
+}
+
+.gov-program-coach-guide-bubble--dismiss .gov-program-coach-guide-text {
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.32;
+}
+
+.gov-program-coach-guide-bubble {
+  pointer-events: none;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(18rem, calc(100% - 1rem));
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(120, 200, 255, 0.42);
+  background: rgba(8, 14, 22, 0.96);
+  box-shadow: 0 0.28rem 0.75rem rgba(0, 0, 0, 0.42);
+}
+
+.gov-program-coach-guide-bubble.gov-program-coach-guide-bubble--dismiss {
+  pointer-events: auto;
+}
+
+.gov-program-coach-guide-text {
+  margin: 0;
+  font-size: clamp(0.95rem, 3vw, 1.05rem);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  text-wrap: pretty;
+}
+
+.world-view.world-view--map-filter-coach .gov-program-coach-guide-bubble,
+.world-view.world-view--map-drawer-coach .gov-program-coach-guide-bubble {
+  z-index: 1320;
+}
+
+.world-view.world-view--map-filter-coach .gov-program-coach-guide-text,
+.world-view.world-view--map-drawer-coach .gov-program-coach-guide-text {
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.32;
+}
+
+.world-view.world-view--map-drawer-coach .map-hex-drawer,
+.world-view.world-view--map-drawer-coach .map-job-filter-panel {
+  pointer-events: none;
+}
+
+.world-view.world-view--map-job-send-coach .map-hex-drawer,
+.world-view.world-view--map-job-send-coach .map-job-filter-panel,
+.world-view.world-view--map-job-send-coach .world-map-stage {
+  pointer-events: none;
+}
+
+.world-view.world-view--map-job-send-coach .map-hex-job-send-coach-anchor,
+.world-view.world-view--map-job-send-coach .map-hex-job-send,
+.world-view.world-view--map-job-send-coach
+  .map-hex-job-row.map-hex-job-row-active {
+  pointer-events: auto;
+}
+
+.world-view.world-view--map-job-send-coach .gov-program-coach-guide-bubble {
+  z-index: 1320;
+}
+
+.world-view.world-view--map-job-send-coach .gov-program-coach-guide-text {
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.32;
+}
+
+html.gov-program-coach-active
+  .world-view--map-job-send-coach
+  .gov-program-coach-spotlight-target {
+  z-index: 1325 !important;
+  position: relative;
+  isolation: isolate;
+}
+
+.world-view.world-view--map-filter-coach
+  .gov-program-coach-guide-bubble--dismiss
+  .gov-program-tutorial-actions,
+.world-view.world-view--map-drawer-coach
+  .gov-program-coach-guide-bubble--dismiss
+  .gov-program-tutorial-actions {
+  margin-top: 0.12rem;
+  justify-content: flex-end;
+}
+
+.world-view.world-view--map-filter-coach
+  .gov-program-coach-guide-bubble--dismiss
+  .gov-program-tutorial-btn,
+.world-view.world-view--map-drawer-coach
+  .gov-program-coach-guide-bubble--dismiss
+  .gov-program-tutorial-btn {
+  min-height: 1.5rem;
+  min-width: 2.75rem;
+  padding: 0.14rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.gov-program-coach-overlay-bubble {
+  position: fixed;
+  z-index: 1300;
+  pointer-events: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 1rem));
+  padding: 0.4rem 0.5rem 0.35rem;
   border-radius: 0.45rem;
   border: 1px solid rgba(120, 200, 255, 0.45);
   background: rgba(8, 14, 22, 0.94);
   box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.45);
-}
-
-.gov-program-coach-overlay-text {
-  margin: 0 0 0.45rem;
-  font-size: 0.74rem;
-  line-height: 1.35;
-}
-
-.gov-program-coach-overlay-ok {
-  min-height: 2rem;
-  width: 100%;
-  padding: 0.28rem 0.75rem;
-  font-size: 0.74rem;
 }
 
 .operations-view.hub-synced-tab-view .hub-synced-tab-scroll-body,

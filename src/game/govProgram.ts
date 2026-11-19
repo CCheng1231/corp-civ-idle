@@ -21,11 +21,23 @@ import {
   GOV_MONTHLY_QUESTS,
   GOV_RECRUIT_UNLOCK_COUNT,
   GOV_WEEKLY_QUESTS,
+  type GovGrowthStepDefinition,
   type GovProgramReward,
 } from "./govProgramData";
+import { isHomeHubMainView } from "./hubNavigation";
+import { resolveOfficeLocation } from "./officeSelection";
 import { appendActivityLogs } from "./logbook";
 import { unlockSecretary } from "./secretaryProgress";
 import { formatAssignmentSummary } from "./unitEffects";
+import {
+  DEFAULT_JOB_BOARD_FILTERS,
+  filterAndSortJobPostings,
+  openJobPostings,
+  sortJobPostingsByDistanceFromMainOffice,
+} from "./jobBoard";
+import { jobDefinitionForPosting } from "./jobs";
+import { jobSiteCoordForPosting } from "./mapWorld";
+import { mapHexInfo, mapHexTitle } from "../components/mapHexInfo";
 import type {
   GameState,
   GovProgramState,
@@ -58,6 +70,10 @@ function migrateGovProgramModal(raw: unknown): GovProgramState["pendingModal"] {
   if (raw === "recruit_queue_intro") return "recruit_queue_intro";
   if (raw === "recruit_first_queue_coach") return "recruit_first_queue_coach";
   if (raw === "recruit_step_coach") return "recruit_step_coach";
+  if (raw === "research_queue_intro") return "research_queue_intro";
+  if (raw === "growth_step_coach") return "growth_step_coach";
+  if (raw === "growth_job_travel_coach") return "growth_job_travel_coach";
+  if (raw === "map_filter_intro") return "map_filter_intro";
   return null;
 }
 
@@ -87,6 +103,11 @@ export function createInitialGovProgram(): GovProgramState {
     structureQueueCoachRewardSupply: null,
     structureQueueCoachRewardConnection: null,
     growthRecruitCoach: null,
+    growthMapCoach: null,
+    growthMapCoachPostingId: null,
+    growthMapCoachSiteLabel: null,
+    growthJobCoach: null,
+    growthJobCoachPostingId: null,
     growthRecruitFirstQueueCoachDone: false,
     calendar: {
       activeDailyQuestId: GOV_DAILY_QUESTS[0]?.questId ?? null,
@@ -167,7 +188,11 @@ export function normalizeGovProgram(
         ? parsed.growthReportDismissedBaseline
         : null,
     growthStructureCoach:
-      parsed.growthStructureCoach === "pick_upgrade" ? "pick_upgrade" : null,
+      parsed.growthStructureCoach === "go_home" ||
+      parsed.growthStructureCoach === "pick_structure_tab" ||
+      parsed.growthStructureCoach === "pick_upgrade"
+        ? parsed.growthStructureCoach
+        : null,
     structureQueueCoachJobId:
       typeof parsed.structureQueueCoachJobId === "string"
         ? parsed.structureQueueCoachJobId
@@ -194,6 +219,40 @@ export function normalizeGovProgram(
         : null,
     growthRecruitFirstQueueCoachDone:
       parsed.growthRecruitFirstQueueCoachDone === true,
+    growthMapCoach:
+      parsed.growthMapCoach === "filter_intro" ||
+      parsed.growthMapCoach === "filter_tier" ||
+      parsed.growthMapCoach === "pick_job" ||
+      parsed.growthMapCoach === "drawer_title" ||
+      parsed.growthMapCoach === "drawer_region" ||
+      parsed.growthMapCoach === "drawer_distance" ||
+      parsed.growthMapCoach === "drawer_contracts" ||
+      parsed.growthMapCoach === "inspect_drawer"
+        ? parsed.growthMapCoach === "inspect_drawer"
+          ? "drawer_title"
+          : parsed.growthMapCoach
+        : null,
+    growthMapCoachPostingId:
+      typeof parsed.growthMapCoachPostingId === "string"
+        ? parsed.growthMapCoachPostingId
+        : null,
+    growthMapCoachSiteLabel:
+      typeof parsed.growthMapCoachSiteLabel === "string"
+        ? parsed.growthMapCoachSiteLabel
+        : null,
+    growthJobCoach:
+      parsed.growthJobCoach === "pick_job" ||
+      parsed.growthJobCoach === "map_send" ||
+      parsed.growthJobCoach === "map_engage" ||
+      parsed.growthJobCoach === "office_engage"
+        ? parsed.growthJobCoach === "office_engage"
+          ? "map_engage"
+          : parsed.growthJobCoach
+        : null,
+    growthJobCoachPostingId:
+      typeof parsed.growthJobCoachPostingId === "string"
+        ? parsed.growthJobCoachPostingId
+        : null,
     calendar: {
       ...base.calendar,
       activeDailyQuestId:
@@ -519,6 +578,16 @@ export function govDismissIntroModal(state: GameState): GameState {
     g.pendingModal = null;
     return withGov(state, g);
   }
+  if (g.pendingModal === "map_filter_intro") {
+    g.pendingModal = null;
+    if (
+      g.growthStepId === "growth_map" &&
+      (g.growthMapCoach === "filter_intro" || g.growthMapCoach == null)
+    ) {
+      g.growthMapCoach = "filter_tier";
+    }
+    return withGov(state, g);
+  }
   if (g.pendingModal === "recruit_queue_intro") {
     g.pendingModal = "recruit_first_queue_coach";
     return withGov(state, g);
@@ -547,7 +616,75 @@ export function govDismissIntroModal(state: GameState): GameState {
       secretaryPanel: "govProgram",
     };
   }
+  if (g.pendingModal === "research_queue_intro") {
+    g.pendingModal = null;
+    g.structureQueueCoachJobId = null;
+    return evaluateGrowthObjectives(withGov(state, g));
+  }
+  if (g.pendingModal === "growth_job_travel_coach") {
+    g.pendingModal = null;
+    let next = withGov(state, g);
+    const after = gp(next);
+    if (
+      after.growthStepId === "growth_job" &&
+      growthObjectiveMet(next, "growth_job")
+    ) {
+      const def = growthStepDef("growth_job");
+      if (def && growthStepCelebrationEligible("growth_job", def)) {
+        next = offerGrowthStepCelebration(next, "growth_job");
+      } else {
+        next = completeGrowthStep(next, "growth_job");
+        next = evaluateGrowthObjectives(next);
+      }
+    }
+    return { ...next, view: "world" };
+  }
+  if (g.pendingModal === "growth_step_coach") {
+    const stepId = g.growthStepId;
+    const completedStep =
+      stepId ?? state.govProgram?.growthCompletedStepIds.at(-1) ?? null;
+    g.pendingModal = null;
+    g.structureQueueCoachJobId = null;
+    g.structureQueueCoachRewardCash = null;
+    g.structureQueueCoachRewardSupply = null;
+    g.structureQueueCoachRewardConnection = null;
+    let next = withGov(state, g);
+    if (
+      stepId &&
+      !gp(next).growthCompletedStepIds.includes(stepId) &&
+      gp(next).growthStepId === stepId &&
+      growthObjectiveMet(next, stepId)
+    ) {
+      next = completeGrowthStep(next, stepId);
+    }
+    next = evaluateGrowthObjectives(next);
+    const stayOnWorld =
+      completedStep === "growth_job" || state.view === "world";
+    return {
+      ...next,
+      view: stayOnWorld ? "world" : "secretary",
+      secretaryPanel: stayOnWorld ? next.secretaryPanel : "govProgram",
+    };
+  }
   return state;
+}
+
+export type GovCoachSpotlightCue = {
+  anchorId: string;
+  message: string;
+  /** No dim scrim — player can use the rest of the UI. */
+  relaxed?: boolean;
+  /** After showing, exit structure coach so the player is not stuck. */
+  releaseCoach?: boolean;
+  /** Dimmed coach — player can dismiss and use the rest of the UI. */
+  dismissible?: boolean;
+  dismissLabel?: string;
+};
+
+export function govReleaseStructureCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (!g.growthStructureCoach) return state;
+  return withGov(state, { ...g, growthStructureCoach: null });
 }
 
 export function govStartStructureCoach(state: GameState): GameState {
@@ -559,7 +696,179 @@ export function govStartStructureCoach(state: GameState): GameState {
   ) {
     return state;
   }
-  return withGov(state, { ...g, growthStructureCoach: "pick_upgrade" });
+  return withGov(state, {
+    ...g,
+    growthStructureCoach: "go_home",
+    pendingModal: null,
+  });
+}
+
+export function govAfterStructureCoachViewChange(
+  _prev: GameState,
+  next: GameState,
+): GameState {
+  const g = gp(next);
+  if (
+    g.growthDeclined ||
+    !g.growthAccepted ||
+    g.growthStepId !== "growth_structure" ||
+    !g.growthStructureCoach
+  ) {
+    return next;
+  }
+  if (g.growthStructureCoach === "go_home") {
+    const onHome =
+      next.view === "overview" || isHomeHubMainView(next.view);
+    if (!onHome) return next;
+    const nextPhase =
+      next.view === "operations" ? "pick_upgrade" : "pick_structure_tab";
+    return withGov(next, { ...g, growthStructureCoach: nextPhase });
+  }
+  if (g.growthStructureCoach === "pick_structure_tab" && next.view === "operations") {
+    return withGov(next, { ...g, growthStructureCoach: "pick_upgrade" });
+  }
+  return next;
+}
+
+export function govStructureNavCoachActive(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    g.growthStepId === "growth_structure" &&
+    g.growthAccepted &&
+    !g.growthDeclined &&
+    (g.growthStructureCoach === "go_home" ||
+      g.growthStructureCoach === "pick_structure_tab")
+  );
+}
+
+export function govStructureNavCoachCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (g.growthStructureCoach === "go_home") {
+    return {
+      anchorId: "gov-coach-anchor-home",
+      message: "Tap Home in the shortcut bar.",
+    };
+  }
+  if (g.growthStructureCoach === "pick_structure_tab") {
+    if (state.view === "overview" && state.homePanel === "landing") {
+      return {
+        anchorId: "gov-coach-anchor-home-structure",
+        message: "Open Structure to manage HQ builds.",
+      };
+    }
+    return {
+      anchorId: "gov-coach-anchor-home-section",
+      message: "In Section, choose Structure.",
+    };
+  }
+  return null;
+}
+
+export function govStructureUpgradeCoachCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  if (!govStructureCoachPickActive(state)) return null;
+  const officeId = resolveOfficeLocation(state);
+  const targetId = govStructureCoachTargetId(state, officeId);
+  if (!targetId) return null;
+  return {
+    anchorId: `structure-card-${targetId}`,
+    message: "Tap Upgrade on this build when you can afford it.",
+  };
+}
+
+/** When pick_upgrade has no affordable card — queue full, broke, or nothing to build. */
+export function govStructureUpgradeCoachBlockedCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  if (!govStructureCoachPickActive(state)) return null;
+  if (govStructureUpgradeCoachCue(state)) return null;
+  const officeId = resolveOfficeLocation(state);
+  if (isStructureQueueFull(state, officeId)) {
+    return {
+      anchorId: "gov-coach-anchor-structure-queue-head",
+      relaxed: true,
+      message:
+        "Queue is full. Wait for a build or cancel one — then tap Go to Structure on Gov't Prog.",
+    };
+  }
+  let hasBuildable = false;
+  let canAffordAny = false;
+  for (const category of STRUCTURE_CATEGORY_ORDER) {
+    const items = sortStructuresForBuildTab(
+      category,
+      structurePanelStructures().filter((s) => s.category === category),
+    );
+    for (const structure of items) {
+      if (!isStructureUnlocked(state, structure.id)) continue;
+      if (isStructureCompletedAtSite(state, officeId, structure)) continue;
+      if (
+        isStructureQueuedAt(state, officeId, structure.id) &&
+        !isStructureCompletedAtSite(state, officeId, structure)
+      ) {
+        continue;
+      }
+      if (!canBuildStructure(state, officeId, structure.id)) continue;
+      hasBuildable = true;
+      if (state.settings.ignoreCosts) {
+        canAffordAny = true;
+        break;
+      }
+      const cost = structureCost(state, officeId, structure.id);
+      if (canAffordAtOffice(state, officeId, cost)) {
+        canAffordAny = true;
+        break;
+      }
+    }
+    if (canAffordAny) break;
+  }
+  if (!hasBuildable) {
+    return {
+      anchorId: "gov-coach-anchor-home-section",
+      relaxed: true,
+      message: "No HQ upgrade available here yet — unlock a structure first.",
+    };
+  }
+  return {
+    anchorId: "gov-coach-anchor-resource-bar",
+    relaxed: true,
+    releaseCoach: true,
+    message:
+      "Need more cash or supply. Wait for income, then Gov't Prog → Go to Structure to continue.",
+  };
+}
+
+/** Step 1 — broke while picking a structure; dim + dismiss to unpark the coach. */
+export function govStructureUpgradeCoachAffordBlockedCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  if (!govStructureCoachPickActive(state)) return null;
+  const officeId = resolveOfficeLocation(state);
+  const targetId = govStructureCoachTargetId(state, officeId);
+  if (targetId && !state.settings.ignoreCosts) {
+    const cost = structureCost(state, officeId, targetId);
+    if (!canAffordAtOffice(state, officeId, cost)) {
+      return {
+        anchorId: `structure-card-${targetId}`,
+        message:
+          "Not enough cash or supply for this upgrade. Earn income, then return from Gov't Prog.",
+        dismissible: true,
+        dismissLabel: "Come back later",
+      };
+    }
+    return null;
+  }
+  const blocked = govStructureUpgradeCoachBlockedCue(state);
+  if (blocked?.anchorId !== "gov-coach-anchor-resource-bar") return null;
+  return {
+    anchorId: blocked.anchorId,
+    message:
+      "Not enough cash or supply to queue a structure upgrade. Earn income, then Gov't Prog → Go to Structure.",
+    dismissible: true,
+    dismissLabel: "Come back later",
+  };
 }
 
 export function govStartRecruitCoach(state: GameState): GameState {
@@ -608,6 +917,415 @@ export function govRecruitCoachQueueActive(state: GameState): boolean {
   return (
     govRecruitCoachActive(state) && gp(state).growthRecruitCoach === "pick_queue"
   );
+}
+
+export function govMapCoachActive(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    (g.growthMapCoach === "filter_intro" ||
+      g.growthMapCoach === "filter_tier" ||
+      g.growthMapCoach === "pick_job" ||
+      g.growthMapCoach === "drawer_title" ||
+      g.growthMapCoach === "drawer_region" ||
+      g.growthMapCoach === "drawer_distance" ||
+      g.growthMapCoach === "drawer_contracts") &&
+    g.growthStepId === "growth_map" &&
+    !g.growthDeclined &&
+    g.growthAccepted &&
+    !g.mapSiteInspected
+  );
+}
+
+export function govStartMapCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (
+    g.growthDeclined ||
+    !g.growthAccepted ||
+    g.growthStepId !== "growth_map" ||
+    g.mapSiteInspected
+  ) {
+    return state;
+  }
+  if (g.growthMapCoach || g.pendingModal === "map_filter_intro") return state;
+  return withGov(state, {
+    ...g,
+    growthMapCoach: "filter_intro",
+    pendingModal: "map_filter_intro",
+  });
+}
+
+export function govOnEnterWorldView(state: GameState): GameState {
+  return govStartMapCoach(state);
+}
+
+function govFirstOpenTier1Posting(state: GameState) {
+  const tier1 = filterAndSortJobPostings(
+    openJobPostings(state),
+    { ...DEFAULT_JOB_BOARD_FILTERS, tier: 1 },
+    "expires_soon",
+  );
+  const sorted = sortJobPostingsByDistanceFromMainOffice(state, tier1);
+  return sorted[0] ?? null;
+}
+
+export function govAdvanceMapCoachTier(
+  state: GameState,
+  postingId?: string | null,
+): GameState {
+  const g = gp(state);
+  if (!govMapCoachActive(state) || g.growthMapCoach !== "filter_tier") {
+    return state;
+  }
+  let targetId = postingId ?? null;
+  if (targetId) {
+    const exists = openJobPostings(state).some((p) => p.id === targetId);
+    if (!exists) targetId = null;
+  }
+  if (!targetId) {
+    const posting = govFirstOpenTier1Posting(state);
+    targetId = posting?.id ?? null;
+  }
+  return withGov(state, {
+    ...g,
+    growthMapCoach: "pick_job",
+    growthMapCoachPostingId: targetId,
+  });
+}
+
+export function govOnMapJobFocused(
+  state: GameState,
+  postingId: string,
+): GameState {
+  const g = gp(state);
+  if (govJobCoachActive(state) && g.growthJobCoach === "pick_job") {
+    if (g.growthJobCoachPostingId && postingId !== g.growthJobCoachPostingId) {
+      return state;
+    }
+    let defTier = 1;
+    try {
+      const posting = openJobPostings(state).find((p) => p.id === postingId);
+      if (!posting) return state;
+      defTier = jobDefinitionForPosting(posting).tier;
+    } catch {
+      return state;
+    }
+    if (defTier !== 1) return state;
+    return withGov(state, {
+      ...g,
+      growthJobCoach: "map_send",
+      growthJobCoachPostingId: postingId,
+    });
+  }
+  if (!govMapCoachActive(state) || g.growthMapCoach !== "pick_job") {
+    return state;
+  }
+  if (g.growthMapCoachPostingId && postingId !== g.growthMapCoachPostingId) {
+    return state;
+  }
+  let defTier = 1;
+  try {
+    const posting = openJobPostings(state).find((p) => p.id === postingId);
+    if (!posting) return state;
+    defTier = jobDefinitionForPosting(posting).tier;
+  } catch {
+    return state;
+  }
+  if (defTier !== 1) return state;
+  let siteLabel: string | null = null;
+  try {
+    const posting = openJobPostings(state).find((p) => p.id === postingId);
+    if (posting) {
+      const def = jobDefinitionForPosting(posting);
+      const coord = jobSiteCoordForPosting(posting, def, state.settings);
+      siteLabel = mapHexTitle(mapHexInfo(coord, state), state);
+    }
+  } catch {
+    siteLabel = null;
+  }
+  return withGov(state, {
+    ...g,
+    growthMapCoach: "drawer_title",
+    growthMapCoachSiteLabel: siteLabel,
+    pendingModal: null,
+  });
+}
+
+const MAP_DRAWER_COACH_ORDER = [
+  "drawer_title",
+  "drawer_region",
+  "drawer_distance",
+  "drawer_contracts",
+] as const;
+
+export function govMapDrawerCoachActive(state: GameState): boolean {
+  const phase = gp(state).growthMapCoach;
+  return (
+    govMapCoachActive(state) &&
+    phase != null &&
+    (MAP_DRAWER_COACH_ORDER as readonly string[]).includes(phase)
+  );
+}
+
+export function govAdvanceMapDrawerCoach(state: GameState): GameState {
+  const g = gp(state);
+  const phase = g.growthMapCoach;
+  if (!govMapDrawerCoachActive(state) || !phase) return state;
+  const idx = MAP_DRAWER_COACH_ORDER.indexOf(
+    phase as (typeof MAP_DRAWER_COACH_ORDER)[number],
+  );
+  if (idx < 0) return state;
+  if (idx >= MAP_DRAWER_COACH_ORDER.length - 1) {
+    const jobPostingId =
+      g.growthMapCoachPostingId ?? g.growthJobCoachPostingId;
+    return evaluateGrowthObjectives(
+      withGov(state, {
+        ...g,
+        growthMapCoach: null,
+        growthMapCoachPostingId: null,
+        growthMapCoachSiteLabel: null,
+        growthJobCoachPostingId: jobPostingId,
+        mapSiteInspected: true,
+      }),
+    );
+  }
+  return withGov(state, {
+    ...g,
+    growthMapCoach: MAP_DRAWER_COACH_ORDER[idx + 1],
+  });
+}
+
+function mapDrawerCoachCue(
+  state: GameState,
+  phase: string,
+): GovCoachSpotlightCue | null {
+  switch (phase) {
+    case "drawer_title": {
+      const label = gp(state).growthMapCoachSiteLabel?.trim();
+      return {
+        anchorId: "gov-coach-anchor-map-hex-drawer-title",
+        message: label
+          ? `This line is the hex you selected — ${label}.`
+          : "This line is the hex you selected — the place name on the map.",
+        dismissible: true,
+        dismissLabel: "Next",
+      };
+    }
+    case "drawer_region":
+      return {
+        anchorId: "gov-coach-anchor-map-hex-region",
+        message:
+          "Region — where this hex sits. Some regions boost pay when perks line up.",
+        dismissible: true,
+        dismissLabel: "Next",
+      };
+    case "drawer_distance":
+      return {
+        anchorId: "gov-coach-anchor-map-hex-distance",
+        message: "Hx — hex hops from your office. More Hx, longer travel time.",
+        dismissible: true,
+        dismissLabel: "Next",
+      };
+    case "drawer_contracts":
+      return {
+        anchorId: "gov-coach-anchor-map-hex-contracts",
+        message:
+          "Contracts — payout/hr, tier, deadline, completion band. Send teams from here next step.",
+        dismissible: true,
+        dismissLabel: "Continue",
+      };
+    default:
+      return null;
+  }
+}
+
+export function govMapCoachSpotlightCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (!govMapCoachActive(state) || g.pendingModal === "map_filter_intro") {
+    return null;
+  }
+  if (g.growthMapCoach === "filter_tier") {
+    return {
+      anchorId: "gov-coach-anchor-map-tier",
+      message: "Set Tier to T1.",
+    };
+  }
+  if (g.growthMapCoach === "pick_job") {
+    if (g.growthMapCoachPostingId) {
+      return {
+        anchorId: `gov-coach-anchor-map-job-${g.growthMapCoachPostingId}`,
+        message: "Pick this T1 contract to pan the map and open the site.",
+      };
+    }
+    return {
+      anchorId: "gov-coach-anchor-map-job-filter",
+      message:
+        "Pick any T1 row in the list. If none show, reset filters or check Secretary → Job.",
+    };
+  }
+  if (govMapDrawerCoachActive(state) && g.growthMapCoach) {
+    return mapDrawerCoachCue(state, g.growthMapCoach);
+  }
+  return null;
+}
+
+export function govJobCoachActive(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    (g.growthJobCoach === "pick_job" ||
+      g.growthJobCoach === "map_send" ||
+      g.growthJobCoach === "map_engage") &&
+    g.growthStepId === "growth_job" &&
+    !g.growthDeclined &&
+    g.growthAccepted
+  );
+}
+
+export function govJobMapCoachActive(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    govJobCoachActive(state) &&
+    (g.growthJobCoach === "pick_job" || g.growthJobCoach === "map_send")
+  );
+}
+
+export function govStartJobCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (
+    g.growthDeclined ||
+    !g.growthAccepted ||
+    g.growthStepId !== "growth_job" ||
+    g.growthJobCoach
+  ) {
+    return state;
+  }
+  let targetId = g.growthJobCoachPostingId;
+  if (targetId && !openJobPostings(state).some((p) => p.id === targetId)) {
+    targetId = null;
+  }
+  if (!targetId) {
+    targetId = govFirstOpenTier1Posting(state)?.id ?? null;
+  }
+  return withGov(state, {
+    ...g,
+    growthJobCoach: "pick_job",
+    growthJobCoachPostingId: targetId,
+  });
+}
+
+export function govShouldMapSendOpenEngageModal(
+  state: GameState,
+  postingId: string,
+): boolean {
+  const g = gp(state);
+  return (
+    g.growthStepId === "growth_job" &&
+    g.growthAccepted &&
+    !g.growthDeclined &&
+    g.growthJobCoach === "map_send" &&
+    (!g.growthJobCoachPostingId || g.growthJobCoachPostingId === postingId)
+  );
+}
+
+export function govMapJobEngageModalActive(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    govJobCoachActive(state) &&
+    g.growthJobCoach === "map_engage" &&
+    !!g.growthJobCoachPostingId
+  );
+}
+
+export function govOnJobSendFromMap(
+  state: GameState,
+  postingId: string,
+): GameState {
+  const g = gp(state);
+  if (!govShouldMapSendOpenEngageModal(state, postingId)) {
+    return state;
+  }
+  return withGov(state, {
+    ...g,
+    growthJobCoach: "map_engage",
+    growthJobCoachPostingId: postingId,
+  });
+}
+
+export function govCancelMapJobEngage(state: GameState): GameState {
+  const g = gp(state);
+  if (g.growthJobCoach !== "map_engage") return state;
+  return withGov(state, {
+    ...g,
+    growthJobCoach: "map_send",
+  });
+}
+
+export function govAfterJobCoachViewChange(
+  _prev: GameState,
+  next: GameState,
+): GameState {
+  const g = gp(next);
+  if (g.growthStepId !== "growth_job" || g.growthJobCoach !== "map_send") {
+    return next;
+  }
+  if (next.view === "office" && next.jobFocusPostingId) {
+    return withGov(next, {
+      ...g,
+      growthJobCoach: "map_engage",
+    });
+  }
+  return next;
+}
+
+export function govJobCoachSpotlightCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (!govJobMapCoachActive(state)) return null;
+  if (g.growthJobCoach === "pick_job") {
+    if (g.growthJobCoachPostingId) {
+      return {
+        anchorId: `gov-coach-anchor-map-job-${g.growthJobCoachPostingId}`,
+        message:
+          "Open the site you surveyed — pick this contract in Jobs.",
+      };
+    }
+    return {
+      anchorId: "gov-coach-anchor-map-job-filter",
+      message: "Pick a T1 contract row to open its map site.",
+    };
+  }
+  if (g.growthJobCoach === "map_send" && g.growthJobCoachPostingId) {
+    return {
+      anchorId: `gov-coach-anchor-map-job-send-${g.growthJobCoachPostingId}`,
+      message:
+        "Tap Send — assign crew here on the map, then Engage.",
+    };
+  }
+  return null;
+}
+
+export function govJobOfficeCoachSpotlightCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (!govJobCoachActive(state) || g.growthJobCoach !== "map_engage") {
+    return null;
+  }
+  return {
+    anchorId: "gov-coach-anchor-job-engage",
+    message:
+      "Adjust crew if you like, then Engage to send your first team.",
+  };
+}
+
+export function govGrowthWorldCoachSpotlightCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const job = govJobCoachSpotlightCue(state);
+  if (job) return job;
+  return govMapCoachSpotlightCue(state);
 }
 
 export function govGrowthStepProgress(
@@ -704,8 +1422,16 @@ export function govOnMapSiteInspected(state: GameState): GameState {
   const g = gp(state);
   if (g.mapSiteInspected) return state;
   if (g.growthStepId !== "growth_map" || govGrowthTrackPaused(state)) return state;
+  const jobPostingId = g.growthMapCoachPostingId ?? g.growthJobCoachPostingId;
   return evaluateGrowthObjectives(
-    withGov(state, { ...g, mapSiteInspected: true }),
+    withGov(state, {
+      ...g,
+      mapSiteInspected: true,
+      growthMapCoach: null,
+      growthMapCoachPostingId: null,
+      growthMapCoachSiteLabel: null,
+      growthJobCoachPostingId: jobPostingId,
+    }),
   );
 }
 
@@ -732,10 +1458,7 @@ function growthObjectiveMet(state: GameState, stepId: string): boolean {
         !g.growthDeclined &&
         (g.growthReplayAt != null || g.growthStepStartedAt != null);
       if (guided) {
-        return activitySince(state, since, [
-          "structure_upgrade",
-          "structure_complete",
-        ]);
+        return activitySince(state, since, ["structure_upgrade"]);
       }
       return state.structureQueues.hq.some((j) => j.startedAt != null) ||
         Object.values(state.structureLevelsByLocation.hq).some((lv) => lv > 0);
@@ -748,13 +1471,20 @@ function growthObjectiveMet(state: GameState, stepId: string): boolean {
       return g.lifetimeRecruits >= Number(def.param);
     case "open_map":
       return g.mapSiteInspected;
-    case "engage_job":
-      if (replaying) {
+    case "engage_job": {
+      const guided =
+        g.growthAccepted &&
+        !g.growthDeclined &&
+        (g.growthReplayAt != null || g.growthStepStartedAt != null);
+      if (guided) {
         return activitySince(state, since, ["job_engage", "job_complete"]);
       }
-      return g.growthCompletedStepIds.includes("growth_job") ||
+      return (
+        g.growthCompletedStepIds.includes("growth_job") ||
         state.jobEngagements.length > 0 ||
-        state.activityLog.some((e) => e.category === "job_complete");
+        state.activityLog.some((e) => e.category === "job_complete")
+      );
+    }
     case "job_report":
       if (replaying) {
         return (
@@ -793,37 +1523,110 @@ function growthObjectiveMet(state: GameState, stepId: string): boolean {
   }
 }
 
-/** Replay the growth track from step 1. Executive path, roster, and economy stay. */
-export function govResetGrowthTrack(state: GameState): GameState {
-  const g = { ...gp(state) };
-  const now = Date.now();
-  g.growthDeclined = false;
-  g.growthAccepted = true;
-  g.growthCompletedStepIds = [];
-  g.growthStepId = GOV_GROWTH_STEPS[0]?.stepId ?? "growth_structure";
-  g.mapSiteInspected = false;
-  g.growthReplayAt = now;
-  g.growthStepStartedAt = now;
-  g.growthReplayRecruitBaseline = g.lifetimeRecruits;
-  g.growthReportDismissedBaseline = state.dismissedJobReportIds?.length ?? 0;
+function clearGovCoachTransient(g: GameState["govProgram"]) {
   g.growthStructureCoach = null;
   g.growthRecruitCoach = null;
+  g.growthMapCoach = null;
+  g.growthMapCoachPostingId = null;
+  g.growthMapCoachSiteLabel = null;
+  g.growthJobCoach = null;
+  g.growthJobCoachPostingId = null;
   g.growthRecruitFirstQueueCoachDone = false;
-  g.executiveStepId = null;
-  g.executiveCompletedStepIds = [];
-  g.chiefLessonPending = false;
   g.pendingModal = null;
   g.structureQueueCoachJobId = null;
   g.structureQueueCoachRewardCash = null;
   g.structureQueueCoachRewardSupply = null;
   g.structureQueueCoachRewardConnection = null;
+}
+
+/** Replay the growth track from step 1. Executive path, roster, and economy stay. */
+export function govResetGrowthTrack(state: GameState): GameState {
+  return govResetGrowthTrackAtStep(
+    state,
+    GOV_GROWTH_STEPS[0]?.stepId ?? "growth_structure",
+  );
+}
+
+/** Replay growth from a specific step (prior steps marked complete for UI). */
+export function govResetGrowthTrackAtStep(
+  state: GameState,
+  stepId: string,
+): GameState {
+  const stepIndex = GOV_GROWTH_STEPS.findIndex((s) => s.stepId === stepId);
+  if (stepIndex < 0) return state;
+  const g = { ...gp(state) };
+  const now = Date.now();
+  g.growthDeclined = false;
+  g.growthAccepted = true;
+  g.growthCompletedStepIds = GOV_GROWTH_STEPS.slice(0, stepIndex).map(
+    (s) => s.stepId,
+  );
+  g.growthStepId = stepId;
+  g.mapSiteInspected = false;
+  g.growthReplayAt = now;
+  g.growthStepStartedAt = now;
+  g.growthReplayRecruitBaseline = g.lifetimeRecruits;
+  g.growthReportDismissedBaseline = state.dismissedJobReportIds?.length ?? 0;
+  g.executiveStepId = null;
+  g.executiveCompletedStepIds = [];
+  g.chiefLessonPending = false;
+  clearGovCoachTransient(g);
+  if (stepId === "growth_recruit_push") {
+    g.growthRecruitCoach = "set_qty";
+    g.pendingModal = "recruit_set_qty_intro";
+  }
+  if (stepId === "growth_map") {
+    g.growthMapCoach = "filter_intro";
+    g.pendingModal = "map_filter_intro";
+  }
+  if (stepId === "growth_job") {
+    const posting = govFirstOpenTier1Posting(state);
+    g.growthJobCoachPostingId = posting?.id ?? null;
+  }
   return withGov(state, g);
+}
+
+function growthStepUsesCustomCelebration(stepId: string): boolean {
+  return stepId === "growth_structure" || stepId === "growth_recruit_push";
+}
+
+function growthStepCelebrationEligible(
+  stepId: string,
+  def: GovGrowthStepDefinition,
+): boolean {
+  if (growthStepUsesCustomCelebration(stepId)) return false;
+  if (def.objectiveType === "hint_only") return false;
+  const reward = def.reward;
+  return (
+    reward.cash > 0 ||
+    reward.supply > 0 ||
+    (reward.connection ?? 0) > 0
+  );
+}
+
+function offerGrowthStepCelebration(
+  state: GameState,
+  stepId: string,
+): GameState {
+  const def = growthStepDef(stepId);
+  if (!def) return state;
+  const reward = def.reward;
+  return withGov(state, {
+    ...gp(state),
+    pendingModal: "growth_step_coach",
+    structureQueueCoachRewardCash: reward.cash > 0 ? reward.cash : null,
+    structureQueueCoachRewardSupply: reward.supply > 0 ? reward.supply : null,
+    structureQueueCoachRewardConnection:
+      (reward.connection ?? 0) > 0 ? reward.connection ?? null : null,
+  });
 }
 
 export function evaluateGrowthObjectives(state: GameState): GameState {
   const g = gp(state);
   if (g.growthDeclined || !g.growthAccepted || !g.growthStepId) return state;
   if (govGrowthTrackPaused(state)) return state;
+  if (g.pendingModal === "growth_step_coach") return state;
+  if (g.pendingModal === "growth_job_travel_coach") return state;
   let next = state;
   let stepId: string | null = g.growthStepId;
   let guard = 0;
@@ -840,6 +1643,9 @@ export function evaluateGrowthObjectives(state: GameState): GameState {
       break;
     }
     if (!growthObjectiveMet(next, stepId)) break;
+    if (growthStepCelebrationEligible(stepId, def)) {
+      return offerGrowthStepCelebration(next, stepId);
+    }
     next = completeGrowthStep(next, stepId);
     stepId = gp(next).growthStepId;
     if (!def.autoAdvance) break;
@@ -913,9 +1719,31 @@ export function govAfterSimulatedTime(
 }
 
 export function govAfterEngageJob(state: GameState): GameState {
-  let next = evaluateGrowthObjectives(state);
+  let next = state;
+  const g0 = gp(state);
+  if (g0.growthJobCoach) {
+    next = withGov(state, {
+      ...g0,
+      growthJobCoach: null,
+      growthJobCoachPostingId: null,
+    });
+  }
   const g = gp(next);
-  if (g.executiveStepId === "exec_charter_engage") {
+  if (
+    g.growthStepId === "growth_job" &&
+    g.growthAccepted &&
+    !g.growthDeclined &&
+    growthObjectiveMet(next, "growth_job") &&
+    !g.growthCompletedStepIds.includes("growth_job")
+  ) {
+    return withGov(next, {
+      ...g,
+      pendingModal: "growth_job_travel_coach",
+    });
+  }
+  next = evaluateGrowthObjectives(next);
+  const after = gp(next);
+  if (after.executiveStepId === "exec_charter_engage") {
     /* charter uses GOV_ENGAGE_CHARTER */
   }
   return next;
@@ -925,7 +1753,26 @@ export function govAfterDismissJobReport(state: GameState): GameState {
   return evaluateGrowthObjectives(state);
 }
 
-export function govAfterResearchQueue(state: GameState): GameState {
+export function govAfterResearchQueue(
+  state: GameState,
+  officeId?: OfficeLocationId,
+  queued?: { jobId: string },
+): GameState {
+  const g = gp(state);
+  if (
+    g.growthStepId === "growth_research" &&
+    g.growthAccepted &&
+    !g.growthDeclined &&
+    officeId === "hq" &&
+    queued &&
+    g.pendingModal == null
+  ) {
+    return withGov(state, {
+      ...g,
+      pendingModal: "research_queue_intro",
+      structureQueueCoachJobId: queued.jobId,
+    });
+  }
   return evaluateGrowthObjectives(state);
 }
 
@@ -1061,4 +1908,70 @@ export function govOnOpenGovProgram(state: GameState): GameState {
   let next = completeExecutiveStep(state, "exec_unlock");
   next = syncExecutiveSideEffects(next);
   return evaluateGrowthObjectives(next);
+}
+
+export function govProgramDailyClaimReady(state: GameState, now = Date.now()): boolean {
+  const g = gp(state);
+  const dailyQuest = GOV_DAILY_QUESTS.find(
+    (q) => q.questId === g.calendar.activeDailyQuestId,
+  );
+  if (!dailyQuest) return false;
+  if (g.calendar.dailyProgress < Number(dailyQuest.param)) return false;
+  if (
+    g.calendar.lastDailyClaimAt &&
+    now - g.calendar.lastDailyClaimAt < 86_400_000
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** Gov't Prog tab deserves attention (badge on Secretary landing). */
+export function govProgramGovTabQuestPending(state: GameState, now = Date.now()): boolean {
+  if (!state.govProgram) return false;
+  if (govGrowthProgramOfferVisible(state)) return true;
+  if (govProgramDailyClaimReady(state, now)) return true;
+  const g = gp(state);
+  if (g.growthAccepted && !g.growthDeclined && g.growthStepId) {
+    return true;
+  }
+  if (govExecutiveTrackActive(state) && g.executiveStepId) {
+    return true;
+  }
+  return false;
+}
+
+/** One-line program reminder under the Secretary greeting (Secretary landing). */
+export function govWorldMapHeaderTitle(state: GameState): string {
+  if (govProgramGovTabQuestPending(state)) {
+    return "World Map - Program available";
+  }
+  return "World map";
+}
+
+export function govSecretaryLandingProgramReminder(state: GameState): string | null {
+  if (!state.govProgram) return null;
+  if (govGrowthProgramOfferVisible(state)) {
+    return "Regional office left a Growth Program packet on your desk — open Gov't Prog when you have a moment.";
+  }
+  if (govProgramDailyClaimReady(state)) {
+    return "Daily stipend is ready on Gov't Prog — claim it before you dive back in.";
+  }
+  const g = gp(state);
+  const growth = govCurrentGrowthStep(state);
+  if (growth && g.growthAccepted && !g.growthDeclined) {
+    const progress = govGrowthStepProgress(state);
+    const label = progress
+      ? `Growth ${progress.current}/${progress.total} · ${growth.title}`
+      : growth.title;
+    if (govGrowthTrackPaused(state)) {
+      return `${label} is on hold until the executive charter clears — Gov't Prog has the briefing.`;
+    }
+    return `${label}: ${growth.body} Check Gov't Prog for the next move.`;
+  }
+  const exec = govCurrentExecutiveStep(state);
+  if (exec && govExecutiveTrackActive(state)) {
+    return `${exec.title}: ${exec.body} Open Gov't Prog to continue.`;
+  }
+  return null;
 }

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState }
 import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { GovProgramModal } from "./components/GovProgramModal";
+import { GovProgramGrowthCoachLayer } from "./components/GovProgramGrowthCoachLayer";
+import { GovProgramStructureNavCoach } from "./components/GovProgramStructureNavCoach";
 import { SecretaryRecruitmentModal } from "./components/SecretaryRecruitmentModal";
 import { SecretarySkinUnlockModal } from "./components/SecretarySkinUnlockModal";
 import { DevicePreviewFrame } from "./components/DevicePreviewFrame";
@@ -127,6 +129,8 @@ function GameShell({
         />
       ) : null}
       <GovProgramModal state={state} dispatch={dispatch} />
+      <GovProgramStructureNavCoach state={state} dispatch={dispatch} />
+      <GovProgramGrowthCoachLayer state={state} dispatch={dispatch} />
       <SecretaryRecruitmentModal state={state} dispatch={dispatch} />
       <SecretarySkinUnlockModal state={state} dispatch={dispatch} />
       <CompletionAlertToasts

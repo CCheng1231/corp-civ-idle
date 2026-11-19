@@ -2372,6 +2372,20 @@
   box-shadow: inset 0 0 0 1px rgba(45, 106, 74, 0.35);
 }
 
+.map-job-filter-row--coach {
+  min-height: 0;
+  padding: 0.1rem 0.22rem;
+}
+
+.map-job-filter-row-coach-anchor {
+  display: flex;
+  align-items: stretch;
+  gap: 0.28rem;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
 .map-job-filter-region {
   flex-shrink: 0;
   width: 4px;
@@ -4240,4 +4254,154 @@
 
 .tab-parallax-main {
   will-change: transform;
+}
+
+/* World map — job dispatch modal (Contracts → Send) */
+.map-world-job-engage-backdrop {
+  z-index: 1400;
+  background: rgba(14, 18, 24, 0.52);
+}
+
+.map-world-job-engage-dialog {
+  width: min(22rem, calc(100% - 1.5rem));
+  max-height: min(78vh, 32rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(26, 26, 26, 0.14);
+  background: rgba(252, 251, 247, 0.97);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.28);
+}
+
+.map-world-job-engage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem 0.4rem;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.1);
+}
+
+.map-world-job-engage-head h2 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-close {
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(26, 26, 26, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #3a3a3a;
+  cursor: pointer;
+}
+
+.map-world-job-engage-body {
+  overflow-y: auto;
+  padding: 0.45rem 0.55rem 0.65rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  gap: 0.35rem;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage header strong {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .job-posting-tower {
+  font-size: 0.62rem;
+  color: #5a5a5a;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .job-posting-facts {
+  gap: 0.12rem 0.4rem;
+  font-size: 0.58rem;
+  line-height: 1.2;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-fact-label {
+  color: #6a6a6a;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .mission-crew-picker,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-unit-list {
+  font-size: 0.62rem;
+}
+
+.map-world-job-engage-body .job-posting-engage-btn {
+  min-height: 2.75rem;
+  font-size: 0.74rem;
+}
+
+.map-hex-job-send-coach-anchor {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.map-world-job-travel-coach-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 1450;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.55rem 0.65rem calc(var(--mobile-bottom-nav-space, 0px) + 0.55rem);
+  background: rgba(14, 18, 24, 0.38);
+  pointer-events: auto;
+}
+
+.map-world-job-travel-coach-card {
+  width: min(20rem, 100%);
+  padding: 0.65rem 0.75rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(120, 200, 255, 0.42);
+  background: rgba(8, 14, 22, 0.96);
+  box-shadow: 0 0.35rem 0.85rem rgba(0, 0, 0, 0.4);
+  color: #e8eef5;
+}
+
+.map-world-job-travel-coach-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.map-world-job-travel-coach-copy {
+  margin: 0 0 0.55rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: rgba(232, 238, 245, 0.88);
+}
+
+.map-world-job-travel-coach-actions {
+  display: flex;
+  justify-content: flex-end;
 }

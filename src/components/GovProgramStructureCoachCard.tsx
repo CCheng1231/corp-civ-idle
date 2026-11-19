@@ -1,6 +1,8 @@
 import type { Dispatch } from "react";
+import { createPortal } from "react-dom";
 import { formatNumber } from "../game/constants";
-import { secretaryById } from "../game/secretaryData";
+import { govGrowthStepProgress } from "../game/govProgram";
+import { govGrowthStepCoachFooter } from "../game/govProgramGrowthCoachCopy";
 import { secretaryRosterPortraitSrc } from "../game/secretaryAssets";
 import type { GameAction, GameState } from "../game/types";
 
@@ -25,24 +27,42 @@ function structureQueueCoachRewardLines(state: GameState): string[] {
 interface GovProgramStructureCoachCardProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  /** Defaults to “Growth Track Step N/M Completed!” from active growth step. */
+  headline?: string;
   footer?: string;
   showReward?: boolean;
+  /** Floating modal (does not push queue/catalog layout). */
+  presentation?: "inline" | "overlay";
 }
 
-/** Shown on Structure tab directly under “Structure in progress”. */
+function growthTrackCompletedHeadline(state: GameState): string {
+  const progress = govGrowthStepProgress(state);
+  if (!progress) return "Growth track step completed!";
+  return `Growth Track Step ${progress.current}/${progress.total} Completed!`;
+}
+
+/** Growth-track reward / nudge card (Structure or Recruit tab). */
 export function GovProgramStructureCoachCard({
   state,
   dispatch,
-  footer = "Click OK for next step.",
+  headline,
+  footer,
   showReward = true,
+  presentation = "inline",
 }: GovProgramStructureCoachCardProps) {
-  const aide = secretaryById("secretary_01");
   const rewards = showReward ? structureQueueCoachRewardLines(state) : [];
+  const resolvedHeadline = headline ?? growthTrackCompletedHeadline(state);
+  const growthStepId =
+    state.govProgram?.growthStepId ??
+    state.govProgram?.growthCompletedStepIds.at(-1);
+  const resolvedFooter =
+    footer ?? govGrowthStepCoachFooter(growthStepId);
 
-  return (
+  const card = (
     <aside
       className="gov-program-structure-coach-card"
       role="dialog"
+      aria-modal={presentation === "overlay" ? true : undefined}
       aria-labelledby="gov-structure-queue-title"
     >
       <div className="gov-program-coach-card-portrait-col" aria-hidden>
@@ -53,21 +73,20 @@ export function GovProgramStructureCoachCard({
         />
       </div>
       <div className="gov-program-coach-card-main">
-        <h2 id="gov-structure-queue-title">{aide.name}</h2>
-        <p className="gov-program-coach-modal-lead gov-program-coach-status-done">
-          Completed
-        </p>
+        <h2 id="gov-structure-queue-title">{resolvedHeadline}</h2>
         {rewards.length > 0 ? (
           <p className="gov-program-coach-modal-reward">
             <span className="gov-program-coach-modal-reward-label">Reward</span>{" "}
             {rewards.join(" · ")}
           </p>
         ) : null}
-        <p className="muted gov-program-coach-modal-foot">{footer}</p>
+        <p className="gov-program-tutorial-copy gov-program-coach-modal-foot">
+          {resolvedFooter}
+        </p>
         <div className="gov-program-coach-card-actions">
           <button
             type="button"
-            className="btn primary gov-program-coach-card-ok"
+            className="btn primary gov-program-tutorial-btn"
             onClick={() => dispatch({ type: "GOV_DISMISS_MODAL" })}
           >
             OK
@@ -76,4 +95,20 @@ export function GovProgramStructureCoachCard({
       </div>
     </aside>
   );
+
+  if (presentation === "overlay") {
+    return createPortal(
+      <>
+        <div
+          className="gov-program-coach-intro-backdrop"
+          role="presentation"
+          aria-hidden
+        />
+        <div className="gov-program-coach-card-floating-wrap">{card}</div>
+      </>,
+      document.body,
+    );
+  }
+
+  return card;
 }

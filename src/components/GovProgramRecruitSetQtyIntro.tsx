@@ -56,24 +56,34 @@ export function GovProgramRecruitSetQtyIntro({
   if (!style) return null;
 
   return createPortal(
-    <div
-      className="gov-program-coach-overlay-bubble"
-      style={style}
-      role="dialog"
-      aria-labelledby="gov-recruit-set-qty-title"
-    >
-      <p id="gov-recruit-set-qty-title" className="gov-program-coach-overlay-text">
-        Change <strong>Qty</strong> to <strong>10</strong>, then tap{" "}
-        <strong>Queue order</strong> on Fresh Graduate.
-      </p>
-      <button
-        type="button"
-        className="btn primary gov-program-coach-overlay-ok"
-        onClick={() => dispatch({ type: "GOV_DISMISS_MODAL" })}
+    <>
+      <div
+        className="gov-program-coach-intro-backdrop"
+        role="presentation"
+        aria-hidden
+      />
+      <div
+        className="gov-program-coach-overlay-bubble"
+        style={style}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gov-recruit-set-qty-title"
       >
-        OK
-      </button>
-    </div>,
+        <p id="gov-recruit-set-qty-title" className="gov-program-tutorial-copy">
+          Change <strong>Qty</strong> to <strong>10</strong>, then tap{" "}
+          <strong>Queue order</strong> on Fresh Graduate.
+        </p>
+        <div className="gov-program-tutorial-actions">
+          <button
+            type="button"
+            className="btn primary gov-program-tutorial-btn"
+            onClick={() => dispatch({ type: "GOV_DISMISS_MODAL" })}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </>,
     document.body,
   );
 }

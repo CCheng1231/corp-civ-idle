@@ -173,6 +173,35 @@
     min-height: 0;
   }
 
+  .layout-mobile-nav .gov-program-view .gov-program-step-go.btn,
+  .layout-mobile-nav .gov-program-view .gov-program-card-btn.btn,
+  .app-shell.viewport-preview-mobile .gov-program-view .gov-program-step-go.btn,
+  .app-shell.viewport-preview-mobile .gov-program-view .gov-program-card-btn.btn,
+  html.viewport-preview-galaxy-s24 .gov-program-view .gov-program-step-go.btn,
+  html.viewport-preview-galaxy-s24 .gov-program-view .gov-program-card-btn.btn {
+    min-height: 2rem;
+    width: auto;
+    padding: 0.26rem 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .layout-mobile-nav .gov-program-coach-overlay-bubble .gov-program-tutorial-btn.btn,
+  .layout-mobile-nav .gov-program-coach-card-actions .gov-program-tutorial-btn.btn,
+  .layout-mobile-nav .gov-program-queue-intro-bubble .gov-program-tutorial-btn.btn,
+  .app-shell.viewport-preview-mobile .gov-program-coach-overlay-bubble .gov-program-tutorial-btn.btn,
+  .app-shell.viewport-preview-mobile .gov-program-coach-card-actions .gov-program-tutorial-btn.btn,
+  .app-shell.viewport-preview-mobile .gov-program-queue-intro-bubble .gov-program-tutorial-btn.btn,
+  html.viewport-preview-galaxy-s24 .gov-program-coach-overlay-bubble .gov-program-tutorial-btn.btn,
+  html.viewport-preview-galaxy-s24 .gov-program-coach-card-actions .gov-program-tutorial-btn.btn,
+  html.viewport-preview-galaxy-s24 .gov-program-queue-intro-bubble .gov-program-tutorial-btn.btn {
+    min-height: 2rem;
+    width: auto;
+    padding: 0.26rem 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
   .job-board-filters-actions .job-board-filter-action {
     min-height: 2.25rem;
     padding-top: 0.35rem;
@@ -236,4 +265,23 @@
 .app-shell-mobile-nav .resource-chip-wrap .resource-rate,
 .app-shell-mobile-nav .resource-chip-wrap .resource-cap-bar {
   display: none !important;
+}
+
+html.viewport-preview-galaxy-s24 .gov-program-view .gov-program-step-go.btn,
+html.viewport-preview-galaxy-s24 .gov-program-view .gov-program-card-btn.btn {
+  min-height: 2rem;
+  width: auto;
+  padding: 0.26rem 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+html.viewport-preview-galaxy-s24 .gov-program-coach-overlay-bubble .gov-program-tutorial-btn.btn,
+html.viewport-preview-galaxy-s24 .gov-program-coach-card-actions .gov-program-tutorial-btn.btn,
+html.viewport-preview-galaxy-s24 .gov-program-queue-intro-bubble .gov-program-tutorial-btn.btn {
+  min-height: 2rem;
+  width: auto;
+  padding: 0.26rem 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }

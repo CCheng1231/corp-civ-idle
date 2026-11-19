@@ -300,6 +300,7 @@ interface ResearchQueueListProps {
   emptyLabel?: string;
   maxSlots?: number;
   compact?: boolean;
+  highlightJobId?: string | null;
 }
 
 export function ResearchQueueList({
@@ -312,6 +313,7 @@ export function ResearchQueueList({
   emptyLabel = "No research queued.",
   maxSlots = 2,
   compact = false,
+  highlightJobId = null,
 }: ResearchQueueListProps) {
   const [pending, setPending] = useState<PendingCancel | null>(null);
   const rows =
@@ -370,6 +372,7 @@ export function ResearchQueueList({
                   now={now}
                   onCancel={() => requestCancel(job, rowOfficeId)}
                   compact={compact}
+                  coached={highlightJobId != null && job.id === highlightJobId}
                 />
               );
             });

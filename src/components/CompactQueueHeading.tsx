@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 interface CompactQueueHeadingProps {
+  id?: string;
   title: string;
   count: ReactNode;
   countAriaLabel: string;
@@ -10,6 +11,7 @@ interface CompactQueueHeadingProps {
 }
 
 export function CompactQueueHeading({
+  id,
   title,
   count,
   countAriaLabel,
@@ -22,23 +24,34 @@ export function CompactQueueHeading({
     hideChecked !== undefined &&
     onHideChange !== undefined;
 
+  const countBadge = (
+    <span className="tab-queue-count muted" aria-label={countAriaLabel}>
+      {count}
+    </span>
+  );
+
+  if (!showHide) {
+    return (
+      <div id={id} className="tab-queue-heading">
+        <h3>{title}</h3>
+        {countBadge}
+      </div>
+    );
+  }
+
   return (
-    <div className="tab-queue-heading tab-queue-heading-stacked">
+    <div id={id} className="tab-queue-heading tab-queue-heading-stacked">
       <h3>{title}</h3>
       <div className="tab-queue-heading-meta">
-        <span className="tab-queue-count muted" aria-label={countAriaLabel}>
-          {count}
-        </span>
-        {showHide ? (
-          <label className="progression-hide-completed-check tab-queue-filter">
-            <input
-              type="checkbox"
-              checked={hideChecked}
-              onChange={(event) => onHideChange(event.target.checked)}
-            />
-            {hideLabel}
-          </label>
-        ) : null}
+        {countBadge}
+        <label className="progression-hide-completed-check tab-queue-filter">
+          <input
+            type="checkbox"
+            checked={hideChecked}
+            onChange={(event) => onHideChange(event.target.checked)}
+          />
+          {hideLabel}
+        </label>
       </div>
     </div>
   );

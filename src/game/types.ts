@@ -825,11 +825,29 @@ export type GovProgramModalKind =
   | "recruit_set_qty_intro"
   | "recruit_queue_intro"
   | "recruit_first_queue_coach"
-  | "recruit_step_coach";
+  | "recruit_step_coach"
+  | "research_queue_intro"
+  | "growth_step_coach"
+  | "growth_job_travel_coach"
+  | "map_filter_intro";
 
 export type GovGrowthRecruitCoachPhase = "set_qty" | "pick_queue";
 
-export type GovGrowthStructureCoachPhase = "pick_upgrade";
+export type GovGrowthMapCoachPhase =
+  | "filter_intro"
+  | "filter_tier"
+  | "pick_job"
+  | "drawer_title"
+  | "drawer_region"
+  | "drawer_distance"
+  | "drawer_contracts";
+
+export type GovGrowthJobCoachPhase = "pick_job" | "map_send" | "map_engage";
+
+export type GovGrowthStructureCoachPhase =
+  | "go_home"
+  | "pick_structure_tab"
+  | "pick_upgrade";
 
 export interface GovProgramCalendarState {
   activeDailyQuestId: string | null;
@@ -869,6 +887,14 @@ export interface GovProgramState {
   /** In-tab coach: arrow on first affordable upgrade before queue explainer modal. */
   growthStructureCoach: GovGrowthStructureCoachPhase | null;
   growthRecruitCoach: GovGrowthRecruitCoachPhase | null;
+  growthMapCoach: GovGrowthMapCoachPhase | null;
+  /** T1 posting row to spotlight during growth_map pick_job coach. */
+  growthMapCoachPostingId: string | null;
+  /** Hex/site label for drawer_title coach copy. */
+  growthMapCoachSiteLabel: string | null;
+  growthJobCoach: GovGrowthJobCoachPhase | null;
+  /** Posting to coach during growth_job (often the step 3 survey site). */
+  growthJobCoachPostingId: string | null;
   growthRecruitFirstQueueCoachDone: boolean;
   /** Queue job row to pulse while structure_queue_coach modal is open. */
   structureQueueCoachJobId: string | null;
@@ -1018,8 +1044,16 @@ export type GameAction =
   | { type: "GOV_ENGAGE_CHARTER"; officeId?: OfficeLocationId }
   | { type: "GOV_CLAIM_DAILY"; now: number }
   | { type: "GOV_MAP_SITE_INSPECTED" }
-  | { type: "GOV_RESET_GROWTH_TRACK" }
+  | { type: "GOV_START_MAP_COACH" }
+  | { type: "GOV_ADVANCE_MAP_COACH_TIER"; postingId?: string | null }
+  | { type: "GOV_MAP_JOB_FOCUSED"; postingId: string }
+  | { type: "GOV_ADVANCE_MAP_DRAWER_COACH" }
+  | { type: "GOV_START_JOB_COACH" }
+  | { type: "GOV_ON_JOB_SEND_FROM_MAP"; postingId: string }
+  | { type: "GOV_CANCEL_MAP_JOB_ENGAGE" }
+  | { type: "GOV_RESET_GROWTH_TRACK"; stepId?: string }
   | { type: "GOV_START_STRUCTURE_COACH" }
+  | { type: "GOV_RELEASE_STRUCTURE_COACH" }
   | { type: "GOV_START_RECRUIT_COACH" }
   | { type: "GOV_ADVANCE_RECRUIT_COACH" }
   | { type: "SET_HOME_PANEL"; panel: HomePanel }

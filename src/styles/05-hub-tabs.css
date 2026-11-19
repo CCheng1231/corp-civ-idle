@@ -10,6 +10,7 @@
   gap: 0;
 }
 
+.overview-view.hub-synced-tab-view--progression-freeze,
 .operations-view.hub-synced-tab-view--progression-freeze,
 .recruitment-view.hub-synced-tab-view--progression-freeze,
 .research-view.hub-synced-tab-view--progression-freeze,
@@ -188,6 +189,7 @@
 }
 
 @media (max-width: 960px) {
+  .overview-view.hub-synced-tab-view .progression-tab-sticky-chrome,
   .operations-view.hub-synced-tab-view .progression-tab-sticky-chrome,
   .recruitment-view.hub-synced-tab-view .progression-tab-sticky-chrome,
   .research-view.hub-synced-tab-view .progression-tab-sticky-chrome,
@@ -200,6 +202,7 @@
     column-gap: 0.5rem;
   }
 
+  .overview-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
   .operations-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
   .recruitment-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
   .research-view.hub-synced-tab-view .progression-tab-sticky-chrome--compact-hub,
@@ -269,13 +272,31 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
 }
 
+.hub-synced-tab-view .tab-compact-queue .build-queue.build-queue-compact > li:only-child,
 .hub-synced-tab-view .tab-hero-main .tab-compact-queue .build-queue li {
   border-color: rgba(255, 255, 255, 0.11);
   background: rgba(8, 12, 18, 0.38);
 }
 
+.hub-synced-tab-view .tab-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) {
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(8, 12, 18, 0.38);
+}
+
+.hub-synced-tab-view .tab-compact-queue .build-queue.build-queue-compact:has(> li:nth-child(2)) > li {
+  background: transparent;
+  border: none;
+}
+
+.hub-synced-tab-view
+  .tab-compact-queue
+  .build-queue.build-queue-compact:has(> li:nth-child(2))
+  > li
+  + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .hub-synced-tab-view :is(
-  .overview-summary-block,
   .office-site-summary-banner,
   .recruitment-units-banner,
   .research-progress-banner,
@@ -294,7 +315,6 @@
 }
 
 .hub-synced-tab-view :is(
-  .overview-summary-block,
   .office-site-summary-banner,
   .recruitment-units-banner,
   .research-progress-banner,
@@ -321,7 +341,6 @@
 }
 
 .hub-synced-tab-view :is(
-  .overview-summary-block,
   .office-site-summary-banner,
   .recruitment-units-banner,
   .research-progress-banner,
@@ -333,10 +352,6 @@
   .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-filters,
   .secretary-view.hub-synced-tab-view .job-board-embedded .job-board-list-wrap
 ) :where(
-  .overview-panel-title,
-  .tab-net-worth-label,
-  .tab-net-worth-value,
-  .tab-net-worth-goal,
   .office-site-capacity-label,
   .office-site-capacity-values,
   .office-site-capacity-stat strong,

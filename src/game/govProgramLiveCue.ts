@@ -38,7 +38,8 @@ export function govProgramLiveCue(
 ): GovLiveCue | null {
   if (
     (screen === "job" || screen === "world") &&
-    govEngageLockActive(state)
+    govEngageLockActive(state) &&
+    govGrowthTrackPaused(state)
   ) {
     return {
       title: "Orientation charter",
@@ -91,12 +92,8 @@ export function govProgramLiveCue(
 
   switch (growth.stepId) {
     case "growth_structure":
-      if (screen !== "operations") return null;
-      return {
-        title: growth.title,
-        instruction:
-          "Tap Upgrade on a structure you can afford — follow the arrow if you see one.",
-      };
+      // Step 1 coaching uses GovProgramStructureNavCoach spotlight only.
+      return null;
     case "growth_recruit_push":
       if (screen !== "recruitment") return null;
       if (
@@ -112,27 +109,30 @@ export function govProgramLiveCue(
       };
     case "growth_map":
       if (screen !== "world") return null;
+      if (
+        state.govProgram?.pendingModal === "map_filter_intro" ||
+        state.govProgram?.growthMapCoach === "filter_tier" ||
+        state.govProgram?.growthMapCoach === "pick_job" ||
+        state.govProgram?.growthMapCoach === "drawer_title" ||
+        state.govProgram?.growthMapCoach === "drawer_region" ||
+        state.govProgram?.growthMapCoach === "drawer_distance" ||
+        state.govProgram?.growthMapCoach === "drawer_contracts"
+      ) {
+        return null;
+      }
       return {
         title: growth.title,
-        instruction: "Tap a hex to open it. That inspect finishes this step.",
+        instruction: "Use Jobs filter → Tier T1, then pick a contract.",
       };
     case "growth_job":
+      if (screen === "world") return null;
+      if (screen === "job" && state.govProgram?.growthJobCoach === "map_engage") {
+        return null;
+      }
       if (screen === "job") {
         return {
           title: growth.title,
-          instruction: "Open a posting and tap Engage.",
-          action: { kind: "local", label: "Job board", id: "job-board" },
-        };
-      }
-      if (screen === "world") {
-        return {
-          title: growth.title,
-          instruction: "Send a team from a contract hex, or use the Job board.",
-          action: {
-            kind: "game",
-            label: "Job board",
-            action: { type: "SET_VIEW", view: "office" },
-          },
+          instruction: "Tap Engage to dispatch the team.",
         };
       }
       return null;
@@ -155,6 +155,21 @@ export function govProgramLiveCue(
             type: "SET_VIEW",
             view: "research",
             researchFocusResearchId: "eff_manuals_cash",
+          },
+        },
+      };
+    case "growth_bm_hint":
+      if (screen !== "research") return null;
+      return {
+        title: growth.title,
+        instruction: growth.body,
+        action: {
+          kind: "game",
+          label: "Branch Management",
+          action: {
+            type: "SET_VIEW",
+            view: "research",
+            researchFocusResearchId: "branch_management",
           },
         },
       };

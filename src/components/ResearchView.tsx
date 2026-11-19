@@ -27,6 +27,7 @@ import {
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
 import { GovProgramLiveCue } from "./GovProgramLiveCue";
+import { GovProgramResearchQueueIntro } from "./GovProgramResearchQueueIntro";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { CompactQueueHeading } from "./CompactQueueHeading";
 import { StructureCostLine } from "./StructureCostLine";
@@ -145,6 +146,10 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
   const [detailResearch, setDetailResearch] = useState<ResearchDefinition | null>(
     null,
   );
+  const researchQueueIntro =
+    state.govProgram?.pendingModal === "research_queue_intro";
+  const researchQueueCoachJobId =
+    state.govProgram?.structureQueueCoachJobId ?? null;
   const [categoryOpen, setCategoryOpen] = useState<
     Partial<Record<ResearchCategory, boolean>>
   >(() => {
@@ -541,8 +546,8 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     );
   }
 
-  const researchBesidePortrait = (
-    <>
+  const researchQueuesBelowBanner = (
+    <div className="tab-hero-queues">
       {showAll ? (
         ownedOfficeIds(state).map((siteId) => {
           const siteQueue = researchJobsAtOffice(state, siteId);
@@ -573,7 +578,12 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           );
         })
       ) : (
-        <section className="location-view-section tab-queue-section tab-compact-queue">
+        <section
+          id="gov-program-research-queue-anchor"
+          className={`location-view-section tab-queue-section tab-compact-queue${
+            researchQueueIntro ? " gov-program-coach-queue-highlight" : ""
+          }`}
+        >
           <CompactQueueHeading
             title="Research in progress"
             count={`${researchQueue.length}/${MAX_RESEARCH_QUEUE}`}
@@ -587,10 +597,14 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
             now={now}
             compact
             emptyLabel=""
+            highlightJobId={researchQueueCoachJobId}
           />
         </section>
       )}
-    </>
+      {researchQueueIntro ? (
+        <GovProgramResearchQueueIntro dispatch={dispatch} key="research-queue-intro" />
+      ) : null}
+    </div>
   );
 
   const researchBelowPortrait = (
@@ -602,6 +616,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
         <span className="research-progress-label">Firm-wide</span>
         <span className="research-progress-value">{progressLabel}</span>
       </div>
+      {researchQueuesBelowBanner}
       <ProgressionCatalogToolbar
         onCollapseAll={collapseAllResearchCategories}
         filterToggle={{
@@ -684,7 +699,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           allowPortraitResize={false}
           className="tab-portrait-fit"
         >
-          {researchBesidePortrait}
+          {null}
         </TabPortraitLayout>
         <div className="tab-below-portrait">{researchBelowPortrait}</div>
       </HubSyncedTabScrollBody>

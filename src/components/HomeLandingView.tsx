@@ -73,6 +73,11 @@ export function HomeLandingView({ state, dispatch }: HomeLandingViewProps) {
             {HOME_DESTINATIONS.map((destination) => (
               <button
                 key={destination.label}
+                id={
+                  destination.view === "operations"
+                    ? "gov-coach-anchor-home-structure"
+                    : undefined
+                }
                 type="button"
                 className="btn hub-landing-nav-btn"
                 onClick={() => openDestination(destination)}

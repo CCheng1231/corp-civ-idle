@@ -50,6 +50,9 @@ interface JobPostingCardProps {
   onAssignmentChange: (next: UnitAssignment) => void;
   onEngageSuccess?: () => void;
   showTower?: boolean;
+  coachEngageHighlight?: boolean;
+  /** Compact light card for World map dispatch modal */
+  presentation?: "default" | "mapEngage";
 }
 
 function MetaTip<T extends string>({
@@ -104,7 +107,10 @@ export function JobPostingCard({
   onAssignmentChange,
   onEngageSuccess,
   showTower = false,
+  coachEngageHighlight = false,
+  presentation = "default",
 }: JobPostingCardProps) {
+  const mapEngage = presentation === "mapEngage";
   const [teamLeadId, setTeamLeadId] = useState<SecretaryId | "">("");
   const officeId = resolveOfficeLocation(state);
   const teamLeadOptions = availableTeamLeadSecretaries(state);
@@ -153,20 +159,44 @@ export function JobPostingCard({
     unitCount > 0 && actualPerHour + 0.05 < expectedPerHour;
   const engageNote = showPayNote ? JOB_ENGAGE_CAPPED_SHIFT_HINT : null;
 
+  const completionParts: string[] = [];
+  if (completionSupply > 0) {
+    completionParts.push(`${formatNumber(completionSupply)} SUP`);
+  }
+  if (completionConnection > 0) {
+    completionParts.push(`${formatNumber(completionConnection)} CON`);
+  }
+  completionParts.push(`${bonusPctLabel}% cash`);
+  const completionSummary = completionParts.join(" · ");
+
   return (
-    <article className="project-card job-posting-card">
+    <article
+      className={`project-card job-posting-card${
+        mapEngage ? " job-posting-card--map-engage" : ""
+      }`}
+    >
       <header>
         <strong>{def.title}</strong>
-        <span>
-          {def.locationType ? LOCATION_TYPE_LABELS[def.locationType] : "Job"}
-        </span>
-        {showTower && (
+        {mapEngage ? (
           <span className="job-posting-tower muted">
             {siteLabel} · {REGION_LABELS[siteRegion]}
           </span>
+        ) : (
+          <>
+            <span>
+              {def.locationType ? LOCATION_TYPE_LABELS[def.locationType] : "Job"}
+            </span>
+            {showTower ? (
+              <span className="job-posting-tower muted">
+                {siteLabel} · {REGION_LABELS[siteRegion]}
+              </span>
+            ) : null}
+          </>
         )}
       </header>
-      <p className="structure-desc muted">{def.description}</p>
+      {mapEngage ? null : (
+        <p className="structure-desc muted">{def.description}</p>
+      )}
       <ul className="job-posting-facts">
         <li>
           <span className="job-posting-fact-label">Tier</span>
@@ -197,24 +227,37 @@ export function JobPostingCard({
           <span className="job-posting-fact-label">Payout</span>
           <span>${def.cashPerUnitHour}/unit-hour</span>
         </li>
-        {completionSupply > 0 ? (
+        {mapEngage ? (
           <li>
-            <span className="job-posting-fact-label">Bonus</span>
-            <span>{formatNumber(completionSupply)} SUP on completion</span>
+            <span className="job-posting-fact-label">Completion</span>
+            <span>{completionSummary}</span>
           </li>
-        ) : null}
-        {completionConnection > 0 ? (
-          <li>
-            <span className="job-posting-fact-label">Bonus</span>
-            <span>{formatNumber(completionConnection)} CON on completion</span>
-          </li>
-        ) : null}
+        ) : (
+          <>
+            {completionSupply > 0 ? (
+              <li>
+                <span className="job-posting-fact-label">Bonus</span>
+                <span>{formatNumber(completionSupply)} SUP on completion</span>
+              </li>
+            ) : null}
+            {completionConnection > 0 ? (
+              <li>
+                <span className="job-posting-fact-label">Bonus</span>
+                <span>
+                  {formatNumber(completionConnection)} CON on completion
+                </span>
+              </li>
+            ) : null}
+            <li>
+              <span className="job-posting-fact-label">Completion cash</span>
+              <span>{bonusPctLabel}% of contract on finish</span>
+            </li>
+          </>
+        )}
         <li>
-          <span className="job-posting-fact-label">Completion cash</span>
-          <span>{bonusPctLabel}% of contract on finish</span>
-        </li>
-        <li>
-          <span className="job-posting-fact-label">Completion</span>
+          <span className="job-posting-fact-label">
+            {mapEngage ? "Progress" : "Completion"}
+          </span>
           <MetaTip<CompletionBand>
             tipId={`job-completion-tip-${posting.id}`}
             current={band}
@@ -252,7 +295,7 @@ export function JobPostingCard({
         dispatch={dispatch}
         onChange={onAssignmentChange}
       />
-      {teamLeadOptions.length > 0 ? (
+      {!mapEngage && teamLeadOptions.length > 0 ? (
         <label className="job-posting-team-lead">
           <span>Team lead (optional)</span>
           <select
@@ -273,7 +316,10 @@ export function JobPostingCard({
       <div className="job-posting-engage">
         <button
           type="button"
-          className="btn primary job-posting-engage-btn"
+          id={coachEngageHighlight ? "gov-coach-anchor-job-engage" : undefined}
+          className={`btn primary job-posting-engage-btn${
+            coachEngageHighlight ? " gov-program-coach-target" : ""
+          }`}
           disabled={disabled}
           onClick={() => {
             if (disabled) return;

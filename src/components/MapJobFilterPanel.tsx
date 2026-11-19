@@ -30,6 +30,7 @@ interface MapJobFilterPanelProps {
   onFiltersChange: (filters: JobBoardFilters) => void;
   onFocusPosting: (posting: JobPosting) => void;
   selectedPostingId: string | null;
+  coachPostingId?: string | null;
 }
 
 export function MapJobFilterPanel({
@@ -42,6 +43,7 @@ export function MapJobFilterPanel({
   onFiltersChange,
   onFocusPosting,
   selectedPostingId,
+  coachPostingId = null,
 }: MapJobFilterPanelProps) {
   const options = jobBoardFilterOptions();
   const allOpen = openJobPostings(state);
@@ -72,7 +74,10 @@ export function MapJobFilterPanel({
       }`}
       aria-label="Job map filters"
     >
-      <div className="map-job-filter-head">
+      <div
+        id="gov-coach-anchor-map-job-filter"
+        className="map-job-filter-head"
+      >
         <button
           type="button"
           className="map-job-filter-toggle-jobs"
@@ -176,9 +181,10 @@ export function MapJobFilterPanel({
                 ))}
               </select>
             </label>
-            <label className="map-job-filter-field">
+            <label className="map-job-filter-field gov-program-coach-target">
               <span>Tier</span>
               <select
+                id="gov-coach-anchor-map-tier"
                 value={filters.tier === "all" ? "all" : String(filters.tier)}
                 onChange={(e) =>
                   updateFilter(
@@ -233,6 +239,8 @@ export function MapJobFilterPanel({
                 }
                 const region = jobSiteRegionForPosting(posting, def);
                 const selected = posting.id === selectedPostingId;
+                const coached =
+                  coachPostingId != null && posting.id === coachPostingId;
                 const payout = def.cashPerUnitHour;
                 const roleLabel =
                   def.locationType != null
@@ -247,14 +255,26 @@ export function MapJobFilterPanel({
                   <li key={posting.id}>
                     <button
                       type="button"
-                      className={`map-job-filter-row${selected ? " is-selected" : ""}`}
+                      className={`map-job-filter-row${
+                        selected ? " is-selected" : ""
+                      }${coached ? " map-job-filter-row--coach" : ""}`}
                       onClick={() => onFocusPosting(posting)}
                     >
                       <span
-                        className={`map-job-filter-region map-job-filter-region-${region}`}
-                        aria-hidden
-                      />
-                      <span className="map-job-filter-row-main">
+                        id={
+                          coached
+                            ? `gov-coach-anchor-map-job-${posting.id}`
+                            : undefined
+                        }
+                        className={`map-job-filter-row-coach-anchor gov-program-coach-target${
+                          coached ? " gov-program-coach-queue-job" : ""
+                        }`}
+                      >
+                        <span
+                          className={`map-job-filter-region map-job-filter-region-${region}`}
+                          aria-hidden
+                        />
+                        <span className="map-job-filter-row-main">
                         <span className="map-job-filter-row-title">
                           {def.title}
                         </span>
@@ -268,17 +288,13 @@ export function MapJobFilterPanel({
                           </span>
                         </span>
                       </span>
+                      </span>
                     </button>
                   </li>
                 );
               })
             )}
           </ul>
-          {!expanded && visible.length > 12 ? (
-            <p className="map-job-filter-more muted">
-              +{visible.length - 12} more — expand list or use Secretary tab
-            </p>
-          ) : null}
         </div>
       ) : null}
     </aside>

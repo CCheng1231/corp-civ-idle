@@ -240,6 +240,7 @@ export function OfficeBuildQueueSection({
         }`}
       >
         <CompactQueueHeading
+          id="gov-coach-anchor-structure-queue-head"
           title="Structure in progress"
           count={`${buildQueue.length}/${MAX_STRUCTURE_QUEUE}`}
           countAriaLabel={`Structure queue ${buildQueue.length} of ${MAX_STRUCTURE_QUEUE}`}
