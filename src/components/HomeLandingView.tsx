@@ -76,7 +76,11 @@ export function HomeLandingView({ state, dispatch }: HomeLandingViewProps) {
                 id={
                   destination.view === "operations"
                     ? "gov-coach-anchor-home-structure"
-                    : undefined
+                    : destination.view === "research"
+                      ? "gov-coach-anchor-home-research"
+                      : destination.view === "recruitment"
+                        ? "gov-coach-anchor-home-recruitment"
+                        : undefined
                 }
                 type="button"
                 className="btn hub-landing-nav-btn"

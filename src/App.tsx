@@ -3,6 +3,8 @@ import { AccountGate } from "./components/AccountGate";
 import { CompletionAlertToasts } from "./components/CompletionAlertToasts";
 import { GovProgramModal } from "./components/GovProgramModal";
 import { GovProgramGrowthCoachLayer } from "./components/GovProgramGrowthCoachLayer";
+import { GovProgramGrowthPathCoach } from "./components/GovProgramGrowthPathCoach";
+import { GovProgramGrowthTutorialIntro } from "./components/GovProgramGrowthTutorialIntro";
 import { GovProgramStructureNavCoach } from "./components/GovProgramStructureNavCoach";
 import { SecretaryRecruitmentModal } from "./components/SecretaryRecruitmentModal";
 import { SecretarySkinUnlockModal } from "./components/SecretarySkinUnlockModal";
@@ -130,6 +132,16 @@ function GameShell({
       ) : null}
       <GovProgramModal state={state} dispatch={dispatch} />
       <GovProgramStructureNavCoach state={state} dispatch={dispatch} />
+      <GovProgramGrowthPathCoach state={state} dispatch={dispatch} />
+      {state.govProgram?.pendingModal === "growth_report_intro" ||
+      state.govProgram?.pendingModal === "growth_research_intro" ||
+      state.govProgram?.pendingModal === "growth_bm_hint_intro" ||
+      state.govProgram?.pendingModal === "growth_bm_hired_intro" ? (
+        <GovProgramGrowthTutorialIntro
+          modal={state.govProgram.pendingModal}
+          dispatch={dispatch}
+        />
+      ) : null}
       <GovProgramGrowthCoachLayer state={state} dispatch={dispatch} />
       <SecretaryRecruitmentModal state={state} dispatch={dispatch} />
       <SecretarySkinUnlockModal state={state} dispatch={dispatch} />

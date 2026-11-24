@@ -1488,7 +1488,7 @@ html.viewport-preview-galaxy-s24 .overview-scene-banner .tab-portrait-frame-pann
   margin: 0.35rem 0;
 }
 
-.recruit-count-field input {
+.recruit-count-field input:not(.recruit-count-input) {
   max-width: 4.75rem;
   padding: 0.35rem 0.5rem;
   border-radius: 0.45rem;

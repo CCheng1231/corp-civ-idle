@@ -64,6 +64,10 @@ export function SecretaryLandingView({
     }
   }, [focusRailOpen]);
 
+  const reportCoachJob =
+    state.govProgram?.growthStepId === "growth_report" &&
+    state.govProgram?.growthReportCoach === "open_job";
+
   function openDestination(
     id: "roster" | "job" | "log" | "govProgram" | "marketResearch",
   ) {
@@ -147,6 +151,11 @@ export function SecretaryLandingView({
             {SECRETARY_DESTINATIONS.map((destination) => (
               <button
                 key={destination.id}
+                id={
+                  reportCoachJob && destination.id === "job"
+                    ? "gov-coach-anchor-secretary-job"
+                    : undefined
+                }
                 type="button"
                 className="btn hub-landing-nav-btn"
                 aria-label={

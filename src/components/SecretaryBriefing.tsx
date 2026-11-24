@@ -8,6 +8,15 @@ import {
 import type { GameAction, GameState } from "../game/types";
 import { JobBoard } from "./JobBoard";
 
+function coachJobReportsTabActive(state: GameState): boolean {
+  const g = state.govProgram;
+  return (
+    g?.growthStepId === "growth_report" &&
+    (g.growthReportCoach === "reports_tab" ||
+      g.growthReportCoach === "dismiss_report")
+  );
+}
+
 const SECRETARY_WORK_TAB_KEY = "corp-civ-idle-secretary-work-tab";
 
 export type SecretaryWorkTab = "reports" | "board";
@@ -36,6 +45,10 @@ export function SecretaryBriefing({
   onWorkTabChange,
 }: SecretaryBriefingProps) {
   const jobReports = pendingJobReports(state);
+  const coachReports = coachJobReportsTabActive(state);
+  const coachDismissFirst =
+    state.govProgram?.growthReportCoach === "dismiss_report" &&
+    jobReports.length > 0;
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,7 +96,11 @@ export function SecretaryBriefing({
             <button
               type="button"
               role="tab"
-              id="secretary-tab-reports"
+              id={
+                coachReports
+                  ? "gov-coach-anchor-job-reports-tab"
+                  : "secretary-tab-reports"
+              }
               aria-selected={workTab === "reports"}
               aria-controls="secretary-panel-reports"
               className={workTab === "reports" ? "tab active" : "tab"}
@@ -145,7 +162,7 @@ export function SecretaryBriefing({
         >
           {jobReports.length > 0 ? (
             <ul className="secretary-job-reports-list">
-              {jobReports.map((entry) => {
+              {jobReports.map((entry, index) => {
                 const expanded = expandedReportId === entry.id;
                 const detailLines = jobReportExpandedLines(
                   entry,
@@ -184,6 +201,11 @@ export function SecretaryBriefing({
                       </button>
                       <button
                         type="button"
+                        id={
+                          coachDismissFirst && index === 0
+                            ? "gov-coach-anchor-job-report-dismiss"
+                            : undefined
+                        }
                         className="secretary-job-report-dismiss"
                         aria-label="Dismiss report"
                         onClick={() =>

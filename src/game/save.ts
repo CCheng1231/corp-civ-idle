@@ -29,6 +29,7 @@ import {
 import { normalizeSecretarySkins } from "./secretarySkins";
 import { checkSecretaryRecruitmentMilestones } from "./secretaryRecruitment";
 import {
+  govFailsafeInterruptedGrowthCoach,
   lifetimeRecruitsFromRoster,
   normalizeGovProgram,
 } from "./govProgram";
@@ -1223,8 +1224,8 @@ function normalizeSave(
   const afterGovSync = syncLegacyGovUnlocks(merged);
   Object.assign(merged, afterGovSync);
 
-  const trimmed = checkSecretaryRecruitmentMilestones(
-    trimSecretaryJobReports(merged),
+  const trimmed = govFailsafeInterruptedGrowthCoach(
+    checkSecretaryRecruitmentMilestones(trimSecretaryJobReports(merged)),
   );
   if (options?.skipFinalize) return trimmed;
   return finalizeLoadedState(trimmed, Date.now());

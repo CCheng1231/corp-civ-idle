@@ -21,6 +21,8 @@ interface MissionCrewPickerProps {
   disabled?: boolean;
   dispatch: Dispatch<GameAction>;
   onChange: (next: UnitAssignment) => void;
+  compactLayout?: boolean;
+  coachQtyAnchorUnitId?: UnitId;
 }
 
 export function MissionCrewPicker({
@@ -31,6 +33,8 @@ export function MissionCrewPicker({
   disabled,
   dispatch,
   onChange,
+  compactLayout,
+  coachQtyAnchorUnitId,
 }: MissionCrewPickerProps) {
   const minUnitTier = requiredMinUnitTierForJob(job);
   const units = RECRUITMENT_UNITS.filter(
@@ -65,6 +69,8 @@ export function MissionCrewPicker({
       disabled={disabled}
       onChange={onChange}
       onRecruitClick={openRecruitment}
+      compactLayout={compactLayout}
+      coachQtyAnchorUnitId={coachQtyAnchorUnitId}
     />
   );
 }

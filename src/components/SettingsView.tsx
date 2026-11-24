@@ -573,12 +573,11 @@ export function SettingsView({ state, dispatch, session }: SettingsViewProps) {
               </button>
               {(
                 [
-                  ["growth_map", "3 Site survey", "world" as const],
-                  ["growth_job", "4 First contract", "office" as const],
-                  ["growth_report", "5 After-action", "secretary" as const],
-                  ["growth_research", "6 R&D voucher", "research" as const],
-                  ["growth_bm_hint", "7 Branch hint", "research" as const],
-                  ["growth_bm_hired", "8 Branch lead", "recruitment" as const],
+                  ["growth_job", "3 Map contract", "world" as const],
+                  ["growth_report", "4 After-action", "secretary" as const],
+                  ["growth_research", "5 R&D voucher", "research" as const],
+                  ["growth_bm_hint", "6 Branch hint", "research" as const],
+                  ["growth_bm_hired", "7 Branch lead", "recruitment" as const],
                 ] as const
               ).map(([stepId, label, view]) => (
                 <button

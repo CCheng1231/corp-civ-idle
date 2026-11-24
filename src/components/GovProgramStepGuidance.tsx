@@ -70,21 +70,6 @@ export function GovProgramStepGuidance({
             </button>
           </GovProgramGuidanceActions>
         );
-      case "growth_map":
-        return (
-          <GovProgramGuidanceActions>
-            <button
-              type="button"
-              className="btn tab gov-program-step-go"
-              onClick={() => {
-                dispatch({ type: "GOV_START_MAP_COACH" });
-                dispatch({ type: "SET_VIEW", view: "world" });
-              }}
-            >
-              Open World map
-            </button>
-          </GovProgramGuidanceActions>
-        );
       case "growth_job":
         return (
           <GovProgramGuidanceActions>
@@ -106,11 +91,12 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() =>
-                dispatch({ type: "SET_SECRETARY_PANEL", panel: "job" })
-              }
+              onClick={() => {
+                dispatch({ type: "GOV_START_REPORT_COACH" });
+                dispatch({ type: "SET_VIEW", view: "secretary" });
+              }}
             >
-              Secretary → Job
+              Secretary → Job reports
             </button>
           </GovProgramGuidanceActions>
         );
@@ -120,7 +106,10 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() => dispatch({ type: "SET_VIEW", view: "research" })}
+              onClick={() => {
+                dispatch({ type: "GOV_START_RESEARCH_COACH" });
+                dispatch({ type: "SET_VIEW", view: "research" });
+              }}
             >
               Go to Research
             </button>
@@ -150,13 +139,14 @@ export function GovProgramStepGuidance({
             <button
               type="button"
               className="btn tab gov-program-step-go"
-              onClick={() =>
+              onClick={() => {
+                dispatch({ type: "GOV_START_BM_HIRED_COACH" });
                 dispatch({
                   type: "SET_VIEW",
                   view: "recruitment",
                   recruitFocusUnitId: "branch_manager" as UnitId,
-                })
-              }
+                });
+              }}
             >
               Recruit Branch Manager
             </button>

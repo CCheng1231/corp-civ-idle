@@ -10,7 +10,7 @@ interface GovProgramJobEngageCoachProps {
 
 export function GovProgramJobEngageCoach({
   state,
-  dispatch: _dispatch,
+  dispatch,
 }: GovProgramJobEngageCoachProps) {
   const cue = govJobOfficeCoachSpotlightCue(state);
   if (!cue) return null;
@@ -21,6 +21,13 @@ export function GovProgramJobEngageCoach({
       message={cue.message}
       dimBackground
       active
+      dismissible={cue.dismissible}
+      dismissLabel={cue.dismissLabel}
+      onDismiss={
+        cue.dismissible
+          ? () => dispatch({ type: "GOV_ADVANCE_JOB_ENGAGE_COACH" })
+          : undefined
+      }
     />
   );
 }

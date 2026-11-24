@@ -51,6 +51,8 @@ interface JobPostingCardProps {
   onEngageSuccess?: () => void;
   showTower?: boolean;
   coachEngageHighlight?: boolean;
+  coachEngageFreshQtyHighlight?: boolean;
+  coachEngageFactsHighlight?: boolean;
   /** Compact light card for World map dispatch modal */
   presentation?: "default" | "mapEngage";
 }
@@ -108,6 +110,8 @@ export function JobPostingCard({
   onEngageSuccess,
   showTower = false,
   coachEngageHighlight = false,
+  coachEngageFreshQtyHighlight = false,
+  coachEngageFactsHighlight = false,
   presentation = "default",
 }: JobPostingCardProps) {
   const mapEngage = presentation === "mapEngage";
@@ -197,7 +201,14 @@ export function JobPostingCard({
       {mapEngage ? null : (
         <p className="structure-desc muted">{def.description}</p>
       )}
-      <ul className="job-posting-facts">
+      <ul
+        className="job-posting-facts"
+        id={
+          coachEngageFactsHighlight
+            ? "gov-coach-anchor-map-job-engage-facts"
+            : undefined
+        }
+      >
         <li>
           <span className="job-posting-fact-label">Tier</span>
           <span>{def.tier}</span>
@@ -294,6 +305,10 @@ export function JobPostingCard({
         assignment={assignment}
         dispatch={dispatch}
         onChange={onAssignmentChange}
+        compactLayout={mapEngage}
+        coachQtyAnchorUnitId={
+          coachEngageFreshQtyHighlight ? "fresh_graduate" : undefined
+        }
       />
       {!mapEngage && teamLeadOptions.length > 0 ? (
         <label className="job-posting-team-lead">
@@ -317,9 +332,7 @@ export function JobPostingCard({
         <button
           type="button"
           id={coachEngageHighlight ? "gov-coach-anchor-job-engage" : undefined}
-          className={`btn primary job-posting-engage-btn${
-            coachEngageHighlight ? " gov-program-coach-target" : ""
-          }`}
+          className="btn primary job-posting-engage-btn"
           disabled={disabled}
           onClick={() => {
             if (disabled) return;
@@ -333,9 +346,11 @@ export function JobPostingCard({
           }}
         >
           {blockReason ??
-            (unitCount > 0
-              ? `Engage · $${formatNumber(expectedPerHour)}/hr`
-              : "Engage")}
+            (mapEngage
+              ? "Engage"
+              : unitCount > 0
+                ? `Engage · $${formatNumber(expectedPerHour)}/hr`
+                : "Engage")}
         </button>
         {engageNote ? (
           <p className="muted job-posting-engage-note">{engageNote}</p>

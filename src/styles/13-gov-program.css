@@ -515,6 +515,32 @@ html.gov-program-coach-active
   pointer-events: auto;
 }
 
+.gov-program-growth-tutorial-backdrop {
+  z-index: 1360;
+  padding: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.gov-program-growth-tutorial-card {
+  width: min(20rem, 100%);
+  padding: 0.75rem 0.85rem 0.8rem;
+  border-radius: 0.55rem;
+}
+
+.gov-program-growth-tutorial-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.gov-program-growth-tutorial-copy {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.38;
+  color: var(--text, #e8eef5);
+}
+
 .gov-program-coach-guide-text {
   margin: 0;
   font-size: clamp(0.95rem, 3vw, 1.05rem);
@@ -622,8 +648,7 @@ html.gov-program-coach-active
   width: 100%;
 }
 
-.recruitment-card-with-portrait .gov-program-coach-qty-input-wrap .recruit-count-input {
-  width: 100%;
+.recruitment-card-with-portrait .gov-program-coach-qty-input-wrap .recruit-count-stepper {
   max-width: 4.5rem;
 }
 

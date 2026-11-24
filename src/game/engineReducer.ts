@@ -130,8 +130,15 @@ import {
   govOnEnterWorldView,
   govOnMapJobFocused,
   govOnJobSendFromMap,
+  govAdvanceJobEngageCoach,
+  govAdvanceMapTravelCoach,
   govCancelMapJobEngage,
+  govAfterGrowthPathCoachViewChange,
   govAfterJobCoachViewChange,
+  govAdvanceGrowthPathCoach,
+  govStartBmHiredCoach,
+  govStartReportCoach,
+  govStartResearchCoach,
   govResetGrowthTrack,
   govResetGrowthTrackAtStep,
   govStartMapCoach,
@@ -352,7 +359,8 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           ? govOnEnterWorldView(next)
           : next;
       next = govAfterStructureCoachViewChange(state, next);
-      return govAfterJobCoachViewChange(state, next);
+      next = govAfterJobCoachViewChange(state, next);
+      return govAfterGrowthPathCoachViewChange(state, next);
     }
 
     case "CLEAR_JOB_FOCUS":
@@ -491,7 +499,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (action.panel === "roster") {
         next = govOnOpenRoster(next);
       }
-      return next;
+      return govAfterGrowthPathCoachViewChange(state, next);
     }
 
     case "GOV_ACCEPT_GROWTH":
@@ -535,6 +543,12 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
     case "GOV_ON_JOB_SEND_FROM_MAP":
       return govOnJobSendFromMap(state, action.postingId);
 
+    case "GOV_ADVANCE_JOB_ENGAGE_COACH":
+      return govAdvanceJobEngageCoach(state);
+
+    case "GOV_ADVANCE_MAP_TRAVEL_COACH":
+      return govAdvanceMapTravelCoach(state);
+
     case "GOV_CANCEL_MAP_JOB_ENGAGE":
       return govCancelMapJobEngage(state);
 
@@ -554,6 +568,18 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
 
     case "GOV_ADVANCE_RECRUIT_COACH":
       return govAdvanceRecruitCoach(state);
+
+    case "GOV_START_REPORT_COACH":
+      return govStartReportCoach(state);
+
+    case "GOV_START_RESEARCH_COACH":
+      return govStartResearchCoach(state);
+
+    case "GOV_START_BM_HIRED_COACH":
+      return govStartBmHiredCoach(state);
+
+    case "GOV_ADVANCE_GROWTH_PATH_COACH":
+      return govAdvanceGrowthPathCoach(state);
 
     case "SET_HOME_PANEL": {
       const homeHubResume =

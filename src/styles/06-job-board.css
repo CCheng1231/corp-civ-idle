@@ -1648,15 +1648,16 @@
   white-space: nowrap;
 }
 
-.recruitment-card-with-portrait .recruit-count-inline input,
-.recruitment-card-with-portrait .recruit-count-inline input.recruit-count-input {
-  width: 4.1rem;
-  min-width: 4.1rem;
-  min-height: 1.45rem;
-  padding: 0.1rem 0.28rem;
+.recruitment-card-with-portrait .recruit-count-stepper {
+  min-height: 1.7rem;
+}
+
+.recruitment-card-with-portrait .recruit-count-stepper .recruit-count-input {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  min-height: 0;
+  padding: 0.1rem 0.12rem 0.1rem 0.28rem;
   font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
 .recruitment-card-with-portrait .recruitment-hire-actions .recruitment-queue-btn-hint-wrap {
@@ -1928,14 +1929,88 @@
   color: var(--muted);
 }
 
-.recruit-count-inline input,
-.recruit-count-field input.recruit-count-input {
-  width: 4.5rem;
-  min-width: 4.5rem;
-  padding: 0.28rem 0.35rem;
+.recruit-count-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.recruit-count-stepper .recruit-count-input {
+  width: 2.6rem;
+  min-width: 2.6rem;
+  margin: 0;
+  padding: 0.2rem 0.15rem 0.2rem 0.35rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
   font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.recruit-count-stepper .recruit-count-input::-webkit-outer-spin-button,
+.recruit-count-stepper .recruit-count-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.recruit-count-arrows {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+}
+
+.recruit-count-arrow {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  min-width: 1.2rem;
+  min-height: 0.72rem;
+  padding: 0 0.16rem;
+  border: none;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.recruit-count-arrow + .recruit-count-arrow {
+  border-top: 1px solid var(--border);
+}
+
+.recruit-count-arrow:hover:not(:disabled) {
+  background: rgba(86, 180, 233, 0.2);
+}
+
+.recruit-count-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.recruit-count-arrow-glyph {
+  width: 0;
+  height: 0;
+  border-left: 0.22rem solid transparent;
+  border-right: 0.22rem solid transparent;
+}
+
+.recruit-count-arrow-glyph--up {
+  border-bottom: 0.26rem solid currentColor;
+}
+
+.recruit-count-arrow-glyph--down {
+  border-top: 0.26rem solid currentColor;
 }
 
 .recruitment-site-staff {

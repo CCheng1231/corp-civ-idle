@@ -181,7 +181,7 @@ export function MapJobFilterPanel({
                 ))}
               </select>
             </label>
-            <label className="map-job-filter-field gov-program-coach-target">
+            <label className="map-job-filter-field">
               <span>Tier</span>
               <select
                 id="gov-coach-anchor-map-tier"
@@ -255,21 +255,17 @@ export function MapJobFilterPanel({
                   <li key={posting.id}>
                     <button
                       type="button"
+                      id={
+                        coached
+                          ? `gov-coach-anchor-map-job-${posting.id}`
+                          : undefined
+                      }
                       className={`map-job-filter-row${
                         selected ? " is-selected" : ""
-                      }${coached ? " map-job-filter-row--coach" : ""}`}
+                      }${coached ? " map-job-filter-row--coach gov-program-coach-target" : ""}`}
                       onClick={() => onFocusPosting(posting)}
                     >
-                      <span
-                        id={
-                          coached
-                            ? `gov-coach-anchor-map-job-${posting.id}`
-                            : undefined
-                        }
-                        className={`map-job-filter-row-coach-anchor gov-program-coach-target${
-                          coached ? " gov-program-coach-queue-job" : ""
-                        }`}
-                      >
+                      <span className="map-job-filter-row-coach-anchor">
                         <span
                           className={`map-job-filter-region map-job-filter-region-${region}`}
                           aria-hidden

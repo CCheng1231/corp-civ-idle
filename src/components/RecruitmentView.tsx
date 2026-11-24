@@ -31,6 +31,7 @@ import { GovProgramRecruitSetQtyIntro } from "./GovProgramRecruitSetQtyIntro";
 import { GovProgramStructureCoachCard } from "./GovProgramStructureCoachCard";
 import { secretaryById } from "../game/secretaryData";
 import {
+  govBmRecruitCoachPickActive,
   govRecruitCoachActive,
   govRecruitCoachQueueActive,
   govRecruitCoachSetQtyActive,
@@ -328,6 +329,11 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     setCategoryOpen(seeded);
   }, [officeId]);
 
+  function setRecruitCount(unitId: UnitId, raw: number) {
+    const n = Math.max(1, Math.min(MAX_RECRUIT_BATCH, Math.floor(raw) || 1));
+    setCounts((prev) => ({ ...prev, [unitId]: n }));
+  }
+
   function hire(unitId: UnitId) {
     const count = Math.max(
       1,
@@ -369,9 +375,12 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
     const orderHours =
       recruitmentOrderDurationMsForState(state, count) / (3600 * 1000);
     const lockedTitle = recruitmentLockedButtonTitle(lockLines);
+    const qtyLocked = actionsLocked || queueFull || researchLocked;
 
     const focused = focusUnitId === unit.id;
     const coachFreshGrad = unit.id === "fresh_graduate" && recruitCoachActive;
+    const coachBm =
+      unit.id === "branch_manager" && govBmRecruitCoachPickActive(state);
     const coachQty =
       coachFreshGrad && recruitCoachSetQty && !recruitSetQtyIntro;
     const coachQueue = coachFreshGrad && recruitCoachQueue;
@@ -418,29 +427,56 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
               {coachQty ? (
                 <span className="gov-program-coach-arrow" aria-hidden="true" />
               ) : null}
-              <input
-                type="number"
+              <div
+                className={`recruit-count-stepper${
+                  coachQty ? " gov-program-coach-btn" : ""
+                }`}
                 id={
                   unit.id === "fresh_graduate"
                     ? "gov-recruit-fresh-grad-qty"
                     : undefined
                 }
-                min={1}
-                max={MAX_RECRUIT_BATCH}
-                inputMode="numeric"
-                className={`recruit-count-input${
-                  coachQty ? " gov-program-coach-btn" : ""
-                }`}
-                value={count}
-                disabled={actionsLocked || queueFull || researchLocked}
-                onChange={(e) => {
-                  const n = Math.max(
-                    1,
-                    Math.min(MAX_RECRUIT_BATCH, Number(e.target.value) || 1),
-                  );
-                  setCounts((prev) => ({ ...prev, [unit.id]: n }));
-                }}
-              />
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={MAX_RECRUIT_BATCH}
+                  inputMode="numeric"
+                  className="recruit-count-input"
+                  value={count}
+                  disabled={qtyLocked}
+                  aria-label={`${unit.name} quantity`}
+                  onChange={(e) =>
+                    setRecruitCount(unit.id, Number(e.target.value))
+                  }
+                />
+                <span className="recruit-count-arrows">
+                  <button
+                    type="button"
+                    className="recruit-count-arrow"
+                    aria-label={`Increase ${unit.name} quantity`}
+                    disabled={qtyLocked || count >= MAX_RECRUIT_BATCH}
+                    onClick={() => setRecruitCount(unit.id, count + 1)}
+                  >
+                    <span
+                      className="recruit-count-arrow-glyph recruit-count-arrow-glyph--up"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    className="recruit-count-arrow"
+                    aria-label={`Decrease ${unit.name} quantity`}
+                    disabled={qtyLocked || count <= 1}
+                    onClick={() => setRecruitCount(unit.id, count - 1)}
+                  >
+                    <span
+                      className="recruit-count-arrow-glyph recruit-count-arrow-glyph--down"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </span>
+              </div>
             </div>
           </span>
           <span
@@ -501,7 +537,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
         className={`structure-card structure-card-upgrade recruitment-card-compact recruitment-card-unit-${unit.id}${
           portraitSrc ? " recruitment-card-with-portrait" : ""
         }${focused ? " recruit-unit-focused" : ""}${
-          coachFreshGrad ? " gov-program-coach-target" : ""
+          coachFreshGrad || coachBm ? " gov-program-coach-target" : ""
         }${researchLocked ? " progression-locked" : ""}`}
       >
         {portraitSrc ? (

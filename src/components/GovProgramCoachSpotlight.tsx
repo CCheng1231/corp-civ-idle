@@ -10,13 +10,41 @@ import { createPortal } from "react-dom";
 
 const PAD = 8;
 const PAD_MAP = 0;
+const PAD_MAP_JOB_ROW = 3;
+const RING_NUDGE_HOST_X = 0;
+const RING_NUDGE_HOST_Y = 0;
 
 function coachHolePad(anchorId: string): number {
+  if (
+    anchorId.startsWith("gov-coach-anchor-map-job-") &&
+    !anchorId.includes("-send-")
+  ) {
+    return PAD_MAP_JOB_ROW;
+  }
   return anchorId.startsWith("gov-coach-anchor-map-") ? PAD_MAP : PAD;
+}
+
+function scrollCoachAnchorIntoView(el: HTMLElement) {
+  el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
 }
 
 function isMapWorldCoachAnchor(anchorId: string): boolean {
   return anchorId.startsWith("gov-coach-anchor-map-");
+}
+
+function isMapJobEngageCoachAnchor(anchorId: string): boolean {
+  return (
+    anchorId === "gov-coach-anchor-map-job-engage-dialog" ||
+    anchorId === "gov-coach-anchor-map-job-engage-facts" ||
+    anchorId === "gov-coach-anchor-map-job-engage-fresh-qty" ||
+    anchorId === "gov-coach-anchor-job-engage"
+  );
+}
+
+function coachMapJobEngageBackdrop(): HTMLElement | null {
+  return document.querySelector(
+    ".map-world-job-engage-backdrop",
+  ) as HTMLElement | null;
 }
 const Z_SCRIM = 1180;
 const Z_RING = 1185;
@@ -39,6 +67,10 @@ function coachMapWorldHost(): HTMLElement | null {
 }
 
 function coachPortalHost(anchorId: string): HTMLElement {
+  if (isMapJobEngageCoachAnchor(anchorId)) {
+    const engageBackdrop = coachMapJobEngageBackdrop();
+    if (engageBackdrop) return engageBackdrop;
+  }
   if (
     isMapWorldCoachAnchor(anchorId) ||
     anchorId === "gov-coach-anchor-job-engage"
@@ -57,14 +89,25 @@ function coachOverlayPosition(host: HTMLElement): "fixed" | "absolute" {
   return coachUsesHostFixedCoords(host) ? "absolute" : "fixed";
 }
 
-function anchorRectForCoachHost(anchor: DOMRect, host: HTMLElement): DOMRect {
-  if (!coachUsesHostFixedCoords(host)) return anchor;
-  const h = host.getBoundingClientRect();
+function snapRectPx(r: DOMRect): DOMRect {
   return new DOMRect(
-    anchor.left - h.left,
-    anchor.top - h.top,
-    anchor.width,
-    anchor.height,
+    Math.round(r.left),
+    Math.round(r.top),
+    Math.round(r.width),
+    Math.round(r.height),
+  );
+}
+
+function anchorRectForCoachHost(anchor: DOMRect, host: HTMLElement): DOMRect {
+  if (!coachUsesHostFixedCoords(host)) return snapRectPx(anchor);
+  const h = host.getBoundingClientRect();
+  return snapRectPx(
+    new DOMRect(
+      anchor.left - h.left,
+      anchor.top - h.top,
+      anchor.width,
+      anchor.height,
+    ),
   );
 }
 
@@ -197,6 +240,26 @@ export function GovProgramCoachSpotlight({
         return;
       }
 
+      if (anchorId === "gov-coach-anchor-job-engage") {
+        const useW = Math.min(maxW, Math.max(156, frame.width - 16));
+        const anchorCenter = r.left + r.width / 2;
+        left = anchorCenter - useW / 2;
+        left = Math.max(frame.left + 8, Math.min(left, frame.right - useW - 8));
+        top = r.bottom + gap;
+        if (top + bubbleHeight > frame.bottom - 8) {
+          top = Math.max(frame.top + 8, frame.bottom - bubbleHeight - 8);
+        }
+        setBubbleStyle({
+          position: overlayPos,
+          top,
+          left,
+          width: useW,
+          maxWidth: useW,
+          zIndex: dismissible ? Z_DISMISS_BUBBLE : Z_BUBBLE,
+        });
+        return;
+      }
+
       if (queueHead) {
         top = r.bottom + gap;
         if (top + bubbleHeight > frame.bottom) {
@@ -250,21 +313,33 @@ export function GovProgramCoachSpotlight({
         setBubbleStyle(null);
         return;
       }
-      if (
+      const needsScroll =
         anchorId === "gov-coach-anchor-structure-queue-head" ||
         anchorId === "gov-coach-anchor-map-tier" ||
-        anchorId.startsWith("gov-coach-anchor-map-job-") ||
-        anchorId.startsWith("gov-coach-anchor-job-")
-      ) {
-        el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        anchorId === "gov-coach-anchor-map-job-engage-fresh-qty" ||
+        (anchorId.startsWith("gov-coach-anchor-map-job-") &&
+          !anchorId.includes("-send-")) ||
+        anchorId.startsWith("gov-coach-anchor-job-");
+      if (needsScroll) {
+        scrollCoachAnchorIntoView(el);
       }
       el.classList.add("gov-program-coach-spotlight-target");
       const host = coachPortalHost(anchorId);
-      const r = anchorRectForCoachHost(el.getBoundingClientRect(), host);
-      setRect(r);
-      const bubbleHeight = bubbleRef.current?.offsetHeight ?? 92;
-      const bubbleWidth = bubbleRef.current?.offsetWidth ?? 200;
-      placeBubble(r, bubbleHeight, bubbleWidth);
+      const applyMeasure = () => {
+        const target = document.getElementById(anchorId);
+        if (!target) return;
+        const r = anchorRectForCoachHost(target.getBoundingClientRect(), host);
+        setRect(r);
+        const bubbleHeight = bubbleRef.current?.offsetHeight ?? 92;
+        const bubbleWidth = bubbleRef.current?.offsetWidth ?? 200;
+        placeBubble(r, bubbleHeight, bubbleWidth);
+      };
+      applyMeasure();
+      if (needsScroll) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(applyMeasure);
+        });
+      }
     }
 
     measure();
@@ -299,7 +374,11 @@ export function GovProgramCoachSpotlight({
       return;
     }
     const sync = () => {
-      setBlockingUiOpen(!!document.querySelector(".modal-backdrop"));
+      const backdrops = document.querySelectorAll(".modal-backdrop");
+      const blocking = Array.from(backdrops).some(
+        (el) => !el.classList.contains("map-world-job-engage-backdrop"),
+      );
+      setBlockingUiOpen(blocking);
     };
     sync();
     const observer = new MutationObserver(sync);
@@ -314,10 +393,19 @@ export function GovProgramCoachSpotlight({
   const shell = coachShellBox(portalHost);
   const frameEdge = 8;
   const holePad = coachHolePad(anchorId);
-  const holeTop = Math.max(frameEdge, rect.top - holePad);
-  const holeLeft = Math.max(frameEdge, rect.left - holePad);
-  const holeRight = Math.min(shell.width - frameEdge, rect.right + holePad);
-  const holeBottom = Math.min(shell.height - frameEdge, rect.bottom + holePad);
+  const hostRelative = coachUsesHostFixedCoords(portalHost);
+  const nudgeX = hostRelative ? RING_NUDGE_HOST_X : 0;
+  const nudgeY = hostRelative ? RING_NUDGE_HOST_Y : 0;
+  const holeTop = Math.max(frameEdge, rect.top - holePad + nudgeY);
+  const holeLeft = Math.max(frameEdge, rect.left - holePad + nudgeX);
+  const holeRight = Math.min(
+    shell.width - frameEdge,
+    rect.right + holePad + nudgeX,
+  );
+  const holeBottom = Math.min(
+    shell.height - frameEdge,
+    rect.bottom + holePad + nudgeY,
+  );
   const holeW = holeRight - holeLeft;
   const holeH = holeBottom - holeTop;
   const scrim = "rgba(14, 18, 24, 0.58)";

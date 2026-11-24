@@ -25,7 +25,13 @@ export function GovProgramMapNavCoach({
       dismissLabel={cue.dismissLabel}
       onDismiss={
         cue.dismissible
-          ? () => dispatch({ type: "GOV_ADVANCE_MAP_DRAWER_COACH" })
+          ? () =>
+              dispatch({
+                type:
+                  state.govProgram?.growthJobCoach === "map_travel"
+                    ? "GOV_ADVANCE_MAP_TRAVEL_COACH"
+                    : "GOV_ADVANCE_MAP_DRAWER_COACH",
+              })
           : undefined
       }
     />

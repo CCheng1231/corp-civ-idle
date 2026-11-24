@@ -876,7 +876,7 @@ export function OfficeStructurePanel({
         );
         const expansionDef = getStructureDefinition(OFFICE_EXPANSION_STRUCTURE_ID);
         const showOfficeExpansion =
-          category === "departments" &&
+          category === "infrastructure" &&
           !readOnly &&
           (!hideCompleted ||
             !isStructureCompletedAtSite(state, officeId, expansionDef));

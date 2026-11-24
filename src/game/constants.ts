@@ -559,11 +559,11 @@ function structureCategoryForId(structureId: StructureId): StructureCategory {
     case "video_production_studio":
     case "press_room":
       return "essentials";
-    case "office_expansion":
     case "dept_finance":
     case "dept_logistics":
     case "company_statue":
       return "departments";
+    case "office_expansion":
     case "power_panel":
     case "electricity_generator":
     case "dept_rnd":
@@ -600,11 +600,12 @@ const STRUCTURE_CARD_ORDER: Partial<Record<StructureCategory, StructureId[]>> = 
     "video_production_studio",
     "press_room",
   ],
-  departments: [
+  departments: ["dept_finance", "dept_logistics", "company_statue"],
+  infrastructure: [
     "office_expansion",
-    "dept_finance",
-    "dept_logistics",
-    "company_statue",
+    "power_panel",
+    "electricity_generator",
+    "dept_rnd",
   ],
 };
 

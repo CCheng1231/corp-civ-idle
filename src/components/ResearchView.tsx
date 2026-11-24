@@ -27,6 +27,7 @@ import {
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { ProgressionCatalogToolbar } from "./ProgressionCatalogToolbar";
 import { GovProgramLiveCue } from "./GovProgramLiveCue";
+import { govResearchCoachPickActive } from "../game/govProgram";
 import { GovProgramResearchQueueIntro } from "./GovProgramResearchQueueIntro";
 import { ProgressionTabStickyChrome } from "./ProgressionTabStickyChrome";
 import { CompactQueueHeading } from "./CompactQueueHeading";
@@ -250,6 +251,7 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
     const cost = researchCost(state, research.id);
     const affordable = canAffordAtOffice(state, office, cost);
     const queueBlocked = queueFull && !inProgress;
+    const researchCoachQueue = govResearchCoachPickActive(state, research.id);
     const disabled =
       actionsLocked ||
       !unlocked ||
@@ -316,6 +318,11 @@ export function ResearchView({ state, dispatch }: ResearchViewProps) {
           <span className="recruitment-queue-btn-hint-wrap">
             <button
               type="button"
+              id={
+                researchCoachQueue
+                  ? `gov-coach-anchor-research-queue-${research.id}`
+                  : undefined
+              }
               className="btn primary recruitment-queue-btn"
               disabled={disabled}
               onClick={() =>

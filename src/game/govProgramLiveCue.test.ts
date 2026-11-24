@@ -26,20 +26,20 @@ describe("gov program live cue", () => {
     );
   });
 
-  it("finishes the survey step when a hex is inspected during that step", () => {
+  it("does not auto-complete the map step on hex inspect (drawer coach marks survey)", () => {
     let state = govAcceptGrowthProgram(createInitialState());
     state = {
       ...state,
       govProgram: {
         ...state.govProgram,
-        growthStepId: "growth_map",
+        growthStepId: "growth_job",
         growthCompletedStepIds: ["growth_structure", "growth_recruit_push"],
       },
     };
     expect(govProgramLiveCue(state, "world")).toBeNull();
     expect(govWorldMapHeaderTitle(state)).toBe("World Map - Program available");
     const next = govOnMapSiteInspected(state);
-    expect(next.govProgram.mapSiteInspected).toBe(true);
+    expect(next.govProgram.mapSiteInspected).toBe(false);
     expect(next.govProgram.growthStepId).toBe("growth_job");
   });
 

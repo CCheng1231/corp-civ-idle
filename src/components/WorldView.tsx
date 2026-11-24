@@ -102,10 +102,10 @@ import {
   govWorldMapHeaderTitle,
 } from "../game/govProgram";
 import { GovProgramMapFilterIntro } from "./GovProgramMapFilterIntro";
+import { GovProgramMapJobTravelCoach } from "./GovProgramMapJobTravelCoach";
 import { GovProgramMapNavCoach } from "./GovProgramMapNavCoach";
 import { MapHexDrawer } from "./MapHexDrawer";
 import { MapWorldJobEngageDialog } from "./MapWorldJobEngageDialog";
-import { GovProgramMapJobTravelCoach } from "./GovProgramMapJobTravelCoach";
 import { ProgressionCatalogInfoDialog } from "./ProgressionCatalogInfoDialog";
 import { MapJobFilterPanel } from "./MapJobFilterPanel";
 import { MapWorldLandmarkFilterControl } from "./MapWorldLandmarkFilterControl";
@@ -820,9 +820,17 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
   function focusJobEngagementTravel(engagement: JobEngagement) {
     const viewport = mapViewportRef.current;
     if (!viewport || mapViewBoundsRef.current.width <= 0) return;
+    const vpW = viewport.clientWidth;
+    const vpH = viewport.clientHeight;
+    if (vpW < 8 || vpH < 8) return;
+    const measured = measureMapViewport(vpW, vpH, mapViewBoundsRef.current);
+    mapContentSizeRef.current = measured.content;
+    setMapContentSize(measured.content);
+    fitZoomRef.current = measured.fitZoom;
+    setFitZoom(measured.fitZoom);
     const { from, to } = jobSiteCoordsForEngagement(state, engagement);
     const bounds = mapViewBoundsRef.current;
-    const content = mapContentSizeRef.current;
+    const content = measured.content;
     const fromPx = worldMapCoordToContentPixel(
       from,
       bounds,
@@ -835,9 +843,7 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       y: (fromPx.y + toPx.y) / 2,
     };
     const spanPx = Math.hypot(toPx.x - fromPx.x, toPx.y - fromPx.y);
-    const vpW = Math.max(1, viewport.clientWidth);
-    const vpH = Math.max(1, viewport.clientHeight);
-    const fit = fitZoomRef.current;
+    const fit = measured.fitZoom;
     let zoomRel = MAP_JOB_DISPATCH_ZOOM_REL;
     if (spanPx > 0 && fit > 0) {
       const targetSpan = Math.min(vpW, vpH) * 0.62;
@@ -869,7 +875,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       setSelectedMapPostingId(null);
       setInspectedCoord(null);
       if (engagement.phase === "outbound") {
-        requestAnimationFrame(() => focusJobEngagementTravel(engagement));
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => focusJobEngagementTravel(engagement));
+        });
       }
     }
     jobEngagementsLenRef.current = count;
@@ -1310,7 +1318,8 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
   useEffect(() => {
     const onFilterCoachStart =
-      state.govProgram?.growthStepId === "growth_map" &&
+      state.govProgram?.growthStepId === "growth_job" &&
+      !state.govProgram.mapSiteInspected &&
       (state.govProgram.growthMapCoach === "filter_intro" ||
         state.govProgram.pendingModal === "map_filter_intro");
     if (onFilterCoachStart) {
@@ -1488,6 +1497,10 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
         state.govProgram?.growthJobCoach === "map_send"
           ? " world-view--map-job-send-coach"
           : ""
+      }${
+        state.govProgram?.growthJobCoach === "map_travel"
+          ? " world-view--map-travel-coach"
+          : ""
       }`}
     >
       <div className="world-header">
@@ -1535,6 +1548,13 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
       </div>
 
       <div className="world-map-stage" style={mapStagePanelStyle}>
+        {state.govProgram?.growthJobCoach === "map_travel" ? (
+          <div
+            id="gov-coach-anchor-map-job-travel"
+            className="map-job-travel-coach-anchor"
+            aria-hidden
+          />
+        ) : null}
         {!isDev ? (
           <MapJobFilterPanel
             state={state}
@@ -1558,6 +1578,9 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
 
         {state.govProgram?.pendingModal === "map_filter_intro" ? (
           <GovProgramMapFilterIntro dispatch={dispatch} />
+        ) : null}
+        {state.govProgram?.pendingModal === "growth_job_travel_coach" ? (
+          <GovProgramMapJobTravelCoach dispatch={dispatch} />
         ) : null}
         {!isDev ? (
           <GovProgramMapNavCoach state={state} dispatch={dispatch} />
@@ -2088,9 +2111,6 @@ export function WorldView({ state, dispatch, session }: WorldViewProps) {
           kind="worldMap"
           onClose={() => setMapInfoOpen(false)}
         />
-      ) : null}
-      {state.govProgram?.pendingModal === "growth_job_travel_coach" ? (
-        <GovProgramMapJobTravelCoach dispatch={dispatch} />
       ) : null}
       {mapJobEngagePosting ? (
         <MapWorldJobEngageDialog

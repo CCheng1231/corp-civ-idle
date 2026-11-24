@@ -272,6 +272,7 @@ export function ShortcutSidebar({
     return (
       <button
         key="secretary"
+        id="gov-coach-anchor-secretary"
         type="button"
         className={
           secretaryActive

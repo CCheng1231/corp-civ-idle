@@ -9,9 +9,10 @@ import {
   isStructureUnlocked,
   sortStructuresForBuildTab,
   STRUCTURE_CATEGORY_ORDER,
+  rosterAt,
   structurePanelStructures,
 } from "./constants";
-import { structureCost } from "./engineQueues";
+import { researchCost, structureCost } from "./engineQueues";
 import { RECRUITMENT_UNITS } from "./recruitmentData";
 import {
   GOV_CHARTER_JOB,
@@ -27,6 +28,13 @@ import {
 import { isHomeHubMainView } from "./hubNavigation";
 import { resolveOfficeLocation } from "./officeSelection";
 import { appendActivityLogs } from "./logbook";
+import { pendingJobReports } from "./secretaryBriefing";
+import {
+  RESEARCH,
+  isResearchQueueFull,
+  isResearchQueued,
+  isResearchUnlocked,
+} from "./constants";
 import { unlockSecretary } from "./secretaryProgress";
 import { formatAssignmentSummary } from "./unitEffects";
 import {
@@ -74,6 +82,10 @@ function migrateGovProgramModal(raw: unknown): GovProgramState["pendingModal"] {
   if (raw === "growth_step_coach") return "growth_step_coach";
   if (raw === "growth_job_travel_coach") return "growth_job_travel_coach";
   if (raw === "map_filter_intro") return "map_filter_intro";
+  if (raw === "growth_report_intro") return "growth_report_intro";
+  if (raw === "growth_research_intro") return "growth_research_intro";
+  if (raw === "growth_bm_hint_intro") return "growth_bm_hint_intro";
+  if (raw === "growth_bm_hired_intro") return "growth_bm_hired_intro";
   return null;
 }
 
@@ -108,6 +120,10 @@ export function createInitialGovProgram(): GovProgramState {
     growthMapCoachSiteLabel: null,
     growthJobCoach: null,
     growthJobCoachPostingId: null,
+    growthReportCoach: null,
+    growthResearchCoach: null,
+    growthResearchCoachResearchId: null,
+    growthBmCoach: null,
     growthRecruitFirstQueueCoachDone: false,
     calendar: {
       activeDailyQuestId: GOV_DAILY_QUESTS[0]?.questId ?? null,
@@ -140,8 +156,9 @@ export function normalizeGovProgram(
     ...base,
     growthDeclined: parsed.growthDeclined === true,
     growthAccepted: parsed.growthAccepted === true,
-    growthStepId:
+    growthStepId: migrateGrowthStepId(
       typeof parsed.growthStepId === "string" ? parsed.growthStepId : null,
+    ),
     growthCompletedStepIds: Array.isArray(parsed.growthCompletedStepIds)
       ? parsed.growthCompletedStepIds.filter(
           (id): id is string => typeof id === "string",
@@ -243,7 +260,11 @@ export function normalizeGovProgram(
     growthJobCoach:
       parsed.growthJobCoach === "pick_job" ||
       parsed.growthJobCoach === "map_send" ||
+      parsed.growthJobCoach === "map_engage_open" ||
+      parsed.growthJobCoach === "map_engage_intro" ||
+      parsed.growthJobCoach === "map_engage_crew_qty" ||
       parsed.growthJobCoach === "map_engage" ||
+      parsed.growthJobCoach === "map_travel" ||
       parsed.growthJobCoach === "office_engage"
         ? parsed.growthJobCoach === "office_engage"
           ? "map_engage"
@@ -252,6 +273,28 @@ export function normalizeGovProgram(
     growthJobCoachPostingId:
       typeof parsed.growthJobCoachPostingId === "string"
         ? parsed.growthJobCoachPostingId
+        : null,
+    growthReportCoach:
+      parsed.growthReportCoach === "open_secretary" ||
+      parsed.growthReportCoach === "open_job" ||
+      parsed.growthReportCoach === "reports_tab" ||
+      parsed.growthReportCoach === "dismiss_report"
+        ? parsed.growthReportCoach
+        : null,
+    growthResearchCoach:
+      parsed.growthResearchCoach === "open_research" ||
+      parsed.growthResearchCoach === "pick_project"
+        ? parsed.growthResearchCoach
+        : null,
+    growthResearchCoachResearchId:
+      typeof parsed.growthResearchCoachResearchId === "string"
+        ? parsed.growthResearchCoachResearchId
+        : null,
+    growthBmCoach:
+      parsed.growthBmCoach === "open_recruit" ||
+      parsed.growthBmCoach === "pick_unit" ||
+      parsed.growthBmCoach === "pick_queue"
+        ? parsed.growthBmCoach
         : null,
     calendar: {
       ...base.calendar,
@@ -318,6 +361,11 @@ function applyRewardAtHq(
     supply: reward.supply ?? 0,
     connection: reward.connection ?? 0,
   });
+}
+
+function migrateGrowthStepId(stepId: string | null): string | null {
+  if (stepId === "growth_map") return "growth_job";
+  return stepId;
 }
 
 function growthStepDef(stepId: string) {
@@ -433,10 +481,24 @@ function completeGrowthStep(state: GameState, stepId: string): GameState {
   if (def?.reward) {
     next = applyRewardAtHq(next, def.reward);
   }
-  g.growthStepId = nextGrowthStepId(g.growthCompletedStepIds);
+  const nextStepId = nextGrowthStepId(g.growthCompletedStepIds);
+  g.growthStepId = nextStepId;
   g.growthStepStartedAt = Date.now();
   g.growthReportDismissedBaseline = next.dismissedJobReportIds?.length ?? 0;
-  return withGov(next, g);
+  let result = withGov(next, g);
+  if (nextStepId === "growth_bm_hint") {
+    result = withGov(result, {
+      ...gp(result),
+      pendingModal: "growth_bm_hint_intro",
+    });
+  }
+  if (nextStepId === "growth_bm_hired") {
+    result = withGov(result, {
+      ...gp(result),
+      pendingModal: "growth_bm_hired_intro",
+    });
+  }
+  return result;
 }
 
 function maybeStartExecutiveAtTen(state: GameState): GameState {
@@ -581,7 +643,8 @@ export function govDismissIntroModal(state: GameState): GameState {
   if (g.pendingModal === "map_filter_intro") {
     g.pendingModal = null;
     if (
-      g.growthStepId === "growth_map" &&
+      g.growthStepId === "growth_job" &&
+      !g.mapSiteInspected &&
       (g.growthMapCoach === "filter_intro" || g.growthMapCoach == null)
     ) {
       g.growthMapCoach = "filter_tier";
@@ -620,6 +683,41 @@ export function govDismissIntroModal(state: GameState): GameState {
     g.pendingModal = null;
     g.structureQueueCoachJobId = null;
     return evaluateGrowthObjectives(withGov(state, g));
+  }
+  if (g.pendingModal === "growth_report_intro") {
+    g.pendingModal = null;
+    let next = withGov(state, {
+      ...g,
+      growthReportCoach: "open_secretary",
+    });
+  return govAfterGrowthPathCoachViewChange(state, next);
+  }
+  if (g.pendingModal === "growth_research_intro") {
+    const target = govResearchCoachTargetId(state);
+    g.pendingModal = null;
+    let next = withGov(state, {
+      ...g,
+      growthResearchCoach: "open_research",
+      growthResearchCoachResearchId: target,
+    });
+    return govAfterGrowthPathCoachViewChange(state, next);
+  }
+  if (g.pendingModal === "growth_bm_hint_intro") {
+    g.pendingModal = null;
+    let next = withGov(state, g);
+    if (gp(next).growthStepId === "growth_bm_hint") {
+      next = completeGrowthStep(next, "growth_bm_hint");
+      next = evaluateGrowthObjectives(next);
+    }
+    return next;
+  }
+  if (g.pendingModal === "growth_bm_hired_intro") {
+    g.pendingModal = null;
+    let next = withGov(state, {
+      ...g,
+      growthBmCoach: "open_recruit",
+    });
+    return govAfterGrowthPathCoachViewChange(state, next);
   }
   if (g.pendingModal === "growth_job_travel_coach") {
     g.pendingModal = null;
@@ -929,7 +1027,7 @@ export function govMapCoachActive(state: GameState): boolean {
       g.growthMapCoach === "drawer_region" ||
       g.growthMapCoach === "drawer_distance" ||
       g.growthMapCoach === "drawer_contracts") &&
-    g.growthStepId === "growth_map" &&
+    g.growthStepId === "growth_job" &&
     !g.growthDeclined &&
     g.growthAccepted &&
     !g.mapSiteInspected
@@ -941,7 +1039,7 @@ export function govStartMapCoach(state: GameState): GameState {
   if (
     g.growthDeclined ||
     !g.growthAccepted ||
-    g.growthStepId !== "growth_map" ||
+    g.growthStepId !== "growth_job" ||
     g.mapSiteInspected
   ) {
     return state;
@@ -1077,16 +1175,15 @@ export function govAdvanceMapDrawerCoach(state: GameState): GameState {
   if (idx >= MAP_DRAWER_COACH_ORDER.length - 1) {
     const jobPostingId =
       g.growthMapCoachPostingId ?? g.growthJobCoachPostingId;
-    return evaluateGrowthObjectives(
-      withGov(state, {
-        ...g,
-        growthMapCoach: null,
-        growthMapCoachPostingId: null,
-        growthMapCoachSiteLabel: null,
-        growthJobCoachPostingId: jobPostingId,
-        mapSiteInspected: true,
-      }),
-    );
+    return withGov(state, {
+      ...g,
+      growthMapCoach: null,
+      growthMapCoachPostingId: null,
+      growthMapCoachSiteLabel: null,
+      growthJobCoachPostingId: jobPostingId,
+      growthJobCoach: jobPostingId ? "map_send" : null,
+      mapSiteInspected: true,
+    });
   }
   return withGov(state, {
     ...g,
@@ -1129,7 +1226,7 @@ function mapDrawerCoachCue(
       return {
         anchorId: "gov-coach-anchor-map-hex-contracts",
         message:
-          "Contracts — payout/hr, tier, deadline, completion band. Send teams from here next step.",
+          "Contracts — payout/hr, tier, deadline, completion band. Tap Send on this row when you're ready.",
         dismissible: true,
         dismissLabel: "Continue",
       };
@@ -1175,7 +1272,11 @@ export function govJobCoachActive(state: GameState): boolean {
   return (
     (g.growthJobCoach === "pick_job" ||
       g.growthJobCoach === "map_send" ||
-      g.growthJobCoach === "map_engage") &&
+      g.growthJobCoach === "map_engage_open" ||
+      g.growthJobCoach === "map_engage_intro" ||
+      g.growthJobCoach === "map_engage_crew_qty" ||
+      g.growthJobCoach === "map_engage" ||
+      g.growthJobCoach === "map_travel") &&
     g.growthStepId === "growth_job" &&
     !g.growthDeclined &&
     g.growthAccepted
@@ -1200,6 +1301,9 @@ export function govStartJobCoach(state: GameState): GameState {
   ) {
     return state;
   }
+  if (!g.mapSiteInspected) {
+    return govStartMapCoach(state);
+  }
   let targetId = g.growthJobCoachPostingId;
   if (targetId && !openJobPostings(state).some((p) => p.id === targetId)) {
     targetId = null;
@@ -1209,7 +1313,7 @@ export function govStartJobCoach(state: GameState): GameState {
   }
   return withGov(state, {
     ...g,
-    growthJobCoach: "pick_job",
+    growthJobCoach: targetId ? "map_send" : "pick_job",
     growthJobCoachPostingId: targetId,
   });
 }
@@ -1232,9 +1336,68 @@ export function govMapJobEngageModalActive(state: GameState): boolean {
   const g = gp(state);
   return (
     govJobCoachActive(state) &&
-    g.growthJobCoach === "map_engage" &&
+    (g.growthJobCoach === "map_engage_open" ||
+      g.growthJobCoach === "map_engage_intro" ||
+      g.growthJobCoach === "map_engage_crew_qty" ||
+      g.growthJobCoach === "map_engage") &&
     !!g.growthJobCoachPostingId
   );
+}
+
+function govGrowthJobEngagementActive(
+  state: GameState,
+  postingId?: string | null,
+): boolean {
+  return state.jobEngagements.some((e) => {
+    if (
+      e.phase !== "outbound" &&
+      e.phase !== "returning" &&
+      e.phase !== "working"
+    ) {
+      return false;
+    }
+    if (postingId && e.postingId !== postingId) return false;
+    return true;
+  });
+}
+
+function govGrowthJobStepEngagedIncomplete(state: GameState): boolean {
+  const g = gp(state);
+  return (
+    g.growthStepId === "growth_job" &&
+    g.growthAccepted &&
+    !g.growthDeclined &&
+    !g.growthCompletedStepIds.includes("growth_job") &&
+    growthObjectiveMet(state, "growth_job")
+  );
+}
+
+function govResumeGrowthJobAfterEngage(state: GameState): GameState {
+  const g = gp(state);
+  const enRoute = govGrowthJobEngagementActive(state);
+  const cleared = withGov(state, {
+    ...g,
+    growthMapCoach: null,
+    growthMapCoachPostingId: null,
+    growthMapCoachSiteLabel: null,
+    growthJobCoachPostingId: null,
+    mapSiteInspected: true,
+    growthJobCoach: null,
+    pendingModal: enRoute ? "growth_job_travel_coach" : null,
+  });
+  if (enRoute) {
+    return { ...cleared, view: "world" };
+  }
+  const def = growthStepDef("growth_job");
+  if (def && growthStepCelebrationEligible("growth_job", def)) {
+    return offerGrowthStepCelebration(cleared, "growth_job");
+  }
+  let next = completeGrowthStep(cleared, "growth_job");
+  return {
+    ...evaluateGrowthObjectives(next),
+    view: "secretary",
+    secretaryPanel: "govProgram",
+  };
 }
 
 export function govOnJobSendFromMap(
@@ -1245,16 +1408,62 @@ export function govOnJobSendFromMap(
   if (!govShouldMapSendOpenEngageModal(state, postingId)) {
     return state;
   }
+  if (
+    govGrowthJobStepEngagedIncomplete(state) &&
+    govGrowthJobEngagementActive(state, postingId)
+  ) {
+    return govResumeGrowthJobAfterEngage(state);
+  }
   return withGov(state, {
     ...g,
-    growthJobCoach: "map_engage",
+    growthJobCoach: "map_engage_open",
     growthJobCoachPostingId: postingId,
   });
 }
 
+export function govAdvanceJobEngageCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (g.growthJobCoach === "map_engage_open") {
+    return withGov(state, { ...g, growthJobCoach: "map_engage_intro" });
+  }
+  if (g.growthJobCoach === "map_engage_intro") {
+    return withGov(state, { ...g, growthJobCoach: "map_engage_crew_qty" });
+  }
+  if (g.growthJobCoach === "map_engage_crew_qty") {
+    return withGov(state, { ...g, growthJobCoach: "map_engage" });
+  }
+  return state;
+}
+
+export function govAdvanceMapTravelCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (g.growthJobCoach !== "map_travel") return state;
+  let next = withGov(state, { ...g, growthJobCoach: null });
+  if (
+    growthObjectiveMet(next, "growth_job") &&
+    !gp(next).growthCompletedStepIds.includes("growth_job")
+  ) {
+    const def = growthStepDef("growth_job");
+    if (def && growthStepCelebrationEligible("growth_job", def)) {
+      next = offerGrowthStepCelebration(next, "growth_job");
+    } else {
+      next = completeGrowthStep(next, "growth_job");
+      next = evaluateGrowthObjectives(next);
+    }
+  }
+  return next;
+}
+
 export function govCancelMapJobEngage(state: GameState): GameState {
   const g = gp(state);
-  if (g.growthJobCoach !== "map_engage") return state;
+  if (
+    g.growthJobCoach !== "map_engage" &&
+    g.growthJobCoach !== "map_engage_crew_qty" &&
+    g.growthJobCoach !== "map_engage_intro" &&
+    g.growthJobCoach !== "map_engage_open"
+  ) {
+    return state;
+  }
   return withGov(state, {
     ...g,
     growthJobCoach: "map_send",
@@ -1272,7 +1481,7 @@ export function govAfterJobCoachViewChange(
   if (next.view === "office" && next.jobFocusPostingId) {
     return withGov(next, {
       ...g,
-      growthJobCoach: "map_engage",
+      growthJobCoach: "map_engage_intro",
     });
   }
   return next;
@@ -1299,30 +1508,96 @@ export function govJobCoachSpotlightCue(
   if (g.growthJobCoach === "map_send" && g.growthJobCoachPostingId) {
     return {
       anchorId: `gov-coach-anchor-map-job-send-${g.growthJobCoachPostingId}`,
-      message:
-        "Tap Send — assign crew here on the map, then Engage.",
+      message: "Tap Send — assign crew in the window, then Engage.",
     };
   }
   return null;
+}
+
+function freeFreshGraduatesAtMapOffice(state: GameState): number {
+  const officeId = resolveOfficeLocation(state);
+  const roster = rosterAt(state, officeId);
+  let free = roster.fresh_graduate ?? 0;
+  for (const engagement of state.jobEngagements) {
+    if (engagement.officeId !== officeId) continue;
+    free -= engagement.crewAssigned.fresh_graduate ?? 0;
+  }
+  return Math.max(0, free);
 }
 
 export function govJobOfficeCoachSpotlightCue(
   state: GameState,
 ): GovCoachSpotlightCue | null {
   const g = gp(state);
-  if (!govJobCoachActive(state) || g.growthJobCoach !== "map_engage") {
+  if (!govJobCoachActive(state)) return null;
+  const freeFresh = freeFreshGraduatesAtMapOffice(state);
+  if (g.growthJobCoach === "map_engage_open") {
+    return {
+      anchorId: "gov-coach-anchor-map-job-engage-dialog",
+      message:
+        "Map dispatch — review the contract, set crew, then Engage.",
+      dismissible: true,
+      dismissLabel: "Next",
+    };
+  }
+  if (g.growthJobCoach === "map_engage_intro") {
+    return {
+      anchorId: "gov-coach-anchor-map-job-engage-facts",
+      message:
+        "Tier is the minimum crew grade. Size is job weight. Shift is on-site hours — travel time is separate.",
+      dismissible: true,
+      dismissLabel: "Next",
+    };
+  }
+  if (g.growthJobCoach === "map_engage_crew_qty") {
+    const sendN = Math.min(10, freeFresh);
+    const message =
+      freeFresh >= 10
+        ? "Assign 10 Fresh Graduate — hires from your workforce grant."
+        : sendN > 0
+          ? `Assign ${sendN} Fresh Graduate (all free here). Step clears on Engage — recruit more first if you want a full 10.`
+          : "No Fresh Graduate free at this office — wait for crews to return or recruit more, then Engage.";
+    return {
+      anchorId: "gov-coach-anchor-map-job-engage-fresh-qty",
+      message,
+      dismissible: true,
+      dismissLabel: "Next",
+    };
+  }
+  if (g.growthJobCoach !== "map_engage") {
     return null;
   }
+  const engageN = Math.min(10, Math.max(1, freeFresh));
   return {
     anchorId: "gov-coach-anchor-job-engage",
     message:
-      "Adjust crew if you like, then Engage to send your first team.",
+      freeFresh > 0
+        ? `Tap Engage with Fresh Graduate assigned (up to ${engageN}; doesn't have to be 10).`
+        : "Tap Engage once you have at least one Fresh Graduate assigned.",
+    dismissible: true,
+    dismissLabel: "Next",
+  };
+}
+
+export function govMapTravelCoachSpotlightCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (g.growthJobCoach !== "map_travel") return null;
+  return {
+    anchorId: "gov-coach-anchor-map-job-travel",
+    message:
+      "Team is traveling — follow the blue line and runner on the map. Supply covered the trip when you engaged.",
+    dismissible: true,
+    dismissLabel: "Got it",
   };
 }
 
 export function govGrowthWorldCoachSpotlightCue(
   state: GameState,
 ): GovCoachSpotlightCue | null {
+  const travel = govMapTravelCoachSpotlightCue(state);
+  if (travel) return travel;
   const job = govJobCoachSpotlightCue(state);
   if (job) return job;
   return govMapCoachSpotlightCue(state);
@@ -1421,18 +1696,10 @@ export function govOnChiefSelected(state: GameState): GameState {
 export function govOnMapSiteInspected(state: GameState): GameState {
   const g = gp(state);
   if (g.mapSiteInspected) return state;
-  if (g.growthStepId !== "growth_map" || govGrowthTrackPaused(state)) return state;
-  const jobPostingId = g.growthMapCoachPostingId ?? g.growthJobCoachPostingId;
-  return evaluateGrowthObjectives(
-    withGov(state, {
-      ...g,
-      mapSiteInspected: true,
-      growthMapCoach: null,
-      growthMapCoachPostingId: null,
-      growthMapCoachSiteLabel: null,
-      growthJobCoachPostingId: jobPostingId,
-    }),
-  );
+  if (g.growthStepId !== "growth_job" || govGrowthTrackPaused(state)) {
+    return state;
+  }
+  return state;
 }
 
 function activitySince(
@@ -1469,14 +1736,13 @@ function growthObjectiveMet(state: GameState, stepId: string): boolean {
         return g.lifetimeRecruits - base >= Number(def.param);
       }
       return g.lifetimeRecruits >= Number(def.param);
-    case "open_map":
-      return g.mapSiteInspected;
     case "engage_job": {
       const guided =
         g.growthAccepted &&
         !g.growthDeclined &&
         (g.growthReplayAt != null || g.growthStepStartedAt != null);
       if (guided) {
+        if (!g.mapSiteInspected) return false;
         return activitySince(state, since, ["job_engage", "job_complete"]);
       }
       return (
@@ -1523,6 +1789,117 @@ function growthObjectiveMet(state: GameState, stepId: string): boolean {
   }
 }
 
+const GROWTH_COACH_PENDING_MODALS = new Set<
+  NonNullable<GameState["govProgram"]["pendingModal"]>
+>([
+  "structure_queue_intro",
+  "structure_queue_coach",
+  "recruit_set_qty_intro",
+  "recruit_queue_intro",
+  "recruit_first_queue_coach",
+  "recruit_step_coach",
+  "map_filter_intro",
+  "growth_step_coach",
+  "growth_job_travel_coach",
+  "research_queue_intro",
+  "growth_report_intro",
+  "growth_research_intro",
+  "growth_bm_hint_intro",
+  "growth_bm_hired_intro",
+]);
+
+/** Mid-step coach UI was persisted — unsafe after tab close / refresh. */
+export function govGrowthCoachInProgress(
+  g: GameState["govProgram"],
+): boolean {
+  if (!g.growthAccepted || g.growthDeclined || !g.growthStepId) {
+    return false;
+  }
+  if (
+    g.growthStructureCoach ||
+    g.growthRecruitCoach ||
+    g.growthMapCoach ||
+    g.growthJobCoach ||
+    g.growthReportCoach ||
+    g.growthResearchCoach ||
+    g.growthBmCoach
+  ) {
+    return true;
+  }
+  if (g.structureQueueCoachJobId) return true;
+  if (g.pendingModal && GROWTH_COACH_PENDING_MODALS.has(g.pendingModal)) {
+    return true;
+  }
+  return false;
+}
+
+function govReenterGrowthStepAfterInterrupt(
+  state: GameState,
+  g: GameState["govProgram"],
+  stepId: string,
+): void {
+  switch (stepId) {
+    case "growth_structure":
+      g.growthStructureCoach = "go_home";
+      break;
+    case "growth_recruit_push":
+      g.growthRecruitCoach = "set_qty";
+      break;
+    case "growth_job":
+      g.mapSiteInspected = false;
+      g.growthMapCoachPostingId = null;
+      g.growthMapCoachSiteLabel = null;
+      g.growthJobCoachPostingId =
+        govFirstOpenTier1Posting(state)?.id ?? null;
+      break;
+    case "growth_report":
+      g.growthReportCoach = "open_secretary";
+      break;
+    case "growth_research":
+      g.growthResearchCoach = "open_research";
+      g.growthResearchCoachResearchId =
+        govResearchCoachTargetId(state) ?? null;
+      break;
+    case "growth_bm_hired":
+      g.growthBmCoach = "open_recruit";
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * On load: interrupted growth coach sessions cannot resume (spotlights/modals).
+ * Clear coach chrome, rewind step-local flags, park on Secretary → Govt Prog.
+ */
+export function govFailsafeInterruptedGrowthCoach(state: GameState): GameState {
+  const g0 = gp(state);
+  if (!govGrowthCoachInProgress(g0)) return state;
+  const stepId = g0.growthStepId;
+  if (!stepId) return state;
+
+  if (stepId === "growth_job" && govGrowthJobStepEngagedIncomplete(state)) {
+    const resumed = govResumeGrowthJobAfterEngage(state);
+    return {
+      ...resumed,
+      recruitFocusUnitId: null,
+      jobFocusPostingId: null,
+    };
+  }
+
+  const g = { ...g0 };
+  clearGovCoachTransient(g);
+  govReenterGrowthStepAfterInterrupt(state, g, stepId);
+  const next = withGov(state, g);
+  return {
+    ...next,
+    view: "secretary",
+    secretaryPanel: "govProgram",
+    recruitFocusUnitId: null,
+    jobFocusPostingId: null,
+  };
+}
+
 function clearGovCoachTransient(g: GameState["govProgram"]) {
   g.growthStructureCoach = null;
   g.growthRecruitCoach = null;
@@ -1531,6 +1908,10 @@ function clearGovCoachTransient(g: GameState["govProgram"]) {
   g.growthMapCoachSiteLabel = null;
   g.growthJobCoach = null;
   g.growthJobCoachPostingId = null;
+  g.growthReportCoach = null;
+  g.growthResearchCoach = null;
+  g.growthResearchCoachResearchId = null;
+  g.growthBmCoach = null;
   g.growthRecruitFirstQueueCoachDone = false;
   g.pendingModal = null;
   g.structureQueueCoachJobId = null;
@@ -1575,13 +1956,28 @@ export function govResetGrowthTrackAtStep(
     g.growthRecruitCoach = "set_qty";
     g.pendingModal = "recruit_set_qty_intro";
   }
-  if (stepId === "growth_map") {
+  if (stepId === "growth_job") {
     g.growthMapCoach = "filter_intro";
     g.pendingModal = "map_filter_intro";
-  }
-  if (stepId === "growth_job") {
+    g.mapSiteInspected = false;
     const posting = govFirstOpenTier1Posting(state);
     g.growthJobCoachPostingId = posting?.id ?? null;
+  }
+  if (stepId === "growth_report") {
+    g.growthReportCoach = null;
+    g.pendingModal = "growth_report_intro";
+  }
+  if (stepId === "growth_research") {
+    g.growthResearchCoach = null;
+    g.growthResearchCoachResearchId = null;
+    g.pendingModal = "growth_research_intro";
+  }
+  if (stepId === "growth_bm_hint") {
+    g.pendingModal = "growth_bm_hint_intro";
+  }
+  if (stepId === "growth_bm_hired") {
+    g.growthBmCoach = null;
+    g.pendingModal = "growth_bm_hired_intro";
   }
   return withGov(state, g);
 }
@@ -1635,6 +2031,7 @@ export function evaluateGrowthObjectives(state: GameState): GameState {
     const def = growthStepDef(stepId);
     if (!def) break;
     if (def.objectiveType === "hint_only") {
+      if (gp(next).pendingModal === "growth_bm_hint_intro") break;
       if (def.autoAdvance) {
         next = completeGrowthStep(next, stepId);
         stepId = gp(next).growthStepId;
@@ -1688,6 +2085,15 @@ export function govAfterRecruitmentQueueChange(
 ): GameState {
   const g = gp(state);
   if (
+    g.growthStepId === "growth_bm_hired" &&
+    g.growthBmCoach === "pick_unit" &&
+    officeId === "hq"
+  ) {
+    return evaluateGrowthObjectives(
+      withGov(state, { ...g, growthBmCoach: null }),
+    );
+  }
+  if (
     g.growthStepId !== "growth_recruit_push" ||
     officeId !== "hq" ||
     g.growthRecruitFirstQueueCoachDone
@@ -1718,27 +2124,43 @@ export function govAfterSimulatedTime(
   return evaluateGrowthObjectives(after);
 }
 
+function govGrowthJobMapEngageCoachActive(g: GameState["govProgram"]): boolean {
+  if (!g) return false;
+  const phase = g.growthJobCoach;
+  return (
+    phase === "map_engage_open" ||
+    phase === "map_engage_intro" ||
+    phase === "map_engage_crew_qty" ||
+    phase === "map_engage" ||
+    phase === "map_send"
+  );
+}
+
 export function govAfterEngageJob(state: GameState): GameState {
-  let next = state;
   const g0 = gp(state);
+  const growthJobStep =
+    g0.growthStepId === "growth_job" &&
+    g0.growthAccepted &&
+    !g0.growthDeclined;
+  if (
+    growthJobStep &&
+    g0.mapSiteInspected &&
+    govGrowthJobMapEngageCoachActive(g0) &&
+    !g0.growthCompletedStepIds.includes("growth_job")
+  ) {
+    return withGov(state, {
+      ...g0,
+      growthJobCoach: null,
+      growthJobCoachPostingId: null,
+      pendingModal: "growth_job_travel_coach",
+    });
+  }
+  let next = state;
   if (g0.growthJobCoach) {
     next = withGov(state, {
       ...g0,
       growthJobCoach: null,
       growthJobCoachPostingId: null,
-    });
-  }
-  const g = gp(next);
-  if (
-    g.growthStepId === "growth_job" &&
-    g.growthAccepted &&
-    !g.growthDeclined &&
-    growthObjectiveMet(next, "growth_job") &&
-    !g.growthCompletedStepIds.includes("growth_job")
-  ) {
-    return withGov(next, {
-      ...g,
-      pendingModal: "growth_job_travel_coach",
     });
   }
   next = evaluateGrowthObjectives(next);
@@ -1750,7 +2172,15 @@ export function govAfterEngageJob(state: GameState): GameState {
 }
 
 export function govAfterDismissJobReport(state: GameState): GameState {
-  return evaluateGrowthObjectives(state);
+  const g = gp(state);
+  let next = state;
+  if (
+    g.growthStepId === "growth_report" &&
+    g.growthReportCoach === "dismiss_report"
+  ) {
+    next = withGov(state, { ...g, growthReportCoach: null });
+  }
+  return evaluateGrowthObjectives(next);
 }
 
 export function govAfterResearchQueue(
@@ -1764,14 +2194,21 @@ export function govAfterResearchQueue(
     g.growthAccepted &&
     !g.growthDeclined &&
     officeId === "hq" &&
-    queued &&
-    g.pendingModal == null
+    queued
   ) {
-    return withGov(state, {
+  const cleared = {
       ...g,
-      pendingModal: "research_queue_intro",
-      structureQueueCoachJobId: queued.jobId,
-    });
+      growthResearchCoach: null,
+      growthResearchCoachResearchId: null,
+    };
+    if (g.pendingModal == null) {
+      return withGov(state, {
+        ...cleared,
+        pendingModal: "research_queue_intro",
+        structureQueueCoachJobId: queued.jobId,
+      });
+    }
+    return withGov(state, cleared);
   }
   return evaluateGrowthObjectives(state);
 }
@@ -1898,6 +2335,215 @@ export function govCurrentExecutiveStep(state: GameState) {
 export function govCharterCanEngage(state: GameState, officeId: OfficeLocationId): boolean {
   if (gp(state).executiveStepId !== "exec_charter_engage") return false;
   return buildCharterCrewAssignment(state, officeId) !== null;
+}
+
+function govGrowthStepCoachBlocked(g: GovProgramState, stepId: string): boolean {
+  return (
+    g.growthDeclined ||
+    !g.growthAccepted ||
+    g.growthStepId !== stepId
+  );
+}
+
+export function govResearchCoachTargetId(state: GameState): string | null {
+  const office = resolveOfficeLocation(state);
+  if (isResearchQueueFull(state, office)) return null;
+  for (const research of RESEARCH) {
+    const level = state.researchLevels[research.id] ?? 0;
+    if (level >= research.maxLevel) continue;
+    if (!isResearchUnlocked(state, research)) continue;
+    if (isResearchQueued(state, research.id)) continue;
+    const cost = researchCost(state, research.id);
+    if (canAffordAtOffice(state, office, cost)) return research.id;
+  }
+  for (const research of RESEARCH) {
+    const level = state.researchLevels[research.id] ?? 0;
+    if (level >= research.maxLevel) continue;
+    if (!isResearchUnlocked(state, research)) continue;
+    if (isResearchQueued(state, research.id)) continue;
+    return research.id;
+  }
+  return RESEARCH[0]?.id ?? null;
+}
+
+export function govResearchCoachPickActive(
+  state: GameState,
+  researchId: string,
+): boolean {
+  const g = gp(state);
+  return (
+    g.growthResearchCoach === "pick_project" &&
+    g.growthResearchCoachResearchId === researchId
+  );
+}
+
+export function govBmRecruitCoachPickActive(state: GameState): boolean {
+  const g = gp(state);
+  return g.growthStepId === "growth_bm_hired" && g.growthBmCoach === "pick_unit";
+}
+
+export function govStartReportCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (govGrowthStepCoachBlocked(g, "growth_report")) return state;
+  return withGov(state, {
+    ...g,
+    growthReportCoach: null,
+    pendingModal: "growth_report_intro",
+  });
+}
+
+export function govStartResearchCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (govGrowthStepCoachBlocked(g, "growth_research")) return state;
+  return withGov(state, {
+    ...g,
+    growthResearchCoach: null,
+    growthResearchCoachResearchId: null,
+    pendingModal: "growth_research_intro",
+  });
+}
+
+export function govStartBmHiredCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (govGrowthStepCoachBlocked(g, "growth_bm_hired")) return state;
+  return withGov(state, {
+    ...g,
+    growthBmCoach: null,
+    pendingModal: "growth_bm_hired_intro",
+  });
+}
+
+export function govAdvanceGrowthPathCoach(state: GameState): GameState {
+  const g = gp(state);
+  if (g.growthReportCoach === "reports_tab") {
+    return withGov(state, { ...g, growthReportCoach: "dismiss_report" });
+  }
+  if (
+    g.growthReportCoach === "dismiss_report" &&
+    pendingJobReports(state).length === 0
+  ) {
+    return withGov(state, { ...g, growthReportCoach: "reports_tab" });
+  }
+  return state;
+}
+
+export function govAfterGrowthPathCoachViewChange(
+  _prev: GameState,
+  next: GameState,
+): GameState {
+  const g = gp(next);
+  if (g.growthReportCoach === "open_secretary") {
+    if (next.view === "secretary" || next.view === "office") {
+      return withGov(next, { ...g, growthReportCoach: "open_job" });
+    }
+  }
+  if (g.growthReportCoach === "open_job" && next.view === "office") {
+    return withGov(next, { ...g, growthReportCoach: "reports_tab" });
+  }
+  if (g.growthResearchCoach === "open_research" && next.view === "research") {
+    const target =
+      g.growthResearchCoachResearchId ?? govResearchCoachTargetId(next);
+    return withGov(next, {
+      ...g,
+      growthResearchCoach: "pick_project",
+      growthResearchCoachResearchId: target,
+    });
+  }
+  if (g.growthBmCoach === "open_recruit" && next.view === "recruitment") {
+    return withGov(next, { ...g, growthBmCoach: "pick_unit" });
+  }
+  return next;
+}
+
+export function govGrowthPathCoachCue(
+  state: GameState,
+): GovCoachSpotlightCue | null {
+  const g = gp(state);
+  if (g.growthReportCoach === "open_secretary") {
+    return {
+      anchorId: "gov-coach-anchor-secretary",
+      message: "Open Secretary — field reports and the job desk live here.",
+    };
+  }
+  if (g.growthReportCoach === "open_job") {
+    return {
+      anchorId: "gov-coach-anchor-secretary-job",
+      message: "Open Job — after-action reports and the job board.",
+    };
+  }
+  if (g.growthReportCoach === "reports_tab") {
+    return {
+      anchorId: "gov-coach-anchor-job-reports-tab",
+      message:
+        "Job reports tab — summaries from completed contracts. Open one or dismiss when done reading.",
+      dismissible: true,
+      dismissLabel: "Next",
+    };
+  }
+  if (g.growthReportCoach === "dismiss_report") {
+    const reports = pendingJobReports(state);
+    if (reports.length === 0) {
+      return {
+        anchorId: "gov-coach-anchor-job-reports-tab",
+        relaxed: true,
+        message:
+          "No report yet — your step 3 team may still be traveling or on site. When a report appears, tap × to clear it.",
+        dismissible: true,
+        dismissLabel: "OK",
+      };
+    }
+    return {
+      anchorId: "gov-coach-anchor-job-report-dismiss",
+      message: "Tap × on a report to file it away — that completes this step.",
+    };
+  }
+  if (g.growthResearchCoach === "open_research") {
+    if (state.view === "research") {
+      const id =
+        g.growthResearchCoachResearchId ?? govResearchCoachTargetId(state);
+      if (id) {
+        return {
+          anchorId: `gov-coach-anchor-research-queue-${id}`,
+          message: "Tap Queue on this project (or any affordable one).",
+        };
+      }
+    }
+    return {
+      anchorId: "gov-coach-anchor-home-research",
+      message:
+        "Home → Research, or use your shortcut bar. Queue one project you can afford at HQ.",
+    };
+  }
+  if (g.growthResearchCoach === "pick_project") {
+    const id = g.growthResearchCoachResearchId;
+    if (!id) {
+      return {
+        anchorId: "gov-program-research-queue-anchor",
+        relaxed: true,
+        message: "Pick any unlocked research and tap Queue when you can afford it.",
+        dismissible: true,
+        dismissLabel: "OK",
+      };
+    }
+    return {
+      anchorId: `gov-coach-anchor-research-queue-${id}`,
+      message: "Tap Queue on this project (or any affordable one).",
+    };
+  }
+  if (g.growthBmCoach === "open_recruit") {
+    return {
+      anchorId: "gov-coach-anchor-home-recruitment",
+      message: "Open Recruit and hire a Branch Manager when gates are met.",
+    };
+  }
+  if (g.growthBmCoach === "pick_unit") {
+    return {
+      anchorId: "recruit-unit-branch_manager",
+      message:
+        "Branch Manager — needs Branch Management researched. Set quantity, then Queue recruit.",
+    };
+  }
+  return null;
 }
 
 export function govOnOpenGovProgram(state: GameState): GameState {

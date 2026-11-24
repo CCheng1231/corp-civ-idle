@@ -2372,11 +2372,6 @@
   box-shadow: inset 0 0 0 1px rgba(45, 106, 74, 0.35);
 }
 
-.map-job-filter-row--coach {
-  min-height: 0;
-  padding: 0.1rem 0.22rem;
-}
-
 .map-job-filter-row-coach-anchor {
   display: flex;
   align-items: stretch;
@@ -4270,9 +4265,16 @@
   flex-direction: column;
   padding: 0;
   border-radius: 0.5rem;
-  border: 1px solid rgba(26, 26, 26, 0.14);
-  background: rgba(252, 251, 247, 0.97);
-  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(45, 106, 74, 0.22);
+  background: linear-gradient(
+    168deg,
+    rgba(255, 255, 252, 0.99) 0%,
+    rgba(248, 246, 240, 0.98) 48%,
+    rgba(236, 244, 238, 0.96) 100%
+  );
+  box-shadow:
+    0 0.5rem 1.25rem rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .map-world-job-engage-head {
@@ -4281,7 +4283,8 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.45rem 0.55rem 0.4rem;
-  border-bottom: 1px solid rgba(26, 26, 26, 0.1);
+  border-bottom: 1px solid rgba(45, 106, 74, 0.16);
+  background: rgba(45, 106, 74, 0.06);
 }
 
 .map-world-job-engage-head h2 {
@@ -4337,27 +4340,411 @@
 }
 
 .map-world-job-engage-body .job-posting-card--map-engage .job-posting-facts {
-  gap: 0.12rem 0.4rem;
-  font-size: 0.58rem;
-  line-height: 1.2;
+  gap: 0.14rem;
+  margin: 0.2rem 0 0.35rem;
+  padding: 0.35rem 0.42rem;
+  border-radius: 0.38rem;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 0.66rem;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .job-posting-facts li {
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  gap: 0.35rem;
 }
 
 .map-world-job-engage-body
   .job-posting-card--map-engage
   .job-posting-fact-label {
-  color: #6a6a6a;
+  color: #4a4a4a;
+  font-weight: 600;
 }
 
-.map-world-job-engage-body .job-posting-card--map-engage .mission-crew-picker,
 .map-world-job-engage-body
   .job-posting-card--map-engage
-  .mission-crew-unit-list {
+  .job-posting-facts
+  > li
+  > span:not(.job-posting-fact-label):not(.job-info-tip),
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-info-tip-value {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-size-band-small,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-completion-band-none {
+  color: #4a4a4a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-size-band-mid,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-completion-band-in_progress {
+  color: #1b5e8c;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-size-band-huge,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-posting-facts
+  > li
+  > .job-info-tip
+  > .job-completion-band-midway {
+  color: #9a5b12;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel {
+  z-index: 30;
+  min-width: 11rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(45, 106, 74, 0.32);
+  background: #fafcf9;
+  box-shadow:
+    0 6px 18px rgba(26, 26, 26, 0.14),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-info-tip-title {
+  margin-bottom: 0.1rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #4a5c52;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-info-tip-row {
+  opacity: 1;
+  font-size: 0.66rem;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-info-tip-row.is-current {
+  font-weight: 650;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-info-tip-mark {
+  color: #2d6a4a;
+  font-weight: 700;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-size-band-small,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-none {
+  color: #4a4a4a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-size-band-mid,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-in_progress,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-minimal {
+  color: #1565a8;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-size-band-huge,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-midway,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-almost {
+  color: #9a5b12;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .job-info-tip-panel
+  .job-completion-band-finishing {
+  color: #1f6b4f;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .muted {
+  color: #5a5a5a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker.mission-crew-picker--compact {
+  margin: 0.12rem 0 0;
+  padding: 0.12rem 0.16rem 0.1rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(27, 75, 122, 0.14);
+  background: rgba(232, 240, 248, 0.45);
   font-size: 0.62rem;
 }
 
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact {
+  --map-engage-crew-step: 1.3rem;
+  --map-engage-crew-qty: 2.25rem;
+  --map-engage-crew-max: 1.95rem;
+  --map-engage-crew-avail: 2.45rem;
+  --map-engage-crew-gap: 0.08rem;
+  --map-engage-crew-strip-w: calc(
+    var(--map-engage-crew-step) * 2 + var(--map-engage-crew-qty) +
+      var(--map-engage-crew-max) + var(--map-engage-crew-avail) +
+      var(--map-engage-crew-gap) * 4
+  );
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 0.04rem;
+  font-size: 0.62rem;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-unit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--map-engage-crew-strip-w);
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.02rem 0;
+  column-gap: 0.12rem;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-unit-link,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-unit-link.btn {
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  line-height: 1.15;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-unit-link--truncate {
+  display: block;
+  min-width: 0;
+  max-width: 4.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1b4b7a;
+  font-size: 0.6rem;
+  line-height: 1.15;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-unit-controls--compact {
+  display: grid;
+  grid-template-columns:
+    var(--map-engage-crew-step)
+    var(--map-engage-crew-qty)
+    var(--map-engage-crew-step)
+    var(--map-engage-crew-max)
+    var(--map-engage-crew-avail);
+  column-gap: var(--map-engage-crew-gap);
+  align-items: center;
+  justify-self: end;
+  width: var(--map-engage-crew-strip-w);
+  max-width: 100%;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-step-btn,
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-max-btn {
+  border-color: rgba(26, 26, 26, 0.2);
+  background: #f0eeea;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-unit-count {
+  border-color: rgba(26, 26, 26, 0.22);
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-step-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.02rem 0;
+  line-height: 1.05;
+  justify-self: stretch;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-max-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.02rem 0.08rem;
+  line-height: 1.05;
+  justify-self: stretch;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-unit-count {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 0;
+  padding: 0.06rem 0.12rem;
+  line-height: 1.05;
+  justify-self: stretch;
+  box-sizing: border-box;
+}
+
+.map-world-job-engage-body
+  .job-posting-card--map-engage
+  .mission-crew-picker--compact
+  .mission-crew-available {
+  justify-self: end;
+  width: 100%;
+  padding-right: 0.02rem;
+  font-size: 0.54rem;
+  font-variant-numeric: tabular-nums;
+  color: #5a5a5a;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.map-world-job-engage-body .job-posting-card--map-engage .job-posting-engage {
+  margin-top: 0.35rem;
+  align-items: stretch;
+}
+
 .map-world-job-engage-body .job-posting-engage-btn {
-  min-height: 2.75rem;
-  font-size: 0.74rem;
+  width: auto;
+  align-self: flex-start;
+  min-height: 0;
+  min-width: 4.1rem;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.6rem;
+  font-weight: 650;
+  border-radius: 0.3rem;
+  border-color: #245a42;
+  background: linear-gradient(180deg, #3a8f66 0%, #2d6a4a 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+}
+
+.map-world-job-engage-body .job-posting-engage-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #42a072 0%, #327a56 100%);
+}
+
+.map-world-job-engage-body .job-posting-engage-btn:disabled {
+  background: #b8c4be;
+  border-color: #a8b4ae;
+}
+
+.layout-mobile-nav .map-world-job-engage-body .job-posting-engage-btn.btn,
+.app-shell.viewport-preview-mobile
+  .map-world-job-engage-body
+  .job-posting-engage-btn.btn,
+html.viewport-preview-galaxy-s24
+  .map-world-job-engage-body
+  .job-posting-engage-btn.btn {
+  min-height: 0;
+  min-width: 0;
+}
+
+.map-job-travel-coach-anchor {
+  position: absolute;
+  z-index: 6;
+  left: 8%;
+  right: 8%;
+  top: 22%;
+  bottom: 28%;
+  pointer-events: none;
+}
+
+.world-view--map-travel-coach .gov-program-coach-guide-bubble {
+  z-index: 1320;
 }
 
 .map-hex-job-send-coach-anchor {

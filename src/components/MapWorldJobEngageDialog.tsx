@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch } from "react";
+import { useEffect, useMemo, useState, type Dispatch } from "react";
 import { rosterAt } from "../game/constants";
 import { resolveOfficeLocation } from "../game/officeSelection";
 import { jobDefinitionForPosting } from "../game/jobs";
@@ -44,10 +44,32 @@ export function MapWorldJobEngageDialog({
     }
   }, [state, posting, officeRoster, crewByPosting]);
 
+  const coachPosting =
+    posting.id === state.govProgram?.growthJobCoachPostingId;
+  const onGrowthJobCoach =
+    state.govProgram?.growthStepId === "growth_job" && coachPosting;
+  const coachEngageOpen =
+    onGrowthJobCoach &&
+    state.govProgram?.growthJobCoach === "map_engage_open";
+  const coachEngageFacts =
+    onGrowthJobCoach &&
+    state.govProgram?.growthJobCoach === "map_engage_intro";
+  const coachEngageFreshQty =
+    onGrowthJobCoach &&
+    state.govProgram?.growthJobCoach === "map_engage_crew_qty";
   const coachEngage =
-    state.govProgram?.growthStepId === "growth_job" &&
-    state.govProgram.growthJobCoach === "map_engage" &&
-    posting.id === state.govProgram.growthJobCoachPostingId;
+    onGrowthJobCoach && state.govProgram?.growthJobCoach === "map_engage";
+
+  useEffect(() => {
+    if (!onGrowthJobCoach) return;
+    const available = officeRoster.fresh_graduate ?? 0;
+    if (available <= 0) return;
+    setCrewByPosting((prev) => {
+      if (prev[posting.id]?.fresh_graduate) return prev;
+      const count = Math.min(10, available);
+      return { ...prev, [posting.id]: { fresh_graduate: count } };
+    });
+  }, [onGrowthJobCoach, officeRoster.fresh_graduate, posting.id]);
 
   return (
     <div
@@ -72,7 +94,14 @@ export function MapWorldJobEngageDialog({
             Cancel
           </button>
         </header>
-        <div className="map-world-job-engage-body">
+        <div
+          id={
+            coachEngageOpen
+              ? "gov-coach-anchor-map-job-engage-dialog"
+              : undefined
+          }
+          className="map-world-job-engage-body"
+        >
           <JobPostingCard
             state={state}
             dispatch={dispatch}
@@ -94,8 +123,9 @@ export function MapWorldJobEngageDialog({
                 return next;
               });
               onEngaged?.(posting.id);
-              onClose();
             }}
+            coachEngageFactsHighlight={coachEngageFacts}
+            coachEngageFreshQtyHighlight={coachEngageFreshQty}
             coachEngageHighlight={coachEngage}
           />
           <GovProgramJobEngageCoach state={state} dispatch={dispatch} />

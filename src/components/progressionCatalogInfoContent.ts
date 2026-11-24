@@ -29,9 +29,9 @@ const STRUCTURE_CATEGORY_BODIES: Record<StructureCategory, string> = {
   essentials:
     "Day-to-day generators—desks, supply lines, outreach, and morale rooms. These are your main source of cash, supply, mood, and reputation (RRS) per hour.",
   departments:
-    "Site scale and limits—expansion, finance, logistics, and landmark builds. Use these when you need more capacity, storage, or department throughput.",
+    "Department floors and landmarks—finance, logistics, and the company statue. Use these for storage, throughput, and holding caps.",
   infrastructure:
-    "Power and the research desk. Keep generation and R&D infrastructure online so firm-wide research can run and advanced builds stay powered.",
+    "Power, office expansion, and the research desk. Keep generation and space online so firm-wide research can run and advanced builds stay powered.",
   staffing:
     "Hiring infrastructure—recruitment desks and training rooms. Upgrade here to unlock contractor roles on the Recruit tab.",
 };

@@ -8,6 +8,8 @@ interface UnitCountPickerProps {
   disabled?: boolean;
   onChange: (next: UnitAssignment) => void;
   onRecruitClick?: (unitId: UnitId) => void;
+  compactLayout?: boolean;
+  coachQtyAnchorUnitId?: UnitId;
 }
 
 export function UnitCountPicker({
@@ -17,6 +19,8 @@ export function UnitCountPicker({
   disabled,
   onChange,
   onRecruitClick,
+  compactLayout,
+  coachQtyAnchorUnitId,
 }: UnitCountPickerProps) {
   function setUnitCount(unitId: UnitId, raw: number) {
     const max = maxForUnit(unitId);
@@ -36,7 +40,11 @@ export function UnitCountPicker({
   }
 
   return (
-    <div className="mission-crew-picker">
+    <div
+      className={`mission-crew-picker${
+        compactLayout ? " mission-crew-picker--compact" : ""
+      }`}
+    >
       <ul className="mission-crew-unit-list">
         {units.map((unit) => {
           const available = maxForUnit(unit.id);
@@ -52,7 +60,9 @@ export function UnitCountPicker({
               {onRecruitClick ? (
                 <button
                   type="button"
-                  className="btn linkish mission-crew-unit-link"
+                  className={`btn linkish mission-crew-unit-link${
+                    compactLayout ? " mission-crew-unit-link--truncate" : ""
+                  }`}
                   aria-label={`Recruit ${unit.name}`}
                   title={`Open Recruit tab — ${unit.name}`}
                   onClick={() => onRecruitClick(unit.id)}
@@ -60,10 +70,19 @@ export function UnitCountPicker({
                   {unit.name}
                 </button>
               ) : (
-                <span className="mission-crew-unit-link">{unit.name}</span>
+                <span
+                  className={`mission-crew-unit-link${
+                    compactLayout ? " mission-crew-unit-link--truncate" : ""
+                  }`}
+                  title={compactLayout ? unit.name : undefined}
+                >
+                  {unit.name}
+                </span>
               )}
               <div
-                className="mission-crew-unit-controls"
+                className={`mission-crew-unit-controls${
+                  compactLayout ? " mission-crew-unit-controls--compact" : ""
+                }`}
                 role="group"
                 aria-label={`Assign ${unit.name}`}
               >
@@ -78,6 +97,11 @@ export function UnitCountPicker({
                 </button>
                 <input
                   type="number"
+                  id={
+                    coachQtyAnchorUnitId === unit.id
+                      ? "gov-coach-anchor-map-job-engage-fresh-qty"
+                      : undefined
+                  }
                   className="mission-crew-unit-count"
                   min={0}
                   max={available}

@@ -107,34 +107,8 @@ export function govProgramLiveCue(
         title: growth.title,
         instruction: "Hire 10 contractors — start with Fresh Graduate.",
       };
-    case "growth_map":
-      if (screen !== "world") return null;
-      if (
-        state.govProgram?.pendingModal === "map_filter_intro" ||
-        state.govProgram?.growthMapCoach === "filter_tier" ||
-        state.govProgram?.growthMapCoach === "pick_job" ||
-        state.govProgram?.growthMapCoach === "drawer_title" ||
-        state.govProgram?.growthMapCoach === "drawer_region" ||
-        state.govProgram?.growthMapCoach === "drawer_distance" ||
-        state.govProgram?.growthMapCoach === "drawer_contracts"
-      ) {
-        return null;
-      }
-      return {
-        title: growth.title,
-        instruction: "Use Jobs filter → Tier T1, then pick a contract.",
-      };
     case "growth_job":
-      if (screen === "world") return null;
-      if (screen === "job" && state.govProgram?.growthJobCoach === "map_engage") {
-        return null;
-      }
-      if (screen === "job") {
-        return {
-          title: growth.title,
-          instruction: "Tap Engage to dispatch the team.",
-        };
-      }
+      // Map contract step: map coach spotlights only (no live-cue strip).
       return null;
     case "growth_report":
       if (screen !== "job") return null;
