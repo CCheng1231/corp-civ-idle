@@ -656,16 +656,18 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: stretch;
+  justify-content: flex-start;
+  overflow: hidden;
   background: transparent;
 }
 
 .secretary-skill-sheet.secretary-detail-dialog {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   width: 100%;
   max-width: none;
   height: 100%;
   max-height: none;
+  min-height: 0;
   margin: 0;
   padding: 0;
   border-radius: 0;
@@ -675,37 +677,69 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  background: #0a0e14;
+}
+
+.secretary-skill-sheet-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  pointer-events: none;
+}
+
+.secretary-skill-sheet-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(15, 20, 25, 0.22) 0%,
-    rgba(15, 20, 25, 0.48) 14%,
-    rgba(15, 20, 25, 0.65) 100%
+    rgba(10, 14, 20, 0.62) 0%,
+    rgba(10, 14, 20, 0.86) 32%,
+    rgba(8, 11, 16, 0.97) 100%
   );
 }
 
 .secretary-skill-sheet-scroll {
-  flex: 1 1 auto;
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 0.85rem 1rem 0.75rem;
+  touch-action: pan-y;
+  padding: 0.9rem 0.9rem max(1rem, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  align-items: stretch;
+  gap: 0.45rem;
 }
 
-.secretary-skill-sheet-footer {
-  flex-shrink: 0;
-  padding: 0.55rem 1rem max(0.75rem, env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 20, 25, 0.82);
+/* Flex scroll parent must not shrink sections (else skill workbook collapses). */
+.secretary-skill-sheet-scroll > * {
+  flex: 0 0 auto;
+  min-height: min-content;
 }
 
-.layout-mobile-nav .secretary-skill-screen,
-.app-shell.viewport-preview-mobile .secretary-skill-screen {
-  bottom: var(--mobile-bottom-nav-space, 52px);
+@media (max-width: 720px) {
+  .secretary-skill-sheet.secretary-detail-dialog {
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+}
+
+html:has(.layout-mobile-nav) .secretary-skill-screen.secretary-detail-backdrop,
+html:has(.app-shell-mobile-nav) .secretary-skill-screen.secretary-detail-backdrop,
+html:has(.app-shell.viewport-preview-mobile) .secretary-skill-screen.secretary-detail-backdrop,
+.device-preview-webview .secretary-skill-screen.secretary-detail-backdrop {
+  bottom: var(
+    --mobile-bottom-nav-space,
+    calc(3.35rem + env(safe-area-inset-bottom, 0px))
+  );
 }
 
 .secretary-skill-sheet-footer .secretary-detail-actions {

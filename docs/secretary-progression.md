@@ -14,8 +14,10 @@
 ## Leveling & skills
 
 - Max level **10**; **2 skill points** per level gained.
-- **Chief tree:** cash/supply throughput, structure build speed, research speed.
-- **Team lead tree:** travel, on-site work speed, job payout.
+- **Three skill tabs** (diagram UI in secretary detail): Chief of Staff, team lead, **on site bonus** — one shared point pool, prerequisites on.
+- **Chief tree:** branched (cash/supply → build / research time & cost).
+- **Team lead tree:** branched (work → travel/supply, payout/hours).
+- **On site tree:** per-secretary rows in Excel **Secretary Skills** — MVP same 5-node fork (+REP at posted office, hire & build time/cost). Effects apply only at `secretaryPostedOffice` (defaults from roster; relocation UI later).
 - Identity perks from the Secretary Stat sheet stack with allocated ranks (hybrid).
 
 ### EXP sources

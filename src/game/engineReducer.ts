@@ -1113,7 +1113,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
       if (isRecruitmentQueueFull(state, officeId)) return state;
       const officeJobs = recruitmentJobsForOffice(state, officeId);
       if (officeJobs.some((j) => j.unitId === unitId)) return state;
-      const cost = recruitBatchCostForState(state, unitId, count);
+      const cost = recruitBatchCostForState(state, officeId, unitId, count);
       if (!canAffordAtOffice(state, officeId, cost)) return state;
 
       const now = Date.now();
@@ -1130,7 +1130,7 @@ function reduceGameState(state: GameState, action: GameAction): GameState {
           ? scheduleTimerAt(
               state,
               now,
-              recruitmentOrderDurationMsForState(state, count),
+              recruitmentOrderDurationMsForState(state, officeId, count),
             )
           : null
 };

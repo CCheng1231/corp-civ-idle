@@ -469,10 +469,11 @@ export function RecruitmentQueueList({
       <QueueSlot count={rows.length} maxSlots={maxSlots} emptyLabel={emptyLabel}>
         <ul className={`build-queue${compact ? " build-queue-compact" : ""}`}>
           {(() => {
-            const timings: QueueJobTiming[] = rows.map(({ job }) => ({
+            const timings: QueueJobTiming[] = rows.map(({ job, officeId }) => ({
               completesAt: job.completesAt,
               durationMs: recruitmentOrderDurationMsForState(
                 state,
+                officeId,
                 job.count ?? 1,
               ),
             }));

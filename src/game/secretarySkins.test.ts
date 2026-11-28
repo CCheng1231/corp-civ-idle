@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState } from "./constants";
-import {
-  CHIEF_SKILL_NODES,
-  CHIEF_SKILL_DEFS,
-  TEAM_LEAD_SKILL_NODES,
-  TEAM_LEAD_SKILL_DEFS,
-} from "./secretarySkillData";
+import { skillTreesFor } from "./secretarySkillData";
 import {
   checkSecretarySkinOffers,
   chiefTreeFullyMastered,
@@ -17,21 +12,25 @@ import {
   teamLeadTreeFullyMastered,
 } from "./secretarySkins";
 import { createInitialSecretaryProgress } from "./secretaryProgress";
+import { SECRETARY_MAX_LEVEL } from "./secretarySkillData";
 import { jobWorkDurationMsForEngagement } from "./secretaryEffects";
 
 describe("secretary skins", () => {
   it("detects per-tree mastery independently", () => {
     const progress = createInitialSecretaryProgress();
-    expect(chiefTreeFullyMastered(progress)).toBe(false);
-    for (const node of CHIEF_SKILL_NODES) {
-      progress.chiefSkillRanks[node] = CHIEF_SKILL_DEFS[node].maxRank;
+    const id = "secretary_01";
+    const trees = skillTreesFor(id);
+    expect(chiefTreeFullyMastered(id, progress)).toBe(false);
+    progress.level = SECRETARY_MAX_LEVEL;
+    for (const node of trees.chief.nodes) {
+      progress.chiefSkillRanks[node.id] = node.maxRank;
     }
-    expect(chiefTreeFullyMastered(progress)).toBe(true);
-    expect(teamLeadTreeFullyMastered(progress)).toBe(false);
-    for (const node of TEAM_LEAD_SKILL_NODES) {
-      progress.teamLeadSkillRanks[node] = TEAM_LEAD_SKILL_DEFS[node].maxRank;
+    expect(chiefTreeFullyMastered(id, progress)).toBe(true);
+    expect(teamLeadTreeFullyMastered(id, progress)).toBe(false);
+    for (const node of trees.teamLead.nodes) {
+      progress.teamLeadSkillRanks[node.id] = node.maxRank;
     }
-    expect(teamLeadTreeFullyMastered(progress)).toBe(true);
+    expect(teamLeadTreeFullyMastered(id, progress)).toBe(true);
   });
 
   it("opens skin offer when a tree is maxed", () => {
@@ -43,9 +42,10 @@ describe("secretary skins", () => {
         secretary_01: createInitialSecretaryProgress(),
       },
     };
-    const progress = { ...createInitialSecretaryProgress() };
-    for (const node of CHIEF_SKILL_NODES) {
-      progress.chiefSkillRanks[node] = CHIEF_SKILL_DEFS[node].maxRank;
+    const progress = { ...createInitialSecretaryProgress(), level: SECRETARY_MAX_LEVEL };
+    const trees = skillTreesFor("secretary_01");
+    for (const node of trees.chief.nodes) {
+      progress.chiefSkillRanks[node.id] = node.maxRank;
     }
     const after = {
       ...before,

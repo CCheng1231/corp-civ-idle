@@ -145,6 +145,7 @@ html.viewport-preview-galaxy-s24 #root {
   background: var(--bg);
   container-type: size;
   container-name: s24-screen;
+  --mobile-bottom-nav-space: 52px;
   /* Containing block so position:fixed chrome stays inside the webview */
   transform: translateZ(0);
 }

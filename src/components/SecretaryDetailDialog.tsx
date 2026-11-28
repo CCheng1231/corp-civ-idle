@@ -1,19 +1,23 @@
-import { useLayoutEffect, type Dispatch } from "react";
+import { useEffect, useLayoutEffect, type Dispatch } from "react";
+import { createPortal } from "react-dom";
+import { appOverlayPortalRoot } from "./appOverlayPortalRoot";
 import type { SecretaryDefinition } from "../game/secretaryData";
-import { createInitialSecretaryProgress } from "../game/secretaryProgress";
+import {
+  createInitialSecretaryProgress,
+  ensureSecretaryProgressShape,
+} from "../game/secretaryProgress";
 import {
   effectiveChiefBonusLabel,
   effectiveTeamLeadBonusLabel,
 } from "../game/secretaryEffects";
+import { officeSiteLabel } from "../game/constants";
+import { secretaryPostedOffice } from "../game/secretaryPosting";
+import { expRequiredForNextLevel, SECRETARY_MAX_LEVEL } from "../game/secretarySkillData";
+import { SecretarySkillWorkbook } from "./SecretarySkillWorkbook";
 import {
-  CHIEF_SKILL_DEFS,
-  CHIEF_SKILL_NODES,
-  expRequiredForNextLevel,
-  SECRETARY_MAX_LEVEL,
-  TEAM_LEAD_SKILL_DEFS,
-  TEAM_LEAD_SKILL_NODES,
-} from "../game/secretarySkillData";
-import { secretaryRosterPortraitSrc } from "../game/secretaryAssets";
+  secretaryRosterPortraitSrc,
+  secretaryTabPortraitSrc,
+} from "../game/secretaryAssets";
 import {
   SECRETARY_SKIN_CATALOG,
   secretarySkinPortraitSrc,
@@ -49,8 +53,9 @@ export function SecretaryDetailDialog({
   onClose,
 }: SecretaryDetailDialogProps) {
   const isChief = secretary.id === chiefOfStaffId;
-  const progress =
-    state.secretaryProgress[secretary.id] ?? createInitialSecretaryProgress();
+  const progress = ensureSecretaryProgressShape(
+    state.secretaryProgress[secretary.id] ?? createInitialSecretaryProgress(),
+  );
   const nextLevelExp =
     progress.level >= SECRETARY_MAX_LEVEL
       ? 0
@@ -61,6 +66,13 @@ export function SecretaryDetailDialog({
       : 100;
   const unlockedSkins = state.secretarySkins?.unlocked[secretary.id] ?? [];
   const equippedSkin = equippedSecretarySkinId(state, secretary.id);
+  const postedLabel = officeSiteLabel(
+    state,
+    secretaryPostedOffice(state, secretary.id),
+  );
+  const roleLine = isChief ? "Chief of Staff" : "Executive secretary";
+  const sheetBg = secretaryTabPortraitSrc(secretary.id, state);
+  const rosterPortrait = secretaryRosterPortraitSrc(secretary.id, state);
 
   useLayoutEffect(() => {
     syncAppTopChromeHeight();
@@ -68,7 +80,21 @@ export function SecretaryDetailDialog({
     return () => window.removeEventListener("resize", syncAppTopChromeHeight);
   }, []);
 
-  return (
+  useEffect(() => {
+    const portalRoot = appOverlayPortalRoot();
+    const scrollLockEl =
+      portalRoot.classList.contains("device-preview-webview")
+        ? ((portalRoot.querySelector(".app-shell") as HTMLElement | null) ??
+          portalRoot)
+        : document.body;
+    const previous = scrollLockEl.style.overflow;
+    scrollLockEl.style.overflow = "hidden";
+    return () => {
+      scrollLockEl.style.overflow = previous;
+    };
+  }, []);
+
+  const sheet = (
     <div
       className="secretary-detail-backdrop secretary-skill-screen"
       onClick={onClose}
@@ -80,6 +106,11 @@ export function SecretaryDetailDialog({
         role="dialog"
         aria-labelledby="secretary-detail-title"
       >
+        <div
+          className="secretary-skill-sheet-bg"
+          style={{ backgroundImage: `url('${sheetBg}')` }}
+          aria-hidden="true"
+        />
         <button
           type="button"
           className="secretary-detail-close"
@@ -89,47 +120,58 @@ export function SecretaryDetailDialog({
           ×
         </button>
         <div className="secretary-skill-sheet-scroll">
-          <header className="secretary-detail-header">
-            <h2 id="secretary-detail-title">{secretary.name}</h2>
-            <p className="muted secretary-detail-role">
-              {isChief ? "Chief of Staff" : "Chief of Staff candidate"}
-            </p>
-            <p className="secretary-detail-level">
-              Level {progress.level}
-              {progress.level < SECRETARY_MAX_LEVEL
-                ? ` · ${progress.exp} / ${nextLevelExp} EXP`
-                : " · MAX"}
-            </p>
-            <div
-              className="secretary-detail-exp-bar"
-              role="progressbar"
-              aria-valuenow={expPct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <span style={{ width: `${expPct}%` }} />
-            </div>
-            <p className="muted secretary-detail-skill-points">
-              Unspent skill points: {progress.unspentSkillPoints}
-            </p>
-          </header>
-          <div className="secretary-detail-summary">
-            <div className="secretary-detail-flavour">
-              {secretary.flavour.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
-            </div>
-            <dl className="secretary-detail-stats">
-              <div>
-                <dt>As Chief of Staff</dt>
-                <dd>{effectiveChiefBonusLabel(state, secretary.id)}</dd>
+          <div className="secretary-skill-who">
+            <img src={rosterPortrait} alt="" draggable={false} />
+            <div>
+              <h2 id="secretary-detail-title">{secretary.name}</h2>
+              <p className="secretary-skill-role">{roleLine}</p>
+              <p className="secretary-skill-role">Posted office · {postedLabel}</p>
+              <p className="secretary-skill-level">
+                Level {progress.level}
+                {progress.level >= SECRETARY_MAX_LEVEL
+                  ? " · MAX"
+                  : ` · ${progress.exp} / ${nextLevelExp} EXP`}
+              </p>
+              <div
+                className="secretary-skill-exp"
+                role="progressbar"
+                aria-valuenow={expPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <span style={{ width: `${expPct}%` }} />
               </div>
-              <div>
-                <dt>As team lead</dt>
-                <dd>{effectiveTeamLeadBonusLabel(state, secretary.id)}</dd>
-              </div>
-            </dl>
+              <p className="secretary-skill-points-line">
+                Unspent skill points:{" "}
+                <span className="points-value">{progress.unspentSkillPoints}</span>
+              </p>
+            </div>
           </div>
+
+          <hr className="secretary-skill-divider" aria-hidden="true" />
+
+          <div className="secretary-skill-chief-assign-row">
+            <button
+              type="button"
+              className="btn primary secretary-skill-chief-btn"
+              disabled={isChief}
+              onClick={() => onAssignChief(secretary.id)}
+            >
+              {isChief ? "Current Chief of Staff" : "Set as Chief of Staff"}
+            </button>
+          </div>
+
+          <dl className="secretary-skill-identity">
+            <div>
+              <dt>As Chief of Staff</dt>
+              <dd>{effectiveChiefBonusLabel(state, secretary.id)}</dd>
+            </div>
+            <div>
+              <dt>As team lead</dt>
+              <dd>{effectiveTeamLeadBonusLabel(state, secretary.id)}</dd>
+            </div>
+          </dl>
+
           {unlockedSkins.length > 0 ? (
             <section className="secretary-detail-skin-panel" aria-label="Wardrobe">
               <h3>Wardrobe</h3>
@@ -178,93 +220,22 @@ export function SecretaryDetailDialog({
               </div>
             </section>
           ) : null}
-          <div className="secretary-detail-skill-panel">
-            <section className="secretary-skill-tree">
-              <h3>Chief of Staff tree</h3>
-              <ul>
-                {CHIEF_SKILL_NODES.map((nodeId) => {
-                  const def = CHIEF_SKILL_DEFS[nodeId];
-                  const rank = progress.chiefSkillRanks[nodeId] ?? 0;
-                  return (
-                    <li key={nodeId}>
-                      <span>
-                        {def.label} ({rank}/{def.maxRank})
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        disabled={
-                          progress.unspentSkillPoints <= 0 ||
-                          rank >= def.maxRank
-                        }
-                        onClick={() =>
-                          dispatch({
-                            type: "SECRETARY_SPEND_SKILL_POINT",
-                            secretaryId: secretary.id,
-                            tree: "chief",
-                            nodeId,
-                          })
-                        }
-                      >
-                        Upgrade
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-            <section className="secretary-skill-tree">
-              <h3>Team lead tree</h3>
-              <ul>
-                {TEAM_LEAD_SKILL_NODES.map((nodeId) => {
-                  const def = TEAM_LEAD_SKILL_DEFS[nodeId];
-                  const rank = progress.teamLeadSkillRanks[nodeId] ?? 0;
-                  return (
-                    <li key={nodeId}>
-                      <span>
-                        {def.label} ({rank}/{def.maxRank})
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        disabled={
-                          progress.unspentSkillPoints <= 0 ||
-                          rank >= def.maxRank
-                        }
-                        onClick={() =>
-                          dispatch({
-                            type: "SECRETARY_SPEND_SKILL_POINT",
-                            secretaryId: secretary.id,
-                            tree: "teamLead",
-                            nodeId,
-                          })
-                        }
-                      >
-                        Upgrade
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          </div>
+
+          <p className="secretary-skill-tap-hint">
+            Tap a skill to spend 1 point and add 1 rank. Ranks stack — see each
+            card for per-rank and total.
+          </p>
+
+          <SecretarySkillWorkbook
+            state={state}
+            dispatch={dispatch}
+            secretaryId={secretary.id}
+            progress={progress}
+          />
         </div>
-        <footer className="secretary-skill-sheet-footer">
-          <div className="secretary-detail-actions">
-            <button
-              type="button"
-              className="btn primary secretary-detail-assign-btn"
-              disabled={isChief}
-              onClick={() => {
-                onAssignChief(secretary.id);
-                onClose();
-              }}
-            >
-              {isChief ? "Current Chief of Staff" : "Assign as Chief of Staff"}
-            </button>
-          </div>
-        </footer>
       </div>
     </div>
   );
+
+  return createPortal(sheet, appOverlayPortalRoot());
 }

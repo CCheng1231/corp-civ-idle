@@ -1,18 +1,23 @@
 import { DEFAULT_CHIEF_OF_STAFF_ID, SECRETARY_IDS } from "./secretaryData";
 import {
-  CHIEF_SKILL_DEFS,
   CHIEF_SKILL_NODES,
   emptyChiefSkillRanks,
+  emptyOnSiteSkillRanks,
   emptyTeamLeadSkillRanks,
   expRequiredForNextLevel,
   GACHA_SECRETARY_IDS,
   SECRETARY_MAX_LEVEL,
   SKILL_POINTS_PER_LEVEL,
-  TEAM_LEAD_SKILL_DEFS,
+  skillTreesFor,
   TEAM_LEAD_SKILL_NODES,
-  type ChiefSkillNodeId,
+  ON_SITE_SKILL_NODES,
   type TeamLeadSkillNodeId,
 } from "./secretarySkillData";
+import {
+  anySkillTreeMastered,
+  canIncreaseSkillRank,
+  type SecretarySkillTreeKey,
+} from "./secretarySkillLogic";
 import type {
   GameState,
   SecretaryId,
@@ -21,6 +26,19 @@ import type {
   SecretaryUnlocks,
 } from "./types";
 
+/** Ensures progress from a partial/old save has all skill rank maps. */
+export function ensureSecretaryProgressShape(
+  progress: SecretaryProgress,
+): SecretaryProgress {
+  if (
+    progress.onSiteSkillRanks &&
+    typeof progress.onSiteSkillRanks === "object"
+  ) {
+    return progress;
+  }
+  return normalizeSecretaryProgressEntry(progress);
+}
+
 export function createInitialSecretaryProgress(): SecretaryProgress {
   return {
     level: 1,
@@ -28,6 +46,7 @@ export function createInitialSecretaryProgress(): SecretaryProgress {
     unspentSkillPoints: 0,
     chiefSkillRanks: emptyChiefSkillRanks(),
     teamLeadSkillRanks: emptyTeamLeadSkillRanks(),
+    onSiteSkillRanks: emptyOnSiteSkillRanks(),
   };
 }
 
@@ -102,6 +121,28 @@ function normalizeSkillRanks<T extends string>(
   return ranks;
 }
 
+function migrateLegacyTeamLeadRanks(
+  ranks: Record<TeamLeadSkillNodeId, number>,
+  raw: Record<string, unknown> | undefined,
+): Record<TeamLeadSkillNodeId, number> {
+  if (!raw) return ranks;
+  const legacyWork = raw.lead_work_time;
+  if (
+    typeof legacyWork === "number" &&
+    (ranks.lead_work ?? 0) === 0
+  ) {
+    ranks.lead_work = Math.max(0, Math.floor(legacyWork));
+  }
+  const legacyIncome = raw.lead_job_income;
+  if (
+    typeof legacyIncome === "number" &&
+    (ranks.lead_payout ?? 0) === 0
+  ) {
+    ranks.lead_payout = Math.max(0, Math.floor(legacyIncome));
+  }
+  return ranks;
+}
+
 export function normalizeSecretaryProgressEntry(
   raw: unknown,
 ): SecretaryProgress {
@@ -121,19 +162,30 @@ export function normalizeSecretaryProgressEntry(
     Number.isFinite(parsed.unspentSkillPoints)
       ? Math.max(0, Math.floor(parsed.unspentSkillPoints))
       : base.unspentSkillPoints;
+  const chiefSkillRanks = normalizeSkillRanks(
+    parsed.chiefSkillRanks,
+    CHIEF_SKILL_NODES,
+    emptyChiefSkillRanks,
+  );
+  let teamLeadSkillRanks = normalizeSkillRanks(
+    parsed.teamLeadSkillRanks,
+    TEAM_LEAD_SKILL_NODES,
+    emptyTeamLeadSkillRanks,
+  );
+  teamLeadSkillRanks = migrateLegacyTeamLeadRanks(
+    teamLeadSkillRanks,
+    parsed.teamLeadSkillRanks as Record<string, unknown> | undefined,
+  );
   return {
     level,
     exp,
     unspentSkillPoints,
-    chiefSkillRanks: normalizeSkillRanks(
-      parsed.chiefSkillRanks,
-      CHIEF_SKILL_NODES,
-      emptyChiefSkillRanks,
-    ),
-    teamLeadSkillRanks: normalizeSkillRanks(
-      parsed.teamLeadSkillRanks,
-      TEAM_LEAD_SKILL_NODES,
-      emptyTeamLeadSkillRanks,
+    chiefSkillRanks,
+    teamLeadSkillRanks,
+    onSiteSkillRanks: normalizeSkillRanks(
+      parsed.onSiteSkillRanks,
+      ON_SITE_SKILL_NODES,
+      emptyOnSiteSkillRanks,
     ),
   };
 }
@@ -224,15 +276,16 @@ export function lockedGachaPool(
   return GACHA_SECRETARY_IDS.filter((id) => !state.secretaryUnlocks[id]);
 }
 
-export function secretaryFullyMastered(progress: SecretaryProgress): boolean {
-  if (progress.level < SECRETARY_MAX_LEVEL) return false;
-  for (const node of CHIEF_SKILL_NODES) {
-    if ((progress.chiefSkillRanks[node] ?? 0) < 3) return false;
-  }
-  for (const node of TEAM_LEAD_SKILL_NODES) {
-    if ((progress.teamLeadSkillRanks[node] ?? 0) < 3) return false;
-  }
-  return true;
+export function secretaryFullyMastered(
+  secretaryId: SecretaryId,
+  progress: SecretaryProgress,
+): boolean {
+  return anySkillTreeMastered(
+    secretaryId,
+    progress.level,
+    progress,
+    SECRETARY_MAX_LEVEL,
+  );
 }
 
 export function anySecretaryFullyMastered(
@@ -241,7 +294,7 @@ export function anySecretaryFullyMastered(
   for (const id of SECRETARY_IDS) {
     if (!state.secretaryUnlocks[id]) continue;
     const progress = state.secretaryProgress[id];
-    if (progress && secretaryFullyMastered(progress)) return true;
+    if (progress && secretaryFullyMastered(id, progress)) return true;
   }
   return false;
 }
@@ -291,55 +344,68 @@ export function grantSecretaryExp(
   };
 }
 
+function treeKeyToDef(
+  trees: ReturnType<typeof skillTreesFor>,
+  tree: SecretarySkillTreeKey,
+) {
+  if (tree === "chief") return trees.chief;
+  if (tree === "teamLead") return trees.teamLead;
+  return trees.onSite;
+}
+
 export function spendSecretarySkillPoint(
   state: GameState,
   secretaryId: SecretaryId,
-  tree: "chief" | "teamLead",
+  tree: SecretarySkillTreeKey,
   nodeId: string,
 ): GameState {
   if (!state.secretaryUnlocks[secretaryId]) return state;
   const current = state.secretaryProgress[secretaryId] ?? createInitialSecretaryProgress();
-  if (current.unspentSkillPoints <= 0) return state;
+  const trees = skillTreesFor(secretaryId);
+  const treeDef = treeKeyToDef(trees, tree);
+  const node = treeDef.nodes.find((n) => n.id === nodeId);
+  if (!node) return state;
 
+  const ranks: Record<string, number> =
+    tree === "chief"
+      ? current.chiefSkillRanks
+      : tree === "teamLead"
+        ? current.teamLeadSkillRanks
+        : current.onSiteSkillRanks;
+  if (
+    !canIncreaseSkillRank(
+      treeDef,
+      ranks,
+      node,
+      current.unspentSkillPoints,
+    )
+  ) {
+    return state;
+  }
+  const nextRank = (ranks[node.id] ?? 0) + 1;
+  const nextProgress: SecretaryProgress = { ...current };
+  nextProgress.unspentSkillPoints = current.unspentSkillPoints - 1;
   if (tree === "chief") {
-    if (!CHIEF_SKILL_NODES.includes(nodeId as ChiefSkillNodeId)) return state;
-    const node = nodeId as ChiefSkillNodeId;
-    const def = CHIEF_SKILL_DEFS[node];
-    const rank = current.chiefSkillRanks[node] ?? 0;
-    if (rank >= def.maxRank) return state;
-    return {
-      ...state,
-      secretaryProgress: {
-        ...state.secretaryProgress,
-        [secretaryId]: {
-          ...current,
-          unspentSkillPoints: current.unspentSkillPoints - 1,
-          chiefSkillRanks: {
-            ...current.chiefSkillRanks,
-            [node]: rank + 1,
-          },
-        },
-      },
+    nextProgress.chiefSkillRanks = {
+      ...current.chiefSkillRanks,
+      [node.id]: nextRank,
+    };
+  } else if (tree === "teamLead") {
+    nextProgress.teamLeadSkillRanks = {
+      ...current.teamLeadSkillRanks,
+      [node.id]: nextRank,
+    };
+  } else {
+    nextProgress.onSiteSkillRanks = {
+      ...current.onSiteSkillRanks,
+      [node.id]: nextRank,
     };
   }
-
-  if (!TEAM_LEAD_SKILL_NODES.includes(nodeId as TeamLeadSkillNodeId)) return state;
-  const node = nodeId as TeamLeadSkillNodeId;
-  const def = TEAM_LEAD_SKILL_DEFS[node];
-  const rank = current.teamLeadSkillRanks[node] ?? 0;
-  if (rank >= def.maxRank) return state;
   return {
     ...state,
     secretaryProgress: {
       ...state.secretaryProgress,
-      [secretaryId]: {
-        ...current,
-        unspentSkillPoints: current.unspentSkillPoints - 1,
-        teamLeadSkillRanks: {
-          ...current.teamLeadSkillRanks,
-          [node]: rank + 1,
-        },
-      },
+      [secretaryId]: nextProgress,
     },
   };
 }

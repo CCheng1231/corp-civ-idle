@@ -49,7 +49,6 @@ function coachMapJobEngageBackdrop(): HTMLElement | null {
 const Z_SCRIM = 1180;
 const Z_RING = 1185;
 const Z_BUBBLE = 1190;
-const Z_BLOCK_SCRIM = 1310;
 const Z_DISMISS_BUBBLE = 1320;
 
 function coachShellElement(): HTMLElement | null {

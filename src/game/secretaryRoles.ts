@@ -2,6 +2,7 @@ import type { SecretaryDefinition } from "./secretaryData";
 import { secretaryById } from "./secretaryData";
 import { jobDefinitionForEngagement } from "./jobs";
 import { officeSiteLabel } from "./officeSelection";
+import { secretaryPostedOffice } from "./secretaryPosting";
 import { teamLeadsOnActiveJobs } from "./secretaryTeamLead";
 import type { GameState, OfficeSelectionId, SecretaryId } from "./types";
 
@@ -58,7 +59,7 @@ export function secretaryRosterRoleLines(
   entry: SecretaryDefinition,
   state: GameState,
 ): SecretaryRoleLine[] {
-  const site = officeSiteLabel(state, entry.officeId);
+  const site = officeSiteLabel(state, secretaryPostedOffice(state, entry.id));
   const lines = secretaryRoleLinesFor(entry.id, state);
 
   if (lines.length === 0) {

@@ -93,7 +93,7 @@ describe("secretary recruitment", () => {
 describe("secretary mastery", () => {
   it("requires max level and full skill trees", () => {
     const progress = createInitialSecretaryProgress();
-    expect(secretaryFullyMastered(progress)).toBe(false);
+    expect(secretaryFullyMastered("secretary_01", progress)).toBe(false);
   });
 });
 
@@ -108,9 +108,8 @@ describe("secretary effects", () => {
           ...(state.secretaryProgress.secretary_01 ??
             createInitialSecretaryProgress()),
           chiefSkillRanks: {
+            ...createInitialSecretaryProgress().chiefSkillRanks,
             chief_cash_supply: 2,
-            chief_build_time: 0,
-            chief_research_time: 0,
           },
         },
       },

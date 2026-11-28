@@ -563,6 +563,8 @@ export interface GameState {
   secretaryUnlocks: SecretaryUnlocks;
   /** Per-secretary level, EXP, and skill ranks. */
   secretaryProgress: Partial<Record<SecretaryId, SecretaryProgress>>;
+  /** Runtime posting; defaults to Secretary Stat office when unset (relocation UI later). */
+  secretaryPostedOffice?: Partial<Record<SecretaryId, OfficeLocationId>>;
   /** Milestone recruitment offers (gacha pool). */
   secretaryRecruitment: SecretaryRecruitmentState;
   /** Unlocked wardrobes, equipped looks, and deferred skin picker offers. */
@@ -770,6 +772,10 @@ export interface SecretaryProgress {
   >;
   teamLeadSkillRanks: Record<
     import("./secretarySkillData").TeamLeadSkillNodeId,
+    number
+  >;
+  onSiteSkillRanks: Record<
+    import("./secretarySkillData").OnSiteSkillNodeId,
     number
   >;
 }
@@ -1020,7 +1026,7 @@ export type GameAction =
   | {
       type: "SECRETARY_SPEND_SKILL_POINT";
       secretaryId: SecretaryId;
-      tree: "chief" | "teamLead";
+      tree: "chief" | "teamLead" | "onSite";
       nodeId: string;
     }
   | {

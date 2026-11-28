@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xaihi skill tree sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #171e27;
+      --panel-2: #1f2833;
+      --border: #2a3544;
+      --text: #e8eef5;
+      --muted: #9fb0c4;
+      --on-panel: #edf2f8;
+      --panel-ink-muted: #b8c6d8;
+      --panel-surface: rgba(10, 14, 20, 0.88);
+      --panel-surface-2: rgba(14, 19, 27, 0.94);
+      --accent: #56b4e9;
+      --success: #009e73;
+      --warn: #e69f00;
+      --danger: #d55e00;
+      --controls: 24rem;
+      --sheet-max: 960px;
+    }
+    * { box-sizing: border-box; }
+    html {
+      font-size: 18px;
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, #1a2433 0%, var(--bg) 55%),
+        var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    header.top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 20, 25, 0.9);
+    }
+    header.top h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    header.top p {
+      margin: 0.15rem 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .top-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--controls);
+      min-height: 0;
+    }
+    body.controls-hidden .workspace {
+      grid-template-columns: 1fr;
+    }
+    body.controls-hidden aside {
+      display: none;
+    }
+    body.controls-hidden .stage {
+      padding: 1.25rem 1.5rem 2rem;
+    }
+    body.controls-hidden .sheet {
+      max-height: none;
+      min-height: calc(100vh - 5.5rem);
+    }
+    aside {
+      overflow: auto;
+      padding: 1rem 1.1rem 2rem;
+      border-left: 1px solid var(--border);
+      background: rgba(23, 30, 39, 0.92);
+      order: 2;
+    }
+    aside h2 {
+      margin: 1rem 0 0.4rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    aside h2:first-child { margin-top: 0; }
+    .field {
+      display: grid;
+      gap: 0.2rem;
+      margin-bottom: 0.55rem;
+    }
+    .field span, .inline-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .row {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+    }
+    .row > * { flex: 1; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 0.4rem;
+      padding: 0.4rem 0.5rem;
+      min-height: 2.4rem;
+    }
+    input[type="range"] { width: 100%; }
+    .check {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+      font-size: 0.82rem;
+      margin: 0.35rem 0;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 0.45rem;
+      min-height: 2.4rem;
+      padding: 0.35rem 0.7rem;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent-2, #0072b2); border-color: transparent; }
+    .btn.warn { color: #ffd7bf; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .readout {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+      margin: 0.2rem 0 0.6rem;
+    }
+    .readout strong { color: var(--text); }
+    .readout .bad { color: #ffb089; }
+    .preset-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
+    .preset-row .btn { flex: 1 1 auto; font-size: 0.75rem; }
+    .stage {
+      order: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 1.5rem 2rem;
+      padding: 1.25rem clamp(0.75rem, 3vw, 2rem) 2.5rem;
+    }
+    .preview-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+    .preview-col--mobile {
+      position: sticky;
+      top: 0.5rem;
+    }
+    .preview-label {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+    .preview-hint {
+      margin: 0;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      max-width: 22rem;
+    }
+    .phone-shell {
+      width: calc(var(--mobile-w, 360px) + 14px);
+      padding: 7px;
+      border-radius: 1.4rem;
+      border: 3px solid #3a4555;
+      background: #080c10;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    }
+    .tree-explainer {
+      margin: 0 0 0.85rem;
+      padding: 0.6rem 0.7rem;
+      border-radius: 0.45rem;
+      background: rgba(86, 180, 233, 0.09);
+      border: 1px solid rgba(86, 180, 233, 0.22);
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+    .tree-explainer strong { color: #9fd4ff; }
+    .tree-explainer em { color: #b8c8dc; font-style: normal; font-weight: 600; }
+    .sheet--mobile {
+      width: var(--mobile-w, 360px) !important;
+      max-height: min(82vh, 780px);
+      min-height: 26rem;
+      max-width: none;
+      border-radius: 0.55rem;
+    }
+    .sheet--mobile .who {
+      grid-template-columns: 4.25rem minmax(0, 1fr);
+      gap: 0.65rem;
+    }
+    .sheet--mobile .who img {
+      width: 4.25rem;
+      height: 5.25rem;
+    }
+    body.mobile-hidden .preview-col--mobile {
+      display: none;
+    }
+    .sheet {
+      width: min(100%, var(--frame, var(--sheet-max)), var(--sheet-max));
+      min-height: 42rem;
+      max-height: calc(100vh - 4.75rem);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      isolation: isolate;
+      background: #0f1419;
+      border: 1px solid var(--border);
+      border-radius: 0.7rem;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      font-size: calc(16px * var(--sheet-scale, 1));
+    }
+    .sheet-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-color: #0f1419;
+      background-size: cover;
+      background-position: center 12%;
+      background-repeat: no-repeat;
+      pointer-events: none;
+    }
+    .sheet-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(10, 14, 20, 0.62) 0%,
+        rgba(10, 14, 20, 0.86) 32%,
+        rgba(8, 11, 16, 0.97) 100%
+      );
+    }
+    .sheet-scroll {
+      position: relative;
+      z-index: 1;
+      overflow: auto;
+      padding: 0.9rem 0.9rem 1.1rem;
+      flex: 1;
+    }
+    .who {
+      display: grid;
+      grid-template-columns: 6.5rem minmax(0, 1fr);
+      gap: 0.85rem;
+      align-items: center;
+      padding: 0.55rem 0.6rem;
+      background: var(--panel-surface-2);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 0.45rem;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+    .who img {
+      width: 6.5rem;
+      height: 8rem;
+      object-fit: cover;
+      object-position: center top;
+      border-radius: 0.4rem;
+      background: #10161c;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .who h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: var(--on-panel);
+      text-shadow: none;
+    }
+    .who .role,
+    .who .level {
+      margin: 0.15rem 0 0;
+      color: #d5e0ed;
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+    .points-line {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #d5e0ed;
+      line-height: 1.35;
+    }
+    .points-line .points-value {
+      color: #f3f7fb;
+      font-weight: 600;
+    }
+    .exp {
+      height: 0.45rem;
+      margin: 0.45rem 0 0.35rem;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .exp span {
+      display: block;
+      height: 100%;
+      width: var(--exp, 40%);
+      background: linear-gradient(90deg, #5eead4, #38bdf8);
+    }
+    .chief-assign-row {
+      margin: 0.65rem 0 0.15rem;
+    }
+    .chief-assign-btn {
+      width: 100%;
+      min-height: 2.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .chief-assign-btn:disabled {
+      opacity: 0.85;
+      cursor: default;
+    }
+    .identity {
+      display: grid;
+      gap: 0.35rem;
+      margin: 0.35rem 0 0.2rem;
+    }
+    .identity div {
+      background: var(--panel-surface-2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.4rem;
+      padding: 0.45rem 0.55rem;
+      font-size: 0.75rem;
+      color: var(--on-panel);
+    }
+    .identity dt {
+      color: #a8b9ce;
+      font-size: 0.64rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .identity dd {
+      margin: 0.1rem 0 0;
+      color: var(--on-panel);
+      line-height: 1.35;
+    }
+    .identity-tag {
+      color: #95a8bf;
+      font-size: 0.92em;
+    }
+    .skill-ranks-reset {
+      width: 100%;
+      margin: 0.35rem 0 0;
+      min-height: 2.75rem;
+      font-size: 0.78rem;
+    }
+    .skill-tap-hint {
+      margin: 0.25rem 0 0;
+      font-size: 0.72rem;
+      color: var(--panel-ink-muted);
+      line-height: 1.35;
+    }
+    .skill-leveling-note {
+      margin: 0;
+      padding: 0.45rem 0.55rem;
+      font-size: 0.68rem;
+      line-height: 1.4;
+      color: var(--panel-ink-muted);
+      background: rgba(0, 0, 0, 0.18);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .skill-leveling-note strong {
+      color: var(--on-panel);
+      font-weight: 600;
+    }
+    .skill-tree-workbook {
+      margin-top: 0.75rem;
+      background: var(--panel-surface);
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .skill-tree-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0;
+      padding: 0.35rem 0.35rem 0;
+      background: linear-gradient(180deg, #161d26 0%, #121820 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .skill-tree-tab {
+      margin: 0 2px 0 0;
+      padding: 0.5rem 0.95rem;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 0.4rem 0.4rem 0 0;
+      background: #1c2632;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      position: relative;
+      top: 1px;
+      cursor: pointer;
+    }
+    .skill-tree-tab:hover {
+      color: var(--text);
+      background: #243040;
+    }
+    .skill-tree-tab.is-active {
+      background: rgba(15, 20, 25, 0.55);
+      color: var(--text);
+      border-color: #3d4d62;
+      z-index: 1;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .skill-tree-tab-points {
+      display: inline-block;
+      margin-left: 0.35rem;
+      font-weight: 400;
+      font-size: 0.66rem;
+      color: var(--muted);
+    }
+    .skill-tree-tab.is-active .skill-tree-tab-points {
+      color: #9fd4ff;
+    }
+    .skill-tree-pane {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: none;
+      margin: 0;
+      padding: 0.4rem 0.5rem 0.55rem;
+      min-height: 10rem;
+      background: var(--panel-surface-2);
+    }
+    .skill-tree-pane[hidden] {
+      display: none;
+    }
+    .skill-tree-pane .tree {
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+    .skill-tree-pane .tree h3 {
+      display: none;
+    }
+    .skill-tree-pane .tree .note {
+      margin: 0 0 0.45rem;
+      font-size: 0.72rem;
+      color: var(--panel-ink-muted);
+    }
+    .tree {
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0.45rem;
+      padding: 0.55rem;
+      min-width: 0;
+    }
+    .tree h3 {
+      margin: 0;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .tree .note { margin: 0.2rem 0 0.5rem; font-size: 0.68rem; color: var(--muted); }
+    .fork {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+  /* Skill tree diagram */
+    .tree--diagram {
+      overflow: visible;
+    }
+    .skill-diagram {
+      position: relative;
+      margin-top: 0.25rem;
+      padding: 0.2rem 0 0.45rem;
+      min-height: 6rem;
+    }
+    .diagram-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+    .diagram-svg path {
+      fill: none;
+      stroke: rgba(86, 180, 233, 0.55);
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .diagram-svg path.locked {
+      stroke: rgba(147, 161, 181, 0.28);
+      stroke-dasharray: 5 4;
+    }
+    .diagram-tiers {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .diagram-tier {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .diagram-tier--spread {
+      justify-content: space-between;
+      gap: 0.85rem;
+      padding: 0 4%;
+    }
+    .diagram-node-wrap {
+      flex: 0 0 4.35rem;
+      display: flex;
+      width: 4.35rem;
+      max-width: 4.35rem;
+    }
+    .diagram-node-wrap .node {
+      margin-top: 0;
+    }
+    .node.diagram-node {
+      width: 100%;
+      min-height: 4.15rem;
+      height: 100%;
+      padding: 0.2rem 0.22rem 0.22rem;
+      text-align: center;
+      border-radius: 0.45rem;
+      gap: 0.1rem;
+      background: var(--panel-surface-2);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      box-sizing: border-box;
+      color: var(--on-panel);
+    }
+    .node.diagram-node .name {
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--on-panel);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .node.diagram-node .name .rank {
+      display: block;
+      font-size: 0.62rem;
+      font-weight: 500;
+      color: var(--panel-ink-muted);
+      margin-top: 0.05rem;
+    }
+    .node.diagram-node .effect {
+      font-size: 0.64rem;
+      color: #84d4ff;
+      line-height: 1.15;
+      flex: 0 0 auto;
+      display: grid;
+      gap: 0.08rem;
+    }
+    .node.diagram-node .effect-per {
+      line-height: 1.2;
+    }
+    .node.diagram-node .effect-detail {
+      font-size: 0.58rem;
+      color: var(--panel-ink-muted);
+      line-height: 1.2;
+    }
+    .node.diagram-node.maxed .effect-detail {
+      color: #7dccb0;
+    }
+    .node.diagram-node .node-req {
+      margin-top: auto;
+      min-height: 1.75rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .node.diagram-node .node-req .gate {
+      font-size: 0.58rem;
+      line-height: 1.22;
+      color: #ffcc9a;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      width: 100%;
+    }
+    .node.diagram-node .node-req--spacer {
+      visibility: hidden;
+      font-size: 0.58rem;
+      line-height: 1.2;
+    }
+    .node.diagram-node {
+      cursor: pointer;
+    }
+    .node.diagram-node:not(.locked):hover {
+      border-color: var(--accent);
+    }
+    .node.diagram-node.can-level {
+      border-color: rgba(86, 180, 233, 0.45);
+    }
+    .sheet--mobile .sheet-scroll,
+    .sheet--mobile .skill-tree-pane,
+    .sheet--mobile .skill-tree-workbook {
+      overflow-x: hidden;
+    }
+    .sheet--mobile .skill-diagram {
+      overflow: visible;
+      max-width: 100%;
+      width: 100%;
+    }
+    .sheet--mobile .diagram-tier,
+    .sheet--mobile .diagram-tier--spread {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 0.55rem;
+      padding: 0;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .sheet--mobile .diagram-tier:has(.diagram-node-wrap:only-child) {
+      justify-content: center;
+    }
+    .sheet--mobile .diagram-node-wrap {
+      flex: 1 1 0;
+      display: flex;
+      width: auto;
+      min-width: 0;
+      max-width: calc(50% - 0.35rem);
+    }
+    .sheet--mobile .diagram-tier:has(.diagram-node-wrap:only-child) .diagram-node-wrap {
+      flex: 0 1 auto;
+      width: calc(46% - 0.35rem);
+      max-width: calc(46% - 0.35rem);
+    }
+    .sheet--mobile .diagram-tiers {
+      gap: 0.55rem;
+      width: 100%;
+      min-width: 0;
+    }
+    .sheet--mobile .node.diagram-node {
+      padding: 0.18rem 0.2rem 0.2rem;
+      min-height: 4rem;
+    }
+    .sheet--mobile .node.diagram-node .node-req {
+      min-height: 1.65rem;
+    }
+    .sheet--mobile .node.diagram-node .name {
+      font-size: 0.65rem;
+    }
+    .sheet--mobile .node.diagram-node .name .rank {
+      font-size: 0.6rem;
+    }
+    .sheet--mobile .node.diagram-node .effect {
+      font-size: 0.62rem;
+    }
+    .sheet--mobile .node.diagram-node .effect-detail {
+      font-size: 0.54rem;
+      -webkit-line-clamp: 2;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .sheet--mobile .node.diagram-node .node-req .gate {
+      font-size: 0.56rem;
+    }
+    .node {
+      width: 100%;
+      text-align: left;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      padding: 0.4rem 0.45rem 0.45rem;
+      margin-top: 0.35rem;
+      display: grid;
+      gap: 0.15rem;
+    }
+    .node.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .node.locked { opacity: 1; }
+    .node.diagram-node.locked {
+      background: rgba(8, 12, 18, 0.95);
+      border-color: rgba(147, 161, 181, 0.22);
+    }
+    .node.diagram-node.locked .name,
+    .node.diagram-node.locked .effect {
+      color: #c8d4e4;
+    }
+    .node.maxed { border-color: rgba(0, 158, 115, 0.7); }
+    .node .name { font-size: 0.78rem; font-weight: 600; }
+    .node .effect { font-size: 0.68rem; color: var(--muted); }
+    .node .gate { font-size: 0.66rem; color: #ffb089; }
+    .node-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.25rem;
+    }
+    .pips { display: flex; gap: 0.2rem; flex: 1; }
+    .pip {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .pip.on { background: var(--accent); }
+    .step {
+      min-width: 3rem;
+      min-height: 3rem;
+      font-size: 1.1rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--border);
+      background: #243140;
+      font-weight: 700;
+    }
+    .step:disabled { opacity: 0.35; }
+    .list-node .node-actions { margin-top: 0.15rem; }
+    .live {
+      margin-top: 0.7rem;
+      font-size: 0.72rem;
+      color: var(--panel-ink-muted);
+      padding: 0.45rem 0.55rem;
+      border-radius: 0.4rem;
+      background: var(--panel-surface);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .live strong { color: var(--on-panel); font-weight: 600; }
+    .empty-col {
+      border: 1px dashed var(--border);
+      border-radius: 0.4rem;
+      color: var(--muted);
+      font-size: 0.68rem;
+      padding: 0.55rem;
+      margin-top: 0.35rem;
+    }
+    .status-saved { font-size: 0.75rem; color: var(--success); min-width: 4.5rem; }
+    @media (max-width: 1100px) {
+      body:not(.controls-hidden) .workspace { grid-template-columns: 1fr; }
+      body:not(.controls-hidden) aside {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+        max-height: 42vh;
+        order: 2;
+      }
+      body:not(.controls-hidden) .stage { order: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Xaihi skill tree sandbox</h1>
+      <p>One secretary, <strong>three skill tabs</strong> (Chief · team lead · on-site bonus) — one point pool. On-site ranks apply only at her posted office. Edit on desktop or mobile preview.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn primary" type="button" id="toggleControls">Hide editing panel</button>
+      <span class="status-saved" id="saved"></span>
+      <button class="btn" type="button" id="copy">Copy JSON</button>
+      <button class="btn warn" type="button" id="reset">Reset all</button>
+    </div>
+  </header>
+  <div class="workspace">
+    <aside id="controls"></aside>
+    <div class="stage">
+      <div class="preview-col preview-col--desktop">
+        <p class="preview-label">Desktop sheet</p>
+        <p class="preview-hint">Wide layout — Excel-style tabs switch Chief vs team lead</p>
+        <div class="sheet" id="sheet"></div>
+      </div>
+      <div class="preview-col preview-col--mobile" id="mobileCol">
+        <p class="preview-label">Mobile preview</p>
+        <p class="preview-hint">~360px — tree fits the frame; branches stay left/right per tier</p>
+        <div class="phone-shell" id="phoneShell">
+          <div class="sheet sheet--mobile" id="sheet-mobile"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const STORAGE_KEY = "corp-civ-idle-skill-sandbox-xaihi-v5";
+    const SKILL_TREE_KEYS = ["chief", "lead", "onsite"];
+    const POSTED_OFFICES = {
+      hq: "HQ",
+      branch_a: "Branch · West lot",
+      branch_b: "Branch · Campus pad",
+    };
+    const SECRETARY_PROFILES = {
+      secretary_01: {
+        name: "Surtr",
+        file: "Secretary_01",
+        chiefIdentity: "Increase Office production by 1%",
+        leadIdentity: "Decrease travel time by 5%",
+      },
+      secretary_02: {
+        name: "Xaihi",
+        file: "Secretary_02",
+        chiefIdentity: "Work time −1%",
+        leadIdentity: "On-site work time −5%",
+      },
+      secretary_03: {
+        name: "Skadi",
+        file: "Secretary_03",
+        chiefIdentity: "Decrease Hiring resources cost by 1%",
+        leadIdentity: "Increase job payout by 5%",
+      },
+      secretary_04: {
+        name: "Fang Yi",
+        file: "Secretary_04",
+        chiefIdentity: "Decrease Hiring time cost by 1%",
+        leadIdentity: "Decrease job travel supply cost by 10%",
+      },
+      secretary_05: {
+        name: "Tang Tang",
+        file: "Secretary_05",
+        chiefIdentity: "Decrease Travel Time by 1%",
+        leadIdentity: "Increase unit hours per shift by 8%",
+      },
+    };
+
+    function secretaryAsset(fileBase, suffix) {
+      const rel = `../../src/assets/Secretary_info/${fileBase}_${suffix}.jpg`;
+      const dev = `/src/assets/Secretary_info/${fileBase}_${suffix}.jpg`;
+      return window.location.protocol === "file:" ? rel : dev;
+    }
+
+    function rosterForSecretary(id) {
+      const profile = SECRETARY_PROFILES[id] || SECRETARY_PROFILES.secretary_02;
+      return secretaryAsset(profile.file, "Roster");
+    }
+
+    function tabBgForSecretary(id) {
+      const profile = SECRETARY_PROFILES[id] || SECRETARY_PROFILES.secretary_02;
+      return secretaryAsset(profile.file, "Secretary");
+    }
+
+    function applySecretaryProfile(id) {
+      const profile = SECRETARY_PROFILES[id];
+      if (!profile) return;
+      state.secretaryId = id;
+      state.name = profile.name;
+      state.chiefIdentity = profile.chiefIdentity;
+      state.leadIdentity = profile.leadIdentity;
+    }
+
+    function node(partial) {
+      return {
+        pct: -2,
+        column: "left",
+        requires: "",
+        gateRank: 1,
+        rank: 0,
+        ...partial,
+      };
+    }
+
+    function defaultState() {
+      return {
+        name: "Xaihi",
+        role: "Chief of Staff candidate",
+        isChiefOfStaff: false,
+        level: 6,
+        expPct: 45,
+        pointsPerLevel: 2,
+        maxRank: 3,
+        gates: true,
+        layout: "diagram",
+        frame: 920,
+        scale: 1.2,
+        controlsHidden: true,
+        showMobile: true,
+        mobileWidth: 360,
+        mobileScale: 1,
+        skillTab: "chief",
+        postedOffice: "hq",
+        secretaryId: "secretary_02",
+        selected: null,
+        chiefIdentity: "Work time −1%",
+        leadIdentity: "On-site work time −5%",
+        chief: {
+          title: "Chief of Staff",
+          note: "Active while she is Chief",
+          nodes: [
+            node({ id: "throughput", label: "Cash & supply", stat: "cash & supply", pct: 1, column: "root", requires: "", gateRank: 1 }),
+            node({ id: "structures", label: "Build speed", stat: "build time", pct: -2, column: "left", requires: "throughput", gateRank: 1 }),
+            node({ id: "structure_cost", label: "Structure cash", stat: "structure cash", pct: -1, column: "left", requires: "structures", gateRank: 2 }),
+            node({ id: "research", label: "Research speed", stat: "research time", pct: -2, column: "right", requires: "throughput", gateRank: 1 }),
+            node({ id: "research_cost", label: "Research cash", stat: "research cash", pct: -1, column: "right", requires: "research", gateRank: 2 }),
+          ],
+        },
+        lead: {
+          title: "Team lead",
+          note: "Active while she leads a team",
+          nodes: [
+            node({ id: "work", label: "On-site work", stat: "work time", pct: -2, column: "root", requires: "", gateRank: 1 }),
+            node({ id: "travel", label: "Travel", stat: "travel time", pct: -2, column: "left", requires: "work", gateRank: 1 }),
+            node({ id: "supply", label: "Field supply", stat: "travel supply", pct: -2, column: "left", requires: "travel", gateRank: 2 }),
+            node({ id: "payout", label: "Payout", stat: "job payout", pct: 2, column: "right", requires: "work", gateRank: 1 }),
+            node({ id: "hours", label: "Unit hours", stat: "unit-hours", pct: 2, column: "right", requires: "payout", gateRank: 2 }),
+          ],
+        },
+        onsite: {
+          title: "On site bonus",
+          note: "Recruitment & builds at posted office only",
+          nodes: [
+            node({ id: "local_ops", label: "Posted office", stat: "rep", pct: 1, column: "root", requires: "", gateRank: 1 }),
+            node({ id: "recruit_time", label: "Hire time", stat: "recruit time", pct: -2, column: "left", requires: "local_ops", gateRank: 1 }),
+            node({ id: "recruit_cost", label: "Hire cost", stat: "recruit cost", pct: -1, column: "left", requires: "recruit_time", gateRank: 2 }),
+            node({ id: "structure_time", label: "Build time", stat: "structure build time", pct: -2, column: "right", requires: "local_ops", gateRank: 1 }),
+            node({ id: "structure_cost", label: "Build cost", stat: "structure build cost", pct: -1, column: "right", requires: "structure_time", gateRank: 2 }),
+          ],
+        },
+      };
+    }
+
+    function normalizeSkillTab(tab) {
+      if (tab === "lead" || tab === "onsite") return tab;
+      return "chief";
+    }
+
+    function treeByKey(key) {
+      return state[key];
+    }
+
+    function treeLabelKey(key) {
+      if (key === "chief") return "Chief";
+      if (key === "lead") return "Team lead";
+      return "On site";
+    }
+
+    function normalizeLegacyNodeStats() {
+      for (const key of SKILL_TREE_KEYS) {
+        for (const item of state[key].nodes) {
+          if (item.stat === "throughput") item.stat = "cash & supply";
+        }
+      }
+      const root = state.onsite?.nodes?.find((n) => n.id === "local_ops");
+      if (root) {
+        if (root.label === "Local ops") root.label = "Posted office";
+        if (root.stat === "office efficiency" || root.stat === "local office" || root.stat === "gateway") {
+          root.stat = "rep";
+          root.pct = 1;
+        }
+      }
+    }
+
+    let state = load();
+    normalizeLegacyNodeStats();
+    applyControlsHidden(state.controlsHidden !== false);
+    applyMobileVisible(state.showMobile !== false);
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.chief || !parsed.lead) return defaultState();
+        const defaults = defaultState();
+        const merged = {
+          ...defaults,
+          ...parsed,
+          chief: parsed.chief,
+          lead: parsed.lead,
+          onsite: parsed.onsite ?? defaults.onsite,
+        };
+        if (merged.frame < 600) merged.frame = 920;
+        if (merged.scale < 1) merged.scale = 1.2;
+        if (merged.layout === "branches") merged.layout = "diagram";
+        if (merged.focus === "lead") merged.skillTab = "lead";
+        else if (merged.focus === "chief") merged.skillTab = "chief";
+        merged.skillTab = normalizeSkillTab(merged.skillTab);
+        if (!POSTED_OFFICES[merged.postedOffice]) merged.postedOffice = "hq";
+        if (!SECRETARY_PROFILES[merged.secretaryId]) merged.secretaryId = "secretary_02";
+        return merged;
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const el = document.getElementById("saved");
+      el.textContent = "Saved";
+      clearTimeout(save._t);
+      save._t = setTimeout(() => { el.textContent = ""; }, 900);
+    }
+
+    function pointsTotal() {
+      return Math.max(0, state.level - 1) * state.pointsPerLevel;
+    }
+    function pointsSpent() {
+      return SKILL_TREE_KEYS.reduce(
+        (sum, key) => sum + state[key].nodes.reduce((s, n) => s + (n.rank || 0), 0),
+        0,
+      );
+    }
+    function treeCost(tree) {
+      return tree.nodes.length * state.maxRank;
+    }
+    function findNode(treeKey, id) {
+      const tree = state[treeKey];
+      if (!tree) return undefined;
+      return tree.nodes.find((n) => n.id === id);
+    }
+    function selectedRef() {
+      if (!state.selected) return null;
+      const [treeKey, id] = state.selected.split(":");
+      const item = findNode(treeKey, id);
+      if (!item) return null;
+      return { treeKey, item };
+    }
+    function parentOk(tree, item) {
+      if (!state.gates || !item.requires) return true;
+      const parent = tree.nodes.find((n) => n.id === item.requires);
+      if (!parent) return true;
+      return parent.rank >= (item.gateRank || 1);
+    }
+    function canIncrease(tree, item) {
+      if (pointsTotal() - pointsSpent() <= 0) return false;
+      if (item.rank >= state.maxRank) return false;
+      return parentOk(tree, item);
+    }
+    function canDecrease(tree, item) {
+      if (item.rank <= 0) return false;
+      if (!state.gates) return true;
+      const next = item.rank - 1;
+      return !tree.nodes.some(
+        (other) =>
+          other.requires === item.id &&
+          other.rank > 0 &&
+          (other.gateRank || 1) > next,
+      );
+    }
+    function fmtPct(pct) {
+      const n = Number(pct) || 0;
+      const abs = Math.abs(n);
+      const shown = Number.isInteger(abs) ? String(abs) : String(Math.round(abs * 10) / 10);
+      return `${n > 0 ? "+" : n < 0 ? "−" : ""}${shown}%`;
+    }
+    function effectTarget(item) {
+      const stat = String(item.stat || "").trim();
+      const legacy = {
+        throughput: "cash & supply",
+        rep: "REP",
+        "unit-hours": "unit hours",
+      };
+      return legacy[stat] || stat;
+    }
+    const ONSITE_EFFECT_PLAIN = {
+      recruit_time: "contractor hire time",
+      recruit_cost: "contractor hire cost",
+      structure_time: "structure build time",
+      structure_cost: "structure build cost",
+    };
+    function postedOfficeLabel() {
+      return POSTED_OFFICES[state.postedOffice] || POSTED_OFFICES.hq;
+    }
+    function effectPerRankLine(item, pct, plain) {
+      const stat = String(item.stat || "").trim();
+      if (stat === "rep") {
+        return `${fmtPct(pct)} REP per rank`;
+      }
+      return `${fmtPct(pct)} per rank · ${plain}`;
+    }
+    function effectTotals(item) {
+      const pct = Number(item.pct) || 0;
+      const rank = item.rank || 0;
+      const target = effectTarget(item);
+      const perRank = effectPerRankLine(item, pct, target);
+      const total = rank > 0 ? fmtPct(pct * rank) : "0%";
+      return { perRank, target, total, totalLabel: `Total ${total}` };
+    }
+    function nodeEffectCopy(treeKey, item) {
+      const pct = Number(item.pct) || 0;
+      const rank = item.rank || 0;
+      const target = effectTarget(item);
+      const total = rank > 0 ? fmtPct(pct * rank) : "0%";
+      if (treeKey === "onsite") {
+        const plain = ONSITE_EFFECT_PLAIN[item.id] || target;
+        return {
+          perLine: effectPerRankLine(item, pct, plain),
+          detail: `Total ${total} · ${postedOfficeLabel()} only`,
+        };
+      }
+      const { perRank, totalLabel } = effectTotals(item);
+      return { perLine: `${perRank} · ${target}`, detail: totalLabel };
+    }
+    function effectLine(item, treeKey) {
+      const { perLine, detail } = nodeEffectCopy(treeKey, item);
+      return `${perLine} · ${detail}`;
+    }
+    function skillLevelingNoteHtml(treeKey) {
+      const officeName = POSTED_OFFICES[state.postedOffice] || POSTED_OFFICES.hq;
+      const scope =
+        treeKey === "onsite"
+          ? ` Root skill: <strong>+1% REP per rank</strong> at the posted office. Branches: <strong>hire</strong> (time → cost) and <strong>build</strong> (time → cost). All apply only at <strong>${escapeHtml(officeName)}</strong>, not firm-wide.`
+          : treeKey === "chief"
+            ? " Active while she is <strong>Chief of Staff</strong>."
+            : " Active while she <strong>leads a team</strong>.";
+      return `<p class="skill-leveling-note" role="note"><strong>Leveling:</strong> Each tap spends <strong>1 skill point</strong> and adds <strong>1 rank</strong>. Branch skills stack their % (e.g. 3× −2%/rank = −6% total).${scope}</p>`;
+    }
+    function diagramEffectMarkup(treeKey, item) {
+      const { perLine, detail } = nodeEffectCopy(treeKey, item);
+      return `<div class="effect"><span class="effect-per">${escapeHtml(perLine)}</span><span class="effect-detail">${escapeHtml(detail)}</span></div>`;
+    }
+    function gateLine(tree, item) {
+      if (!item.requires) return "";
+      const parent = tree.nodes.find((n) => n.id === item.requires);
+      const name = parent ? parent.label : "missing skill";
+      const need = item.gateRank || 1;
+      if (!state.gates) return `Linked to ${name}`;
+      if (parent && parent.rank >= need) return "";
+      return `Needs ${name} ${need}`;
+    }
+
+    function pointsSpentInTree(tree) {
+      return tree.nodes.reduce((sum, n) => sum + (n.rank || 0), 0);
+    }
+
+    function renderSkillWorkbook() {
+      const tab = normalizeSkillTab(state.skillTab);
+      const officeName = POSTED_OFFICES[state.postedOffice] || POSTED_OFFICES.hq;
+      const tabBtn = (id, label, spent) => {
+        const active = tab === id ? " is-active" : "";
+        return `<button type="button" class="skill-tree-tab${active}" data-act="tab" data-tab="${id}" aria-selected="${tab === id}">
+          ${escapeHtml(label)}<span class="skill-tree-tab-points">${spent} pt</span>
+        </button>`;
+      };
+      const panes = SKILL_TREE_KEYS.map((key) => {
+        const tree = state[key];
+        const note =
+          key === "onsite"
+            ? `Active at posted office only · ${officeName}`
+            : tree.note;
+        const treeWithNote = { ...tree, note };
+        return `<div class="skill-tree-pane" role="tabpanel" ${
+          tab === key ? "" : "hidden"
+        } data-pane="${key}">${skillLevelingNoteHtml(key)}${renderTree(key, treeWithNote)}</div>`;
+      }).join("");
+      return `
+        <div class="skill-tree-workbook" role="tablist" aria-label="Skill trees">
+          <div class="skill-tree-tabs">
+            ${tabBtn("chief", "Chief of Staff", pointsSpentInTree(state.chief))}
+            ${tabBtn("lead", "Team lead", pointsSpentInTree(state.lead))}
+            ${tabBtn("onsite", "On site bonus", pointsSpentInTree(state.onsite))}
+          </div>
+          ${panes}
+        </div>`;
+    }
+
+    function buildSheetInnerHtml() {
+      const unspent = pointsTotal() - pointsSpent();
+      const roleLine = state.isChiefOfStaff ? "Chief of Staff" : state.role;
+      const chiefBtnLabel = state.isChiefOfStaff
+        ? "Current Chief of Staff"
+        : "Set as Chief of Staff";
+      const portrait = rosterForSecretary(state.secretaryId);
+      return `
+        <div class="sheet-scroll">
+          <div class="who">
+            <img src="${portrait}" alt="" />
+            <div>
+              <h2>${escapeHtml(state.name)}</h2>
+              <p class="role">${escapeHtml(roleLine)}</p>
+              <p class="role posted-office">Posted office · ${escapeHtml(POSTED_OFFICES[state.postedOffice] || POSTED_OFFICES.hq)}</p>
+              <p class="level">Level ${state.level}${state.level >= 10 ? " · MAX" : ` · sample EXP`}</p>
+              <div class="exp" style="--exp:${state.level >= 10 ? 100 : state.expPct}%"><span></span></div>
+              <p class="points-line">Unspent skill points: ${
+                unspent < 0
+                  ? `<span class="bad">${unspent} (overspent)</span>`
+                  : `<span class="points-value">${unspent}</span>`
+              }</p>
+            </div>
+          </div>
+          <div class="chief-assign-row">
+            <button
+              type="button"
+              class="btn primary chief-assign-btn"
+              data-act="assign-chief"
+              ${state.isChiefOfStaff ? "disabled" : ""}
+            >
+              ${escapeHtml(chiefBtnLabel)}
+            </button>
+          </div>
+          <div class="identity">
+            <div><dt>As Chief of Staff</dt><dd>${escapeHtml(state.chiefIdentity)} <span class="identity-tag">(identity)</span></dd></div>
+            <div><dt>As team lead</dt><dd>${escapeHtml(state.leadIdentity)} <span class="identity-tag">(identity)</span></dd></div>
+          </div>
+          <button type="button" class="btn skill-ranks-reset" data-act="reset-ranks">Reset skill ranks</button>
+          <p class="skill-tap-hint">Tap a skill to spend 1 point and add 1 rank (see stacking rules in the skill box). Reset clears all ranks. Shift+click edits in the panel.</p>
+          ${renderSkillWorkbook()}
+          <div class="live">${liveSummary()}</div>
+        </div>`;
+    }
+
+    function bindSheetEvents(root) {
+      root.querySelectorAll("[data-act]").forEach((el) => {
+        el.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const act = el.dataset.act;
+          const treeKey = el.dataset.tree;
+          const id = el.dataset.id;
+          if (act === "tab") {
+            state.skillTab = normalizeSkillTab(el.dataset.tab);
+            save();
+            renderSheets();
+            requestAnimationFrame(() => drawDiagramConnectors(root));
+            return;
+          }
+          if (act === "assign-chief") {
+            if (!state.isChiefOfStaff) {
+              state.isChiefOfStaff = true;
+              save();
+              renderSheets();
+            }
+            return;
+          }
+          if (act === "reset-ranks") {
+            for (const key of SKILL_TREE_KEYS) {
+              for (const item of state[key].nodes) item.rank = 0;
+            }
+            save();
+            renderSheets();
+            renderControls();
+            return;
+          }
+          if (act === "level" || act === "select") {
+            const tree = state[treeKey];
+            const item = tree?.nodes.find((n) => n.id === id);
+            if (!tree || !item) return;
+            if (act === "level") {
+              if (event.shiftKey) {
+                state.selected = `${treeKey}:${id}`;
+                save();
+                renderSheets();
+                renderControls();
+                return;
+              }
+              if (canIncrease(tree, item)) {
+                item.rank += 1;
+                state.selected = `${treeKey}:${id}`;
+                save();
+                renderSheets();
+                renderControls();
+                return;
+              }
+              state.selected = `${treeKey}:${id}`;
+              save();
+              renderSheets();
+              renderControls();
+              return;
+            }
+            state.selected = `${treeKey}:${id}`;
+            save();
+            renderSheets();
+            renderControls();
+            return;
+          }
+          const tree = state[treeKey];
+          const item = tree.nodes.find((n) => n.id === id);
+          if (!item) return;
+          if (act === "plus" && canIncrease(tree, item)) item.rank += 1;
+          if (act === "minus" && canDecrease(tree, item)) item.rank -= 1;
+          state.selected = `${treeKey}:${id}`;
+          save();
+          renderSheets();
+          renderControls();
+        });
+      });
+    }
+
+    function mountSheetContent(shellEl, innerHtml) {
+      const bgUrl = tabBgForSecretary(state.secretaryId);
+      shellEl.dataset.secretaryId = state.secretaryId;
+      shellEl.innerHTML = `<div class="sheet-bg" style="background-image:url('${escapeAttr(bgUrl)}')" aria-hidden="true"></div>${innerHtml}`;
+      bindSheetEvents(shellEl);
+    }
+
+    function renderSheets() {
+      const html = buildSheetInnerHtml();
+      const desktop = document.getElementById("sheet");
+      const mobile = document.getElementById("sheet-mobile");
+      const phoneShell = document.getElementById("phoneShell");
+      desktop.style.setProperty("--frame", `${state.frame}px`);
+      desktop.style.setProperty("--sheet-scale", String(state.scale));
+      mountSheetContent(desktop, html);
+      if (mobile) {
+        phoneShell?.style.setProperty("--mobile-w", `${state.mobileWidth}px`);
+        mobile.style.setProperty("--mobile-w", `${state.mobileWidth}px`);
+        mobile.style.setProperty("--sheet-scale", String(state.mobileScale));
+        mountSheetContent(mobile, html);
+      }
+      requestAnimationFrame(() => {
+        drawDiagramConnectors(desktop);
+        if (mobile) drawDiagramConnectors(mobile);
+      });
+    }
+
+    function nodeDepth(node, byId, seen = new Set()) {
+      if (!node.requires) return 0;
+      if (seen.has(node.id)) return 0;
+      seen.add(node.id);
+      const parent = byId[node.requires];
+      if (!parent) return 0;
+      return 1 + nodeDepth(parent, byId, seen);
+    }
+
+    function diagramTiers(tree) {
+      const byId = Object.fromEntries(tree.nodes.map((n) => [n.id, n]));
+      const depths = tree.nodes.map((n) => nodeDepth(n, byId));
+      const maxD = Math.max(0, ...depths);
+      const colOrder = { left: 0, root: 1, right: 2 };
+      const tiers = [];
+      for (let d = 0; d <= maxD; d += 1) {
+        tiers.push(
+          tree.nodes
+            .filter((n) => nodeDepth(n, byId) === d)
+            .sort(
+              (a, b) =>
+                (colOrder[a.column] ?? 1) - (colOrder[b.column] ?? 1) ||
+                a.label.localeCompare(b.label),
+            ),
+        );
+      }
+      return tiers;
+    }
+
+    function renderTree(key, tree) {
+      if (state.layout === "list") {
+        return `<section class="tree"><h3>${escapeHtml(tree.title)}</h3><p class="note">${escapeHtml(tree.note)}</p>${
+          tree.nodes.map((item) => renderNode(key, tree, item, "list-node")).join("")
+        }</section>`;
+      }
+      const tiers = diagramTiers(tree);
+      const tierHtml = tiers
+        .map((tier, index) => {
+          const spread = tier.length > 1 ? " diagram-tier--spread" : "";
+          const nodes = tier
+            .map(
+              (item) =>
+                `<div class="diagram-node-wrap" data-node-id="${escapeAttr(item.id)}">${renderNode(key, tree, item, "diagram-node")}</div>`,
+            )
+            .join("");
+          return `<div class="diagram-tier${spread}" data-tier="${index}">${nodes}</div>`;
+        })
+        .join("");
+      return `<section class="tree tree--diagram"><h3>${escapeHtml(tree.title)}</h3><p class="note">${escapeHtml(tree.note)}</p>
+        <div class="skill-diagram" data-tree-key="${escapeAttr(key)}">
+          <svg class="diagram-svg" aria-hidden="true"></svg>
+          <div class="diagram-tiers">${tierHtml}</div>
+        </div>
+      </section>`;
+    }
+
+    function drawDiagramConnectors(sheetRoot) {
+      if (!sheetRoot || state.layout === "list") return;
+      sheetRoot.querySelectorAll(".skill-diagram").forEach((diagram) => {
+        const key = diagram.dataset.treeKey;
+        const pane = diagram.closest(".skill-tree-pane");
+        if (pane && pane.hidden) return;
+        const tree = state[key];
+        if (!tree) return;
+        const svg = diagram.querySelector(".diagram-svg");
+        const w = diagram.clientWidth;
+        const h = diagram.clientHeight;
+        if (!svg || w < 1 || h < 1) return;
+        const origin = diagram.getBoundingClientRect();
+        const paths = [];
+        for (const item of tree.nodes) {
+          if (!item.requires) continue;
+          const fromWrap = diagram.querySelector(`[data-node-id="${item.requires}"]`);
+          const toWrap = diagram.querySelector(`[data-node-id="${item.id}"]`);
+          const fromEl = fromWrap?.querySelector(".node");
+          const toEl = toWrap?.querySelector(".node");
+          if (!fromEl || !toEl) continue;
+          const f = fromEl.getBoundingClientRect();
+          const t = toEl.getBoundingClientRect();
+          const x1 = f.left + f.width / 2 - origin.left;
+          const y1 = f.bottom - origin.top + 2;
+          const x2 = t.left + t.width / 2 - origin.left;
+          const y2 = t.top - origin.top - 2;
+          const mid = y1 + (y2 - y1) * 0.45;
+          const d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x1.toFixed(1)} ${mid.toFixed(1)} L ${x2.toFixed(1)} ${mid.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+          const parent = tree.nodes.find((n) => n.id === item.requires);
+          const parentOkRank = parent && (parent.rank ?? 0) >= (item.gateRank || 1);
+          const lockedCls = state.gates && !parentOkRank && item.rank === 0 ? " locked" : "";
+          paths.push(`<path class="${lockedCls.trim()}" d="${d}"/>`);
+        }
+        svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        svg.setAttribute("width", String(w));
+        svg.setAttribute("height", String(h));
+        svg.innerHTML = paths.join("");
+      });
+    }
+
+    function renderNode(key, tree, item, extra) {
+      const selected = state.selected === `${key}:${item.id}`;
+      const locked = !parentOk(tree, item) && item.rank === 0;
+      const maxed = item.rank >= state.maxRank;
+      const gate = gateLine(tree, item);
+      const isDiagram = extra.includes("diagram-node");
+      const pips = Array.from({ length: state.maxRank }, (_, i) =>
+        `<i class="pip ${i < item.rank ? "on" : ""}"></i>`,
+      ).join("");
+      if (isDiagram) {
+        const tip = `${effectLine(item, key)}${gate ? ` · ${gate}` : ""}`;
+        const canUp = canIncrease(tree, item);
+        const reqBlock =
+          gate && locked
+            ? `<div class="node-req"><span class="gate">${escapeHtml(gate)}</span></div>`
+            : `<div class="node-req node-req--spacer" aria-hidden="true"><span class="gate">Needs</span></div>`;
+        return `<article class="node diagram-node ${selected ? "selected" : ""} ${locked ? "locked" : ""} ${maxed ? "maxed" : ""} ${canUp ? "can-level" : ""}" data-act="level" data-tree="${key}" data-id="${item.id}" title="${escapeAttr(tip)}">
+        <div class="name">${escapeHtml(item.label)}<span class="rank">Lv ${item.rank}/${state.maxRank}</span></div>
+        ${diagramEffectMarkup(key, item)}
+        ${reqBlock}
+      </article>`;
+      }
+      return `<article class="node ${extra} ${selected ? "selected" : ""} ${locked ? "locked" : ""} ${maxed ? "maxed" : ""}" data-act="select" data-tree="${key}" data-id="${item.id}">
+        <div class="name">${escapeHtml(item.label)} <span style="color:var(--muted);font-weight:400">(${item.rank}/${state.maxRank})</span></div>
+        <div class="effect">${escapeHtml(effectLine(item, key))}</div>
+        ${gate ? `<div class="gate">${escapeHtml(gate)}</div>` : ""}
+        <div class="node-actions">
+          <div class="pips">${pips}</div>
+          <button class="step" type="button" data-act="minus" data-tree="${key}" data-id="${item.id}" ${canDecrease(tree, item) ? "" : "disabled"} aria-label="Remove a rank">−</button>
+          <button class="step" type="button" data-act="plus" data-tree="${key}" data-id="${item.id}" ${canIncrease(tree, item) ? "" : "disabled"} aria-label="Add a rank">+</button>
+        </div>
+      </article>`;
+    }
+
+    function liveSummary() {
+      const line = (title, identity, tree) => {
+        const trained = tree.nodes
+          .filter((n) => n.rank > 0)
+          .map((n) => `${n.label} ${fmtPct((Number(n.pct) || 0) * n.rank)}`)
+          .join(" · ");
+        return `<div><strong>${title}.</strong> ${escapeHtml(identity)}${trained ? ` · ${escapeHtml(trained)}` : ""}</div>`;
+      };
+      const office = POSTED_OFFICES[state.postedOffice] || POSTED_OFFICES.hq;
+      const onsiteLine = (tree) => {
+        const trained = tree.nodes
+          .filter((n) => n.rank > 0)
+          .map((n) => `${n.label} ${fmtPct((Number(n.pct) || 0) * n.rank)}`)
+          .join(" · ");
+        return `<div><strong>At ${escapeHtml(office)}.</strong>${trained ? ` · ${escapeHtml(trained)}` : " · no on-site ranks yet"}</div>`;
+      };
+      return (
+        line("If Chief", state.chiefIdentity, state.chief) +
+        line("If team lead", state.leadIdentity, state.lead) +
+        onsiteLine(state.onsite)
+      );
+    }
+
+    function renderControls() {
+      const active = document.activeElement;
+      const keepId = active && active.id ? active.id : "";
+      const sel = selectedRef();
+      const controls = document.getElementById("controls");
+      controls.innerHTML = `
+        <h2>About the trees</h2>
+        <p class="readout">Three tabs — Chief, team lead, <strong>On site bonus</strong>. One point pool. On site applies only at the secretary's <strong>posted office</strong> (hire + build time/cost).</p>
+        <h2>Points</h2>
+        <label class="field"><span id="levelLabel">Level ${state.level}</span><input id="level" type="range" min="1" max="10" value="${state.level}" /></label>
+        <div class="row">
+          <label class="field"><span>Points / level</span><input id="ppl" type="number" min="0" max="5" value="${state.pointsPerLevel}" /></label>
+          <label class="field"><span>Max rank</span><input id="maxRank" type="number" min="1" max="5" value="${state.maxRank}" /></label>
+        </div>
+        <p class="readout" id="pointsReadout"></p>
+        <label class="check"><input id="gates" type="checkbox" ${state.gates ? "checked" : ""} /> Prerequisites</label>
+        <div class="preset-row">
+          <button class="btn" type="button" id="clearRanks">Clear ranks</button>
+          <button class="btn" type="button" id="presetBranch">One branch</button>
+          <button class="btn" type="button" id="presetSplit">One each</button>
+        </div>
+        <h2>Previews</h2>
+        <label class="check"><input id="showMobile" type="checkbox" ${state.showMobile !== false ? "checked" : ""} /> Show mobile preview</label>
+        <label class="field"><span id="mobileWidthLabel">Mobile width ${state.mobileWidth}px</span><input id="mobileWidth" type="range" min="320" max="430" value="${state.mobileWidth}" /></label>
+        <label class="field"><span id="mobileScaleLabel">Mobile type ${Math.round((state.mobileScale || 1) * 100)}%</span><input id="mobileScale" type="range" min="85" max="125" value="${Math.round((state.mobileScale || 1) * 100)}" /></label>
+        <h2>Sheet layout</h2>
+        <label class="field"><span>Layout</span>
+          <select id="layout">
+            <option value="diagram" ${state.layout === "diagram" || state.layout === "branches" ? "selected" : ""}>Tree diagram</option>
+            <option value="list" ${state.layout === "list" ? "selected" : ""}>List (current in-game)</option>
+          </select>
+        </label>
+        <label class="field"><span>Default tab on load</span>
+          <select id="skillTab">
+            <option value="chief" ${state.skillTab === "chief" ? "selected" : ""}>Chief of Staff</option>
+            <option value="lead" ${state.skillTab === "lead" ? "selected" : ""}>Team lead</option>
+            <option value="onsite" ${state.skillTab === "onsite" ? "selected" : ""}>On site bonus</option>
+          </select>
+        </label>
+        <label class="field"><span>Posted office (on-site scope)</span>
+          <select id="postedOffice">
+            ${Object.entries(POSTED_OFFICES)
+              .map(
+                ([id, label]) =>
+                  `<option value="${id}" ${state.postedOffice === id ? "selected" : ""}>${escapeHtml(label)}</option>`,
+              )
+              .join("")}
+          </select>
+        </label>
+        <label class="field"><span id="frameLabel">Sheet width ${state.frame}px</span><input id="frame" type="range" min="480" max="1200" value="${state.frame}" /></label>
+        <div class="preset-row">
+          <button class="btn" type="button" data-width="720">Narrow</button>
+          <button class="btn" type="button" data-width="920">Wide</button>
+          <button class="btn" type="button" data-width="1200">Max</button>
+        </div>
+        <label class="field"><span id="scaleLabel">Type scale ${Math.round(state.scale * 100)}%</span><input id="scale" type="range" min="100" max="150" value="${Math.round(state.scale * 100)}" /></label>
+        <label class="field"><span id="expLabel">Sample EXP fill ${state.expPct}%</span><input id="expPct" type="range" min="0" max="100" value="${state.expPct}" /></label>
+        <h2>Secretary</h2>
+        <label class="field"><span>Character</span>
+          <select id="secretaryId">
+            ${Object.entries(SECRETARY_PROFILES)
+              .map(
+                ([id, p]) =>
+                  `<option value="${id}" ${state.secretaryId === id ? "selected" : ""}>${escapeHtml(p.name)}</option>`,
+              )
+              .join("")}
+          </select>
+        </label>
+        <label class="field"><span>Name</span><input id="name" type="text" value="${escapeAttr(state.name)}" /></label>
+        <label class="field"><span>Role line</span><input id="role" type="text" value="${escapeAttr(state.role)}" /></label>
+        <label class="field"><span>Chief identity (not a node)</span><input id="chiefIdentity" type="text" value="${escapeAttr(state.chiefIdentity)}" /></label>
+        <label class="field"><span>Team lead identity (not a node)</span><input id="leadIdentity" type="text" value="${escapeAttr(state.leadIdentity)}" /></label>
+        <h2>Selected skill</h2>
+        ${sel ? inspector(sel) : `<p class="readout">Click a skill on the sheet to edit its name, effect, branch, and requirement.</p>`}
+        <div class="preset-row">
+          <button class="btn" type="button" id="addChief">Add Chief skill</button>
+          <button class="btn" type="button" id="addLead">Add team-lead skill</button>
+          <button class="btn" type="button" id="addOnsite">Add on-site skill</button>
+        </div>
+      `;
+      bindControls();
+      refreshReadouts();
+      if (keepId) {
+        const next = document.getElementById(keepId);
+        if (next && (next.tagName === "INPUT" || next.tagName === "SELECT" || next.tagName === "TEXTAREA")) {
+          next.focus();
+          if (next.setSelectionRange && next.type === "text") {
+            const pos = next.value.length;
+            next.setSelectionRange(pos, pos);
+          }
+        }
+      }
+    }
+
+    function inspector(sel) {
+      const { treeKey, item } = sel;
+      const tree = state[treeKey];
+      const options = [`<option value="">None</option>`]
+        .concat(
+          tree.nodes
+            .filter((n) => n.id !== item.id)
+            .map((n) => `<option value="${escapeAttr(n.id)}" ${item.requires === n.id ? "selected" : ""}>${escapeHtml(n.label)}</option>`),
+        )
+        .join("");
+      return `
+        <p class="readout">${treeLabelKey(treeKey)} · ${escapeHtml(item.id)}</p>
+        <label class="field"><span>Name</span><input id="nodeLabel" type="text" value="${escapeAttr(item.label)}" /></label>
+        <label class="field"><span>Stat wording</span><input id="nodeStat" type="text" value="${escapeAttr(item.stat)}" /></label>
+        <label class="field"><span>% per rank (negative reduces)</span><input id="nodePct" type="number" step="0.5" value="${item.pct}" /></label>
+        <label class="field"><span>Column</span>
+          <select id="nodeColumn">
+            <option value="root" ${item.column === "root" ? "selected" : ""}>Root</option>
+            <option value="left" ${item.column === "left" ? "selected" : ""}>Left branch</option>
+            <option value="right" ${item.column === "right" ? "selected" : ""}>Right branch</option>
+          </select>
+        </label>
+        <label class="field"><span>Requires</span><select id="nodeRequires">${options}</select></label>
+        <label class="field"><span>Parent rank needed</span><input id="nodeGate" type="number" min="1" max="${state.maxRank}" value="${item.gateRank || 1}" /></label>
+        <div class="preset-row">
+          <button class="btn" type="button" id="moveUp">Move up</button>
+          <button class="btn" type="button" id="moveDown">Move down</button>
+          <button class="btn warn" type="button" id="deleteNode">Delete</button>
+        </div>`;
+    }
+
+    function bindControls() {
+      const bind = (id, fn) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", fn);
+        el.addEventListener("change", fn);
+      };
+      bind("level", (e) => { state.level = Number(e.target.value); paint(); });
+      bind("ppl", (e) => { state.pointsPerLevel = clamp(e.target.value, 0, 5); paint(); });
+      bind("maxRank", (e) => {
+        state.maxRank = clamp(e.target.value, 1, 5);
+        for (const key of SKILL_TREE_KEYS) {
+          for (const item of state[key].nodes) {
+            item.rank = Math.min(item.rank, state.maxRank);
+            item.gateRank = Math.min(item.gateRank || 1, state.maxRank);
+          }
+        }
+        commit();
+      });
+      bind("gates", (e) => { state.gates = e.target.checked; paint(); });
+      bind("layout", (e) => {
+        state.layout = e.target.value === "branches" ? "diagram" : e.target.value;
+        paint();
+      });
+      bind("skillTab", (e) => {
+        state.skillTab = normalizeSkillTab(e.target.value);
+        paint();
+      });
+      bind("postedOffice", (e) => {
+        state.postedOffice = POSTED_OFFICES[e.target.value] ? e.target.value : "hq";
+        paint();
+      });
+      bind("frame", (e) => { state.frame = Number(e.target.value); paint(); });
+      bind("scale", (e) => { state.scale = Number(e.target.value) / 100; paint(); });
+      bind("expPct", (e) => { state.expPct = Number(e.target.value); paint(); });
+      bind("showMobile", (e) => {
+        state.showMobile = e.target.checked;
+        applyMobileVisible(state.showMobile);
+        save();
+      });
+      bind("mobileWidth", (e) => {
+        state.mobileWidth = Number(e.target.value);
+        paint();
+      });
+      bind("mobileScale", (e) => {
+        state.mobileScale = Number(e.target.value) / 100;
+        paint();
+      });
+      bind("secretaryId", (e) => {
+        applySecretaryProfile(e.target.value);
+        commit();
+      });
+      bind("name", (e) => { state.name = e.target.value; paint(); });
+      bind("role", (e) => { state.role = e.target.value; paint(); });
+      bind("chiefIdentity", (e) => { state.chiefIdentity = e.target.value; paint(); });
+      bind("leadIdentity", (e) => { state.leadIdentity = e.target.value; paint(); });
+      bind("nodeLabel", (e) => { const s = selectedRef(); if (s) { s.item.label = e.target.value; paint(); } });
+      bind("nodeStat", (e) => { const s = selectedRef(); if (s) { s.item.stat = e.target.value; paint(); } });
+      bind("nodePct", (e) => { const s = selectedRef(); if (s) { s.item.pct = Number(e.target.value); paint(); } });
+      bind("nodeColumn", (e) => { const s = selectedRef(); if (s) { s.item.column = e.target.value; commit(); } });
+      bind("nodeRequires", (e) => { const s = selectedRef(); if (s) { s.item.requires = e.target.value; commit(); } });
+      bind("nodeGate", (e) => { const s = selectedRef(); if (s) { s.item.gateRank = clamp(e.target.value, 1, state.maxRank); paint(); } });
+
+      document.querySelectorAll("[data-width]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.frame = Number(btn.dataset.width);
+          commit();
+        });
+      });
+      on("clearRanks", () => {
+        for (const key of SKILL_TREE_KEYS) {
+          for (const item of state[key].nodes) item.rank = 0;
+        }
+        commit();
+      });
+      on("presetBranch", () =>
+        applyRanks({
+          level: 10,
+          chief: { throughput: 3, structures: 3, structure_cost: 3 },
+          lead: {},
+          onsite: {},
+        }),
+      );
+      on("presetSplit", () =>
+        applyRanks({
+          level: 10,
+          chief: { throughput: 3, research: 3, research_cost: 3 },
+          lead: { work: 3, payout: 3, hours: 3 },
+          onsite: { recruit_time: 3, structure_time: 3, structure_cost: 3 },
+        }),
+      );
+      on("addChief", () => addNode("chief"));
+      on("addLead", () => addNode("lead"));
+      on("addOnsite", () => addNode("onsite"));
+      on("moveUp", () => moveSelected(-1));
+      on("moveDown", () => moveSelected(1));
+      on("deleteNode", () => deleteSelected());
+    }
+
+    function paint() {
+      save();
+      renderSheets();
+      refreshReadouts();
+    }
+    function commit() {
+      paint();
+      renderControls();
+    }
+    function refreshReadouts() {
+      const unspent = pointsTotal() - pointsSpent();
+      const chiefMax = treeCost(state.chief);
+      const leadMax = treeCost(state.lead);
+      const onsiteMax = treeCost(state.onsite);
+      const allThree = chiefMax + leadMax + onsiteMax;
+      const atTen = 9 * state.pointsPerLevel;
+      const set = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+      set("levelLabel", `Level ${state.level}`);
+      set("frameLabel", `Sheet width ${state.frame}px`);
+      set("scaleLabel", `Type scale ${Math.round(state.scale * 100)}%`);
+      set("expLabel", `Sample EXP fill ${state.expPct}%`);
+      set("mobileWidthLabel", `Mobile width ${state.mobileWidth}px`);
+      set("mobileScaleLabel", `Mobile type ${Math.round((state.mobileScale || 1) * 100)}%`);
+      const readout = document.getElementById("pointsReadout");
+      if (readout) {
+        readout.innerHTML = `Now <strong>${pointsTotal()}</strong> points, <strong>${pointsSpent()}</strong> spent, <strong class="${unspent < 0 ? "bad" : ""}">${unspent}</strong> left. At level 10: <strong>${atTen}</strong> points. Full trees: Chief ${chiefMax}, Team lead ${leadMax}, On site ${onsiteMax} (all three ${allThree}). ${atTen >= allThree ? "All three maxed — not realistic at L10." : "Pick where to invest."}`;
+      }
+    }
+    function on(id, fn) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", fn);
+    }
+    function clamp(value, min, max) {
+      const n = Number(value);
+      if (Number.isNaN(n)) return min;
+      return Math.min(max, Math.max(min, n));
+    }
+    function applyRanks(preset) {
+      state.level = preset.level;
+      for (const key of SKILL_TREE_KEYS) {
+        const ranks = preset[key] || {};
+        for (const item of state[key].nodes) item.rank = ranks[item.id] || 0;
+      }
+      commit();
+    }
+    function addNode(treeKey) {
+      const id = `skill_${Math.random().toString(36).slice(2, 7)}`;
+      state[treeKey].nodes.push(node({
+        id,
+        label: "New skill",
+        stat: "effect",
+        pct: -1,
+        column: "left",
+        requires: "",
+        gateRank: 1,
+        rank: 0,
+      }));
+      state.selected = `${treeKey}:${id}`;
+      commit();
+    }
+    function moveSelected(dir) {
+      const sel = selectedRef();
+      if (!sel) return;
+      const list = state[sel.treeKey].nodes;
+      const index = list.indexOf(sel.item);
+      const next = index + dir;
+      if (next < 0 || next >= list.length) return;
+      list.splice(index, 1);
+      list.splice(next, 0, sel.item);
+      commit();
+    }
+    function deleteSelected() {
+      const sel = selectedRef();
+      if (!sel) return;
+      const list = state[sel.treeKey].nodes;
+      state[sel.treeKey].nodes = list.filter((n) => n.id !== sel.item.id);
+      for (const item of state[sel.treeKey].nodes) {
+        if (item.requires === sel.item.id) item.requires = "";
+      }
+      state.selected = null;
+      commit();
+    }
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/"/g, "&quot;");
+    }
+
+    function applyControlsHidden(hidden) {
+      document.body.classList.toggle("controls-hidden", hidden);
+      const btn = document.getElementById("toggleControls");
+      if (btn) {
+        btn.textContent = hidden ? "Show editing panel" : "Hide editing panel";
+      }
+    }
+    function applyMobileVisible(visible) {
+      document.body.classList.toggle("mobile-hidden", !visible);
+    }
+    document.getElementById("toggleControls").addEventListener("click", () => {
+      state.controlsHidden = !document.body.classList.contains("controls-hidden");
+      applyControlsHidden(state.controlsHidden);
+      save();
+    });
+
+    document.getElementById("copy").addEventListener("click", async () => {
+      const payload = JSON.stringify(state, null, 2);
+      try {
+        await navigator.clipboard.writeText(payload);
+        document.getElementById("saved").textContent = "Copied";
+      } catch {
+        window.prompt("Copy this JSON", payload);
+      }
+    });
+    document.getElementById("reset").addEventListener("click", () => {
+      if (!window.confirm("Reset the sandbox to the starting Xaihi tree? Your saved edits on this page will be cleared.")) return;
+      state = defaultState();
+      save();
+      renderSheets();
+      renderControls();
+    });
+
+    window.addEventListener(
+      "resize",
+      () => {
+        clearTimeout(window._diagramResize);
+        window._diagramResize = setTimeout(() => {
+          drawDiagramConnectors(document.getElementById("sheet"));
+          drawDiagramConnectors(document.getElementById("sheet-mobile"));
+        }, 120);
+      },
+    );
+
+    renderSheets();
+    renderControls();
+  </script>
+</body>
+</html>

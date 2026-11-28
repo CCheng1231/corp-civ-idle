@@ -39,9 +39,11 @@ import {
   buildTimeMsForQueueJob,
   clampResourcesToCaps,
   computeResourceCaps,
+  structureBuildCostMultAtOffice,
   structureSellRefundCost,
-  structureUpgradeCostForTargetLevel
+  structureUpgradeCostForTargetLevel,
 } from "./structureBalance";
+import { scaleResourceCost } from "./secretaryEffects";
 import {
   scheduleQueueJobTimer,
   timerHasNotElapsed
@@ -99,7 +101,11 @@ export function structureCost(
   structureId: StructureId,
 ): ResourceCost {
   const projected = projectedStructureLevels(state, locationId)[structureId];
-  return structureUpgradeCostForTargetLevel(structureId, projected + 1);
+  const base = structureUpgradeCostForTargetLevel(structureId, projected + 1);
+  return scaleResourceCost(
+    base,
+    structureBuildCostMultAtOffice(state, locationId),
+  );
 }
 
 export function structureBuildCostForLevel(
@@ -456,7 +462,11 @@ function startRecruitmentJobTimer(
   job: import("./types").RecruitmentJob,
   activationTime: number,
 ): import("./types").RecruitmentJob {
-  const buildMs = recruitmentOrderDurationMsForState(state, job.count ?? 1);
+  const buildMs = recruitmentOrderDurationMsForState(
+    state,
+    job.officeId,
+    job.count ?? 1,
+  );
   const timing = scheduleQueueJobTimer(state, job, buildMs, activationTime);
   return { ...job, ...timing };
 }

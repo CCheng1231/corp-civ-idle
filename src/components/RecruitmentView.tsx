@@ -227,6 +227,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
   const freshGradQty = counts.fresh_graduate ?? 1;
   const freshGradTenCost = recruitBatchCostForState(
     state,
+    officeId,
     "fresh_graduate",
     10,
   );
@@ -362,7 +363,7 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
 
   function renderUnitCard(unit: RecruitmentUnitDefinition) {
     const count = counts[unit.id] ?? 1;
-    const cost = recruitBatchCostForState(state, unit.id, count);
+    const cost = recruitBatchCostForState(state, officeId, unit.id, count);
     const lockLines = recruitmentUnitProgressionLockNav(state, unit.id);
     const researchLocked = lockLines.length > 0;
     const affordable =
@@ -373,7 +374,8 @@ export function RecruitmentView({ state, dispatch }: RecruitmentViewProps) {
       (job) => job.unitId === unit.id,
     );
     const orderHours =
-      recruitmentOrderDurationMsForState(state, count) / (3600 * 1000);
+      recruitmentOrderDurationMsForState(state, officeId, count) /
+      (3600 * 1000);
     const lockedTitle = recruitmentLockedButtonTitle(lockLines);
     const qtyLocked = actionsLocked || queueFull || researchLocked;
 

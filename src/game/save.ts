@@ -26,6 +26,7 @@ import {
   normalizeSecretaryUnlocks,
   syncLegacyGovUnlocks,
 } from "./secretaryProgress";
+import { normalizeSecretaryPostedOffice } from "./secretaryPosting";
 import { normalizeSecretarySkins } from "./secretarySkins";
 import { checkSecretaryRecruitmentMilestones } from "./secretaryRecruitment";
 import {
@@ -1157,11 +1158,35 @@ function normalizeSave(
     branchSites: merged.branchSites,
   });
 
+  merged.govProgram = normalizeGovProgram(
+    parsed.govProgram,
+    lifetimeRecruitsFromRoster(merged),
+  );
+  merged.secretaryUnlocks = normalizeSecretaryUnlocks(
+    parsed.secretaryUnlocks,
+    merged.govProgram.xaihiUnlocked,
+  );
+  merged.secretaryProgress = normalizeSecretaryProgressMap(
+    parsed.secretaryProgress,
+    merged.secretaryUnlocks,
+  );
+  merged.secretaryPostedOffice = normalizeSecretaryPostedOffice(
+    parsed.secretaryPostedOffice,
+    merged.structureLevelsByLocation,
+  );
+  merged.chiefOfStaffId = normalizeChiefOfStaffId(
+    parsed.chiefOfStaffId,
+    merged.secretaryUnlocks,
+  );
+
   const derived = recomputeDerivedStats({
     structureLevelsByLocation: merged.structureLevelsByLocation,
     contractorsByLocation: merged.contractorsByLocation,
     researchLevels: merged.researchLevels,
     chiefOfStaffId: merged.chiefOfStaffId,
+    secretaryProgress: merged.secretaryProgress,
+    secretaryUnlocks: merged.secretaryUnlocks,
+    secretaryPostedOffice: merged.secretaryPostedOffice,
     siteRateBonusByOffice: siteRateBonusesForState(merged),
   });
   merged.rates = derived.rates;
@@ -1200,27 +1225,10 @@ function normalizeSave(
     );
   }
 
-  merged.govProgram = normalizeGovProgram(
-    parsed.govProgram,
-    lifetimeRecruitsFromRoster(merged),
-  );
-
-  merged.secretaryUnlocks = normalizeSecretaryUnlocks(
-    parsed.secretaryUnlocks,
-    merged.govProgram.xaihiUnlocked,
-  );
-  merged.secretaryProgress = normalizeSecretaryProgressMap(
-    parsed.secretaryProgress,
-    merged.secretaryUnlocks,
-  );
   merged.secretaryRecruitment = normalizeSecretaryRecruitment(
     parsed.secretaryRecruitment,
   );
   merged.secretarySkins = normalizeSecretarySkins(parsed.secretarySkins);
-  merged.chiefOfStaffId = normalizeChiefOfStaffId(
-    parsed.chiefOfStaffId,
-    merged.secretaryUnlocks,
-  );
   const afterGovSync = syncLegacyGovUnlocks(merged);
   Object.assign(merged, afterGovSync);
 

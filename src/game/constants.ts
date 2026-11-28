@@ -45,8 +45,10 @@ import {
   chiefOfficeProductionMult,
   chiefRecruitCostMult,
   chiefTravelDurationMs,
-  recruitmentOrderDurationMsForChief,
-  scaleResourceCost,
+  onSiteRecruitCostMultAtOffice,
+  onSiteReputationMultAtOffice,
+  recruitOrderDurationMsForOffice,
+  scaleResourceCostMultipliers,
 } from "./secretaryEffects";
 import {
   HQ_BASE_OFFICE_SPACE,
@@ -63,6 +65,7 @@ import {
   powerBonusFromLevels,
   recomputeProductionRates,
   structureMaxLevel,
+  structureOfficeIds,
 } from "./structureBalance";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import {
@@ -121,11 +124,20 @@ export function recruitmentOrderDurationMs(count: number): number {
 }
 
 export function recruitmentOrderDurationMsForState(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  state: Pick<
+    GameState,
+    | "chiefOfStaffId"
+    | "secretaryProgress"
+    | "secretaryUnlocks"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
   count: number,
 ): number {
-  return recruitmentOrderDurationMsForChief(
-    state,
+  return recruitOrderDurationMsForOffice(
+    state as GameState,
+    officeId,
     recruitmentOrderDurationMs(count),
   );
 }
@@ -762,6 +774,7 @@ export function createInitialState(now = Date.now()): GameState {
     secretaryProgress: initializeSecretaryProgressMap(
       createInitialSecretaryUnlocks(),
     ),
+    secretaryPostedOffice: {},
     secretaryRecruitment: createInitialSecretaryRecruitment(),
     secretarySkins: createInitialSecretarySkinsState(),
     playerNotes: "",
@@ -857,14 +870,34 @@ export function recomputeDerivedStats(state: {
   researchLevels: GameState["researchLevels"];
   chiefOfStaffId?: GameState["chiefOfStaffId"];
   secretaryProgress?: GameState["secretaryProgress"];
+  secretaryUnlocks?: GameState["secretaryUnlocks"];
+  secretaryPostedOffice?: GameState["secretaryPostedOffice"];
   /** Region site bonus on structure passives at each office. */
   siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): { rates: ProductionRates } {
+  const onSiteReputationMultByOffice: Partial<
+    Record<OfficeLocationId, number>
+  > = {};
+  if (
+    state.secretaryUnlocks &&
+    state.secretaryProgress &&
+    state.structureLevelsByLocation
+  ) {
+    for (const officeId of structureOfficeIds(
+      state.structureLevelsByLocation,
+    )) {
+      onSiteReputationMultByOffice[officeId] = onSiteReputationMultAtOffice(
+        state as GameState,
+        officeId,
+      );
+    }
+  }
   const structureRates = recomputeProductionRates({
     structureLevelsByLocation: state.structureLevelsByLocation,
     siteRateBonusByOffice: state.siteRateBonusByOffice ?? {
       hq: 0,
     },
+    onSiteReputationMultByOffice,
   });
   const chiefCtx = {
     chiefOfStaffId: state.chiefOfStaffId ?? DEFAULT_CHIEF_OF_STAFF_ID,
@@ -1140,13 +1173,22 @@ export function recruitBatchCost(
 }
 
 export function recruitBatchCostForState(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  state: Pick<
+    GameState,
+    | "chiefOfStaffId"
+    | "secretaryProgress"
+    | "secretaryUnlocks"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
   unitId: UnitId,
   count: number,
 ): ResourceCost {
-  return scaleResourceCost(
+  return scaleResourceCostMultipliers(
     recruitBatchCost(unitId, count),
     chiefRecruitCostMult(state),
+    onSiteRecruitCostMultAtOffice(state as GameState, officeId),
   );
 }
 

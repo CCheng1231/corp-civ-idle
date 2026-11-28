@@ -1,16 +1,9 @@
 import { jobDefinitionById } from "./jobDefinitions";
 import { SECRETARY_IDS } from "./secretaryData";
-import {
-  CHIEF_SKILL_NODES,
-  SECRETARY_MAX_LEVEL,
-  TEAM_LEAD_SKILL_NODES,
-  CHIEF_SKILL_DEFS,
-  TEAM_LEAD_SKILL_DEFS,
-  type ChiefSkillNodeId,
-  type TeamLeadSkillNodeId,
-} from "./secretarySkillData";
+import { SECRETARY_MAX_LEVEL, skillTreesFor } from "./secretarySkillData";
 import type { SecretaryUnlockableSkinId } from "./secretarySkinData";
 import { createInitialSecretaryProgress } from "./secretaryProgress";
+import { treeFullyMastered } from "./secretarySkillLogic";
 import type {
   JobLocationType,
   GameState,
@@ -138,20 +131,43 @@ export function normalizeSecretarySkins(raw: unknown): SecretarySkinsState {
   };
 }
 
-export function chiefTreeFullyMastered(progress: SecretaryProgress): boolean {
-  for (const node of CHIEF_SKILL_NODES) {
-    const max = CHIEF_SKILL_DEFS[node].maxRank;
-    if ((progress.chiefSkillRanks[node] ?? 0) < max) return false;
-  }
-  return true;
+export function chiefTreeFullyMastered(
+  secretaryId: SecretaryId,
+  progress: SecretaryProgress,
+): boolean {
+  const trees = skillTreesFor(secretaryId);
+  return treeFullyMastered(
+    progress.level,
+    trees.chief,
+    progress.chiefSkillRanks,
+    SECRETARY_MAX_LEVEL,
+  );
 }
 
-export function teamLeadTreeFullyMastered(progress: SecretaryProgress): boolean {
-  for (const node of TEAM_LEAD_SKILL_NODES) {
-    const max = TEAM_LEAD_SKILL_DEFS[node].maxRank;
-    if ((progress.teamLeadSkillRanks[node] ?? 0) < max) return false;
-  }
-  return true;
+export function teamLeadTreeFullyMastered(
+  secretaryId: SecretaryId,
+  progress: SecretaryProgress,
+): boolean {
+  const trees = skillTreesFor(secretaryId);
+  return treeFullyMastered(
+    progress.level,
+    trees.teamLead,
+    progress.teamLeadSkillRanks,
+    SECRETARY_MAX_LEVEL,
+  );
+}
+
+export function onSiteTreeFullyMastered(
+  secretaryId: SecretaryId,
+  progress: SecretaryProgress,
+): boolean {
+  const trees = skillTreesFor(secretaryId);
+  return treeFullyMastered(
+    progress.level,
+    trees.onSite,
+    progress.onSiteSkillRanks,
+    SECRETARY_MAX_LEVEL,
+  );
 }
 
 function progressFor(
@@ -192,14 +208,21 @@ function enqueueSkinOffer(
 }
 
 function newlyMasteredTrees(
+  secretaryId: SecretaryId,
   before: SecretaryProgress,
   after: SecretaryProgress,
 ): SecretarySkinRewardTree[] {
   const trees: SecretarySkinRewardTree[] = [];
-  if (!chiefTreeFullyMastered(before) && chiefTreeFullyMastered(after)) {
+  if (
+    !chiefTreeFullyMastered(secretaryId, before) &&
+    chiefTreeFullyMastered(secretaryId, after)
+  ) {
     trees.push("chief");
   }
-  if (!teamLeadTreeFullyMastered(before) && teamLeadTreeFullyMastered(after)) {
+  if (
+    !teamLeadTreeFullyMastered(secretaryId, before) &&
+    teamLeadTreeFullyMastered(secretaryId, after)
+  ) {
     trees.push("teamLead");
   }
   return trees;
@@ -213,7 +236,7 @@ export function checkSecretarySkinOffers(
   if (!next.secretaryUnlocks[secretaryId]) return next;
   const before = progressFor(prev, secretaryId);
   const after = progressFor(next, secretaryId);
-  const trees = newlyMasteredTrees(before, after);
+  const trees = newlyMasteredTrees(secretaryId, before, after);
   if (trees.length === 0) return next;
   let skins = next.secretarySkins ?? createInitialSecretarySkinsState();
   for (const tree of trees) {
@@ -369,15 +392,18 @@ export function devMaxSecretaryProgress(
   if (!state.secretaryUnlocks[secretaryId]) return state;
   const current =
     state.secretaryProgress[secretaryId] ?? createInitialSecretaryProgress();
+  const trees = skillTreesFor(secretaryId);
   const chiefSkillRanks = { ...current.chiefSkillRanks };
   const teamLeadSkillRanks = { ...current.teamLeadSkillRanks };
-  for (const node of CHIEF_SKILL_NODES) {
-    chiefSkillRanks[node as ChiefSkillNodeId] =
-      CHIEF_SKILL_DEFS[node as ChiefSkillNodeId].maxRank;
+  const onSiteSkillRanks = { ...current.onSiteSkillRanks };
+  for (const node of trees.chief.nodes) {
+    chiefSkillRanks[node.id] = node.maxRank;
   }
-  for (const node of TEAM_LEAD_SKILL_NODES) {
-    teamLeadSkillRanks[node as TeamLeadSkillNodeId] =
-      TEAM_LEAD_SKILL_DEFS[node as TeamLeadSkillNodeId].maxRank;
+  for (const node of trees.teamLead.nodes) {
+    teamLeadSkillRanks[node.id] = node.maxRank;
+  }
+  for (const node of trees.onSite.nodes) {
+    onSiteSkillRanks[node.id] = node.maxRank;
   }
   const progress: SecretaryProgress = {
     level: SECRETARY_MAX_LEVEL,
@@ -385,6 +411,7 @@ export function devMaxSecretaryProgress(
     unspentSkillPoints: 0,
     chiefSkillRanks,
     teamLeadSkillRanks,
+    onSiteSkillRanks,
   };
   const withProgress: GameState = {
     ...state,

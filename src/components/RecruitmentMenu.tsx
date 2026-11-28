@@ -54,7 +54,7 @@ export function RecruitmentMenu({
         </header>
         <div className="recruitment-grid">
           {RECRUITMENT_UNITS.map((unit) => {
-            const cost = recruitBatchCostForState(state, unit.id, 1);
+            const cost = recruitBatchCostForState(state, officeId, unit.id, 1);
             const researchLocked =
               unit.id === "branch_manager" &&
               (state.researchLevels.branch_management ?? 0) < 1;

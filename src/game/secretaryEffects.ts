@@ -1,21 +1,20 @@
-import { SECRETARIES, secretaryById } from "./secretaryData";
+import { SECRETARIES, secretaryById, SECRETARY_IDS } from "./secretaryData";
 import {
   createInitialSecretaryProgress,
+  ensureSecretaryProgressShape,
   secretaryIsUnlocked,
 } from "./secretaryProgress";
+import { secretaryPostedOffice } from "./secretaryPosting";
 import {
-  chiefSkillPct,
-  CHIEF_SKILL_DEFS,
-  type ChiefSkillNodeId,
-  teamLeadSkillPct,
-  TEAM_LEAD_SKILL_DEFS,
-  type TeamLeadSkillNodeId,
+  skillTreesFor,
+  summedSkillPctByEffect,
 } from "./secretarySkillData";
 import { secretarySkinOnSiteWorkPctForEngagement } from "./secretarySkins";
 import type {
   ChiefOfStaffEffectKind,
   GameState,
   JobEngagement,
+  OfficeLocationId,
   ResourceCost,
   SecretaryId,
   SecretaryProgress,
@@ -29,32 +28,21 @@ export interface ChiefOfStaffEffect {
   pct: number;
 }
 
-const TEAM_LEAD_TREE_TO_KIND: Record<
-  TeamLeadSkillNodeId,
-  TeamLeadEffectKind
-> = {
-  lead_travel: "travelTime",
-  lead_work_time: "jobWorkTime",
-  lead_job_income: "jobIncome",
-};
-
-/** Skill-tree node that stacks with each team-lead identity kind. */
-const TEAM_LEAD_KIND_SKILL_NODE: Record<
-  TeamLeadEffectKind,
-  TeamLeadSkillNodeId
-> = {
-  travelTime: "lead_travel",
-  jobWorkTime: "lead_work_time",
-  jobIncome: "lead_job_income",
-  jobSupplyCost: "lead_travel",
-  jobUnitHours: "lead_work_time",
+const TEAM_LEAD_SKILL_EFFECT: Record<TeamLeadEffectKind, string> = {
+  travelTime: "travelTime",
+  jobWorkTime: "jobWorkTime",
+  jobIncome: "jobIncome",
+  jobSupplyCost: "jobSupplyCost",
+  jobUnitHours: "jobUnitHours",
 };
 
 function progressFor(
   state: Pick<GameState, "secretaryProgress">,
   secretaryId: SecretaryId,
 ): SecretaryProgress {
-  return state.secretaryProgress[secretaryId] ?? createInitialSecretaryProgress();
+  const raw = state.secretaryProgress[secretaryId];
+  if (!raw) return createInitialSecretaryProgress();
+  return ensureSecretaryProgressShape(raw);
 }
 
 function chiefEffectFromData(chiefId: SecretaryId): ChiefOfStaffEffect | null {
@@ -86,17 +74,22 @@ function identityChiefPct(
   return effect.pct;
 }
 
-function totalChiefPct(
+function activeChiefSkillPct(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
-  kind: ChiefOfStaffEffectKind,
-  treeNode?: ChiefSkillNodeId,
+  effectKind: string,
 ): number {
-  let pct = identityChiefPct(state.chiefOfStaffId, kind);
-  if (treeNode) {
-    const ranks = progressFor(state, state.chiefOfStaffId).chiefSkillRanks;
-    pct += chiefSkillPct(ranks, treeNode);
-  }
-  return pct;
+  const ranks = progressFor(state, state.chiefOfStaffId).chiefSkillRanks;
+  const trees = skillTreesFor(state.chiefOfStaffId);
+  return summedSkillPctByEffect(ranks, trees, "chief", effectKind);
+}
+
+function totalChiefIdentityAndSkill(
+  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+  identityKind: ChiefOfStaffEffectKind,
+  treeEffectKind: string,
+): number {
+  return identityChiefPct(state.chiefOfStaffId, identityKind) +
+    activeChiefSkillPct(state, treeEffectKind);
 }
 
 function identityTeamLeadPctForKind(
@@ -108,29 +101,48 @@ function identityTeamLeadPctForKind(
   return def.teamLeadEffectPct;
 }
 
+function activeTeamLeadSkillPct(
+  state: Pick<GameState, "secretaryProgress">,
+  secretaryId: SecretaryId,
+  effectKind: string,
+): number {
+  const ranks = progressFor(state, secretaryId).teamLeadSkillRanks;
+  const trees = skillTreesFor(secretaryId);
+  return summedSkillPctByEffect(ranks, trees, "teamLead", effectKind);
+}
+
 function totalTeamLeadPctForKind(
   state: Pick<GameState, "secretaryProgress">,
   secretaryId: SecretaryId,
   kind: TeamLeadEffectKind,
 ): number {
-  const ranks = progressFor(state, secretaryId).teamLeadSkillRanks;
-  const skillNode = TEAM_LEAD_KIND_SKILL_NODE[kind];
+  const effectKind = TEAM_LEAD_SKILL_EFFECT[kind];
   return (
     identityTeamLeadPctForKind(secretaryId, kind) +
-    teamLeadSkillPct(ranks, skillNode)
+    activeTeamLeadSkillPct(state, secretaryId, effectKind)
   );
 }
 
-function totalTeamLeadPct(
-  state: Pick<GameState, "secretaryProgress">,
-  secretaryId: SecretaryId,
-  treeNode: TeamLeadSkillNodeId,
+export function onSiteEffectPctAtOffice(
+  state: Pick<
+    GameState,
+  | "secretaryUnlocks"
+  | "secretaryProgress"
+  | "secretaryPostedOffice"
+  | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+  effectKind: string,
 ): number {
-  return totalTeamLeadPctForKind(
-    state,
-    secretaryId,
-    TEAM_LEAD_TREE_TO_KIND[treeNode],
-  );
+  let total = 0;
+  for (const id of SECRETARY_IDS) {
+    if (!state.secretaryUnlocks[id]) continue;
+    if (secretaryPostedOffice(state, id) !== officeId) continue;
+    const ranks = progressFor(state, id).onSiteSkillRanks;
+    const trees = skillTreesFor(id);
+    total += summedSkillPctByEffect(ranks, trees, "onSite", effectKind);
+  }
+  return total;
 }
 
 function multFromPct(pct: number, base = 1): number {
@@ -142,45 +154,109 @@ export function chiefOfficeProductionMult(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
 ): number {
   return multFromPct(
-    totalChiefPct(state, "officeProduction", "chief_cash_supply"),
+    totalChiefIdentityAndSkill(state, "officeProduction", "officeProduction"),
   );
-}
-
-export function chiefCashSupplyRateMult(
-  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
-): number {
-  return multFromPct(chiefSkillPct(
-    progressFor(state, state.chiefOfStaffId).chiefSkillRanks,
-    "chief_cash_supply",
-  ));
 }
 
 export function chiefStructureBuildTimeMult(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
 ): number {
-  return multFromPct(
-    chiefSkillPct(
-      progressFor(state, state.chiefOfStaffId).chiefSkillRanks,
-      "chief_build_time",
-    ),
-  );
+  return multFromPct(activeChiefSkillPct(state, "structureBuildTime"));
+}
+
+export function chiefStructureBuildCostMult(
+  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+): number {
+  return multFromPct(activeChiefSkillPct(state, "structureBuildCost"));
 }
 
 export function chiefResearchBuildTimeMult(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
 ): number {
-  return multFromPct(
-    chiefSkillPct(
-      progressFor(state, state.chiefOfStaffId).chiefSkillRanks,
-      "chief_research_time",
-    ),
-  );
+  return multFromPct(activeChiefSkillPct(state, "researchBuildTime"));
+}
+
+export function chiefResearchBuildCostMult(
+  state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
+): number {
+  return multFromPct(activeChiefSkillPct(state, "researchBuildCost"));
 }
 
 export function chiefRecruitCostMult(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
 ): number {
-  return multFromPct(identityChiefPct(state.chiefOfStaffId, "recruitCost"));
+  return multFromPct(
+    totalChiefIdentityAndSkill(state, "recruitCost", "recruitCost"),
+  );
+}
+
+export function onSiteReputationMultAtOffice(
+  state: Pick<
+    GameState,
+    | "secretaryUnlocks"
+    | "secretaryProgress"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+): number {
+  return multFromPct(onSiteEffectPctAtOffice(state, officeId, "onSiteReputation"));
+}
+
+export function onSiteRecruitTimeMultAtOffice(
+  state: Pick<
+    GameState,
+    | "secretaryUnlocks"
+    | "secretaryProgress"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+): number {
+  return multFromPct(onSiteEffectPctAtOffice(state, officeId, "onSiteRecruitTime"));
+}
+
+export function onSiteRecruitCostMultAtOffice(
+  state: Pick<
+    GameState,
+    | "secretaryUnlocks"
+    | "secretaryProgress"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+): number {
+  return multFromPct(onSiteEffectPctAtOffice(state, officeId, "onSiteRecruitCost"));
+}
+
+export function onSiteStructureBuildTimeMultAtOffice(
+  state: Pick<
+    GameState,
+    | "secretaryUnlocks"
+    | "secretaryProgress"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+): number {
+  return multFromPct(
+    onSiteEffectPctAtOffice(state, officeId, "onSiteStructureBuildTime"),
+  );
+}
+
+export function onSiteStructureBuildCostMultAtOffice(
+  state: Pick<
+    GameState,
+    | "secretaryUnlocks"
+    | "secretaryProgress"
+    | "secretaryPostedOffice"
+    | "structureLevelsByLocation"
+  >,
+  officeId: OfficeLocationId,
+): number {
+  return multFromPct(
+    onSiteEffectPctAtOffice(state, officeId, "onSiteStructureBuildCost"),
+  );
 }
 
 function chiefScaledDurationMs(
@@ -222,13 +298,23 @@ export function recruitmentOrderDurationMsForChief(
   );
 }
 
+export function recruitOrderDurationMsForOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+  baseMs: number,
+): number {
+  const chiefMs = recruitmentOrderDurationMsForChief(state, baseMs);
+  const onSiteMult = onSiteRecruitTimeMultAtOffice(state, officeId);
+  return Math.max(1000, Math.round(chiefMs * onSiteMult));
+}
+
 export function teamLeadTravelDurationMs(
   state: Pick<GameState, "secretaryProgress">,
   teamLeadId: SecretaryId,
   baseMs: number,
   minMs: number,
 ): number {
-  const pct = totalTeamLeadPct(state, teamLeadId, "lead_travel");
+  const pct = totalTeamLeadPctForKind(state, teamLeadId, "travelTime");
   if (pct === 0) return baseMs;
   return Math.max(minMs, Math.round(baseMs * (1 + pct)));
 }
@@ -261,7 +347,7 @@ export function jobWorkDurationMsForEngagement(
   const baseMs = Math.max(0, durationSec) * 1000;
   const teamLeadId = engagement?.teamLeadSecretaryId;
   if (teamLeadId) {
-    let pct = totalTeamLeadPct(state, teamLeadId, "lead_work_time");
+    let pct = totalTeamLeadPctForKind(state, teamLeadId, "jobWorkTime");
     pct += secretarySkinOnSiteWorkPctForEngagement(
       state,
       teamLeadId,
@@ -343,6 +429,16 @@ export function scaleResourceCost(
   return next;
 }
 
+export function scaleResourceCostMultipliers(
+  cost: ResourceCost,
+  ...multipliers: number[]
+): ResourceCost {
+  return multipliers.reduce(
+    (acc, mult) => scaleResourceCost(acc, mult),
+    cost,
+  );
+}
+
 export function chiefOfStaffRateBreakdownLabel(
   state: Pick<GameState, "chiefOfStaffId" | "secretaryProgress">,
 ): string | null {
@@ -359,12 +455,9 @@ export function effectiveChiefBonusLabel(
 ): string {
   const def = secretaryById(chiefId);
   const progress = progressFor(chiefState, chiefId);
-  const skillBits = CHIEF_SKILL_DEFS.chief_cash_supply
-    ? Object.keys(CHIEF_SKILL_DEFS).filter(
-        (node) => (progress.chiefSkillRanks[node as ChiefSkillNodeId] ?? 0) > 0,
-      )
-    : [];
-  if (skillBits.length === 0) return def.chiefOfStaffBonus;
+  const trained = progress.chiefSkillRanks &&
+    Object.values(progress.chiefSkillRanks).some((r) => (r ?? 0) > 0);
+  if (!trained) return def.chiefOfStaffBonus;
   return `${def.chiefOfStaffBonus} (+ skill tree)`;
 }
 
@@ -374,8 +467,8 @@ export function effectiveTeamLeadBonusLabel(
 ): string {
   const def = secretaryById(secretaryId);
   const progress = progressFor(state, secretaryId);
-  const trained = Object.keys(TEAM_LEAD_SKILL_DEFS).some(
-    (node) => (progress.teamLeadSkillRanks[node as TeamLeadSkillNodeId] ?? 0) > 0,
+  const trained = Object.values(progress.teamLeadSkillRanks).some(
+    (r) => (r ?? 0) > 0,
   );
   if (!trained) return def.teamLeadBonus;
   return `${def.teamLeadBonus} (+ skill tree)`;
@@ -385,7 +478,7 @@ export function teamLeadTravelPctForSecretary(
   state: Pick<GameState, "secretaryProgress">,
   secretaryId: SecretaryId,
 ): number {
-  return totalTeamLeadPct(state, secretaryId, "lead_travel");
+  return totalTeamLeadPctForKind(state, secretaryId, "travelTime");
 }
 
 export function teamLeadIdentityBonusLabel(secretaryId: SecretaryId): string {

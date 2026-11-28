@@ -29,7 +29,6 @@ import {
   commercialSiteAt,
   formatSiteRateBonusPercent,
   isAvailableCommercialLot,
-  jobSiteLabelForPosting,
   officeDisplayName,
   siteRateBonusForRegion,
   towerAtCoord,

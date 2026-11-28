@@ -14,9 +14,14 @@ import {
 } from "./structureBalanceData";
 import { RESEARCH_DEFINITIONS } from "./researchData";
 import { REP_GREP_CAP_WITHOUT_COMPANY_STATUE } from "./phaseA";
-import { chiefStructureBuildTimeMult } from "./secretaryEffects";
+import {
+  chiefStructureBuildCostMult,
+  chiefStructureBuildTimeMult,
+  onSiteStructureBuildCostMultAtOffice,
+  onSiteStructureBuildTimeMultAtOffice,
+} from "./secretaryEffects";
 
-function structureOfficeIds(
+export function structureOfficeIds(
   structureLevelsByLocation: GameState["structureLevelsByLocation"],
 ): OfficeLocationId[] {
   return Object.keys(structureLevelsByLocation) as OfficeLocationId[];
@@ -307,6 +312,8 @@ export function recomputeProductionRates(state: {
   researchLevels?: GameState["researchLevels"];
   /** Per-site multiplier on structure passives (region site bonus). */
   siteRateBonusByOffice?: Partial<Record<OfficeLocationId, number>>;
+  /** Secretary on-site REP skill at each owned office (reputation line only). */
+  onSiteReputationMultByOffice?: Partial<Record<OfficeLocationId, number>>;
 }): ProductionRates {
   const rates: ProductionRates = {
     cash: 0,
@@ -329,9 +336,13 @@ export function recomputeProductionRates(state: {
       state.structureLevelsByLocation[officeId],
       siteRates,
     );
-    const mult = 1 + (state.siteRateBonusByOffice?.[officeId] ?? 0);
+    const siteMult = 1 + (state.siteRateBonusByOffice?.[officeId] ?? 0);
+    const repMult =
+      state.onSiteReputationMultByOffice?.[officeId] ?? 1;
     for (const key of Object.keys(rates) as (keyof ProductionRates)[]) {
-      rates[key] += siteRates[key] * mult;
+      const siteValue = siteRates[key] * siteMult;
+      rates[key] +=
+        key === "reputation" ? siteValue * repMult : siteValue;
     }
   }
   return rates;
@@ -484,9 +495,18 @@ export function buildTimeMsForQueueJob(
     job.targetLevel ??
     targetLevelForStructureQueueJob(state, officeId, queueIndex);
   const base = structureBuildTimeMs(job.structureId, targetLevel);
-  return Math.max(
-    1000,
-    Math.round(base * chiefStructureBuildTimeMult(state)),
+  const chiefMult = chiefStructureBuildTimeMult(state);
+  const onSiteMult = onSiteStructureBuildTimeMultAtOffice(state, officeId);
+  return Math.max(1000, Math.round(base * chiefMult * onSiteMult));
+}
+
+export function structureBuildCostMultAtOffice(
+  state: GameState,
+  officeId: OfficeLocationId,
+): number {
+  return (
+    chiefStructureBuildCostMult(state) *
+    onSiteStructureBuildCostMultAtOffice(state, officeId)
   );
 }
 
